@@ -15,8 +15,8 @@ class TransactionBase(BaseModel):
     merchant_name: Optional[str] = None
     category: str
     sub_category: str
-    status: TransactionStatus = TransactionStatus.PENDING
-    account_type: AccountType = AccountType.SAVINGS
+    status: TransactionStatus = "PENDING"
+    account_type: AccountType = "SAVINGS"
     remarks: Optional[str] = None
     tags: Optional[List[str]] = []
 
@@ -29,7 +29,7 @@ class ManualTransactionCreate(BaseModel):
     merchant_name: str
     category: str
     sub_category: str
-    account_type: AccountType = AccountType.SAVINGS
+    account_type: AccountType = "SAVINGS"
     credit_card_id: Optional[UUID] = None
     transaction_date: datetime
     is_surety: bool = False
