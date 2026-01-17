@@ -1,4 +1,3 @@
-```python
 import logging
 from uuid import UUID
 from decimal import Decimal
@@ -230,4 +229,3 @@ class AnalyticsService:
             month=current_range["month_start"].strftime("%B"),
             year=current_range["month_start"].year
         )
-```

@@ -23,6 +23,8 @@ class Settings(BaseSettings):
         "/api/v1/sync/webhook"
     ]
     
+    USE_AI_FORECASTING: bool = False
+    
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama3-8b-8192"
     GOOGLE_CLIENT_ID: str = ""

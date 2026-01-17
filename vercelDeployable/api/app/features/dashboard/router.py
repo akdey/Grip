@@ -95,7 +95,7 @@ async def get_financial_forecast(
     service: Annotated[ForecastingService, Depends()]
 ):
     history = await get_daily_expenses(db, current_user.id, days=90)
-    predicted_burden = service.calculate_safe_to_spend(history)
+    predicted_burden = await service.calculate_safe_to_spend(history)
     
     return {
         "predicted_burden_30d": predicted_burden,

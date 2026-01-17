@@ -6,7 +6,6 @@ from sqlalchemy import String, ForeignKey, Numeric, Boolean, Integer, DateTime, 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
-from app.features.transactions.enums import Category, SubCategory
 
 
 class Bill(Base):
@@ -20,8 +19,8 @@ class Bill(Base):
     is_paid: Mapped[bool] = mapped_column(Boolean, default=False)
     is_recurring: Mapped[bool] = mapped_column(Boolean, default=False)
     recurrence_day: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    category: Mapped[Category] = mapped_column(String, nullable=False)
-    sub_category: Mapped[SubCategory] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(String, nullable=False)
+    sub_category: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship("User", back_populates="bills")

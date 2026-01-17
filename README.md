@@ -19,7 +19,8 @@ Griply acts as a central hub for your financial life, utilizing a multi-stage pi
 4.  **Deduplication**: A SHA-256 hash of the unique message ID and internal timestamp ensures no transaction is ever processed twice.
 5.  **Memory (Merchant Mapping)**: When you manually verify a transaction, the engine creates a "Merchant Mapping." Future transactions from that same merchant are automatically categorized based on your past preferences.
 6.  **Insights**: A dedicated dashboard provides real-time visibility into your Liquidity and Investment portfolio.
-7.  **Predictive Forecasting**: Leverages **Meta Prophet** to analyze historical spending patterns, predicting your upcoming monthly burden (including Credit Card bills and recurring "Sure Bills") to calculate a "Safe-to-Spend" margin.
+7.  **Predictive Forecasting**: Leverages a **Hybrid AI Engine** (Meta Prophet locally, or Groq Llama 3 on Vercel) to analyze historical spending patterns, predicting your upcoming monthly burden to calculate a 30-day "Safe-to-Spend" margin.
+8.  **PWA Ready**: Install Griply on your mobile device as a Progressive Web App for a native-like experience with offline capabilities.
 
 ---
 
@@ -50,8 +51,10 @@ Griply acts as a central hub for your financial life, utilizing a multi-stage pi
 - **Legacy OAuth Sync**: Fallback method for manual history fetching using Google API Client.
 - **X-GRIPLY-SECRET**: Header-based authentication for secure webhook communication.
 
-### 📉 Predictive Analytics & Forecasting
-- **Meta Prophet Integration**: Uses high-performance time-series forecasting to predict your financial burden for the next 30 days.
+### 📉 Predictive Analytics & Hybrid Forecasting
+- **Hybrid AI Engine**: 
+    - **Meta Prophet**: Uses high-performance statistical time-series forecasting for deep local analysis.
+    - **Groq LLM Fallback**: Seamlessly switches to Llama 3 for trend analysis in resource-constrained environments (like Vercel).
 - **Credit Card Bill Prediction**: Analyzes previous spending patterns and unbilled transactions to estimate upcoming credit card liabilities.
 - **Variance Analysis**: Compare current month-to-date spending vs. last month-to-date with category-level breakdowns.
 - **Percentage Metrics**: Calculate % over/under for total spend and category-specific spend.
@@ -108,6 +111,9 @@ GROQ_API_KEY="your-groq-api-key"
 GOOGLE_CLIENT_ID="your-google-id"
 GOOGLE_CLIENT_SECRET="your-google-secret"
 
+# Feature Flags
+USE_AI_FORECASTING="True" # Required for both Prophet and Groq-based forecasting
+
 # Secondary Ingress
 GRIPLY_SECRET="your-custom-webhook-secret"
 ```
@@ -124,7 +130,12 @@ GRIPLY_SECRET="your-custom-webhook-secret"
     alembic upgrade head
     ```
 
-3.  **Run the application**:
+3.  **Seed the database** (Optional - creates amit@griply.com/admin and default categories):
+    ```bash
+    uv run scripts/seed_db.py
+    ```
+
+4.  **Run the application**:
     ```bash
     uv run main.py
     ```
