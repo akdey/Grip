@@ -18,7 +18,7 @@ from app.core.database import get_db
 from app.core.config import get_settings
 from app.features.transactions.service import TransactionService
 from app.features.sanitizer.service import get_sanitizer_service
-from app.features.transactions.enums import Category, SubCategory, TransactionStatus, AccountType
+from app.features.transactions.models import TransactionStatus
 from app.features.sync.models import SyncLog
 from app.features.auth.models import User
 
@@ -71,8 +71,8 @@ class SyncService:
             "Content-Type": "application/json"
         }
         
-        categories = [c.value for c in Category]
-        sub_categories = [s.value for s in SubCategory]
+        # Fetch dynamic categories from the database if needed, or stick to a sane set
+        # For simplicity in LLM prompting, we can still provide a baseline, but strings are fine
         
         prompt = f"""
         Extract transaction details from the following text:
@@ -82,8 +82,8 @@ class SyncService:
         - amount: float
         - currency: string (3-letter code, default INR)
         - merchant_name: string (clean, title case)
-        - category: string (Must be one of: {categories})
-        - sub_category: string (Must be one of: {sub_categories})
+        - category: string
+        - sub_category: string
         - account_type: string (SAVINGS, CREDIT_CARD, or CASH)
         
         If unsure about category, use "Uncategorized".
@@ -109,9 +109,9 @@ class SyncService:
                     "amount": float(data.get("amount", 0)),
                     "currency": data.get("currency", "INR"),
                     "merchant_name": data.get("merchant_name", "UNKNOWN"),
-                    "category": data.get("category", Category.UNCATEGORIZED),
-                    "sub_category": data.get("sub_category", SubCategory.UNCATEGORIZED),
-                    "account_type": data.get("account_type", AccountType.SAVINGS)
+                    "category": data.get("category", "Uncategorized"),
+                    "sub_category": data.get("sub_category", "Uncategorized"),
+                    "account_type": data.get("account_type", "SAVINGS")
                 }
         except Exception as e:
             logger.error(f"Groq API Error: {e}")
@@ -123,9 +123,9 @@ class SyncService:
             "amount": 0.0,
             "currency": "INR",
             "merchant_name": "UNCATEGORIZED",
-            "category": Category.UNCATEGORIZED,
-            "sub_category": SubCategory.UNCATEGORIZED,
-            "account_type": AccountType.SAVINGS
+            "category": "Uncategorized",
+            "sub_category": "Uncategorized",
+            "account_type": "SAVINGS"
         }
 
     async def fetch_gmail_changes(self, user_id: uuid.UUID, start_time: datetime = None) -> List[dict]:

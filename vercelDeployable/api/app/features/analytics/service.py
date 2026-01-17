@@ -1,11 +1,11 @@
+```python
 import logging
 from uuid import UUID
 from decimal import Decimal
 from typing import Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from app.features.transactions.models import Transaction
-from app.features.transactions.enums import Category, AccountType
+from app.features.transactions.models import Transaction, AccountType
 from app.features.analytics.schemas import (
     CategoryVariance,
     VarianceAnalysis,
@@ -49,7 +49,7 @@ class AnalyticsService:
                 func.sum(Transaction.amount).label("total")
             )
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category != Category.INCOME)
+            .where(Transaction.category != "Income")
             .where(Transaction.transaction_date >= current_range["month_start"])
             .where(Transaction.transaction_date <= current_range["month_end"])
             .group_by(Transaction.category)
@@ -66,7 +66,7 @@ class AnalyticsService:
                 func.sum(Transaction.amount).label("total")
             )
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category != Category.INCOME)
+            .where(Transaction.category != "Income")
             .where(Transaction.transaction_date >= previous_range["month_start"])
             .where(Transaction.transaction_date <= previous_range["month_end"])
             .group_by(Transaction.category)
@@ -86,7 +86,7 @@ class AnalyticsService:
             variance_amt = current_amount - previous_amount
             variance_pct = calculate_variance_percentage(current_amount, previous_amount)
             
-            category_breakdown[str(category)] = CategoryVariance(
+            category_breakdown[category] = CategoryVariance(
                 current=current_amount,
                 previous=previous_amount,
                 variance_amount=variance_amt,
@@ -146,7 +146,7 @@ class AnalyticsService:
         income_stmt = (
             select(func.sum(Transaction.amount))
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category == Category.INCOME)
+            .where(Transaction.category == "Income")
         )
         income_result = await db.execute(income_stmt)
         total_income = income_result.scalar() or Decimal("0")
@@ -154,7 +154,7 @@ class AnalyticsService:
         expense_stmt = (
             select(func.sum(Transaction.amount))
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category.not_in([Category.INCOME, Category.INVESTMENT]))
+            .where(Transaction.category.not_in(["Income", "Investment"]))
             .where(Transaction.account_type.in_([AccountType.CASH, AccountType.SAVINGS]))
         )
         expense_result = await db.execute(expense_stmt)
@@ -203,7 +203,7 @@ class AnalyticsService:
         income_stmt = (
             select(func.sum(Transaction.amount))
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category == Category.INCOME)
+            .where(Transaction.category == "Income")
             .where(Transaction.transaction_date >= current_range["month_start"])
             .where(Transaction.transaction_date <= current_range["month_end"])
         )
@@ -214,7 +214,7 @@ class AnalyticsService:
         expense_stmt = (
             select(func.sum(Transaction.amount))
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category != Category.INCOME)
+            .where(Transaction.category != "Income")
             .where(Transaction.transaction_date >= current_range["month_start"])
             .where(Transaction.transaction_date <= current_range["month_end"])
         )
@@ -230,3 +230,4 @@ class AnalyticsService:
             month=current_range["month_start"].strftime("%B"),
             year=current_range["month_start"].year
         )
+```

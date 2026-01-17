@@ -3,7 +3,11 @@ from uuid import UUID
 from datetime import datetime, date
 from decimal import Decimal
 from pydantic import BaseModel
-from app.features.transactions.enums import Category, SubCategory, TransactionStatus, AccountType
+from typing import Literal
+
+# Core status constants for validation
+TransactionStatus = Literal["PENDING", "VERIFIED", "REJECTED"]
+AccountType = Literal["SAVINGS", "CREDIT_CARD", "CASH"]
 
 class TransactionBase(BaseModel):
     amount: Decimal

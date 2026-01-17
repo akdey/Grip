@@ -6,7 +6,8 @@ from fastapi import HTTPException
 from fastapi import Depends
 from app.features.transactions.models import Transaction, MerchantMapping
 from app.features.transactions import schemas
-from app.features.transactions.enums import TransactionStatus
+from app.features.transactions import schemas
+from app.features.transactions.models import TransactionStatus
 from app.core.database import get_db
 import logging
 logger = logging.getLogger(__name__)
@@ -188,6 +189,10 @@ class TransactionService:
         txns = await self._attach_icons([txn])
         return txns[0]
 
-    def get_categories(self) -> dict:
-        from app.features.transactions.enums import CATEGORY_MAP
-        return {cat.value: [sub.value for sub in subs] for cat, subs in CATEGORY_MAP.items()}
+    async def get_categories(self) -> dict:
+        # Legacy method - should probably be removed as we now have a dedicated Categories service
+        from app.features.categories.models import Category
+        stmt = select(Category)
+        result = await self.db.execute(stmt)
+        categories = result.scalars().all()
+        return {c.name: [s.name for s in c.sub_categories] for c in categories}
