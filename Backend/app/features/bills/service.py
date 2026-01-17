@@ -8,19 +8,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.features.bills.models import Bill
 from app.features.bills.schemas import BillCreate, BillUpdate
-from app.features.transactions.enums import Category, SubCategory
+# Constants
 
 logger = logging.getLogger(__name__)
 
 # Surety categories - bills that are predictable and recurring
 SURETY_CATEGORIES = {
-    Category.HOUSING: [SubCategory.RENT, SubCategory.MAINTENANCE],
-    Category.BILLS_UTILITIES: [
-        SubCategory.ELECTRICITY,
-        SubCategory.WATER,
-        SubCategory.INTERNET,
-        SubCategory.MOBILE_RECHARGE,
-        SubCategory.GAS
+    "Housing": ["Rent", "Maintenance"],
+    "Bills & Utilities": [
+        "Electricity",
+        "Water",
+        "Internet",
+        "Mobile Recharge",
+        "Gas"
     ]
 }
 

@@ -3,7 +3,7 @@ from uuid import UUID
 from datetime import datetime, date
 from decimal import Decimal
 from pydantic import BaseModel, Field
-from app.features.transactions.enums import Category, SubCategory
+# Using strings for category/sub_category
 
 
 class BillBase(BaseModel):
@@ -12,8 +12,8 @@ class BillBase(BaseModel):
     due_date: date = Field(..., description="Due date for the bill")
     is_recurring: bool = Field(default=False, description="Whether this is a recurring bill")
     recurrence_day: Optional[int] = Field(None, ge=1, le=31, description="Day of month for recurring bills")
-    category: Category
-    sub_category: SubCategory
+    category: str
+    sub_category: str
 
 
 class BillCreate(BillBase):
@@ -26,8 +26,8 @@ class BillUpdate(BaseModel):
     due_date: Optional[date] = None
     is_recurring: Optional[bool] = None
     recurrence_day: Optional[int] = Field(None, ge=1, le=31)
-    category: Optional[Category] = None
-    sub_category: Optional[SubCategory] = None
+    category: Optional[str] = None
+    sub_category: Optional[str] = None
 
 
 class BillResponse(BillBase):
