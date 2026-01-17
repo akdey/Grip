@@ -1,10 +1,10 @@
-# Private Financial Intelligence Engine (PFIE)
+# Griply: The financial diet that sticks.
 
-The **Private Financial Intelligence Engine (PFIE)** is a privacy-first, AI-powered financial aggregator designed to convert raw banking communications into structured, actionable insights without compromising user privacy.
+**Griply** is a privacy-first, AI-powered financial companion designed to convert raw banking communications into structured, actionable insights without compromising user privacy.
 
 ## 🚀 How It Works
 
-PFIE acts as a central hub for your financial life, utilizing a multi-stage pipeline to process data:
+Griply acts as a central hub for your financial life, utilizing a multi-stage pipeline to process data:
 
 1.  **Ingestion**: Receives banking emails via three methods:
     *   **Direct Push**: A Google Apps Script pings the backend with raw email content.
