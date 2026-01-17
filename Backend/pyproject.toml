@@ -17,7 +17,7 @@ dependencies = [
     "email-validator",
     "httpx",
     "python-multipart",
-    "psycopg2>=2.9.11",
+    "psycopg2-binary",
     "google-api-python-client",
     "google-auth",
     "google-auth-oauthlib",
