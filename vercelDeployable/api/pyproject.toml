@@ -1,24 +1,6 @@
-[project]
-name = "private-financial-intelligence-engine"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.11"
-dependencies = [
-    "fastapi",
-    "uvicorn",
-    "sqlalchemy",
-    "asyncpg",
-    "alembic",
-    "python-jose[cryptography]",
-    "passlib[bcrypt]",
-    "bcrypt",
-    "pydantic-settings",
-    "email-validator",
-    "httpx",
-    "python-multipart",
-    "psycopg2-binary",
-    "google-api-python-client",
-    "google-auth",
-    "google-auth-oauthlib",
-]
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
