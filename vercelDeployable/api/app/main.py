@@ -25,12 +25,11 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.ENVIRONMENT in ["local", "development"]:
-        logger.info(f"Environment: {settings.ENVIRONMENT}. Ensuring tables...")
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-    else:
-        logger.info(f"Environment: {settings.ENVIRONMENT}. Skipping table creation.")
+    # Enable for Vercel to ensure initialized DB
+    # In a real heavy-traffic prod, use Alembic, but for this setup it's fine
+    logger.info(f"Environment: {settings.ENVIRONMENT}. ensuring tables...")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     yield
 
 app = FastAPI(
