@@ -76,13 +76,13 @@ const Dashboard: React.FC = () => {
             {/* Liquid Header */}
             <header className="px-5 pt-safe pt-6 pb-4 flex items-center justify-between relative z-50">
                 <div className="flex flex-col">
-                    <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-white/40">
+                    <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-indigo-400">
                         Grip
                     </h1>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[3px] mt-1">Intelligence Hub</p>
 
                     {/* Scope Selector */}
-                    <div className="relative mt-2">
+                    <div className="relative mt-6">
                         <button
                             onClick={() => setShowScopeMenu(!showScopeMenu)}
                             className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
@@ -139,28 +139,28 @@ const Dashboard: React.FC = () => {
             <div className="px-5 space-y-5 animate-enter">
                 {/* Summary Grid */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] flex flex-col gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
                             <ArrowUpRight size={20} />
                         </div>
-                        <div>
-                            <div className="flex items-center justify-between mb-1">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 mb-1">
                                 <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Inflow</p>
                                 {!showSensitive && <Lock size={10} className="text-gray-600" />}
                             </div>
-                            <p className="text-xl font-black text-white leading-none">
+                            <p className="text-lg font-black text-white leading-none truncate">
                                 {showSensitive ? formatCurrency(summary?.total_income || 0) : '******'}
                             </p>
                         </div>
                     </div>
 
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] flex flex-col gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
+                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0">
                             <ArrowDownRight size={20} />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Outflow</p>
-                            <p className="text-xl font-black text-white leading-none">{formatCurrency(summary?.total_expense || 0)}</p>
+                            <p className="text-lg font-black text-white leading-none truncate">{formatCurrency(summary?.total_expense || 0)}</p>
                         </div>
                     </div>
                 </div>

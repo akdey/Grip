@@ -20,7 +20,7 @@ const NAV_ITEMS = [
 
 export const Navbar: React.FC = () => {
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#050505]/60 glass-blur border-t border-white/[0.05] pb-safe pt-2 px-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#050505]/95 glass-blur border-t border-white/[0.05] pb-safe pt-2 px-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
             <div className="flex items-center justify-between h-14 relative">
                 {NAV_ITEMS.map((item) => {
                     if (item.isAction) {

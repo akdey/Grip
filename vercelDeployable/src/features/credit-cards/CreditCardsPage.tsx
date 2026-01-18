@@ -56,8 +56,8 @@ const CreditCardsPage: React.FC = () => {
     if (isLoading) return <Loader fullPage text="Initializing Vault" />;
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white pb-24 overflow-x-hidden">
-            <header className="px-6 py-8 flex items-center justify-between sticky top-0 bg-[#050505]/60 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
+        <div className="text-white pb-24 overflow-x-hidden relative">
+            <header className="px-5 pt-safe pt-6 pb-4 flex items-center justify-between sticky top-0 bg-[#050505]/80 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all">
                         <ArrowLeft size={20} />
@@ -81,7 +81,7 @@ const CreditCardsPage: React.FC = () => {
                 </button>
             </header>
 
-            <div className="p-6 space-y-10 animate-enter">
+            <div className="px-5 py-6 space-y-10 animate-enter">
                 {showForm && (
                     <div className="glass-card p-6 rounded-[2.5rem] border-white/10 space-y-6">
                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[4px] ml-1">
