@@ -55,3 +55,30 @@ async def get_category_expenses_history(db: AsyncSession, user_id: str, days: in
         {"category": row.category, "total": abs(float(row.total or 0))}
         for row in rows
     ]
+
+async def get_discretionary_daily_expenses(db: AsyncSession, user_id: str, days: int = 30):
+    """Return daily discretionary expenses (excluding Investment, Housing, Bills, Transfers, Surety)."""
+    start_date = (datetime.now() - timedelta(days=days)).date()
+    
+    stmt = (
+        select(
+            Transaction.transaction_date.label("day"),
+            func.sum(Transaction.amount).label("total")
+        )
+        .where(Transaction.user_id == user_id)
+        .where(Transaction.category.notin_(["Income", "Investment", "Housing", "Bill Payment", "Transfer"]))
+        .where(Transaction.is_surety == False)
+        .where(Transaction.transaction_date >= start_date)
+        .group_by("day")
+        .order_by("day")
+    )
+    
+    result = await db.execute(stmt)
+    rows = result.all()
+    
+    return [
+        {"ds": row.day.isoformat(), "y": abs(float(row.total or 0))}
+        for row in rows
+        if row.day is not None
+    ]
+

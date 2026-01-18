@@ -107,17 +107,22 @@ class CreditCardService:
         cycle_start: date,
         cycle_end: date
     ) -> Decimal:
-        """Calculate unbilled amount for current billing cycle."""
+        """
+        Calculate total unsettled debt for the card.
+        Ignores cycle dates in favor of explicit 'is_settled' status.
+        """
         stmt = (
             select(func.sum(Transaction.amount))
             .where(Transaction.credit_card_id == card_id)
-            .where(Transaction.transaction_date >= cycle_start)
-            .where(Transaction.transaction_date <= cycle_end)
+            .where(Transaction.is_settled == False) # Only include unpaid transactions
         )
         
         result = await db.execute(stmt)
-        amount = result.scalar()
-        return amount or Decimal("0.00")
+        amount = result.scalar() or Decimal("0.00")
+        # Transactions are stored as: Expense negative (-), Income positive (+)
+        # Unbilled amount (Debt) should be positive for expenses.
+        # So we negate the sum. (-(-1000) = 1000 debt).
+        return -amount
     
     async def get_cycle_info(
         self,

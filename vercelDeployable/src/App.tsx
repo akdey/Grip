@@ -8,6 +8,7 @@ const Login = React.lazy(() => import('./pages/Login'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Transactions = React.lazy(() => import('./pages/Transactions'));
 const CreditCards = React.lazy(() => import('./features/credit-cards/CreditCardsPage'));
+const CreditCardDetails = React.lazy(() => import('./features/credit-cards/CreditCardDetailsPage'));
 const Analytics = React.lazy(() => import('./pages/Analytics'));
 const AddEntry = React.lazy(() => import('./pages/AddEntry'));
 const Bills = React.lazy(() => import('./features/bills/BillsPage'));
@@ -32,6 +33,7 @@ function App() {
               <Route path="/transactions" element={<Transactions />} />
               <Route path="/transactions/:id" element={<AddEntry />} />
               <Route path="/credit-cards" element={<CreditCards />} />
+              <Route path="/credit-cards/:id" element={<CreditCardDetails />} />
               <Route path="/bills" element={<Bills />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/add" element={<AddEntry />} />

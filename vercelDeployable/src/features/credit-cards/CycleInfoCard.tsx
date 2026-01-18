@@ -1,17 +1,20 @@
 import React from 'react';
-import { CreditCard as CardIcon, Calendar, TrendingUp, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { CreditCard as CardIcon, Calendar, TrendingUp, AlertTriangle, ShieldCheck, Pencil } from 'lucide-react';
 import { useCardCycleInfo, type CreditCard } from './hooks';
+import { useNavigate } from 'react-router-dom';
 import { Loader } from '../../components/ui/Loader';
 
 interface Props {
     cardId: string;
     initialData: CreditCard;
+    onEdit?: (card: CreditCard) => void;
 }
 
-export const CycleInfoCard: React.FC<Props> = ({ cardId, initialData }) => {
+export const CycleInfoCard: React.FC<Props> = ({ cardId, initialData, onEdit }) => {
+    const navigate = useNavigate();
     const { data } = useCardCycleInfo(cardId);
 
-    const card = data || initialData;
+    const card = initialData;
     const isDetailed = !!data;
 
     const formatCurrency = (amount: number) =>
@@ -29,7 +32,10 @@ export const CycleInfoCard: React.FC<Props> = ({ cardId, initialData }) => {
     const availableLimit = (data?.credit_limit || 0) - (data?.unbilled_amount || 0);
 
     return (
-        <div className="glass-card p-6 rounded-[2.5rem] relative overflow-hidden group border border-white/[0.05] active:scale-[0.99] transition-all">
+        <div
+            onClick={() => navigate(`/credit-cards/${cardId}`)}
+            className="glass-card p-6 rounded-[2.5rem] relative overflow-hidden group border border-white/[0.05] active:scale-[0.99] transition-all cursor-pointer"
+        >
             {/* Background Gradient Pulse */}
             <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-700" />
 
@@ -56,6 +62,17 @@ export const CycleInfoCard: React.FC<Props> = ({ cardId, initialData }) => {
                             <ShieldCheck size={10} strokeWidth={3} />
                             Safe
                         </div>
+                    )}
+                    {onEdit && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(card);
+                            }}
+                            className="p-2 rounded-full hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                        >
+                            <Pencil size={12} />
+                        </button>
                     )}
                 </div>
 
@@ -88,7 +105,7 @@ export const CycleInfoCard: React.FC<Props> = ({ cardId, initialData }) => {
                             <div className="flex justify-between items-center">
                                 <p className="text-[8px] font-black text-gray-700 uppercase tracking-widest">Limit: {formatCurrency(data.credit_limit || 0)}</p>
                                 <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">
-                                    {data.utilization_percentage.toFixed(1)}% Used
+                                    {(data.utilization_percentage ?? 0).toFixed(1)}% Used
                                 </p>
                             </div>
                         </div>

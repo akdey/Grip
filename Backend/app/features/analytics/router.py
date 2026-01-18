@@ -20,12 +20,13 @@ async def get_monthly_summary(
     db: Annotated[AsyncSession, Depends(get_db)],
     service: Annotated[AnalyticsService, Depends()],
     month: Optional[int] = Query(None, ge=1, le=12),
-    year: Optional[int] = Query(None, ge=2000, le=2100)
+    year: Optional[int] = Query(None, ge=2000, le=2100),
+    scope: str = Query("month", enum=["month", "year", "all"])
 ):
     """
-    Get monthly financial summary (Income vs Expense).
+    Get financial summary (Income vs Expense) for a specific scope.
     """
-    return await service.get_monthly_summary(db, current_user.id, month, year)
+    return await service.get_monthly_summary(db, current_user.id, month, year, scope)
 
 
 @router.get("/variance/", response_model=VarianceAnalysis)
@@ -59,11 +60,13 @@ async def get_burden_calculation(
 async def get_safe_to_spend(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-    service: Annotated[AnalyticsService, Depends()],
-    buffer: float = Query(0.10, ge=0.0, le=0.30, description="Safety buffer percentage (default 10%)")
+    service: Annotated[AnalyticsService, Depends()]
 ):
     """
-    Calculate safe-to-spend amount with frozen funds and buffer.
-    Formula: Balance - FrozenFunds - Buffer
+    Calculate safe-to-spend amount with AI-predicted buffer till salary (1st of next month).
+    Buffer = AI prediction of discretionary expenses till next salary
+    Formula: Balance - FrozenFunds - AI Buffer
     """
-    return await service.calculate_safe_to_spend_amount(db, current_user.id, buffer)
+    return await service.calculate_safe_to_spend_amount(db, current_user.id)
+
+

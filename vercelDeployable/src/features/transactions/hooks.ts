@@ -20,6 +20,7 @@ export interface Transaction {
     sub_category_icon?: string;
     category_color?: string;
     sub_category_color?: string;
+    is_settled?: boolean;
 }
 
 export interface TransactionFilters {
@@ -30,7 +31,10 @@ export interface TransactionFilters {
     category?: string;
     sub_category?: string;
     search?: string;
+    credit_card_id?: string;
 }
+
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 export const useTransactions = (filters: TransactionFilters = {}) => {
     const { limit = 50, skip = 0, ...rest } = filters;
@@ -48,6 +52,29 @@ export const useTransactions = (filters: TransactionFilters = {}) => {
         },
     });
 };
+
+export const useToggleSettledStatus = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            console.log('Toggling settled status for transaction:', id);
+            const { data } = await api.patch<Transaction>(`/transactions/${id}/toggle-settled`);
+            console.log('Toggle response:', data);
+            return data;
+        },
+        onSuccess: () => {
+            console.log('Successfully toggled, invalidating queries...');
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['card-cycle-info'] });
+            queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+        },
+        onError: (error) => {
+            console.error('Error toggling settled status:', error);
+            alert('Failed to update transaction status. Please check console for details.');
+        },
+    });
+};
+
 export const useTransaction = (id?: string) => {
     return useQuery({
         queryKey: ['transaction', id],

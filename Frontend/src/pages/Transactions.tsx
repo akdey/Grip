@@ -426,6 +426,11 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
                         }`}>
                         {txn.is_manual ? 'Manual' : 'Auto'}
                     </span>
+                    {txn.sub_category === 'Credit Card Payment' && (
+                        <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-purple-500/20 text-purple-400 bg-purple-500/10 uppercase tracking-tighter">
+                            Offset
+                        </span>
+                    )}
                 </div>
             </div>
         </div>

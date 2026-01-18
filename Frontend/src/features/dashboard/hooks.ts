@@ -28,6 +28,8 @@ export interface MonthlySummary {
     balance: number;
     month: string;
     year: number;
+    current_period_expense: number;
+    prior_period_settlement: number;
 }
 
 export interface InvestmentSummary {
@@ -47,11 +49,11 @@ export interface ForecastInfo {
     }>;
 }
 
-export const useSafeToSpend = (buffer: number = 0.10) => {
+export const useSafeToSpend = () => {
     return useQuery({
-        queryKey: ['safe-to-spend', buffer],
+        queryKey: ['safe-to-spend'],
         queryFn: async () => {
-            const { data } = await api.get<SafeToSpend>(`/analytics/safe-to-spend/?buffer=${buffer}`);
+            const { data } = await api.get<SafeToSpend>(`/analytics/safe-to-spend/`);
             return data;
         },
     });
@@ -70,13 +72,14 @@ export const useVariance = (month?: number, year?: number) => {
     });
 };
 
-export const useMonthlySummary = (month?: number, year?: number) => {
+export const useMonthlySummary = (month?: number, year?: number, scope: string = 'month') => {
     return useQuery({
-        queryKey: ['monthly-summary', month, year],
+        queryKey: ['monthly-summary', month, year, scope],
         queryFn: async () => {
             const params = new URLSearchParams();
             if (month) params.append('month', month.toString());
             if (year) params.append('year', year.toString());
+            if (scope) params.append('scope', scope);
             const { data } = await api.get<MonthlySummary>(`/analytics/summary/?${params.toString()}`);
             return data;
         },

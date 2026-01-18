@@ -37,3 +37,5 @@ class MonthlySummaryResponse(BaseModel):
     balance: Decimal
     month: str
     year: int
+    current_period_expense: Decimal = Decimal(0)
+    prior_period_settlement: Decimal = Decimal(0)

@@ -1,4 +1,5 @@
 from typing import Annotated, List, Optional
+from datetime import date
 from uuid import UUID
 from fastapi import APIRouter, Depends
 from app.features.auth.deps import get_current_user
@@ -42,9 +43,9 @@ async def get_all_transactions(
     end_date: Optional[str] = None,
     category: Optional[str] = None,
     sub_category: Optional[str] = None,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    credit_card_id: Optional[UUID] = None
 ):
-    from datetime import date
     parsed_start = date.fromisoformat(start_date) if start_date else None
     parsed_end = date.fromisoformat(end_date) if end_date else None
     
@@ -56,7 +57,8 @@ async def get_all_transactions(
         end_date=parsed_end,
         category=category,
         sub_category=sub_category,
-        search=search
+        search=search,
+        credit_card_id=credit_card_id
     )
 
 @router.post("/", response_model=schemas.TransactionResponse)
@@ -92,3 +94,11 @@ async def update_transaction(
     service: Annotated[TransactionService, Depends()]
 ):
     return await service.update_transaction(transaction_id=transaction_id, user_id=current_user.id, data=data) 
+
+@router.patch("/{transaction_id}/toggle-settled", response_model=schemas.TransactionResponse)
+async def toggle_settled_status(
+    transaction_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[TransactionService, Depends()]
+):
+    return await service.toggle_settled_status(transaction_id=transaction_id, user_id=current_user.id) 

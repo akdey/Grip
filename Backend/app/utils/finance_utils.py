@@ -202,3 +202,25 @@ def get_previous_month_date_range(reference_date: Optional[date] = None) -> Dict
         "month_start": month_start,
         "month_end": month_end
     }
+
+
+def get_year_date_range(reference_date: Optional[date] = None) -> Dict[str, date]:
+    """
+    Get start and end dates for the current year.
+    
+    Args:
+        reference_date: Reference date (defaults to today)
+        
+    Returns:
+        Dictionary with year_start and year_end
+    """
+    if reference_date is None:
+        reference_date = date.today()
+    
+    year_start = date(reference_date.year, 1, 1)
+    year_end = date(reference_date.year, 12, 31)
+    
+    return {
+        "year_start": year_start,
+        "year_end": year_end
+    }

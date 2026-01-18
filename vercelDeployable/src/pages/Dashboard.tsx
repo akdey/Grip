@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useSafeToSpend, useMonthlySummary, useForecast } from '../features/dashboard/hooks';
+import { useSafeToSpend, useMonthlySummary, useForecast, useVariance } from '../features/dashboard/hooks';
 import RecentActivity from '../features/dashboard/components/RecentActivity';
 import { useTransactions } from '../features/transactions/hooks';
 import {
@@ -11,18 +11,23 @@ import {
     Activity,
     Eye,
     EyeOff,
+    Check,
+    ChevronDown,
     Receipt
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '../components/ui/Loader';
 const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
-import { motion } from 'framer-motion';
+import { startOfMonth, endOfMonth, startOfYear, endOfYear, format } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const [showSensitive, setShowSensitive] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showForecastDetails, setShowForecastDetails] = useState(false);
+    const [scope, setScope] = useState('month');
+    const [showScopeMenu, setShowScopeMenu] = useState(false);
 
     const togglePrivacy = () => {
         if (showSensitive) {
@@ -32,10 +37,22 @@ const Dashboard: React.FC = () => {
         }
     };
 
-    const { data: summary, isLoading: isSummaryLoading } = useMonthlySummary();
-    const { data: safeToSpend, isLoading: isSafeLoading } = useSafeToSpend(0.10);
+    const now = new Date();
+    const txnFilters: any = { limit: 5 };
+
+    if (scope === 'month') {
+        txnFilters.start_date = format(startOfMonth(now), 'yyyy-MM-dd');
+        txnFilters.end_date = format(endOfMonth(now), 'yyyy-MM-dd');
+    } else if (scope === 'year') {
+        txnFilters.start_date = format(startOfYear(now), 'yyyy-MM-dd');
+        txnFilters.end_date = format(endOfYear(now), 'yyyy-MM-dd');
+    }
+
+    const { data: summary, isLoading: isSummaryLoading } = useMonthlySummary(undefined, undefined, scope);
+    const { data: safeToSpend, isLoading: isSafeLoading } = useSafeToSpend();
     const { data: forecast, isLoading: isForecastLoading } = useForecast();
-    const { data: transactions, isLoading: isTxnLoading } = useTransactions({ limit: 5 });
+    const { data: transactions, isLoading: isTxnLoading } = useTransactions(txnFilters);
+    const { data: variance, isLoading: isVarianceLoading } = useVariance();
 
     const formatCurrency = (amount: number) =>
         new Intl.NumberFormat('en-IN', {
@@ -44,21 +61,63 @@ const Dashboard: React.FC = () => {
             maximumFractionDigits: 0
         }).format(amount);
 
-    if (isSummaryLoading || isSafeLoading || isTxnLoading || isForecastLoading) {
+    if (isSummaryLoading || isSafeLoading || isTxnLoading || isForecastLoading || isVarianceLoading) {
         return <Loader fullPage text="Synchronizing Intelligence" />;
     }
+
+    const scopes = [
+        { id: 'month', label: 'This Month' },
+        { id: 'year', label: 'This Year' },
+        { id: 'all', label: 'All Time' }
+    ];
 
     return (
         <div className="min-h-screen bg-[#050505] text-white pb-20 overflow-x-hidden">
             {/* Liquid Header */}
-            <header className="px-6 py-8 flex items-center justify-between">
+            <header className="px-6 py-8 flex items-center justify-between relative z-50">
                 <div className="flex flex-col">
                     <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-white/40">
                         Griply
                     </h1>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[3px] mt-1">Intelligence Hub</p>
+
+                    {/* Scope Selector */}
+                    <div className="relative mt-2">
+                        <button
+                            onClick={() => setShowScopeMenu(!showScopeMenu)}
+                            className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
+                        >
+                            <span>{scopes.find(s => s.id === scope)?.label}</span>
+                            <ChevronDown size={10} className={`transition-transform duration-300 ${showScopeMenu ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        <AnimatePresence>
+                            {showScopeMenu && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="absolute top-full left-0 mt-2 w-40 bg-[#1A1A1A] border border-white/[0.1] rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl z-[100]"
+                                >
+                                    {scopes.map(s => (
+                                        <button
+                                            key={s.id}
+                                            onClick={() => { setScope(s.id); setShowScopeMenu(false); }}
+                                            className={`w-full text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-white/[0.05] transition-all flex items-center justify-between ${scope === s.id ? 'text-white bg-white/[0.05]' : 'text-gray-500'}`}
+                                        >
+                                            {s.label}
+                                            {scope === s.id && <Check size={12} className="text-white" />}
+                                        </button>
+                                    ))}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
                 <div className="flex items-center gap-3">
+
+
                     <button
                         onClick={togglePrivacy}
                         className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all shadow-2xl ${showSensitive
@@ -106,34 +165,121 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Accrual Accounting - Outflow Composition */}
+                {summary && (() => {
+                    const currentExpense = summary.current_period_expense || 0;
+                    const priorSettlement = summary.prior_period_settlement || 0;
+                    const total = currentExpense + priorSettlement;
+                    const max = Math.max(total, 1);
+
+                    return (
+                        <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] flex flex-col gap-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[3px]">Outflow Ledger</h3>
+                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                                    Accrual View
+                                </span>
+                            </div>
+
+                            <div className="space-y-3">
+                                {/* Current Period Expense */}
+                                <div>
+                                    <div className="flex justify-between mb-1">
+                                        <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Current Period</span>
+                                        <span className="text-[9px] font-black text-white">{formatCurrency(currentExpense)}</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-white/[0.03] rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${(currentExpense / max) * 100}%` }}
+                                            className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full"
+                                        />
+                                    </div>
+                                    <p className="text-[8px] text-gray-600 mt-1 font-medium">Expenses incurred this period</p>
+                                </div>
+
+                                {/* Prior Period Settlement */}
+                                <div>
+                                    <div className="flex justify-between mb-1">
+                                        <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest">Prior Settlement</span>
+                                        <span className="text-[9px] font-black text-gray-400">{formatCurrency(priorSettlement)}</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-white/[0.03] rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${(priorSettlement / max) * 100}%` }}
+                                            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
+                                        />
+                                    </div>
+                                    <p className="text-[8px] text-gray-600 mt-1 font-medium">Credit card bills paid from prior period</p>
+                                </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-white/[0.05] flex justify-between items-center">
+                                <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Total Outflow</span>
+                                <span className="text-sm font-black text-white">{formatCurrency(total)}</span>
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {/* Safe to Spend - Liquid Glass Hero */}
                 {(() => {
                     const safe = Number(safeToSpend?.safe_to_spend || 0);
                     const balance = Number(safeToSpend?.current_balance || 0);
-                    const status = balance <= 0 || safe <= 0 ? 'danger' : safe < balance * 0.25 ? 'warning' : 'success';
+
+                    // 4-Stage Status System
+                    // Stage 1: Negative (deep red with white/red text)
+                    // Stage 2: Critical Low < ₹5000 (red)
+                    // Stage 3: Warning ₹5000-₹15000 (amber)
+                    // Stage 4: Healthy > ₹15000 (blue)
+                    let status: 'negative' | 'critical' | 'warning' | 'success';
+                    if (safe < 0) {
+                        status = 'negative';
+                    } else if (safe < 1000) {
+                        status = 'critical';
+                    } else if (safe < 3000) {
+                        status = 'warning';
+                    } else {
+                        status = 'success';
+                    }
 
                     const themes = {
-                        danger: {
+                        negative: {
+                            glow: 'bg-red-600/30',
+                            border: 'border-red-600/30',
+                            text: 'text-red-500',
+                            amountText: 'text-white',
+                            shadow: 'shadow-[0_40px_80px_-15px_rgba(220,38,38,0.25)]',
+                            pill: 'bg-red-600/20 text-red-400 border-red-600/30',
+                            bgIntensity: 'bg-red-600/10'
+                        },
+                        critical: {
                             glow: 'bg-rose-500/20',
                             border: 'border-rose-500/20',
                             text: 'text-rose-400',
+                            amountText: 'text-white',
                             shadow: 'shadow-[0_40px_80px_-15px_rgba(225,29,72,0.15)]',
-                            pill: 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                            pill: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                            bgIntensity: 'bg-rose-500/5'
                         },
                         warning: {
                             glow: 'bg-amber-500/20',
                             border: 'border-amber-500/20',
                             text: 'text-amber-400',
+                            amountText: 'text-white',
                             shadow: 'shadow-[0_40px_80px_-15px_rgba(245,158,11,0.15)]',
-                            pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                            bgIntensity: 'bg-amber-500/5'
                         },
                         success: {
                             glow: 'bg-indigo-500/20',
                             border: 'border-white/[0.08]',
                             text: 'text-indigo-400',
+                            amountText: 'text-white',
                             shadow: 'shadow-[0_40px_80px_-15px_rgba(79,70,229,0.2)]',
-                            pill: 'bg-white/[0.05] text-indigo-300 border-white/[0.05]'
+                            pill: 'bg-white/[0.05] text-indigo-300 border-white/[0.05]',
+                            bgIntensity: 'bg-white/[0.01]'
                         }
                     };
 
@@ -157,9 +303,10 @@ const Dashboard: React.FC = () => {
                                     <span className="text-[10px] font-black uppercase tracking-[3px]">Safe Liquid</span>
                                 </div>
 
-                                <h2 className="text-6xl font-black tracking-tighter text-white mb-2">
-                                    {formatCurrency(safe)}
-                                </h2>
+                                <h3 className={`text-6xl font-black tracking-tighter mb-3 ${theme.amountText} flex items-center justify-center gap-1`}>
+                                    {safe < 0 && <span className={theme.text}>-</span>}
+                                    <span>{formatCurrency(Math.abs(safe))}</span>
+                                </h3>
 
                                 <p className="text-[11px] font-medium text-gray-400 max-w-[240px] leading-relaxed">
                                     {safeToSpend?.recommendation}
@@ -167,10 +314,10 @@ const Dashboard: React.FC = () => {
 
                                 {/* Progress Indicator - Glass Style */}
                                 <div className="w-full max-w-[200px] mt-8 space-y-3">
-                                    <div className="h-1.5 w-full bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.05]">
+                                    <div className="h-1 w-full bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.05]">
                                         <motion.div
                                             initial={{ width: 0 }}
-                                            animate={{ width: `${Math.min((safe / Math.max(balance, 1)) * 100, 100)}%` }}
+                                            animate={{ width: `${Math.max(0, Math.min((safe / Math.max(balance, 1)) * 100, 100))}%` }}
                                             transition={{ duration: 1.5, ease: [0.34, 1.56, 0.64, 1] }}
                                             className={`h-full bg-gradient-to-r from-white to-white/60 shadow-[0_0_20px_rgba(255,255,255,0.3)]`}
                                         />

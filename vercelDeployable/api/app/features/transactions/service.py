@@ -74,45 +74,54 @@ class TransactionService:
         end_date: Optional[date] = None,
         category: Optional[str] = None,
         sub_category: Optional[str] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
+        credit_card_id: Optional[UUID] = None
     ) -> List[Transaction]:
         from sqlalchemy import or_
-
-        stmt = (
-            select(Transaction)
-            .where(Transaction.user_id == user_id)
-        )
-
-        if start_date:
-            stmt = stmt.where(Transaction.transaction_date >= start_date)
-        if end_date:
-            stmt = stmt.where(Transaction.transaction_date <= end_date)
-        
-        if category:
-            stmt = stmt.where(Transaction.category.ilike(category))
-        if sub_category:
-            stmt = stmt.where(Transaction.sub_category.ilike(sub_category))
-            
-        if search:
-            search_term = f"%{search}%"
-            stmt = stmt.where(
-                or_(
-                    Transaction.merchant_name.ilike(search_term),
-                    Transaction.remarks.ilike(search_term),
-                    Transaction.category.ilike(search_term),
-                    Transaction.sub_category.ilike(search_term)
-                )
+        try:
+            stmt = (
+                select(Transaction)
+                .where(Transaction.user_id == user_id)
             )
 
-        stmt = (
-            stmt
-            .order_by(Transaction.transaction_date.desc().nulls_last(), Transaction.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-        )
-        result = await self.db.execute(stmt)
-        transactions = result.scalars().all()
-        return await self._attach_icons(transactions)
+            if credit_card_id:
+                stmt = stmt.where(Transaction.credit_card_id == credit_card_id)
+
+            if start_date:
+                stmt = stmt.where(Transaction.transaction_date >= start_date)
+            if end_date:
+                stmt = stmt.where(Transaction.transaction_date <= end_date)
+            
+            if category:
+                stmt = stmt.where(Transaction.category.ilike(category))
+            if sub_category:
+                stmt = stmt.where(Transaction.sub_category.ilike(sub_category))
+                
+            if search:
+                search_term = f"%{search}%"
+                stmt = stmt.where(
+                    or_(
+                        Transaction.merchant_name.ilike(search_term),
+                        Transaction.remarks.ilike(search_term),
+                        Transaction.category.ilike(search_term),
+                        Transaction.sub_category.ilike(search_term)
+                    )
+                )
+
+            stmt = (
+                stmt
+                .order_by(Transaction.transaction_date.desc().nulls_last(), Transaction.created_at.desc())
+                .offset(skip)
+                .limit(limit)
+            )
+            result = await self.db.execute(stmt)
+            transactions = result.scalars().all()
+            return await self._attach_icons(transactions)
+        except Exception as e:
+            logger.error(f"Error fetching transactions: {e}")
+            # If critical parameter error, could raise HTTPException.
+            # But to keep UI stable, return empty list or re-raise
+            raise HTTPException(status_code=500, detail=f"Failed to fetch transactions: {str(e)}")
 
     async def verify_transaction(self, transaction_id: UUID, user_id: UUID, verification: schemas.VerificationRequest) -> Transaction:
         stmt = select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user_id)
@@ -234,3 +243,18 @@ class TransactionService:
         result = await self.db.execute(stmt)
         categories = result.scalars().all()
         return {c.name: [s.name for s in c.sub_categories] for c in categories}
+
+    async def toggle_settled_status(self, transaction_id: UUID, user_id: UUID) -> Transaction:
+        stmt = select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user_id)
+        result = await self.db.execute(stmt)
+        txn = result.scalar_one_or_none()
+        
+        if not txn:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+            
+        txn.is_settled = not txn.is_settled
+        await self.db.commit()
+        await self.db.refresh(txn)
+        
+        txns = await self._attach_icons([txn])
+        return txns[0]

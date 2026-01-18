@@ -212,3 +212,120 @@ class ForecastingService:
             logger.error(f"LLM breakdown error: {e}")
             
         return {"reason": "Statistical forecast.", "breakdown": []}
+
+    async def predict_discretionary_buffer(self, history_data: List[dict], buffer_days: int = 7) -> dict:
+        """
+        Predict discretionary spending for the next N days using AI.
+        Returns: {
+            "predicted_amount": Decimal,
+            "confidence": str,
+            "range_low": Decimal,
+            "range_high": Decimal,
+            "method": str
+        }
+        """
+        default_result = {
+            "predicted_amount": Decimal("500"),  # Minimum fallback
+            "confidence": "low",
+            "range_low": Decimal("500"),
+            "range_high": Decimal("500"),
+            "method": "fallback"
+        }
+        
+        if not history_data or len(history_data) < 7:
+            return default_result
+        
+        use_prophet = settings.USE_AI_FORECASTING and PROPHET_AVAILABLE
+        
+        try:
+            if use_prophet:
+                # Use Prophet for prediction
+                df = pd.DataFrame(history_data)
+                df['ds'] = pd.to_datetime(df['ds'])
+                
+                m = Prophet(interval_width=0.8)  # 80% confidence interval
+                m.fit(df)
+                
+                # Predict for buffer_days
+                future = m.make_future_dataframe(periods=buffer_days)
+                forecast = m.predict(future)
+                
+                # Get predictions for future days only
+                last_date = df['ds'].max()
+                future_mask = forecast['ds'] > last_date
+                future_forecast = forecast[future_mask]
+                
+                predicted_total = max(0, future_forecast['yhat'].sum())
+                range_low = max(0, future_forecast['yhat_lower'].sum())
+                range_high = max(0, future_forecast['yhat_upper'].sum())
+                
+                return {
+                    "predicted_amount": Decimal(str(predicted_total)),
+                    "confidence": "high",
+                    "range_low": Decimal(str(range_low)),
+                    "range_high": Decimal(str(range_high)),
+                    "method": "prophet"
+                }
+            
+            elif settings.GROQ_API_KEY:
+                # Use LLM for prediction
+                history_summary = [
+                    {"date": d['ds'], "amount": float(d['y'])} 
+                    for d in history_data[-30:]  # Last 30 days
+                ]
+                
+                prompt = f"""
+                Analyze the following 30-day DISCRETIONARY expense history (Food, Shopping, Entertainment, Transport, etc.).
+                Predict the TOTAL discretionary spending for the NEXT {buffer_days} DAYS.
+                
+                Daily History: {json.dumps(history_summary)}
+                
+                Consider:
+                - Day of week patterns (weekends vs weekdays)
+                - Recent trends
+                - Typical daily variation
+                
+                Return ONLY a JSON object:
+                {{
+                    "predicted_total": float,
+                    "confidence_low": float,
+                    "confidence_high": float
+                }}
+                """
+                
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                headers = {
+                    "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "model": settings.GROQ_MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.1
+                }
+                
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(url, headers=headers, json=payload, timeout=10.0)
+                    
+                if response.status_code == 200:
+                    result = response.json()['choices'][0]['message']['content']
+                    data = json.loads(result)
+                    
+                    predicted = max(0, data.get("predicted_total", 0))
+                    low = max(0, data.get("confidence_low", predicted * 0.8))
+                    high = max(0, data.get("confidence_high", predicted * 1.2))
+                    
+                    return {
+                        "predicted_amount": Decimal(str(predicted)),
+                        "confidence": "medium",
+                        "range_low": Decimal(str(low)),
+                        "range_high": Decimal(str(high)),
+                        "method": "llm"
+                    }
+                    
+        except Exception as e:
+            logger.error(f"Buffer prediction error: {e}")
+        
+        return default_result
+

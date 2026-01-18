@@ -41,12 +41,26 @@ export const useCardCycleInfo = (cardId: string) => {
     });
 };
 
+
 export const useAddCreditCard = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (newCard: Partial<CreditCard>) => {
             const { data } = await api.post('/credit-cards', newCard);
             return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+        },
+    });
+};
+
+export const useUpdateCreditCard = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, ...data }: Partial<CreditCard> & { id: string }) => {
+            const { data: response } = await api.put(`/credit-cards/${id}`, data);
+            return response;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
