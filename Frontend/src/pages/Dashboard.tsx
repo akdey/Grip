@@ -72,9 +72,9 @@ const Dashboard: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white pb-20 overflow-x-hidden">
+        <div className="text-white pb-24 overflow-x-hidden relative">
             {/* Liquid Header */}
-            <header className="px-6 py-8 flex items-center justify-between relative z-50">
+            <header className="px-5 pt-safe pt-6 pb-4 flex items-center justify-between relative z-50">
                 <div className="flex flex-col">
                     <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-white/40">
                         Grip
@@ -136,7 +136,7 @@ const Dashboard: React.FC = () => {
                 </div>
             </header>
 
-            <div className="px-4 space-y-6 animate-enter">
+            <div className="px-5 space-y-5 animate-enter">
                 {/* Summary Grid */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] flex flex-col gap-4">

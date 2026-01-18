@@ -15,7 +15,7 @@ export const Layout: React.FC = () => {
             {!isEntryPage && <Sidebar />}
 
             <main className={`min-h-screen transition-all duration-300 ${!isEntryPage ? 'md:pl-72 pb-32 md:pb-12' : 'pb-0'}`}>
-                <div className={`container mx-auto max-w-7xl ${!isEntryPage ? 'animate-enter px-4 py-6 md:p-12' : 'p-0'}`}>
+                <div className={`container mx-auto max-w-7xl ${!isEntryPage ? 'animate-enter px-0 md:px-12 md:py-12 pb-24' : 'p-0'}`}>
                     <Outlet />
                 </div>
             </main>

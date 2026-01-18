@@ -15,7 +15,12 @@
     ],
     "start_url": "/",
     "display": "standalone",
-    "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+    "display_override": [
+        "window-controls-overlay",
+        "standalone",
+        "fullscreen",
+        "minimal-ui"
+    ],
     "theme_color": "#050505",
     "background_color": "#050505",
     "orientation": "portrait"
