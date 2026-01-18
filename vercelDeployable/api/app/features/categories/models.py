@@ -11,6 +11,7 @@ class Category(Base):
     name: Mapped[str] = mapped_column(String, index=True)
     icon: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     color: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    type: Mapped[str] = mapped_column(String, default="EXPENSE") # EXPENSE, INCOME, INVESTMENT
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True) # None for system categories
 
     sub_categories: Mapped[List["SubCategory"]] = relationship("SubCategory", back_populates="category", cascade="all, delete-orphan", lazy="selectin")
@@ -22,6 +23,7 @@ class SubCategory(Base):
     name: Mapped[str] = mapped_column(String)
     icon: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     color: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    type: Mapped[str] = mapped_column(String, default="EXPENSE")
     category_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("categories.id"))
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
 

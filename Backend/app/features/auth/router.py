@@ -63,3 +63,14 @@ async def login_for_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+from app.features.auth.deps import get_current_user
+
+@router.post("/verify")
+async def verify_user_password(
+    data: schemas.PasswordVerification,
+    current_user: Annotated[User, Depends(get_current_user)]
+):
+    if not verify_password(data.password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Invalid password")
+    return {"valid": True}

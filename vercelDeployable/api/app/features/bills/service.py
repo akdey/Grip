@@ -21,7 +21,9 @@ SURETY_CATEGORIES = {
         "Internet",
         "Mobile Recharge",
         "Gas"
-    ]
+    ],
+    "Investment": ["SIP", "Mutual Fund", "Stocks", "EPF", "PPF", "FD", "RD"],
+    "Insurance": ["Life Insurance", "Health Insurance", "Car Insurance", "Term Insurance"]
 }
 
 

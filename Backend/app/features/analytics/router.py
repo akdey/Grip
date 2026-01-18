@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
@@ -18,25 +18,28 @@ router = APIRouter()
 async def get_monthly_summary(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-    service: Annotated[AnalyticsService, Depends()]
+    service: Annotated[AnalyticsService, Depends()],
+    month: Optional[int] = Query(None, ge=1, le=12),
+    year: Optional[int] = Query(None, ge=2000, le=2100)
 ):
     """
     Get monthly financial summary (Income vs Expense).
     """
-    return await service.get_monthly_summary(db, current_user.id)
+    return await service.get_monthly_summary(db, current_user.id, month, year)
 
 
 @router.get("/variance/", response_model=VarianceAnalysis)
 async def get_variance_analysis(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-    service: Annotated[AnalyticsService, Depends()]
+    service: Annotated[AnalyticsService, Depends()],
+    month: Optional[int] = Query(None, ge=1, le=12),
+    year: Optional[int] = Query(None, ge=2000, le=2100)
 ):
     """
-    Get month-to-date vs last month spending variance analysis.
-    Compares current month spending with previous month by category.
+    Get spending variance analysis for a specific period.
     """
-    return await service.get_variance_analysis(db, current_user.id)
+    return await service.get_variance_analysis(db, current_user.id, month, year)
 
 
 @router.get("/burden/", response_model=FrozenFundsBreakdown)

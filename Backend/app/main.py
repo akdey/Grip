@@ -16,6 +16,7 @@ from app.features.credit_cards.router import router as credit_cards_router
 from app.features.bills.router import router as bills_router
 from app.features.analytics.router import router as analytics_router
 from app.features.categories.router import router as categories_router
+from app.features.goals.router import router as goals_router
 from app.features.sync.models import SyncLog 
 
 setup_logging()
@@ -75,6 +76,7 @@ app.include_router(credit_cards_router, prefix=f"{settings.API_V1_STR}/credit-ca
 app.include_router(bills_router, prefix=f"{settings.API_V1_STR}/bills", tags=["bills"])
 app.include_router(analytics_router, prefix=f"{settings.API_V1_STR}/analytics", tags=["analytics"])
 app.include_router(categories_router, prefix=f"{settings.API_V1_STR}/categories", tags=["categories"])
+app.include_router(goals_router, prefix=f"{settings.API_V1_STR}/goals", tags=["goals"])
 
 @app.get("/")
 async def root():

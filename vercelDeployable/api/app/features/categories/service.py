@@ -25,6 +25,7 @@ class CategoryService:
             name=data.name,
             icon=data.icon,
             color=data.color,
+            type=data.type,
             user_id=user_id
         )
         self.db.add(category)
@@ -37,6 +38,7 @@ class CategoryService:
             name=data.name,
             icon=data.icon,
             color=data.color,
+            type=data.type,
             category_id=data.category_id,
             user_id=user_id
         )

@@ -1,23 +1,48 @@
-import React, { useMemo } from 'react';
-import { useVariance, useInvestments } from '../features/dashboard/hooks';
+import React, { useMemo, useState } from 'react';
+import { useVariance, useInvestments, useMonthlySummary } from '../features/dashboard/hooks';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, TrendingUp, ArrowLeft, Target, Layers } from 'lucide-react';
+import { TrendingUp, ArrowLeft, Target, Layers, ChevronLeft, ChevronRight, TrendingDown, Eye, EyeOff, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { format, addMonths, subMonths } from 'date-fns';
 import { Loader } from '../components/ui/Loader';
+
+const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
 
 const COLORS = ['#00f2ea', '#ff0050', '#6366f1', '#fbbf24', '#34d399', '#c084fc'];
 
 const Analytics: React.FC = () => {
     const navigate = useNavigate();
-    const { data: variance, isLoading: isVarianceLoading } = useVariance();
-    const { data: investments, isLoading: isInvestLoading } = useInvestments();
+    const [referenceDate, setReferenceDate] = useState(new Date());
+    const [showSensitive, setShowSensitive] = useState(false);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+
+    const togglePrivacy = () => {
+        if (showSensitive) {
+            setShowSensitive(false);
+        } else {
+            setShowAuthModal(true);
+        }
+    };
+
+    const { data: variance, isLoading: isVarianceLoading } = useVariance(
+        referenceDate.getMonth() + 1,
+        referenceDate.getFullYear()
+    );
+    const { data: summary, isLoading: isSummaryLoading } = useMonthlySummary(
+        referenceDate.getMonth() + 1,
+        referenceDate.getFullYear()
+    );
+    const { data: investments, isLoading: isInvestLoading } = useInvestments(
+        referenceDate.getMonth() + 1,
+        referenceDate.getFullYear()
+    );
 
     const categoryData = useMemo(() => {
         if (!variance?.category_breakdown) return [];
         return Object.entries(variance.category_breakdown)
             .map(([name, data]: any) => ({
                 name,
-                value: data.current || 0,
+                value: Math.abs(data.current || 0),
                 ...data
             }))
             .filter(item => item.value > 0)
@@ -27,7 +52,7 @@ const Analytics: React.FC = () => {
     const investmentData = useMemo(() => {
         if (!investments?.breakdown) return [];
         return Object.entries(investments.breakdown)
-            .map(([name, value]) => ({ name, value }))
+            .map(([name, value]) => ({ name, value: Math.abs(value) }))
             .filter(item => item.value > 0)
             .sort((a, b) => b.value - a.value);
     }, [investments]);
@@ -35,7 +60,7 @@ const Analytics: React.FC = () => {
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
-    if (isVarianceLoading || isInvestLoading) return <Loader fullPage text="Visualizing Data" />;
+    if (isVarianceLoading || isInvestLoading || isSummaryLoading) return <Loader fullPage text="Visualizing Data" />;
 
     return (
         <div className="min-h-screen bg-[#050505] text-white pb-24 overflow-x-hidden">
@@ -44,9 +69,88 @@ const Analytics: React.FC = () => {
                     <ArrowLeft size={20} />
                 </button>
                 <h1 className="text-xl font-black tracking-tight uppercase">Intelligence</h1>
+
+                <button
+                    onClick={togglePrivacy}
+                    className={`ml-auto w-10 h-10 rounded-full border flex items-center justify-center transition-all ${showSensitive
+                        ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
+                        : 'bg-white/[0.03] border-white/[0.08] text-gray-400'
+                        }`}
+                >
+                    {showSensitive ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
             </header>
 
-            <div className="p-6 space-y-12 animate-enter">
+            <div className="px-6 py-8 space-y-10 animate-enter">
+                {/* Period Selector & Navigator */}
+                <div className="space-y-8">
+                    {/* Month Navigator */}
+                    <div className="flex items-center justify-between px-2">
+                        <button
+                            onClick={() => setReferenceDate(subMonths(referenceDate, 1))}
+                            className="w-12 h-12 rounded-full bg-white/[0.02] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all hover:bg-white/[0.05]"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                        <div className="bg-white/[0.03] px-8 py-3 rounded-2xl border border-white/[0.05]">
+                            <span className="text-[12px] font-black uppercase tracking-[3px]">
+                                {format(referenceDate, 'MMMM yyyy')}
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => setReferenceDate(addMonths(referenceDate, 1))}
+                            className="w-12 h-12 rounded-full bg-white/[0.02] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all hover:bg-white/[0.05]"
+                        >
+                            <ChevronRight size={20} />
+                        </button>
+                    </div>
+
+                    {/* Spend / Income Pills */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-[2rem] flex items-center gap-3 relative overflow-hidden group hover:bg-rose-500/15 transition-all">
+                            <div className="w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                                <TrendingUp size={16} />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-[8px] font-black text-rose-500/60 uppercase tracking-widest leading-none mb-1">Spending</span>
+                                <span className="text-sm font-black text-white tracking-tighter whitespace-nowrap">
+                                    {formatCurrency(summary?.total_expense || 0)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-[2rem] flex items-center gap-3 relative overflow-hidden group hover:bg-emerald-500/15 transition-all">
+                            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                                <TrendingDown size={16} />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[8px] font-black text-emerald-500/60 uppercase tracking-widest leading-none mb-1">Income</span>
+                                    {!showSensitive && <Lock size={8} className="text-emerald-500/40 mb-1" />}
+                                </div>
+                                <span className="text-sm font-black text-white tracking-tighter whitespace-nowrap">
+                                    {showSensitive ? formatCurrency(summary?.total_income || 0) : '******'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Monthly Balance Pill */}
+                    <div className="flex justify-center">
+                        <div className="bg-white/[0.03] border border-white/[0.08] px-8 py-3 rounded-full flex items-center gap-3">
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Balance</span>
+                            {!showSensitive && <Lock size={10} className="text-gray-600" />}
+                            <span className={`text-sm font-black tracking-tighter ${Number(summary?.balance) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                {showSensitive ? (
+                                    <>
+                                        {Number(summary?.balance) < 0 ? '-' : ''}{formatCurrency(Math.abs(summary?.balance || 0))}
+                                    </>
+                                ) : '******'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Outflow Analysis Section */}
                 <div className="space-y-6">
                     <div className="flex items-center gap-3">
@@ -127,11 +231,11 @@ const Analytics: React.FC = () => {
                     <div className="glass-card rounded-[2.5rem] p-8 bg-gradient-to-br from-emerald-600/10 to-transparent border-emerald-500/10">
                         <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1 opacity-60">Total Deployed</p>
                         <h3 className="text-4xl font-black text-white tracking-tighter mb-8">
-                            {formatCurrency(investments?.total_investments || 0)}
+                            {formatCurrency(Math.abs(investments?.total_investments || 0))}
                         </h3>
 
                         <div className="space-y-4">
-                            {investmentData.map((inv, idx) => {
+                            {investmentData.map((inv) => {
                                 const percentage = ((inv.value / (investments?.total_investments || 1)) * 100);
                                 return (
                                     <div key={inv.name} className="space-y-2">
@@ -152,6 +256,17 @@ const Analytics: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <React.Suspense fallback={null}>
+                <PasswordVerifyModal
+                    isOpen={showAuthModal}
+                    onClose={() => setShowAuthModal(false)}
+                    onSuccess={() => {
+                        setShowSensitive(true);
+                        setShowAuthModal(false);
+                    }}
+                />
+            </React.Suspense>
         </div>
     );
 };

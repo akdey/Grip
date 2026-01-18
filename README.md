@@ -19,9 +19,8 @@ Griply acts as a central hub for your financial life, utilizing a multi-stage pi
 4.  **Deduplication**: A SHA-256 hash of the unique message ID and internal timestamp ensures no transaction is ever processed twice.
 5.  **Memory (Merchant Mapping)**: When you manually verify a transaction, the engine creates a "Merchant Mapping." Future transactions from that same merchant are automatically categorized based on your past preferences.
 6.  **Insights**: A dedicated dashboard provides real-time visibility into your Liquidity and Investment portfolio.
-7.  **Predictive Forecasting**: Leverages a **Hybrid AI Engine** (Meta Prophet locally, or Groq Llama 3 on Vercel) to analyze historical spending patterns, predicting your upcoming monthly burden to calculate a 30-day "Safe-to-Spend" margin.
+7.  **Predictive Forecasting**: Leverages a **Hybrid AI Engine** (Meta Prophet locally, or Groq Llama 3 on Vercel) to analyze historical spending patterns and category trends. It predicts your **month-end burden** (remaining expenses for the current month) to calculate a dynamic "Safe-to-Spend" margin.
 8.  **PWA Ready**: Install Griply on your mobile device as a Progressive Web App for a native-like experience with offline capabilities.
-
 ---
 
 ## ✨ Core Functionalities
@@ -53,13 +52,13 @@ Griply acts as a central hub for your financial life, utilizing a multi-stage pi
 
 ### 📉 Predictive Analytics & Hybrid Forecasting
 - **Hybrid AI Engine**: 
-    - **Meta Prophet**: Uses high-performance statistical time-series forecasting for deep local analysis.
-    - **Groq LLM Fallback**: Seamlessly switches to Llama 3 for trend analysis in resource-constrained environments (like Vercel).
+    - **Meta Prophet**: Uses high-performance statistical time-series forecasting for deep local analysis of daily spending totals.
+    - **Groq LLM Intelligence**: seamlessly provides **category-level breakdowns** and **context-aware reasoning** (e.g., "Trending up due to weekend dining") for the forecasted amounts.
+- **Month-End Precision**: specific forecasting for the *remaining days* of the current month, ensuring you don't overspend before your next paycheck.
 - **Credit Card Bill Prediction**: Analyzes previous spending patterns and unbilled transactions to estimate upcoming credit card liabilities.
 - **Variance Analysis**: Compare current month-to-date spending vs. last month-to-date with category-level breakdowns.
 - **Percentage Metrics**: Calculate % over/under for total spend and category-specific spend.
 - **Spend Analysis**: Breaks down historical data to identify "Sure Bills" (recurring rent, utilities, maintenance) and calculate a reliable "Safe-to-Spend" limit.
-- **Pattern Recognition**: Detects cyclical spending habits to alert you about upcoming recurring outflows before they happen.
 
 ### 💰 Safe-to-Spend Intelligence
 - **Real-Time Calculation**: `Safe-to-Spend = Balance - FrozenFunds - Buffer`

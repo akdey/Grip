@@ -1,11 +1,14 @@
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Literal
 from pydantic import BaseModel
+
+CategoryType = Literal["EXPENSE", "INCOME", "INVESTMENT"]
 
 class SubCategoryBase(BaseModel):
     name: str
     icon: Optional[str] = None
     color: Optional[str] = None
+    type: CategoryType = "EXPENSE"
 
 class SubCategoryCreate(SubCategoryBase):
     category_id: uuid.UUID
@@ -14,6 +17,7 @@ class SubCategoryUpdate(BaseModel):
     name: Optional[str] = None
     icon: Optional[str] = None
     color: Optional[str] = None
+    type: Optional[CategoryType] = None
 
 class SubCategoryResponse(SubCategoryBase):
     id: uuid.UUID
@@ -27,6 +31,7 @@ class CategoryBase(BaseModel):
     name: str
     icon: Optional[str] = None
     color: Optional[str] = None
+    type: CategoryType = "EXPENSE"
 
 class CategoryCreate(CategoryBase):
     pass
@@ -35,6 +40,7 @@ class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     icon: Optional[str] = None
     color: Optional[str] = None
+    type: Optional[CategoryType] = None
 
 class CategoryResponse(CategoryBase):
     id: uuid.UUID

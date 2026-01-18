@@ -53,7 +53,17 @@ import {
     Book,
     Briefcase,
     HelpCircle,
-    Sparkles
+    Sparkles,
+    Truck,
+    Store,
+    Map,
+    Leaf,
+    User,
+    ParkingCircle,
+    Martini,
+    PartyPopper,
+    Users,
+    Clock
 } from 'lucide-react';
 
 export const ICON_MAP: Record<string, LucideIcon> = {
@@ -66,6 +76,9 @@ export const ICON_MAP: Record<string, LucideIcon> = {
     'Drumstick': Drumstick,
     'Wine': Wine,
     'GlassWater': GlassWater,
+    'Truck': Truck,
+    'Store': Store,
+    'Leaf': Leaf,
 
     // Transport
     'Plane': Plane,
@@ -75,6 +88,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
     'Bus': Bus,
     'TrainFront': TrainFront,
     'Ship': Ship,
+    'Map': Map,
 
     // Shopping
     'ShoppingBag': ShoppingBag,
@@ -113,6 +127,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
     'Landmark': Landmark,
     'TrendingUp': TrendingUp,
     'PiggyBank': PiggyBank,
+    'Clock': Clock,
 
     // Misc
     'Baby': Baby,
@@ -126,17 +141,22 @@ export const ICON_MAP: Record<string, LucideIcon> = {
     'Briefcase': Briefcase,
     'Sparkles': Sparkles,
     'HelpCircle': HelpCircle,
+    'User': User,
+    'ParkingCircle': ParkingCircle,
+    'Martini': Martini,
+    'PartyPopper': PartyPopper,
+    'Users': Users,
 };
 
 export const CATEGORIZED_LUCIDE_ICONS = [
-    { name: 'Food', icons: ['Utensils', 'Pizza', 'Coffee', 'Beer', 'IceCream', 'Drumstick', 'Wine', 'GlassWater'] },
-    { name: 'Transport', icons: ['Plane', 'Car', 'Bike', 'Fuel', 'Bus', 'TrainFront', 'Ship'] },
+    { name: 'Food', icons: ['Utensils', 'Pizza', 'Coffee', 'Beer', 'IceCream', 'Drumstick', 'Wine', 'GlassWater', 'Truck', 'Store', 'Leaf'] },
+    { name: 'Transport', icons: ['Plane', 'Car', 'Bike', 'Fuel', 'Bus', 'TrainFront', 'Ship', 'Map'] },
     { name: 'Shopping', icons: ['ShoppingBag', 'Shirt', 'Gift', 'Tag', 'ShoppingCart'] },
     { name: 'Home', icons: ['Home', 'Lamp', 'Zap', 'Droplets', 'Wrench', 'Key', 'Wifi', 'Smartphone'] },
     { name: 'Entertainment', icons: ['Gamepad2', 'Film', 'Music', 'Tv', 'Palmtree'] },
     { name: 'Health', icons: ['Heart', 'Stethoscope', 'Pill', 'Dumbbell'] },
-    { name: 'Finance', icons: ['Wallet', 'CreditCard', 'Banknote', 'Landmark', 'TrendingUp', 'PiggyBank'] },
-    { name: 'Misc', icons: ['Baby', 'Dog', 'Trees', 'Rocket', 'Shield', 'Lock', 'Bell', 'Book', 'Briefcase'] },
+    { name: 'Finance', icons: ['Wallet', 'CreditCard', 'Banknote', 'Landmark', 'TrendingUp', 'PiggyBank', 'Clock'] },
+    { name: 'Misc', icons: ['Baby', 'Dog', 'Trees', 'Rocket', 'Shield', 'Lock', 'Bell', 'Book', 'Briefcase', 'ParkingCircle', 'Martini', 'PartyPopper', 'Users'] },
 ];
 
 interface CategoryIconProps {

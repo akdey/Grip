@@ -1,12 +1,13 @@
-from typing import Annotated, Dict
-from fastapi import APIRouter, Depends
+from typing import Annotated, Dict, Optional
+import asyncio
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, case
 from app.core.database import get_db
 from app.features.auth.deps import get_current_user
 from app.features.auth.models import User
 from app.features.transactions.models import Transaction
-from app.features.dashboard.service import get_daily_expenses
+from app.features.dashboard.service import get_daily_expenses, get_category_expenses_history
 from app.features.forecasting.service import ForecastingService
 
 router = APIRouter()
@@ -16,72 +17,72 @@ async def get_liquidity_dashboard(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)]
 ):
-    p2p_res = await db.execute(
+    balance_stmt = (
         select(func.sum(Transaction.amount))
         .where(Transaction.user_id == current_user.id)
-        .where(Transaction.category == "Income")
-        .where(Transaction.sub_category == "P2P Receive")
-    )
-    p2p_in = p2p_res.scalar() or 0
-    
-    income_res = await db.execute(
-        select(func.sum(Transaction.amount))
-        .where(Transaction.user_id == current_user.id)
-        .where(Transaction.category == "Income")
-    )
-    total_income = income_res.scalar() or 0
-    
-    expense_res = await db.execute(
-        select(func.sum(Transaction.amount))
-        .where(Transaction.user_id == current_user.id)
-        .where(Transaction.category.not_in(["Income", "Investment"]))
         .where(Transaction.account_type.in_(["CASH", "SAVINGS"]))
     )
-    non_cc_expenses = expense_res.scalar() or 0
     
-    balance = total_income - non_cc_expenses
-    
-    cc_res = await db.execute(
+    cc_stmt = (
         select(func.sum(Transaction.amount))
         .where(Transaction.user_id == current_user.id)
         .where(Transaction.category != "Income")
         .where(Transaction.account_type == "CREDIT_CARD")
     )
-    unbilled_cc = cc_res.scalar() or 0
     
-    bills_res = await db.execute(
+    bills_stmt = (
         select(func.sum(Transaction.amount))
         .where(Transaction.user_id == current_user.id)
         .where(Transaction.sub_category.in_(["Rent", "Maintenance", "Credit Card Payment"]))
     )
+
+    balance_res = await db.execute(balance_stmt)
+    cc_res = await db.execute(cc_stmt)
+    bills_res = await db.execute(bills_stmt)
+
+    balance = balance_res.scalar() or 0
+    unbilled_cc = cc_res.scalar() or 0
     bills = bills_res.scalar() or 0
     
+    # Liquidity is the sum of liquid balance + CC debt (which is negative)
+    # If balance is 10,000 and CC debt is -2,000, liquidity is 8,000.
     return {
-        "liquidity": (balance + p2p_in) - (unbilled_cc + bills),
+        "liquidity": balance + unbilled_cc,
         "breakdown": {
             "balance": balance,
-            "p2p_in": p2p_in,
-            "unbilled_cc": unbilled_cc,
-            "bills": bills
+            "unbilled_cc": abs(unbilled_cc),
+            "bills": abs(bills)
         }
     }
 
 @router.get("/investments")
 async def get_investments_dashboard(
     current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
+    db: Annotated[AsyncSession, Depends(get_db)],
+    month: Optional[int] = Query(None, ge=1, le=12),
+    year: Optional[int] = Query(None, ge=2000, le=2100)
 ):
+    from datetime import date
+    from app.utils.finance_utils import get_month_date_range
+
     # Aggregate by SubCategory for Investment Category
     stmt = (
         select(Transaction.sub_category, func.sum(Transaction.amount))
         .where(Transaction.user_id == current_user.id)
         .where(Transaction.category == "Investment")
-        .group_by(Transaction.sub_category)
     )
+
+    if month and year:
+        target_date = date(year, month, 1)
+        rng = get_month_date_range(target_date)
+        stmt = stmt.where(Transaction.transaction_date >= rng["month_start"])
+        stmt = stmt.where(Transaction.transaction_date <= rng["month_end"])
+
+    stmt = stmt.group_by(Transaction.sub_category)
     result = await db.execute(stmt)
-    breakdown = {str(row[0]): row[1] for row in result.all()}
+    breakdown = {str(row[0]): abs(row[1]) for row in result.all()}
     
-    total = sum(breakdown.values())
+    total = abs(sum(breakdown.values()))
     
     return {
         "total_investments": total,
@@ -95,10 +96,14 @@ async def get_financial_forecast(
     service: Annotated[ForecastingService, Depends()]
 ):
     history = await get_daily_expenses(db, current_user.id, days=90)
-    predicted_burden = await service.calculate_safe_to_spend(history)
+    category_history = await get_category_expenses_history(db, current_user.id, days=90)
+    
+    forecast = await service.calculate_safe_to_spend(history, category_history)
     
     return {
-        "predicted_burden_30d": predicted_burden,
-        "confidence": "high" if len(history) > 60 else "medium",
-        "description": "Predicted outflows for the next 30 days based on historical trends."
+        "predicted_burden_30d": forecast.amount,
+        "confidence": forecast.confidence,
+        "description": forecast.reason,
+        "time_frame": forecast.time_frame,
+        "breakdown": forecast.breakdown
     }

@@ -1,5 +1,6 @@
 from uuid import UUID
 from typing import List, Optional
+from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import HTTPException
@@ -64,10 +65,47 @@ class TransactionService:
         transactions = result.scalars().all()
         return await self._attach_icons(transactions)
 
-    async def get_all_transactions(self, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Transaction]:
+    async def get_all_transactions(
+        self, 
+        user_id: UUID, 
+        skip: int = 0, 
+        limit: int = 100,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        category: Optional[str] = None,
+        sub_category: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> List[Transaction]:
+        from sqlalchemy import or_
+
         stmt = (
             select(Transaction)
             .where(Transaction.user_id == user_id)
+        )
+
+        if start_date:
+            stmt = stmt.where(Transaction.transaction_date >= start_date)
+        if end_date:
+            stmt = stmt.where(Transaction.transaction_date <= end_date)
+        
+        if category:
+            stmt = stmt.where(Transaction.category.ilike(category))
+        if sub_category:
+            stmt = stmt.where(Transaction.sub_category.ilike(sub_category))
+            
+        if search:
+            search_term = f"%{search}%"
+            stmt = stmt.where(
+                or_(
+                    Transaction.merchant_name.ilike(search_term),
+                    Transaction.remarks.ilike(search_term),
+                    Transaction.category.ilike(search_term),
+                    Transaction.sub_category.ilike(search_term)
+                )
+            )
+
+        stmt = (
+            stmt
             .order_by(Transaction.transaction_date.desc().nulls_last(), Transaction.created_at.desc())
             .offset(skip)
             .limit(limit)

@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, CheckCircle, Smartphone, Home, Zap, Calendar as CalendarIcon, ArrowLeft, ShieldAlert, TrendingDown } from 'lucide-react';
 import { useBills, useMarkBillPaid, useAddBill } from './hooks';
-import { Button } from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '../../components/ui/Loader';
 import { format, isWithinInterval, addDays, isPast } from 'date-fns';

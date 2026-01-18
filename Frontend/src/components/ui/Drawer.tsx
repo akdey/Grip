@@ -8,6 +8,7 @@ interface DrawerProps {
     title: string;
     children: React.ReactNode;
     height?: string;
+    noPadding?: boolean;
 }
 
 export const Drawer: React.FC<DrawerProps> = ({
@@ -15,7 +16,8 @@ export const Drawer: React.FC<DrawerProps> = ({
     onClose,
     title,
     children,
-    height = 'h-[75vh]'
+    height = 'h-[75vh]',
+    noPadding = false
 }) => {
     useEffect(() => {
         if (isOpen) {
@@ -66,8 +68,8 @@ export const Drawer: React.FC<DrawerProps> = ({
                             </button>
                         </div>
 
-                        {/* Scrollable Content */}
-                        <div className="flex-1 overflow-y-auto p-6 pb-40 custom-scrollbar">
+                        {/* Content Area */}
+                        <div className={`flex-1 flex flex-col min-h-0 ${noPadding ? '' : 'p-6 pb-40 overflow-y-auto custom-scrollbar'}`}>
                             {children}
                         </div>
                     </motion.div>

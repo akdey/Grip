@@ -20,6 +20,7 @@ class FrozenFundsBreakdown(BaseModel):
     unpaid_bills: Decimal
     projected_surety: Decimal
     unbilled_cc: Decimal
+    active_goals: Decimal = Decimal(0)
     total_frozen: Decimal
 
 class SafeToSpendResponse(BaseModel):

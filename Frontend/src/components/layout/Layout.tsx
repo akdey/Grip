@@ -5,7 +5,10 @@ import { Sidebar } from './Sidebar';
 
 export const Layout: React.FC = () => {
     const location = useLocation();
-    const isEntryPage = location.pathname === '/add' || location.pathname.startsWith('/transactions/');
+    const isEntryPage = location.pathname === '/add' ||
+        location.pathname.startsWith('/transactions/') ||
+        location.pathname === '/settings/categories' ||
+        location.pathname === '/tags';
 
     return (
         <div className="min-h-screen text-white selection:bg-cyan-500/30">

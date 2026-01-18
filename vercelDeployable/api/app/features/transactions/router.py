@@ -37,9 +37,27 @@ async def get_all_transactions(
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[TransactionService, Depends()],
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    category: Optional[str] = None,
+    sub_category: Optional[str] = None,
+    search: Optional[str] = None
 ):
-    return await service.get_all_transactions(user_id=current_user.id, skip=skip, limit=limit)
+    from datetime import date
+    parsed_start = date.fromisoformat(start_date) if start_date else None
+    parsed_end = date.fromisoformat(end_date) if end_date else None
+    
+    return await service.get_all_transactions(
+        user_id=current_user.id, 
+        skip=skip, 
+        limit=limit,
+        start_date=parsed_start,
+        end_date=parsed_end,
+        category=category,
+        sub_category=sub_category,
+        search=search
+    )
 
 @router.post("/", response_model=schemas.TransactionResponse)
 async def create_manual_transaction(

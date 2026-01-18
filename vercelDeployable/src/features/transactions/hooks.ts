@@ -22,12 +22,27 @@ export interface Transaction {
     sub_category_color?: string;
 }
 
-export const useTransactions = (limit: number = 50, skip: number = 0) => {
+export interface TransactionFilters {
+    limit?: number;
+    skip?: number;
+    start_date?: string;
+    end_date?: string;
+    category?: string;
+    sub_category?: string;
+    search?: string;
+}
+
+export const useTransactions = (filters: TransactionFilters = {}) => {
+    const { limit = 50, skip = 0, ...rest } = filters;
     return useQuery({
-        queryKey: ['transactions', limit, skip],
+        queryKey: ['transactions', limit, skip, rest],
         queryFn: async () => {
             const { data } = await api.get<Transaction[]>('/transactions/', {
-                params: { limit, skip }
+                params: {
+                    limit,
+                    skip,
+                    ...rest
+                }
             });
             return data;
         },

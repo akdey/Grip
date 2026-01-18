@@ -14,6 +14,7 @@ const Bills = React.lazy(() => import('./features/bills/BillsPage'));
 const Categories = React.lazy(() => import('./pages/Categories'));
 const More = React.lazy(() => import('./pages/More'));
 const Tags = React.lazy(() => import('./pages/Tags'));
+const Goals = React.lazy(() => import('./pages/Goals'));
 
 import { AnimatePresence } from 'framer-motion';
 import { Loader } from './components/ui/Loader';
@@ -37,6 +38,7 @@ function App() {
               <Route path="/settings/categories" element={<Categories />} />
               <Route path="/more" element={<More />} />
               <Route path="/tags" element={<Tags />} />
+              <Route path="/goals" element={<Goals />} />
             </Route>
           </Route>
 

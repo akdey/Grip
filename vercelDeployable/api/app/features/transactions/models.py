@@ -23,15 +23,15 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
     raw_content_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     currency: Mapped[str] = mapped_column(String, default="INR")
     merchant_name: Mapped[str] = mapped_column(String, nullable=True)
-    category: Mapped[str] = mapped_column(String)
+    category: Mapped[str] = mapped_column(String, index=True)
     sub_category: Mapped[str] = mapped_column(String)
     status: Mapped[str] = mapped_column(String, default=TransactionStatus.PENDING)
-    account_type: Mapped[str] = mapped_column(String, default=AccountType.SAVINGS)
+    account_type: Mapped[str] = mapped_column(String, default=AccountType.SAVINGS, index=True)
     remarks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     tags: Mapped[Optional[List[str]]] = mapped_column(ARRAY(String), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -39,7 +39,7 @@ class Transaction(Base):
     # New fields for hybrid manual-first system
     is_surety: Mapped[bool] = mapped_column(Boolean, default=False)
     credit_card_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("credit_cards.id"), nullable=True)
-    transaction_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    transaction_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
     is_manual: Mapped[bool] = mapped_column(Boolean, default=False)
 
     user: Mapped["User"] = relationship("User")

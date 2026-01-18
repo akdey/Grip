@@ -5,6 +5,7 @@ import { motion, LayoutGroup } from 'framer-motion';
 import { api } from '../lib/api';
 import { useCreditCards } from '../features/credit-cards/hooks';
 import { useCategories } from '../features/transactions/categoryHooks';
+import type { TransactionType } from '../features/transactions/categoryHooks';
 import { useTransaction } from '../features/transactions/hooks';
 import {
     ArrowLeft,
@@ -41,7 +42,7 @@ const AddEntry: React.FC = () => {
     const { data: categories, isLoading: isCategoriesLoading } = useCategories();
     const { data: existingTxn, isLoading: isTxnLoading } = useTransaction(id);
 
-    const [type, setType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
+    const [type, setType] = useState<TransactionType>('EXPENSE');
 
     // Form State
     const [amount, setAmount] = useState('');
@@ -62,6 +63,13 @@ const AddEntry: React.FC = () => {
     const [isCalculatorOpen, setCalculatorOpen] = useState(false);
     const [view, setView] = useState<'CATEGORIES' | 'SUBCATEGORIES'>('CATEGORIES');
     const [tempCategory, setTempCategory] = useState<any | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Add Mode state (for inline creation)
+    const [isAddMode, setAddMode] = useState<'NONE' | 'CATEGORY' | 'SUB_CATEGORY'>('NONE');
+    const [newName, setNewName] = useState('');
+    const [newIcon, setNewIcon] = useState('Store');
+    const [newColor, setNewColor] = useState('#6366f1');
 
     const dateInputRef = useRef<HTMLInputElement>(null);
     const timeInputRef = useRef<HTMLInputElement>(null);
@@ -136,6 +144,27 @@ const AddEntry: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['monthly-summary'] });
             if (id) queryClient.invalidateQueries({ queryKey: ['transaction', id] });
             navigate(-1);
+        }
+    });
+
+    const createCategoryMutation = useMutation({
+        mutationFn: async (data: any) => await api.post('/categories', data),
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+            setAddMode('NONE');
+            setCategory(res.data.name);
+            setSubCategory('Uncategorized');
+            setCategoryOpen(false);
+        }
+    });
+
+    const createSubCategoryMutation = useMutation({
+        mutationFn: async (data: any) => await api.post('/categories/sub-categories', data),
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+            setAddMode('NONE');
+            setSubCategory(res.data.name);
+            setCategoryOpen(false);
         }
     });
 
@@ -466,71 +495,173 @@ const AddEntry: React.FC = () => {
 
                 <Drawer
                     isOpen={isCategoryOpen}
-                    onClose={() => setCategoryOpen(false)}
-                    title={view === 'CATEGORIES' ? "Entities" : "Sub-Nodes"}
+                    onClose={() => { setCategoryOpen(false); setAddMode('NONE'); setView('CATEGORIES'); }}
+                    height="h-[92vh]"
+                    noPadding
+                    title={isAddMode !== 'NONE' ? `New ${isAddMode === 'CATEGORY' ? 'Entity' : 'Node'}` : (view === 'CATEGORIES' ? "Categories" : "Sub-Nodes")}
                 >
-                    <div className="space-y-6 px-2 pb-10">
-                        <div className="relative">
-                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-700" size={14} />
-                            <input
-                                placeholder="Filter nodes..."
-                                className="w-full bg-white/[0.03] rounded-xl py-3.5 pl-14 pr-6 text-white placeholder-gray-800 focus:outline-none border border-white/[0.05] focus:border-white/[0.1] transition-all font-black uppercase text-[9px] tracking-widest"
-                            />
-                        </div>
-                        {view === 'SUBCATEGORIES' && (
-                            <button
-                                onClick={() => setView('CATEGORIES')}
-                                className="flex items-center gap-2 text-cyan-500 font-black text-[7px] tracking-[2px] uppercase bg-cyan-500/5 px-3 py-2 rounded-lg border border-cyan-500/10"
-                            >
-                                <ChevronLeft size={10} />
-                                BACK TO ORIGIN
-                            </button>
-                        )}
-                        <div className="grid grid-cols-1 gap-2 no-scrollbar pb-20">
-                            {view === 'CATEGORIES' ? (
-                                categories?.map(cat => (
-                                    <div
-                                        key={cat.id}
-                                        onClick={() => handleCategorySelect(cat)}
-                                        className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] cursor-pointer transition-all border border-white/[0.05] active:scale-[0.98]"
-                                    >
-                                        <div className="flex items-center gap-3.5">
-                                            <div
-                                                className="w-9 h-9 rounded-lg flex items-center justify-center shadow-inner border border-white/[0.08]"
-                                                style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
+                    <div className="flex-1 flex flex-col bg-[#121214] overflow-hidden">
+                        {isAddMode === 'NONE' ? (
+                            <div className="flex-1 flex flex-col min-h-0 relative">
+                                <div className="p-6 pb-0">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        {view === 'SUBCATEGORIES' && (
+                                            <button
+                                                onClick={() => setView('CATEGORIES')}
+                                                className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-cyan-500 active:scale-90 transition-all"
                                             >
-                                                <CategoryIcon name={cat.icon} size={18} />
-                                            </div>
-                                            <span className="font-black text-white/90 text-sm uppercase tracking-tight">{cat.name}</span>
+                                                <ChevronLeft size={20} />
+                                            </button>
+                                        )}
+                                        <div className="relative flex-1">
+                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-700" size={14} />
+                                            <input
+                                                placeholder="Filter nodes..."
+                                                value={searchQuery}
+                                                onChange={e => setSearchQuery(e.target.value)}
+                                                className="w-full bg-white/[0.03] rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-800 focus:outline-none border border-white/[0.05] focus:border-white/[0.1] transition-all font-black uppercase text-[10px] tracking-widest"
+                                            />
                                         </div>
-                                        <ChevronRight size={14} className="text-gray-800" />
                                     </div>
-                                ))
-                            ) : (
-                                tempCategory?.sub_categories.map((sub: any) => (
-                                    <div
-                                        key={sub.id}
-                                        onClick={() => handleSubCategorySelect(sub)}
-                                        className="flex items-center justify-between p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.06] cursor-pointer transition-all border border-cyan-500/10 active:scale-[0.98]"
-                                    >
-                                        <div className="flex items-center gap-3.5">
+                                </div>
+                                <div className="flex-1 overflow-y-auto space-y-2 p-6 pt-0 pb-10 custom-scrollbar">
+                                    {view === 'CATEGORIES' ? (
+                                        categories?.filter(c => {
+                                            const matchesType = type === 'EXPENSE'
+                                                ? (c.type === 'EXPENSE' || c.type === 'INVESTMENT')
+                                                : c.type === type;
+                                            return matchesType && c.name.toLowerCase().includes(searchQuery.toLowerCase());
+                                        }).map(cat => (
                                             <div
-                                                className="w-9 h-9 rounded-lg flex items-center justify-center shadow-inner border border-white/[0.05]"
-                                                style={{ backgroundColor: `${sub.color || tempCategory?.color}15`, color: sub.color || tempCategory?.color }}
+                                                key={cat.id}
+                                                onClick={() => handleCategorySelect(cat)}
+                                                className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-all cursor-pointer group active:scale-[0.98]"
                                             >
-                                                <CategoryIcon name={sub.icon} size={18} fallback={<CategoryIcon name={tempCategory?.icon} size={18} />} />
+                                                <div className="flex items-center gap-3.5">
+                                                    <div
+                                                        className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/[0.08]"
+                                                        style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
+                                                    >
+                                                        <CategoryIcon name={cat.icon} size={18} />
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-black text-white/90 text-sm uppercase tracking-tight">{cat.name}</span>
+                                                        <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest leading-none mt-1">{cat.sub_categories.length} Nodes</span>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight size={14} className="text-gray-800 transition-transform group-hover:translate-x-1" />
                                             </div>
-                                            <span className="font-black text-white text-sm uppercase tracking-tight truncate max-w-[170px]">{sub.name}</span>
+                                        ))
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-4 p-4 rounded-3xl bg-white/[0.03] border border-white/[0.08]">
+                                                <div
+                                                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl border border-white/10 shadow-2xl"
+                                                    style={{ backgroundColor: `${tempCategory?.color}20`, color: tempCategory?.color }}
+                                                >
+                                                    <CategoryIcon name={tempCategory?.icon} size={24} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-lg font-black text-white uppercase tracking-tight">{tempCategory?.name}</h4>
+                                                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[2px]">{type}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {tempCategory?.sub_categories.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((sub: any) => (
+                                                    <div
+                                                        key={sub.id}
+                                                        onClick={() => handleSubCategorySelect(sub)}
+                                                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-[0.98] ${subCategory === sub.name ? 'bg-cyan-500/10 border-cyan-500/20' : 'bg-white/[0.02] border-white/[0.05]'}`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div
+                                                                className="w-8 h-8 rounded-lg flex items-center justify-center border border-white/5"
+                                                                style={{ backgroundColor: `${sub.color || tempCategory?.color}10`, color: sub.color || tempCategory?.color }}
+                                                            >
+                                                                <CategoryIcon name={sub.icon} size={14} fallback={<CategoryIcon name={tempCategory?.icon} size={14} />} />
+                                                            </div>
+                                                            <span className={`text-sm font-bold uppercase tracking-tight ${subCategory === sub.name ? 'text-cyan-400' : 'text-gray-400'}`}>{sub.name}</span>
+                                                        </div>
+                                                        {subCategory === sub.name && (
+                                                            <Check size={14} className="text-cyan-500" />
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                        {subCategory === sub.name && (
-                                            <div className="w-5 h-5 rounded-full bg-cyan-500 flex items-center justify-center">
-                                                <Check size={10} className="text-black stroke-[3px]" />
-                                            </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col h-full space-y-10 p-6 pb-32 overflow-y-auto custom-scrollbar">
+                                <div className="flex flex-col items-center gap-6 pt-6">
+                                    <div
+                                        className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-2xl transition-all duration-300 relative border border-white/10"
+                                        style={{
+                                            backgroundColor: `${newColor}15`,
+                                            color: newColor,
+                                            boxShadow: `0 20px 40px -10px ${newColor}30`
+                                        }}
+                                    >
+                                        <CategoryIcon name={newIcon} size={32} />
+                                    </div>
+                                    <div className="flex flex-col items-center gap-1 w-full text-center px-4">
+                                        <input
+                                            placeholder="Identify..."
+                                            value={newName}
+                                            onChange={e => setNewName(e.target.value)}
+                                            className="w-full bg-transparent border-none text-2xl font-black text-center focus:outline-none placeholder-gray-900 uppercase tracking-tighter"
+                                            autoFocus
+                                        />
+                                        {isAddMode === 'SUB_CATEGORY' && (
+                                            <p className="text-[8px] text-gray-700 font-black uppercase tracking-[5px] mt-2">
+                                                Parent: {tempCategory?.name}
+                                            </p>
                                         )}
                                     </div>
-                                ))
-                            )}
-                        </div>
+                                </div>
+
+                                <div className="space-y-4 px-2">
+                                    <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[4px] ml-1">Fluid Color</h4>
+                                    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                                        {['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b2d2', '#8b5cf6', '#ec4899'].map(c => (
+                                            <button
+                                                key={c}
+                                                onClick={() => setNewColor(c)}
+                                                className={`w-10 h-10 rounded-full shrink-0 transition-all active:scale-75 ${newColor === c ? 'ring-2 ring-white ring-offset-4 ring-offset-[#050505] scale-110' : 'opacity-40'}`}
+                                                style={{ backgroundColor: c }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="mt-auto pt-10 sticky bottom-0 bg-[#050505] pb-10 z-[30]">
+                                    <div className="flex gap-4 px-2">
+                                        <button
+                                            onClick={() => setAddMode('NONE')}
+                                            className="flex-1 py-4 rounded-2xl bg-white/5 text-gray-600 font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 border border-white/[0.05]"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (isAddMode === 'CATEGORY') {
+                                                    createCategoryMutation.mutate({ name: newName, icon: newIcon, color: newColor, type: type });
+                                                } else {
+                                                    createSubCategoryMutation.mutate({ name: newName, icon: newIcon, color: newColor, type: type, category_id: tempCategory.id });
+                                                }
+                                            }}
+                                            disabled={!newName || createCategoryMutation.isPending || createSubCategoryMutation.isPending}
+                                            className="flex-[2] py-4 rounded-2xl bg-white text-black font-black uppercase text-[10px] tracking-[2px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none"
+                                        >
+                                            <Save size={16} />
+                                            {createCategoryMutation.isPending || createSubCategoryMutation.isPending ? 'Committing...' : 'Commit Node'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </Drawer>
 
@@ -540,8 +671,8 @@ const AddEntry: React.FC = () => {
                     onConfirm={(val) => setAmount(val)}
                     initialValue={amount}
                 />
-            </div>
-        </LayoutGroup>
+            </div >
+        </LayoutGroup >
     );
 };
 

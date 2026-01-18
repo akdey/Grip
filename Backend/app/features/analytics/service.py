@@ -1,10 +1,12 @@
 import logging
+import asyncio
 from uuid import UUID
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.features.transactions.models import Transaction, AccountType
+from app.features.goals.models import Goal
 from app.features.analytics.schemas import (
     CategoryVariance,
     VarianceAnalysis,
@@ -35,13 +37,21 @@ class AnalyticsService:
     async def get_variance_analysis(
         self,
         db: AsyncSession,
-        user_id: UUID
+        user_id: UUID,
+        month: Optional[int] = None,
+        year: Optional[int] = None
     ) -> VarianceAnalysis:
-        """Calculate month-to-date vs last month variance."""
-        current_range = get_month_date_range()
-        previous_range = get_previous_month_date_range()
+        """Calculate period vs previous period variance."""
+        from datetime import date
+        target_date = date.today()
+        if month and year:
+            target_date = date(year, month, 1)
+            
+        current_range = get_month_date_range(target_date)
+        previous_range = get_previous_month_date_range(target_date)
         
         # Current month spending
+        # Prepare Current month spending query
         current_stmt = (
             select(
                 Transaction.category,
@@ -54,11 +64,7 @@ class AnalyticsService:
             .group_by(Transaction.category)
         )
         
-        current_result = await db.execute(current_stmt)
-        current_by_category = {row.category: (row.total or Decimal("0")) for row in current_result.all()}
-        current_total = sum(current_by_category.values())
-        
-        # Previous month spending
+        # Prepare Previous month spending query
         previous_stmt = (
             select(
                 Transaction.category,
@@ -71,8 +77,14 @@ class AnalyticsService:
             .group_by(Transaction.category)
         )
         
+        # Execute sequentially
+        current_result = await db.execute(current_stmt)
         previous_result = await db.execute(previous_stmt)
-        previous_by_category = {row.category: (row.total or Decimal("0")) for row in previous_result.all()}
+        
+        current_by_category = {row.category: abs(row.total or Decimal("0")) for row in current_result.all()}
+        current_total = sum(current_by_category.values())
+        
+        previous_by_category = {row.category: abs(row.total or Decimal("0")) for row in previous_result.all()}
         previous_total = sum(previous_by_category.values())
         
         # Calculate category-level variance
@@ -116,21 +128,26 @@ class AnalyticsService:
         """Calculate total frozen funds (burden)."""
         # Unpaid bills
         unpaid_bills = await self.bill_service.get_unpaid_bills_total(db, user_id)
-        
-        # Projected surety bills (next 30 days)
-        projected_surety = await self.bill_service.get_projected_surety_bills(
-            db, user_id, days_ahead=30
-        )
-        
-        # Unbilled credit card spending
+        projected_surety = await self.bill_service.get_projected_surety_bills(db, user_id, days_ahead=30)
         unbilled_cc = await self.cc_service.get_all_unbilled_for_user(db, user_id)
         
-        total_frozen = calculate_frozen_funds(unpaid_bills, projected_surety, unbilled_cc)
+        # Monthly Goal contribution
+        goal_stmt = (
+            select(func.sum(Goal.monthly_contribution))
+            .where(Goal.user_id == user_id)
+            .where(Goal.is_active == True)
+        )
+        goal_res = await db.execute(goal_stmt)
+        
+        active_goals = goal_res.scalar() or 0.0
+        
+        total_frozen = calculate_frozen_funds(unpaid_bills, projected_surety, unbilled_cc) + Decimal(str(active_goals))
         
         return FrozenFundsBreakdown(
             unpaid_bills=unpaid_bills,
             projected_surety=projected_surety,
             unbilled_cc=unbilled_cc,
+            active_goals=Decimal(str(active_goals)), # Add this field to schema first!
             total_frozen=total_frozen
         )
     
@@ -141,39 +158,32 @@ class AnalyticsService:
         buffer_percentage: float = 0.10
     ) -> SafeToSpendResponse:
         """Calculate safe-to-spend amount with frozen funds and buffer."""
-        # Get current balance (income - expenses in savings/cash)
-        income_stmt = (
+        # Get current balance (liquid balance across bank/cash)
+        # Note: Transaction amounts are signed (Positive Income, Negative Expenses/Investments)
+        balance_stmt = (
             select(func.sum(Transaction.amount))
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category == "Income")
-        )
-        income_result = await db.execute(income_stmt)
-        total_income = income_result.scalar() or Decimal("0")
-        
-        expense_stmt = (
-            select(func.sum(Transaction.amount))
-            .where(Transaction.user_id == user_id)
-            .where(Transaction.category.not_in(["Income", "Investment"]))
             .where(Transaction.account_type.in_([AccountType.CASH, AccountType.SAVINGS]))
         )
-        expense_result = await db.execute(expense_stmt)
-        total_expenses = expense_result.scalar() or Decimal("0")
-        
-        current_balance = total_income - total_expenses
-        
-        # Get frozen funds
+        balance_result = await db.execute(balance_stmt)
         frozen_breakdown = await self.calculate_burden(db, user_id)
         
+        current_balance = balance_result.scalar() or Decimal("0")
+        
         # Calculate safe-to-spend
-        buffer = current_balance * Decimal(str(buffer_percentage))
-        safe_amount = calculate_safe_to_spend(
-            current_balance,
-            frozen_breakdown.total_frozen,
-            buffer_percentage
-        )
+        # If balance is negative, safe-to-spend is always 0
+        if current_balance <= 0:
+            safe_amount = Decimal("0")
+            buffer = Decimal("0")
+        else:
+            buffer = current_balance * Decimal(str(buffer_percentage))
+            # frozen_breakdown.total_frozen is returned as a positive burden
+            safe_amount = max(Decimal("0"), current_balance - frozen_breakdown.total_frozen - buffer)
         
         # Generate recommendation
-        if safe_amount <= 0:
+        if current_balance <= 0:
+            recommendation = "❌ Your balance is negative. Please stop spending immediately and check your inflows."
+        elif safe_amount <= 0:
             recommendation = "⚠️ You have no safe spending capacity. Consider paying bills or reducing expenses."
         elif safe_amount < (current_balance * Decimal("0.20")):
             recommendation = "⚡ Low spending capacity. Be cautious with discretionary spending."
@@ -192,13 +202,21 @@ class AnalyticsService:
     async def get_monthly_summary(
         self,
         db: AsyncSession,
-        user_id: UUID
+        user_id: UUID,
+        month: Optional[int] = None,
+        year: Optional[int] = None
     ) -> MonthlySummaryResponse:
         import datetime
+        from datetime import date
         
-        current_range = get_month_date_range()
+        target_date = date.today()
+        if month and year:
+            target_date = date(year, month, 1)
+        
+        current_range = get_month_date_range(target_date)
         
         # Calculate Income for current month
+        # Prepare queries
         income_stmt = (
             select(func.sum(Transaction.amount))
             .where(Transaction.user_id == user_id)
@@ -206,10 +224,7 @@ class AnalyticsService:
             .where(Transaction.transaction_date >= current_range["month_start"])
             .where(Transaction.transaction_date <= current_range["month_end"])
         )
-        income_result = await db.execute(income_stmt)
-        total_income = income_result.scalar() or Decimal("0")
         
-        # Calculate Expenses for current month
         expense_stmt = (
             select(func.sum(Transaction.amount))
             .where(Transaction.user_id == user_id)
@@ -217,8 +232,13 @@ class AnalyticsService:
             .where(Transaction.transaction_date >= current_range["month_start"])
             .where(Transaction.transaction_date <= current_range["month_end"])
         )
+        
+        # Execute sequentially
+        income_result = await db.execute(income_stmt)
         expense_result = await db.execute(expense_stmt)
-        total_expense = expense_result.scalar() or Decimal("0")
+        
+        total_income = income_result.scalar() or Decimal("0")
+        total_expense = abs(expense_result.scalar() or Decimal("0"))
         
         balance = total_income - total_expense
         

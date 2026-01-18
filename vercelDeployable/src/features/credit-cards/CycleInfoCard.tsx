@@ -9,7 +9,7 @@ interface Props {
 }
 
 export const CycleInfoCard: React.FC<Props> = ({ cardId, initialData }) => {
-    const { data, isLoading } = useCardCycleInfo(cardId);
+    const { data } = useCardCycleInfo(cardId);
 
     const card = data || initialData;
     const isDetailed = !!data;

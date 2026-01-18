@@ -1,11 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 
+export type TransactionType = 'EXPENSE' | 'INCOME' | 'INVESTMENT';
+
 export interface SubCategory {
     id: string;
     name: string;
     icon?: string;
     color?: string;
+    type: TransactionType;
     category_id: string;
     user_id?: string;
 }
@@ -15,6 +18,7 @@ export interface Category {
     name: string;
     icon?: string;
     color?: string;
+    type: TransactionType;
     user_id?: string;
     sub_categories: SubCategory[];
 }

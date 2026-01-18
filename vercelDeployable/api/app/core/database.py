@@ -6,7 +6,7 @@ settings = get_settings()
 
 engine = create_async_engine(
     settings.ASYNC_DATABASE_URL, 
-    echo=True,
+    echo=True,  # Disabled for performance
     connect_args={"statement_cache_size": 0}
 )
 

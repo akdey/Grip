@@ -39,6 +39,12 @@ export interface ForecastInfo {
     predicted_burden_30d: number;
     confidence: string;
     description: string;
+    time_frame: string;
+    breakdown: Array<{
+        category: string;
+        predicted_amount: number;
+        reason: string;
+    }>;
 }
 
 export const useSafeToSpend = (buffer: number = 0.10) => {
@@ -51,31 +57,40 @@ export const useSafeToSpend = (buffer: number = 0.10) => {
     });
 };
 
-export const useVariance = () => {
+export const useVariance = (month?: number, year?: number) => {
     return useQuery({
-        queryKey: ['variance'],
+        queryKey: ['variance', month, year],
         queryFn: async () => {
-            const { data } = await api.get<VarianceAnalysis>('/analytics/variance/');
+            const params = new URLSearchParams();
+            if (month) params.append('month', month.toString());
+            if (year) params.append('year', year.toString());
+            const { data } = await api.get<VarianceAnalysis>(`/analytics/variance/?${params.toString()}`);
             return data;
         },
     });
 };
 
-export const useMonthlySummary = () => {
+export const useMonthlySummary = (month?: number, year?: number) => {
     return useQuery({
-        queryKey: ['monthly-summary'],
+        queryKey: ['monthly-summary', month, year],
         queryFn: async () => {
-            const { data } = await api.get<MonthlySummary>('/analytics/summary/');
+            const params = new URLSearchParams();
+            if (month) params.append('month', month.toString());
+            if (year) params.append('year', year.toString());
+            const { data } = await api.get<MonthlySummary>(`/analytics/summary/?${params.toString()}`);
             return data;
         },
     });
 };
 
-export const useInvestments = () => {
+export const useInvestments = (month?: number, year?: number) => {
     return useQuery({
-        queryKey: ['investments'],
+        queryKey: ['investments', month, year],
         queryFn: async () => {
-            const { data } = await api.get<InvestmentSummary>('/dashboard/investments');
+            const params = new URLSearchParams();
+            if (month) params.append('month', month.toString());
+            if (year) params.append('year', year.toString());
+            const { data } = await api.get<InvestmentSummary>(`/dashboard/investments?${params.toString()}`);
             return data;
         },
     });
