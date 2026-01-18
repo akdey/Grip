@@ -139,28 +139,28 @@ const Dashboard: React.FC = () => {
             <div className="px-5 space-y-5 animate-enter">
                 {/* Summary Grid */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex flex-col gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
                             <ArrowUpRight size={20} />
                         </div>
-                        <div className="min-w-0">
+                        <div>
                             <div className="flex items-center gap-1.5 mb-1">
                                 <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Inflow</p>
                                 {!showSensitive && <Lock size={10} className="text-gray-600" />}
                             </div>
-                            <p className="text-lg font-black text-white leading-none truncate">
+                            <p className="text-xl font-black text-white leading-none whitespace-nowrap">
                                 {showSensitive ? formatCurrency(summary?.total_income || 0) : '******'}
                             </p>
                         </div>
                     </div>
 
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0">
+                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex flex-col gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
                             <ArrowDownRight size={20} />
                         </div>
-                        <div className="min-w-0">
+                        <div>
                             <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Outflow</p>
-                            <p className="text-lg font-black text-white leading-none truncate">{formatCurrency(summary?.total_expense || 0)}</p>
+                            <p className="text-xl font-black text-white leading-none whitespace-nowrap">{formatCurrency(summary?.total_expense || 0)}</p>
                         </div>
                     </div>
                 </div>
