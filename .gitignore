@@ -12,8 +12,12 @@ wheels/
 .env.production
 .env.local
 node_modules
-logs/*
+# Logs
+logs/
+*.log
+Backend/logs/
 !logs/.gitkeep
+!Backend/logs/.gitkeep
 .chromadb
 .agent
 alembic/*
