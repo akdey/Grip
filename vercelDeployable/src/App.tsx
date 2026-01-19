@@ -17,6 +17,8 @@ const More = React.lazy(() => import('./pages/More'));
 const Tags = React.lazy(() => import('./pages/Tags'));
 const Goals = React.lazy(() => import('./pages/Goals'));
 const Sync = React.lazy(() => import('./pages/Sync'));
+const Privacy = React.lazy(() => import('./pages/Privacy'));
+const Terms = React.lazy(() => import('./pages/Terms'));
 
 import { AnimatePresence } from 'framer-motion';
 import { Loader } from './components/ui/Loader';
@@ -27,6 +29,8 @@ function App() {
       <AnimatePresence mode="wait">
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
 
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>

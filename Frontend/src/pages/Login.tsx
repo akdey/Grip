@@ -165,6 +165,21 @@ const Login: React.FC = () => {
                         )}
                     </form>
                 </Card>
+
+                <div className="flex justify-center gap-6 pt-4">
+                    <button
+                        onClick={() => navigate('/privacy')}
+                        className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-gray-400 transition-colors"
+                    >
+                        Privacy
+                    </button>
+                    <button
+                        onClick={() => navigate('/terms')}
+                        className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-gray-400 transition-colors"
+                    >
+                        Terms
+                    </button>
+                </div>
             </div>
         </div>
     );

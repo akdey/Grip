@@ -167,8 +167,8 @@ const Dashboard: React.FC = () => {
 
                 {/* Accrual Accounting - Outflow Composition */}
                 {summary && (() => {
-                    const currentExpense = summary.current_period_expense || 0;
-                    const priorSettlement = summary.prior_period_settlement || 0;
+                    const currentExpense = Number(summary.current_period_expense || 0);
+                    const priorSettlement = Number(summary.prior_period_settlement || 0);
                     const total = currentExpense + priorSettlement;
                     const max = Math.max(total, 1);
 
