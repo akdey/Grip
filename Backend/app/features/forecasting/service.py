@@ -112,33 +112,46 @@ class ForecastingService:
         """Use Groq LLM to predict remaining month expenses."""
         default_response = ForecastResponse(
             amount=Decimal("0.00"), 
-            reason="AI service unavailable.", 
+            reason="Insufficient data/AI service unavailable.", 
             time_frame=time_frame,
             confidence="low"
         )
 
-        if not settings.GROQ_API_KEY or not history_data:
+        if not settings.GROQ_API_KEY:
             return default_response
+            
+        if not history_data or len(history_data) < 5:
+            return ForecastResponse(
+                amount=Decimal("0.00"),
+                reason="Need at least 5 days of transaction history to generate an AI forecast.",
+                time_frame=time_frame,
+                confidence="low"
+            )
 
         try:
             # Prepare context
             history_summary = [
                 {"date": d['ds'], "amount": float(d['y'])} 
-                for d in history_data[-60:] # Last 60 days
+                for d in history_data[-90:] # Increase to last 90 days for better context
             ]
             
             prompt = f"""
-            Analyze the following 60-day daily expense history and CATEGORY breakdown.
+            Analyze the following 90-day daily expense history and category breakdown.
             Predict the TOTAL expenses for the REMAINING {days} DAYS of the current month.
-            Consider end-of-month bills (Rent, subscriptions) if they haven't occurred yet.
+            Consider month-end liabilities (Rent, insurance) if not yet seen in recent history.
             
-            Daily History (Last 60d): {json.dumps(history_summary)}
-            Category Totals (Last 90d): {json.dumps(category_history)}
+            History Summary: {json.dumps(history_summary)}
+            Category Breakdown: {json.dumps(category_history)}
             
-            Return ONLY a JSON object with these keys:
-            - predicted_total: float
-            - reason: string (Short explanation focusing on end-of-month liabilities or trends)
-            - breakdown: list of objects {{ "category": string, "predicted_amount": float, "reason": string }}
+            You must return a valid JSON object.
+            Required JSON structure:
+            {{
+                "predicted_total": float,
+                "reason": "short explanation",
+                "breakdown": [
+                    {{ "category": "string", "predicted_amount": float, "reason": "string" }}
+                ]
+            }}
             """
 
             url = "https://api.groq.com/openai/v1/chat/completions"
@@ -148,7 +161,10 @@ class ForecastingService:
             }
             payload = {
                 "model": settings.GROQ_MODEL,
-                "messages": [{"role": "user", "content": prompt}],
+                "messages": [
+                    {"role": "system", "content": "You are a financial intelligence engine. Always output valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
                 "response_format": {"type": "json_object"},
                 "temperature": 0.1
             }
@@ -162,11 +178,13 @@ class ForecastingService:
                 
                 return ForecastResponse(
                     amount=Decimal(str(max(0, data.get("predicted_total", 0)))),
-                    reason=data.get("reason", "Based on analysis of recent spending trends."),
+                    reason=data.get("reason", "Based on deep analysis of spending cycles."),
                     time_frame=time_frame,
                     confidence="medium",
                     breakdown=data.get("breakdown", [])
                 )
+            else:
+                logger.error(f"Groq API Error ({response.status_code}): {response.text}")
                 
         except Exception as e:
             logger.error(f"LLM forecasting error: {e}")

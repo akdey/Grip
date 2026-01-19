@@ -37,8 +37,9 @@ export const useConnectGmail = () => {
 
     return useMutation({
         mutationFn: async () => {
-            // Step 1: Get auth URL
-            const { data } = await api.get<{ url: string }>('/sync/google/auth');
+            // Step 1: Get auth URL - Use current location as redirect URI so polling works
+            const redirectUri = window.location.origin + '/sync';
+            const { data } = await api.get<{ url: string }>(`/sync/google/auth?redirect_uri=${encodeURIComponent(redirectUri)}`);
 
             // Step 2: Open popup
             const width = 500;
@@ -58,10 +59,11 @@ export const useConnectGmail = () => {
                     if (!popup || popup.closed) {
                         clearInterval(checkPopup);
                         reject(new Error('Popup closed'));
+                        return;
                     }
 
                     try {
-                        // Check if we got redirected to callback
+                        // Check if we got redirected back to our app with code
                         if (popup.location.href.includes('code=')) {
                             const urlParams = new URLSearchParams(popup.location.search);
                             const code = urlParams.get('code');
@@ -70,17 +72,17 @@ export const useConnectGmail = () => {
                                 popup.close();
                                 clearInterval(checkPopup);
 
-                                // Step 4: Send code to backend
+                                // Step 4: Send code to backend with the SAME redirect_uri
                                 api.post('/sync/google/callback', {
                                     code,
-                                    redirect_uri: 'postmessage'
+                                    redirect_uri: redirectUri
                                 })
                                     .then(() => resolve())
                                     .catch(reject);
                             }
                         }
                     } catch (e) {
-                        // Cross-origin error, keep waiting
+                        // Cross-origin error while on Google terrain, keep waiting
                     }
                 }, 500);
 

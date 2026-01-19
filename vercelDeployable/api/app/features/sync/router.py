@@ -35,7 +35,10 @@ def get_google_flow(redirect_uri: str = None):
     return flow
 
 @router.get("/google/auth")
-async def google_auth(current_user: Annotated[User, Depends(get_current_user)]):
+async def google_auth(
+    current_user: Annotated[User, Depends(get_current_user)],
+    redirect_uri: str | None = None
+):
     # Validate FRONTEND_ORIGIN is configured
     if not settings.FRONTEND_ORIGIN:
         logger.error("FRONTEND_ORIGIN is not configured in environment variables")
@@ -47,7 +50,11 @@ async def google_auth(current_user: Annotated[User, Depends(get_current_user)]):
     # Strip any trailing slash from origin as Google is strict about this
     origin = settings.FRONTEND_ORIGIN.rstrip('/')
     
-    flow = get_google_flow()
+    # Priority for redirect_uri: 
+    # 1. Passed in query param
+    # 2. Settings (usually 'postmessage')
+    flow = get_google_flow(redirect_uri)
+    
     # Include origin parameter to match Authorized JavaScript Origins in Google Console
     # The origin parameter is specifically required for 'postmessage' redirect_uri
     auth_url, _ = flow.authorization_url(
@@ -63,7 +70,8 @@ async def google_auth(current_user: Annotated[User, Depends(get_current_user)]):
     else:
         auth_url += f'?origin={origin}'
     
-    logger.info(f"Generated OAuth URL with origin: {origin} and redirect_uri: {settings.GOOGLE_REDIRECT_URI}")
+    effective_redirect = redirect_uri or settings.GOOGLE_REDIRECT_URI
+    logger.info(f"Generated OAuth URL with origin: {origin} and redirect_uri: {effective_redirect}")
     
     return {"url": auth_url}
 
@@ -76,23 +84,43 @@ async def google_callback(
     code = payload.get("code")
     redirect_uri = payload.get("redirect_uri", "postmessage")
     
+    logger.info(f"Received Google callback for user {current_user.email} with redirect_uri: {redirect_uri}")
+    
     if not code:
+        logger.error("No code provided in callback payload")
         raise HTTPException(status_code=400, detail="Missing code")
         
     flow = get_google_flow(redirect_uri)
     try:
+        # Fetch token using the authorization code
+        logger.debug(f"Fetching token for code: {code[:10]}...")
         flow.fetch_token(code=code)
         creds = flow.credentials
-        current_user.gmail_credentials = {
+        logger.info(f"Successfully fetched token for {current_user.email}")
+        
+        # Fresh fetch from DB to avoid session/detachment issues
+        user_stmt = select(User).where(User.id == current_user.id)
+        result = await db.execute(user_stmt)
+        db_user = result.scalar_one_or_none()
+        
+        if not db_user:
+            logger.error(f"User {current_user.id} not found in DB during callback")
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        # Update credentials
+        db_user.gmail_credentials = {
             "token": creds.token,
             "refresh_token": creds.refresh_token,
             "expiry": creds.expiry.isoformat() if creds.expiry else None
         }
+        
         await db.commit()
+        logger.info(f"Committed Gmail credentials for {current_user.email}")
+        
         return {"status": "success"}
     except Exception as e:
-        logger.error(f"Token exchange failed: {e}")
-        raise HTTPException(status_code=400, detail="Invalid authorization code")
+        logger.error(f"Token exchange failed for {current_user.email}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Invalid authorization code: {str(e)}")
 
 @router.post("/webhook", status_code=status.HTTP_202_ACCEPTED)
 async def webhook_ingress(
