@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "llama3-8b-8192"
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
-    FRONTEND_ORIGIN: str = "http://localhost:5173"  # Frontend URL for OAuth origin parameter
+    FRONTEND_ORIGIN: str = ""  # Frontend URL for OAuth origin parameter
     
     # Email Settings
     SMTP_HOST: str = "smtp.gmail.com"

@@ -33,6 +33,14 @@ def get_google_flow(redirect_uri: str = "postmessage"):
 
 @router.get("/google/auth")
 async def google_auth(current_user: Annotated[User, Depends(get_current_user)]):
+    # Validate FRONTEND_ORIGIN is configured
+    if not settings.FRONTEND_ORIGIN:
+        logger.error("FRONTEND_ORIGIN is not configured in environment variables")
+        raise HTTPException(
+            status_code=500, 
+            detail="OAuth configuration error: FRONTEND_ORIGIN not set"
+        )
+    
     flow = get_google_flow()
     # Include origin parameter to match Authorized JavaScript Origins in Google Console
     auth_url, _ = flow.authorization_url(
@@ -47,6 +55,9 @@ async def google_auth(current_user: Annotated[User, Depends(get_current_user)]):
         auth_url += f'&origin={settings.FRONTEND_ORIGIN}'
     else:
         auth_url += f'?origin={settings.FRONTEND_ORIGIN}'
+    
+    logger.info(f"Generated OAuth URL with origin: {settings.FRONTEND_ORIGIN}")
+    logger.debug(f"Full auth URL: {auth_url}")
     
     return {"url": auth_url}
 
