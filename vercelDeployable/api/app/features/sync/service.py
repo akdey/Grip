@@ -85,6 +85,7 @@ class SyncService:
         - category: string
         - sub_category: string
         - account_type: string (SAVINGS, CREDIT_CARD, or CASH)
+        - transaction_type: string (DEBIT or CREDIT)
         
         If unsure about category, use "Uncategorized".
         If no transaction found, return null.
@@ -111,7 +112,8 @@ class SyncService:
                     "merchant_name": data.get("merchant_name", "UNKNOWN"),
                     "category": data.get("category", "Uncategorized"),
                     "sub_category": data.get("sub_category", "Uncategorized"),
-                    "account_type": data.get("account_type", "SAVINGS")
+                    "account_type": data.get("account_type", "SAVINGS"),
+                    "transaction_type": data.get("transaction_type", "DEBIT")
                 }
         except Exception as e:
             logger.error(f"Groq API Error: {e}")
@@ -125,7 +127,8 @@ class SyncService:
             "merchant_name": "UNCATEGORIZED",
             "category": "Uncategorized",
             "sub_category": "Uncategorized",
-            "account_type": "SAVINGS"
+            "account_type": "SAVINGS",
+            "transaction_type": "DEBIT"
         }
 
     async def fetch_gmail_changes(self, user_id: uuid.UUID, start_time: datetime = None) -> List[dict]:
@@ -213,15 +216,30 @@ class SyncService:
                 
                 mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
                 cat, sub = extracted["category"], extracted["sub_category"]
+
+                # Skip if no valid amount was extracted
+                if extracted["amount"] == 0:
+                    continue
+
                 
                 if mapping:
                     cat, sub = mapping.default_category, mapping.default_sub_category
                 
+                # Determine amount sign based on explicit type or category
+                final_amount = abs(extracted["amount"])
+                if extracted.get("transaction_type") == "DEBIT" and cat != "Income":
+                    final_amount = -final_amount
+                elif cat == "Income" or extracted.get("transaction_type") == "CREDIT":
+                    final_amount = final_amount
+                else:
+                    # Default to negative (Expense) if unsure, unless it looks like income
+                    final_amount = -final_amount
+
                 await self.txn_service.create_transaction({
                     "id": uuid.uuid4(),
                     "user_id": user_id,
                     "raw_content_hash": content_hash,
-                    "amount": extracted["amount"],
+                    "amount": final_amount,
                     "currency": extracted["currency"],
                     "merchant_name": extracted["merchant_name"],
                     "category": cat,

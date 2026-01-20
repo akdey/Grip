@@ -7,7 +7,8 @@ from app.core.database import get_db
 from app.features.auth.deps import get_current_user
 from app.features.auth.models import User
 from app.features.transactions.models import Transaction
-from app.features.dashboard.service import get_daily_expenses, get_category_expenses_history
+
+from app.features.dashboard.service import get_daily_expenses, get_category_expenses_history, get_monthly_category_breakdown
 from app.features.forecasting.service import ForecastingService
 
 router = APIRouter()
@@ -97,8 +98,9 @@ async def get_financial_forecast(
 ):
     history = await get_daily_expenses(db, current_user.id, days=120)
     category_history = await get_category_expenses_history(db, current_user.id, days=120)
+    monthly_breakdown = await get_monthly_category_breakdown(db, current_user.id, months=4)
     
-    forecast = await service.calculate_safe_to_spend(history, category_history)
+    forecast = await service.calculate_safe_to_spend(history, category_history, monthly_breakdown)
     
     return {
         "predicted_burden_30d": forecast.amount,

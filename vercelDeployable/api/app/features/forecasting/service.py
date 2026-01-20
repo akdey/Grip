@@ -27,7 +27,8 @@ class ForecastingService:
     def __init__(self):
         pass
         
-    async def calculate_safe_to_spend(self, history_data: List[dict], category_history: List[dict]) -> ForecastResponse:
+
+    async def calculate_safe_to_spend(self, history_data: List[dict], category_history: List[dict], monthly_breakdown: List[dict] = []) -> ForecastResponse:
         """Forecast upcoming expenses for the remainder of the current month."""
         today = date.today()
         # Get last day of current month
@@ -53,7 +54,7 @@ class ForecastingService:
             return await self._calculate_prophet(history_data, category_history, time_frame_str, days_to_predict)
         
         # Fallback to LLM (Groq)
-        return await self._calculate_llm(history_data, category_history, time_frame_str, days_to_predict)
+        return await self._calculate_llm(history_data, category_history, monthly_breakdown, time_frame_str, days_to_predict)
 
     async def _calculate_prophet(self, history_data: List[dict], category_history: List[dict], time_frame: str, days: int) -> ForecastResponse:
         default_response = ForecastResponse(
@@ -108,7 +109,7 @@ class ForecastingService:
             logger.error(f"Prophet forecasting error: {e}")
             return default_response
 
-    async def _calculate_llm(self, history_data: List[dict], category_history: List[dict], time_frame: str, days: int) -> ForecastResponse:
+    async def _calculate_llm(self, history_data: List[dict], category_history: List[dict], monthly_breakdown: List[dict], time_frame: str, days: int) -> ForecastResponse:
         """Use Groq LLM to predict remaining month expenses."""
         default_response = ForecastResponse(
             amount=Decimal("0.00"), 
@@ -136,18 +137,25 @@ class ForecastingService:
             ]
             
             prompt = f"""
-            Analyze the following 90-day daily expense history and category breakdown.
-            Predict the TOTAL expenses for the REMAINING {days} DAYS of the current month.
-            Consider month-end liabilities (Rent, insurance) if not yet seen in recent history.
+            Analyze the following financial data to predict expenses for the REMAINING {days} DAYS of the current month.
             
-            History Summary: {json.dumps(history_summary)}
-            Category Breakdown: {json.dumps(category_history)}
+            1. Daily History (Last 90 days): {json.dumps(history_summary)}
+            2. Category Totals (Last 90 days): {json.dumps(category_history)}
+            3. Monthly Category Trends (Key for recurring bills like Rent): {json.dumps(monthly_breakdown)}
+            
+            Task:
+            - Analyze the 'Monthly Category Trends' to identify MISSING recurring payments for the current month (e.g., Rent, Insurance).
+            - Note: Categories starting with '_' like '_Rent' are explicit recurring bills.
+            - If a recurring bill (like Rent) was paid in previous months but NOT yet in the current month, YOU MUST INCLUDE IT in the forecast.
+            - Predict discretionary spending based on 'Daily History'.
+            
+            Return the TOTAL predicted expenses for the REMAINING {days} days.
             
             You must return a valid JSON object.
             Required JSON structure:
             {{
                 "predicted_total": float,
-                "reason": "short explanation",
+                "reason": "short explanation highlighting if rent/bills were added",
                 "breakdown": [
                     {{ "category": "string", "predicted_amount": float, "reason": "string" }}
                 ]

@@ -6,9 +6,10 @@ import { api } from '../lib/api';
 import { useCreditCards } from '../features/credit-cards/hooks';
 import { useCategories } from '../features/transactions/categoryHooks';
 import type { TransactionType } from '../features/transactions/categoryHooks';
-import { useTransaction, useVerifyTransaction } from '../features/transactions/hooks';
+import { useTransaction, useVerifyTransaction, useDeleteTransaction } from '../features/transactions/hooks';
 import {
     ArrowLeft,
+    Trash2,
     Calendar,
     Clock,
     ChevronRight,
@@ -26,7 +27,8 @@ import {
     Tag as TagIcon,
     X,
     Plus,
-    Store
+    Store,
+    Sparkles
 } from 'lucide-react';
 import { format, parse, parseISO } from 'date-fns';
 import { Drawer } from '../components/ui/Drawer';
@@ -42,6 +44,7 @@ const AddEntry: React.FC = () => {
     const { data: categories, isLoading: isCategoriesLoading } = useCategories();
     const { data: existingTxn, isLoading: isTxnLoading } = useTransaction(id);
     const verifyMutation = useVerifyTransaction();
+    const deleteMutation = useDeleteTransaction();
 
     const [type, setType] = useState<TransactionType>('EXPENSE');
 
@@ -210,13 +213,29 @@ const AddEntry: React.FC = () => {
     return (
         <LayoutGroup id="add-entry">
             <div className="min-h-screen bg-[#050505] text-white flex flex-col pb-24 overflow-x-hidden">
-                <header className="px-5 py-3.5 flex items-center gap-4 sticky top-0 bg-[#050505]/60 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
-                    <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all">
-                        <ArrowLeft size={16} />
-                    </button>
-                    <h1 className="text-sm font-black tracking-tight uppercase">
-                        {existingTxn?.status === 'PENDING' ? 'Review Transaction' : (id ? 'Edit Entry' : 'New Entry')}
-                    </h1>
+                <header className="px-5 py-3.5 flex items-center justify-between sticky top-0 bg-[#050505]/60 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all">
+                            <ArrowLeft size={16} />
+                        </button>
+                        <h1 className="text-sm font-black tracking-tight uppercase">
+                            {existingTxn?.status === 'PENDING' ? 'Review Transaction' : (id ? 'Edit Entry' : 'New Entry')}
+                        </h1>
+                    </div>
+                    {id && (
+                        <button
+                            onClick={() => {
+                                if (window.confirm('Are you sure you want to delete this transaction?')) {
+                                    deleteMutation.mutate(id, {
+                                        onSuccess: () => navigate(-1)
+                                    });
+                                }
+                            }}
+                            className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-500/10 hover:border-red-500/20 active:scale-90 transition-all"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                    )}
                 </header>
 
                 {existingTxn?.status === 'PENDING' && (

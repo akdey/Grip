@@ -157,6 +157,9 @@ class TransactionService:
                      default_sub_category=verification.sub_category
                  ))
                  
+            if not txn.transaction_date:
+                txn.transaction_date = txn.created_at.date()
+
         await self.db.commit()
         await self.db.refresh(txn)
         return txn
@@ -258,3 +261,14 @@ class TransactionService:
         
         txns = await self._attach_icons([txn])
         return txns[0]
+
+    async def delete_transaction(self, transaction_id: UUID, user_id: UUID):
+        stmt = select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user_id)
+        result = await self.db.execute(stmt)
+        txn = result.scalar_one_or_none()
+        
+        if not txn:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+            
+        await self.db.delete(txn)
+        await self.db.commit()

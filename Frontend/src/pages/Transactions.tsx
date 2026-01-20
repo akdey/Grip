@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 // Transactions Page
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useTransactions, usePendingTransactions } from '../features/transactions/hooks';
+import { useTransactions, usePendingTransactions, useVerifyTransaction, useDeleteTransaction } from '../features/transactions/hooks';
 import { useCategories } from '../features/transactions/categoryHooks';
 import {
     Receipt,
@@ -9,6 +9,8 @@ import {
     ChevronRight,
     ArrowLeft,
     Filter,
+    Check,
+    Trash2,
 } from 'lucide-react';
 import {
     format,
@@ -174,8 +176,9 @@ const Transactions: React.FC = () => {
                         <h1 className="text-xl font-bold tracking-tight">
                             {view === 'day' ? "Today" :
                                 view === 'month' ? "Calendar" :
-                                    view === 'custom' ? "Filtered" :
-                                        "Activity"}
+                                    view === 'pending' ? "Action Center" :
+                                        view === 'custom' ? "Filtered" :
+                                            "Activity"}
                         </h1>
                         <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">
                             {view === 'month' ? format(currentMonth, 'MMMM yyyy') : `${transactions?.length || 0} records`}
@@ -217,7 +220,7 @@ const Transactions: React.FC = () => {
                 </div>
             )}
 
-            <div className="px-4 py-6 space-y-6 animate-enter">
+            {view !== 'pending' && <div className="px-4 py-6 space-y-6 animate-enter">
                 {view === 'month' ? (
                     <div className="space-y-8">
                         {/* Compact Month Selector */}
@@ -319,7 +322,15 @@ const Transactions: React.FC = () => {
                         )}
                     </div>
                 )}
-            </div>
+            </div>}
+            {view === 'pending' && (!pendingTransactions || pendingTransactions.length === 0) && (
+                <div className="flex flex-col items-center justify-center py-40 opacity-10 space-y-6">
+                    <Check size={80} strokeWidth={1} />
+                    <p className="font-black uppercase tracking-[4px] text-[10px] text-center px-10">
+                        All Caught Up
+                    </p>
+                </div>
+            )}
 
             <Drawer isOpen={isFilterOpen} onClose={() => setFilterOpen(false)} title="Discovery Filter">
                 <div className="space-y-10 px-2 pb-10">
@@ -405,7 +416,32 @@ const Transactions: React.FC = () => {
 
 const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: any }) => {
     const navigate = useNavigate();
+    const deleteMutation = useDeleteTransaction();
+    const verifyMutation = useVerifyTransaction();
     const dateObj = txn.transaction_date ? parseISO(txn.transaction_date) : new Date(txn.created_at);
+
+    if (txn.amount === 0) return null;
+
+    const handleApprove = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        verifyMutation.mutate({
+            id: txn.id,
+            data: {
+                approved: true,
+                category: txn.category,
+                sub_category: txn.sub_category || 'Uncategorized',
+                merchant_name: txn.merchant_name || 'Unknown'
+            }
+        });
+    };
+
+    const handleDelete = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (window.confirm("Are you sure you want to delete this transaction?")) {
+            deleteMutation.mutate(txn.id);
+        }
+    };
+
 
     return (
         <div
@@ -457,6 +493,19 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
                         <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-purple-500/20 text-purple-400 bg-purple-500/10 uppercase tracking-tighter">
                             Offset
                         </span>
+
+                    )}
+                    {txn.status === 'PENDING' && (
+                        <div className="flex items-center gap-1 ml-2">
+                            <button
+                                onClick={handleApprove}
+                                disabled={verifyMutation.isPending}
+                                className="w-6 h-6 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-500 hover:bg-green-500/20 transition-all active:scale-95"
+                            >
+                                <Check size={12} />
+                            </button>
+
+                        </div>
                     )}
                 </div>
             </div>

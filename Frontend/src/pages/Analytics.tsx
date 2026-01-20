@@ -3,7 +3,7 @@ import { useVariance, useInvestments, useMonthlySummary } from '../features/dash
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { TrendingUp, ArrowLeft, Target, Layers, ChevronLeft, ChevronRight, TrendingDown, Eye, EyeOff, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { format, addMonths, subMonths } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { Loader } from '../components/ui/Loader';
 
 const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
@@ -59,6 +59,12 @@ const Analytics: React.FC = () => {
 
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+
+    const handleCategoryClick = (categoryName: string) => {
+        const start = format(startOfMonth(referenceDate), 'yyyy-MM-dd');
+        const end = format(endOfMonth(referenceDate), 'yyyy-MM-dd');
+        navigate(`/transactions?view=custom&category=${encodeURIComponent(categoryName)}&start_date=${start}&end_date=${end}`);
+    };
 
     if (isVarianceLoading || isInvestLoading || isSummaryLoading) return <Loader fullPage text="Visualizing Data" />;
 
@@ -173,6 +179,8 @@ const Analytics: React.FC = () => {
                                     paddingAngle={8}
                                     dataKey="value"
                                     stroke="none"
+                                    onClick={(data) => handleCategoryClick(data.name)}
+                                    className="cursor-pointer focus:outline-none"
                                 >
                                     {categoryData.map((_, index) => (
                                         <Cell
@@ -205,7 +213,11 @@ const Analytics: React.FC = () => {
 
                     <div className="space-y-3">
                         {categoryData.slice(0, 5).map((cat, idx) => (
-                            <div key={cat.name} className="flex items-center justify-between p-5 rounded-[1.8rem] bg-white/[0.02] border border-white/[0.05]">
+                            <div
+                                key={cat.name}
+                                onClick={() => handleCategoryClick(cat.name)}
+                                className="flex items-center justify-between p-5 rounded-[1.8rem] bg-white/[0.02] border border-white/[0.05] cursor-pointer hover:bg-white/[0.04] transition-colors active:scale-[0.98]"
+                            >
                                 <div className="flex items-center gap-5">
                                     <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
                                     <div>

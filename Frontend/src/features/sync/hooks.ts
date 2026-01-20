@@ -140,3 +140,16 @@ export const useSyncHistory = () => {
         },
     });
 };
+
+export const useAutoSync = () => {
+    const { mutate: sync } = useManualSync();
+
+    // Logic to run sync on mount if connected
+    // We don't want to run this TOO often, but "on app load" (hook mount) is a good start.
+    // Ideally, we check status first, then sync.
+    const { data: status } = useGmailStatus();
+
+    // Effectively, we can just expose a function or useEffect in the component using this.
+    // But for clean separation, let's keep logic here or just rely on the existing hooks in the Layout.
+    return { status, sync };
+};

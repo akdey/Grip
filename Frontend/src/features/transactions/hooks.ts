@@ -112,3 +112,17 @@ export const usePendingTransactions = () => {
         },
     });
 };
+
+export const useDeleteTransaction = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            await api.delete(`/transactions/${id}`);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+            queryClient.invalidateQueries({ queryKey: ['monthly-summary'] });
+        },
+    });
+};

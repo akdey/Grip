@@ -102,3 +102,11 @@ async def toggle_settled_status(
     service: Annotated[TransactionService, Depends()]
 ):
     return await service.toggle_settled_status(transaction_id=transaction_id, user_id=current_user.id) 
+
+@router.delete("/{transaction_id}", status_code=204)
+async def delete_transaction(
+    transaction_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[TransactionService, Depends()]
+):
+    await service.delete_transaction(transaction_id=transaction_id, user_id=current_user.id)
