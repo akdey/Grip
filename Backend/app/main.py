@@ -27,13 +27,17 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.ENVIRONMENT in ["local", "development", "production"]:
-        logger.info(f"Environment: {settings.ENVIRONMENT}. Ensuring tables...")
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-    else:
-        logger.info(f"Environment: {settings.ENVIRONMENT}. Skipping table creation.")
-    
+    # Database Table Creation
+    try:
+        if settings.ENVIRONMENT in ["local", "development", "production"]:
+            logger.info(f"Environment: {settings.ENVIRONMENT}. Ensuring tables...")
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        else:
+            logger.info(f"Environment: {settings.ENVIRONMENT}. Skipping table creation.")
+    except Exception as e:
+        logger.error(f"Startup Database Error: {e}. properly. proceeding without db initialization.")
+
     # Start Scheduler
     from app.core.scheduler import start_scheduler
     try:
