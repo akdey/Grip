@@ -373,10 +373,12 @@ const Categories: React.FC = () => {
                                         </Button>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
                         </motion.div>
                     )}
-                </AnimatePresence>
-            </main>
+            </AnimatePresence>
+        </main>
         </div >
     );
 };

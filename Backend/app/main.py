@@ -19,6 +19,7 @@ from app.features.analytics.router import router as analytics_router
 from app.features.categories.router import router as categories_router
 from app.features.goals.router import router as goals_router
 from app.features.export.router import router as export_router
+from app.features.wealth.router import router as wealth_router
 from app.features.sync.models import SyncLog 
 
 setup_logging()
@@ -91,9 +92,8 @@ app.include_router(bills_router, prefix=f"{settings.API_V1_STR}/bills", tags=["b
 app.include_router(analytics_router, prefix=f"{settings.API_V1_STR}/analytics", tags=["analytics"])
 app.include_router(categories_router, prefix=f"{settings.API_V1_STR}/categories", tags=["categories"])
 app.include_router(goals_router, prefix=f"{settings.API_V1_STR}/goals", tags=["goals"])
-app.include_router(export_router, prefix=f"{settings.API_V1_STR}/export", tags=["export"])
-from app.features.wealth.router import router as wealth_router
 app.include_router(wealth_router, prefix=f"{settings.API_V1_STR}/wealth", tags=["wealth"])
+app.include_router(export_router, prefix=f"{settings.API_V1_STR}/export", tags=["export"])
 
 @app.get("/")
 async def root():
