@@ -8,6 +8,7 @@ from fastapi import Depends
 from app.features.transactions.models import Transaction, MerchantMapping
 from app.features.transactions import schemas
 from app.features.transactions import schemas
+from app.features.categories.models import SubCategory
 from app.features.transactions.models import TransactionStatus
 from app.core.database import get_db
 import logging
@@ -16,6 +17,19 @@ logger = logging.getLogger(__name__)
 class TransactionService:
     def __init__(self, db: AsyncSession = Depends(get_db)):
         self.db = db
+
+    async def _resolve_surety(self, sub_category_name: str) -> bool:
+        """Resolve is_surety flag from SubCategory table."""
+        if not sub_category_name:
+            return False
+            
+        # We need to find the sub_category. Since we store strings in Transaction, 
+        # we try to match by name. 
+        # Note: Names might not be unique globally if system allows per-user dupes, 
+        # but usually consistent enough for surety check.
+        stmt = select(SubCategory.is_surety).where(SubCategory.name == sub_category_name).limit(1)
+        result = await self.db.execute(stmt)
+        return result.scalar() or False
 
     async def _attach_icons(self, transactions: List[Transaction]) -> List[Transaction]:
         from app.features.categories.models import Category
@@ -137,6 +151,7 @@ class TransactionService:
             txn.status = TransactionStatus.VERIFIED
             txn.category = verification.category
             txn.sub_category = verification.sub_category
+            txn.is_surety = await self._resolve_surety(verification.sub_category)
             
             raw_merchant_key = txn.merchant_name 
             txn.merchant_name = verification.merchant_name
@@ -200,7 +215,8 @@ class TransactionService:
             "user_id": user_id,
             "raw_content_hash": content_hash,
             "status": TransactionStatus.VERIFIED,
-            "is_manual": True
+            "is_manual": True,
+            "is_surety": txn_data.get("is_surety", False) or await self._resolve_surety(txn_data.get("sub_category"))
         })
         
         return await self.create_transaction(txn_data)
@@ -233,6 +249,14 @@ class TransactionService:
                     except:
                         pass
             setattr(txn, key, value)
+            
+        # Re-evaluate surety if category changes
+        if "category" in update_data or "sub_category" in update_data:
+             # If user explicitly updated is_surety in the same request, respect it (via setattr above)
+             # But if only category changed, re-evaluate. 
+             # Check if is_surety is in update_data
+             if "is_surety" not in update_data:
+                txn.is_surety = await self._resolve_surety(txn.sub_category)
             
         await self.db.commit()
         await self.db.refresh(txn)

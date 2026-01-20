@@ -6,8 +6,17 @@ settings = get_settings()
 
 engine = create_async_engine(
     settings.ASYNC_DATABASE_URL, 
-    echo=True,  # Disabled for performance
-    connect_args={"statement_cache_size": 0}
+    echo=False,  # Disable SQL echo for cleaner logs
+    pool_pre_ping=True,  # Verify connections before using them
+    pool_recycle=300,  # Recycle connections after 5 minutes
+    pool_size=5,  # Maintain 5 connections in the pool
+    max_overflow=10,  # Allow up to 10 additional connections
+    connect_args={
+        "statement_cache_size": 0,
+        "server_settings": {
+            "application_name": "grip_backend"
+        }
+    }
 )
 
 AsyncSessionLocal = async_sessionmaker(

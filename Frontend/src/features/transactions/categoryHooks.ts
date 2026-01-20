@@ -11,6 +11,7 @@ export interface SubCategory {
     type: TransactionType;
     category_id: string;
     user_id?: string;
+    is_surety?: boolean;
 }
 
 export interface Category {

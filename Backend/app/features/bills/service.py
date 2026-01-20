@@ -13,22 +13,10 @@ from app.features.bills.schemas import BillCreate, BillUpdate
 
 settings = get_settings()
 # Constants
-
+import logging
 logger = logging.getLogger(__name__)
 
-# Surety categories - bills that are predictable and recurring
-SURETY_CATEGORIES = {
-    "Housing": ["Rent", "Maintenance"],
-    "Bills & Utilities": [
-        "Electricity",
-        "Water",
-        "Internet",
-        "Mobile Recharge",
-        "Gas"
-    ],
-    "Investment": ["SIP", "Mutual Fund", "Stocks", "EPF", "PPF", "FD", "RD"],
-    "Insurance": ["Life Insurance", "Health Insurance", "Car Insurance", "Term Insurance"]
-}
+from app.features.categories.models import SubCategory
 
 
 class BillService:
@@ -174,32 +162,36 @@ class BillService:
     ) -> Decimal:
         """
         Calculate projected surety bills (recurring predictable bills).
-        This includes recurring bills that will be due in the next X days.
+        This uses the 'is_surety' flag from the SubCategory table.
         """
         today = self._get_today()
         threshold_date = today + timedelta(days=days_ahead)
         
-        # Get all recurring surety bills
+        # Get all recurring bills
+        # We need to filter by those which are linked to a Surety SubCategory
+        # Since Bill stores sub_category as String name (legacy design), we might need to join or subquery.
+        # But we don't have a direct FK for sub_category. 
+        # So we fetch all recurring bills, and then filtering Python or use a subquery on name.
+        
+        # Let's fetch all recurring bills first
         stmt = (
             select(Bill)
             .where(Bill.user_id == user_id)
             .where(Bill.is_recurring == True)
         )
-        
         result = await db.execute(stmt)
         recurring_bills = result.scalars().all()
+        
+        # Get list of surety sub-category names
+        sub_stmt = select(SubCategory.name).where(SubCategory.is_surety == True)
+        sub_res = await db.execute(sub_stmt)
+        surety_subs = set(sub_res.scalars().all())
         
         projected_total = Decimal("0.00")
         
         for bill in recurring_bills:
-            # Check if this is a surety category
-            is_surety = False
-            for cat, subcats in SURETY_CATEGORIES.items():
-                if bill.category == cat and bill.sub_category in subcats:
-                    is_surety = True
-                    break
-            
-            if not is_surety:
+            # Check if this bill's sub-category is in our surety list
+            if bill.sub_category not in surety_subs:
                 continue
             
             # Calculate next occurrence

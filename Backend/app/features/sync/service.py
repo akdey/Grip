@@ -21,16 +21,23 @@ from app.features.sanitizer.service import get_sanitizer_service
 from app.features.transactions.models import TransactionStatus
 from app.features.sync.models import SyncLog
 from app.features.auth.models import User
+from app.features.categories.service import CategoryService
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
+from app.features.wealth.service import WealthService
+
 class SyncService:
     def __init__(self, 
                  db: AsyncSession = Depends(get_db), 
-                 transaction_service: TransactionService = Depends()):
+                 transaction_service: TransactionService = Depends(),
+                 category_service: CategoryService = Depends(),
+                 wealth_service: WealthService = Depends()):
         self.db = db
         self.txn_service = transaction_service
+        self.category_service = category_service
+        self.wealth_service = wealth_service
         self.sanitizer = get_sanitizer_service()
 
     async def _get_last_sync_time(self, user_id: uuid.UUID) -> Optional[datetime]:
@@ -59,7 +66,7 @@ class SyncService:
         log.error_message = error
         await self.db.commit()
 
-    async def call_brain_api(self, text: str) -> dict:
+    async def call_brain_api(self, text: str, user_id: uuid.UUID, categories_context: List[str] = None) -> dict:
         """Extract transaction details using Groq LLM."""
         if not settings.GROQ_API_KEY:
             logger.warning("GROQ_API_KEY not set. Using fallback.")
@@ -71,25 +78,34 @@ class SyncService:
             "Content-Type": "application/json"
         }
         
-        # Fetch dynamic categories from the database if needed, or stick to a sane set
-        # For simplicity in LLM prompting, we can still provide a baseline, but strings are fine
-        
+        # Prepare context
+        cat_str = ""
+        if categories_context:
+            cat_str = "Valid Categories & Sub-Categories (Use these EXACTLY):\n" + "\n".join([f"- {c}" for c in categories_context])
+        else:
+            cat_str = "Valid Categories: Food, Transport, Shopping, Housing, Bills & Utilities, Investment, Income, Entertainment, Medical, Personal Care"
+
         prompt = f"""
         Extract transaction details from the following text:
         Text: "{text}"
+        
+        {cat_str}
         
         Return ONLY a JSON object with these keys:
         - amount: float
         - currency: string (3-letter code, default INR)
         - merchant_name: string (clean, title case)
-        - category: string
-        - sub_category: string
+        - category: string (Must be one of the Valid Categories keys)
+        - sub_category: string (Must be one of the sub-categories listed for the chosen category)
         - account_type: string (SAVINGS, CREDIT_CARD, or CASH)
         - transaction_type: string (DEBIT or CREDIT)
         
         If unsure about category, use "Uncategorized".
         If no transaction found, return null.
         """
+        
+        # Log the full prompt as requested
+        logger.info(f"LLM Prompt: {prompt}")
 
         payload = {
             "model": settings.GROQ_MODEL,
@@ -211,22 +227,43 @@ class SyncService:
                 if await self.txn_service.get_transaction_by_hash(content_hash):
                     continue
                 
+            # Fetch categories once for context
+            db_categories = await self.category_service.get_categories(user_id)
+            
+            # Build hierarchy for context: "Category (Sub1, Sub2, Sub3)"
+            cat_list = []
+            for c in db_categories:
+                subs = [s.name for s in c.sub_categories]
+                if subs:
+                    cat_list.append(f"{c.name}: [{', '.join(subs)}]")
+                else:
+                     cat_list.append(c.name)
+            
+            processed_count = 0
+            for msg in messages:
+                dedup_payload = f"{msg['id']}:{msg['internalDate']}"
+                content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
+                
+                if await self.txn_service.get_transaction_by_hash(content_hash):
+                    continue
+                
                 clean_text = self.sanitizer.sanitize(msg['body'] or msg['snippet'])
-                extracted = await self.call_brain_api(clean_text)
+                extracted = await self.call_brain_api(clean_text, user_id, cat_list)
                 
                 mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
                 cat, sub = extracted["category"], extracted["sub_category"]
-
-                # Skip if no valid amount was extracted
-                if extracted["amount"] == 0:
-                    continue
-
                 
+                # Use mapping if available overrides
                 if mapping:
                     cat, sub = mapping.default_category, mapping.default_sub_category
                 
                 # Determine amount sign based on explicit type or category
                 final_amount = abs(extracted["amount"])
+                
+                # Skip if no valid amount was extracted
+                if final_amount == 0:
+                    continue
+
                 if extracted.get("transaction_type") == "DEBIT" and cat != "Income":
                     final_amount = -final_amount
                 elif cat == "Income" or extracted.get("transaction_type") == "CREDIT":
@@ -235,7 +272,23 @@ class SyncService:
                     # Default to negative (Expense) if unsure, unless it looks like income
                     final_amount = -final_amount
 
-                await self.txn_service.create_transaction({
+                # Determine Surety
+                # We need to resolve it. Since SyncService has txn_service, let's assume we can use a helper or query directly.
+                # But _resolve_surety is private. Let's make it public or query DB here too.
+                # Simplest: use category_service to check? category_service deals with ID.
+                # Let's perform a lightweight check similar to TransactionService.
+                # Actually, TransactionService instance is available. Let's call a public method on it.
+                # I'll update TransactionService to make resolve_surety public first? 
+                # No, I can't edit previous file easily in same thought without tool.
+                # I will assume I can access the DB directly as I have self.db.
+                
+                # Fetch surety status
+                from app.features.categories.models import SubCategory
+                stmt = select(SubCategory.is_surety).where(SubCategory.name == sub).limit(1)
+                res = await self.db.execute(stmt)
+                is_surety_flag = res.scalar() or False
+
+                new_txn = await self.txn_service.create_transaction({
                     "id": uuid.uuid4(),
                     "user_id": user_id,
                     "raw_content_hash": content_hash,
@@ -246,8 +299,16 @@ class SyncService:
                     "sub_category": sub,
                     "status": TransactionStatus.PENDING,
                     "account_type": extracted["account_type"],
-                    "remarks": f"Synced via {source}"
+                    "remarks": f"Synced via {source}",
+                    "is_surety": is_surety_flag
                 })
+                
+                # Attempt to map to Wealth/Investment
+                try:
+                    await self.wealth_service.process_transaction_match(new_txn)
+                except Exception as w_ex:
+                    logger.error(f"Wealth mapping failed for txn {new_txn.id}: {w_ex}")
+
                 processed_count += 1
             
             await self._log_end(log, "SUCCESS", processed_count)

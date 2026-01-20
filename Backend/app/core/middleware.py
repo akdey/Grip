@@ -45,29 +45,45 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Could not validate credentials"}
             )
             
-        # 4. DB Lookup (Scoped Session)
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(select(User).where(User.email == token_data.email))
-            user = result.scalar_one_or_none()
-            
-            if not user:
-                logger.warning(f"Authentication failed: User {token_data.email} not found")
-                return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={"detail": "User not found"}
-                )
-            
-            # Attach user to request state
-            request.state.user = user
-            logger.debug(f"User {user.email} authenticated successfully for {path}")
-            
+        # 4. DB Lookup (Scoped Session with retry)
+        max_retries = 2
+        for attempt in range(max_retries):
             try:
-                response = await call_next(request)
-                logger.info(f"Response: {response.status_code} for {path}")
-                return response
-            except Exception as e:
-                logger.error(f"Error in middleware processing {path}: {e}", exc_info=True)
-                return JSONResponse(
-                    status_code=500,
-                    content={"detail": "Internal Server Error in Middleware", "msg": str(e)}
-                )
+                async with AsyncSessionLocal() as session:
+                    result = await session.execute(select(User).where(User.email == token_data.email))
+                    user = result.scalar_one_or_none()
+                    
+                    if not user:
+                        logger.warning(f"Authentication failed: User {token_data.email} not found")
+                        return JSONResponse(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            content={"detail": "User not found"}
+                        )
+                    
+                    # Attach user to request state
+                    request.state.user = user
+                    logger.debug(f"User {user.email} authenticated successfully for {path}")
+                    break
+            except Exception as db_error:
+                if attempt < max_retries - 1:
+                    logger.warning(f"Database connection error (attempt {attempt + 1}/{max_retries}): {db_error}")
+                    continue
+                else:
+                    logger.error(f"Database connection failed after {max_retries} attempts: {db_error}")
+                    return JSONResponse(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        content={"detail": "Database temporarily unavailable. Please try again."}
+                    )
+        
+        # 5. Process request
+        try:
+            response = await call_next(request)
+            logger.info(f"Response: {response.status_code} for {path}")
+            return response
+        except Exception as e:
+            logger.error(f"Error in middleware processing {path}: {e}", exc_info=True)
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Internal Server Error in Middleware", "msg": str(e)}
+            )
+

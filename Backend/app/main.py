@@ -27,12 +27,20 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.ENVIRONMENT in ["local", "development"]:
+    if settings.ENVIRONMENT in ["local", "development", "production"]:
         logger.info(f"Environment: {settings.ENVIRONMENT}. Ensuring tables...")
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
     else:
         logger.info(f"Environment: {settings.ENVIRONMENT}. Skipping table creation.")
+    
+    # Start Scheduler
+    from app.core.scheduler import start_scheduler
+    try:
+        start_scheduler()
+    except Exception as e:
+        logger.error(f"Failed to start scheduler: {e}")
+        
     yield
 
 app = FastAPI(
@@ -80,6 +88,8 @@ app.include_router(analytics_router, prefix=f"{settings.API_V1_STR}/analytics", 
 app.include_router(categories_router, prefix=f"{settings.API_V1_STR}/categories", tags=["categories"])
 app.include_router(goals_router, prefix=f"{settings.API_V1_STR}/goals", tags=["goals"])
 app.include_router(export_router, prefix=f"{settings.API_V1_STR}/export", tags=["export"])
+from app.features.wealth.router import router as wealth_router
+app.include_router(wealth_router, prefix=f"{settings.API_V1_STR}/wealth", tags=["wealth"])
 
 @app.get("/")
 async def root():

@@ -37,6 +37,7 @@ const Categories: React.FC = () => {
     const [newIcon, setNewIcon] = useState('Store');
     const [newColor, setNewColor] = useState('#6366f1');
     const [newType, setNewType] = useState<TransactionType>('EXPENSE');
+    const [newIsSurety, setNewIsSurety] = useState(false);
 
     const createCategoryMutation = useMutation({
         mutationFn: async (data: any) => await api.post('/categories', data),
@@ -71,6 +72,7 @@ const Categories: React.FC = () => {
         setNewIcon('Store');
         setNewColor('#6366f1');
         setNewType('EXPENSE');
+        setNewIsSurety(false);
     };
 
     if (isLoading) return <Loader fullPage text="Decrypting Entities" />;
@@ -275,72 +277,110 @@ const Categories: React.FC = () => {
                                         </p>
                                     )}
                                 </div>
+                                    )}
                             </div>
+                        </div>
 
-                            <div className="space-y-5">
-                                <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Logic Archetype</h4>
-                                <div className="flex gap-2 p-1.5 bg-white/[0.02] rounded-3xl border border-white/[0.05] h-14 relative">
-                                    {['EXPENSE', 'INCOME', 'INVESTMENT'].map((t) => (
-                                        <button
-                                            key={t}
-                                            onClick={() => setNewType(t as TransactionType)}
-                                            className={`
+                            {/* Logic Archetype */}
+                    <div className="space-y-4 px-4">
+                        {isAddMode === 'SUB_CATEGORY' && (
+                            <button
+                                onClick={() => setNewIsSurety(!newIsSurety)}
+                                className={`w-full flex items-center justify-between p-4 rounded-[1.5rem] border transition-all active:scale-[0.98] ${newIsSurety
+                                    ? 'bg-amber-500/10 border-amber-500/20'
+                                    : 'bg-white/[0.02] border-white/[0.05]'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${newIsSurety
+                                        ? 'bg-amber-500/20 border-amber-500/30 text-amber-500'
+                                        : 'bg-white/[0.03] border-white/[0.08] text-gray-500'
+                                        }`}>
+                                        <Save size={18} />
+                                    </div>
+                                    <div className="text-left">
+                                        <h4 className={`text-sm font-black uppercase tracking-tight ${newIsSurety ? 'text-amber-500' : 'text-gray-500'}`}>Recurring Surety</h4>
+                                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-60">Fixed Monthly Obligation</p>
+                                    </div>
+                                </div>
+                                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${newIsSurety ? 'bg-amber-500' : 'bg-white/10'}`}>
+                                    <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${newIsSurety ? 'translate-x-6' : 'translate-x-0'}`} />
+                                </div>
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="space-y-5">
+                        <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Logic Archetype</h4>
+                        <div className="flex gap-2 p-1.5 bg-white/[0.02] rounded-3xl border border-white/[0.05] h-14 relative">
+                            {['EXPENSE', 'INCOME', 'INVESTMENT'].map((t) => (
+                                <button
+                                    key={t}
+                                    onClick={() => setNewType(t as TransactionType)}
+                                    className={`
                                                 relative flex-1 rounded-[1rem] text-[9px] font-black uppercase tracking-[2px] transition-colors z-10
                                                 ${newType === t ? 'text-black font-extrabold' : 'text-gray-600'}
                                             `}
-                                        >
-                                            {t}
-                                            {newType === t && (
-                                                <motion.div
-                                                    layoutId="full-archetype-indicator"
-                                                    className="absolute inset-0 bg-white rounded-[1rem] -z-10 shadow-xl"
-                                                    transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
-                                                />
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                                >
+                                    {t}
+                                    {newType === t && (
+                                        <motion.div
+                                            layoutId="full-archetype-indicator"
+                                            className="absolute inset-0 bg-white rounded-[1rem] -z-10 shadow-xl"
+                                            transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+                                        />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-                            <div className="space-y-5">
-                                <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Aesthetic Color</h4>
-                                <ColorSelector selectedColor={newColor} onSelect={setNewColor} />
-                            </div>
+                    <div className="space-y-5">
+                        <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Aesthetic Color</h4>
+                        <ColorSelector selectedColor={newColor} onSelect={setNewColor} />
+                    </div>
 
-                            <div className="space-y-5">
-                                <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Symbolic Glyph</h4>
-                                <IconSelector selectedIcon={newIcon} onSelect={setNewIcon} color={newColor} />
-                            </div>
+                    <div className="space-y-5">
+                        <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Symbolic Glyph</h4>
+                        <IconSelector selectedIcon={newIcon} onSelect={setNewIcon} color={newColor} />
+                    </div>
 
-                            <div className="fixed bottom-0 left-0 right-0 p-6 bg-[#050505]/80 backdrop-blur-2xl border-t border-white/[0.05] z-50">
-                                <div className="max-w-xl mx-auto flex gap-4">
-                                    <button
-                                        onClick={() => setAddMode('NONE')}
-                                        className="flex-1 py-5 rounded-[2rem] bg-white/5 text-gray-600 font-black uppercase text-xs tracking-[3px] transition-all active:scale-95 border border-white/[0.05] hover:text-white"
-                                    >
-                                        Drop
-                                    </button>
-                                    <Button
-                                        onClick={() => {
-                                            if (isAddMode === 'CATEGORY') {
-                                                createCategoryMutation.mutate({ name: newName, icon: newIcon, color: newColor, type: newType });
-                                            } else {
-                                                createSubCategoryMutation.mutate({ name: newName, icon: newIcon, color: newColor, type: newType, category_id: selectedCategoryId });
-                                            }
-                                        }}
-                                        isLoading={createCategoryMutation.isPending || createSubCategoryMutation.isPending}
-                                        className="flex-[2] py-5 rounded-[2rem] bg-white text-black font-black uppercase text-xs tracking-[4px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none"
-                                    >
-                                        <Save size={20} />
-                                        Commit
-                                    </Button>
-                                </div>
-                            </div>
-                        </motion.div>
+                    <div className="fixed bottom-0 left-0 right-0 p-6 bg-[#050505]/80 backdrop-blur-2xl border-t border-white/[0.05] z-50">
+                        <div className="max-w-xl mx-auto flex gap-4">
+                            <button
+                                onClick={() => setAddMode('NONE')}
+                                className="flex-1 py-5 rounded-[2rem] bg-white/5 text-gray-600 font-black uppercase text-xs tracking-[3px] transition-all active:scale-95 border border-white/[0.05] hover:text-white"
+                            >
+                                Drop
+                            </button>
+                            <Button
+                                onClick={() => {
+                                    if (isAddMode === 'CATEGORY') {
+                                        createCategoryMutation.mutate({ name: newName, icon: newIcon, color: newColor, type: newType });
+                                    } else {
+                                        createSubCategoryMutation.mutate({
+                                            name: newName,
+                                            icon: newIcon,
+                                            color: newColor,
+                                            type: newType,
+                                            category_id: selectedCategoryId,
+                                            is_surety: newIsSurety
+                                        });
+                                    }
+                                }}
+                                isLoading={createCategoryMutation.isPending || createSubCategoryMutation.isPending}
+                                className="flex-[2] py-5 rounded-[2rem] bg-white text-black font-black uppercase text-xs tracking-[4px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none"
+                            >
+                                <Save size={20} />
+                                Commit
+                            </Button>
+                        </div>
+                    </div>
+                </motion.div>
                     )}
-                </AnimatePresence>
-            </main>
-        </div>
+            </AnimatePresence>
+        </main>
+        </div >
     );
 };
 

@@ -5,7 +5,7 @@ import {
     BarChart3,
     Plus,
     LayoutGrid,
-    Target
+    Briefcase
 } from 'lucide-react';
 
 import { motion } from 'framer-motion';
@@ -14,7 +14,7 @@ const NAV_ITEMS = [
     { path: '/', label: 'Matrix', icon: Home },
     { path: '/analytics', label: 'Flow', icon: BarChart3 },
     { path: '/add', label: '', icon: Plus, isAction: true },
-    { path: '/credit-cards', label: 'Vault', icon: Target },
+    { path: '/wealth', label: 'Wealth', icon: Briefcase },
     { path: '/more', label: 'Explorer', icon: LayoutGrid },
 ];
 

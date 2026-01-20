@@ -233,3 +233,4 @@ def get_year_date_range(reference_date: Optional[date] = None) -> Dict[str, date
         "year_start": year_start,
         "year_end": year_end
     }
+

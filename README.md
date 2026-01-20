@@ -2,7 +2,7 @@
 
 > **Money that minds itself.**
 
-An AI-powered personal finance companion that automatically transforms your email inbox into actionable financial insights. Track spending, forecast expenses, and stay in control—all while keeping your data private.
+An AI-powered personal finance platform that transforms your inbox into a complete financial intelligence system. Track spending, forecast expenses, grow investments—all while keeping your data private and secure.
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org)
@@ -13,10 +13,17 @@ An AI-powered personal finance companion that automatically transforms your emai
 ## 🌟 What Makes Grip Different
 
 ### 💰 Know Your True Spending Power
-- **Safe-to-Spend Engine**: Forget bank balance—see what you can *actually* spend after bills, credit cards, and commitments
+- **Safe-to-Spend Engine**: See what you can *actually* spend after bills, credit cards, and commitments—not just your bank balance
 - **Real-Time Intelligence**: Automatically accounts for unpaid bills, upcoming rent, unbilled credit card purchases, and safety buffer
 - **Visual Health Indicators**: 4-stage color system (Negative, Critical, Warning, Healthy) shows your financial status at a glance
 - **Predictive Budgeting**: Includes projected recurring expenses ("Surety") before they even arrive
+
+### 📈 Investment Intelligence Platform (NEW!)
+- **Automated Portfolio Tracking**: Link investment transactions once, track growth forever
+- **Live Market Sync**: Daily NAV updates for mutual funds (mfapi.in) and stocks (yfinance)
+- **XIRR Calculation**: Professional-grade returns using scipy optimization
+- **AI-Powered Forecasting**: 10-20 year projections using Facebook Prophet with confidence intervals
+- **Email-to-Wealth Pipeline**: SIP/MF purchases auto-detected from bank emails and converted to portfolio units
 
 ### 🤖 AI Does the Heavy Lifting
 - **Automatic Transaction Extraction**: Connect Gmail once; AI extracts transaction details from bank alerts forever
@@ -37,7 +44,7 @@ An AI-powered personal finance companion that automatically transforms your emai
 - **Smart Deduplication**: SHA-256 hashing ensures no duplicate transactions
 - **Background Processing**: Email parsing happens async—never blocks your UI
 - **Merchant Intelligence**: Auto-learns from your verifications, gets smarter over time
-
+- **Daily Price Sync**: Scheduled job updates investment NAVs every evening at 9 PM IST
 
 ---
 
@@ -76,27 +83,31 @@ Grip processes your financial data through a sophisticated, privacy-preserving p
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ 5. MERCHANT INTELLIGENCE                                        │
+│ 5. INVESTMENT DETECTION & MAPPING                               │
+│    "ICICI Pru SIP ₹5000" → Match Rule → Fetch NAV → Add Units  │
+│    Auto-creates snapshots for portfolio tracking                │
+└────────────────────────┬────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 6. MERCHANT INTELLIGENCE                                        │
 │    User Verification → Create Mapping → Future Auto-categorize  │
 │    "SWIGGY*BANGALORE" → Clean: "Swiggy" → Category: Food        │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ 6. PREDICTIVE FORECASTING                                       │
+│ 7. PREDICTIVE FORECASTING                                       │
 │    Historical Data → Prophet/Groq → Month-end burden prediction │
 │    "Expected ₹12,500 in remaining expenses (18 days left)"     │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ 7. ACTIONABLE INSIGHTS & DASHBOARD                              │
+│ 8. ACTIONABLE INSIGHTS & DASHBOARD                              │
 │    • Safe-to-Spend = Balance - (Bills + CC + Buffer)           │
-│    • Liquidity View: Savings + Cash aggregated balance         │
-│    • Investment Tracking: Mutual Funds, Stocks, FDs portfolio   │
+│    • Wealth Trajectory: Historical + 10Y AI forecast           │
+│    • Investment XIRR: Annualized returns per asset              │
 │    Visual dashboard with spending trends and recommendations    │
 └─────────────────────────────────────────────────────────────────┘
 ```
-
-
 
 ---
 
@@ -139,6 +150,63 @@ Safe-to-Spend:             ₹17,370 ✅
 - **Reduces Anxiety**: One number tells you your true spending power
 - **Builds Buffer**: Automatic safety margin prevents living paycheck-to-paycheck
 - **Predictive**: Includes projected bills, not just current ones
+
+### 📈 Investment Intelligence Platform (NEW!)
+
+**Automated Wealth Tracking**
+
+Transform your investment expenses into a live-tracked portfolio with zero manual work.
+
+**Email-to-Wealth Pipeline:**
+```
+① Bank Email: "SIP ₹5,000 debited for ICICI Pru Bluechip"
+② Auto-Detection: Investment category + merchant pattern match
+③ Smart Linking: Checks if asset exists in portfolio
+   - If New: Creates new holding
+   - If Existing: Appends transaction to history
+④ NAV Fetch: Historical price on transaction date (mfapi.in)
+⑤ Unit Calculation: ₹5,000 / ₹45.23 = 110.52 units
+⑤ Snapshot Created: Portfolio updated with new units
+⑥ XIRR Recalculated: Annualized returns refreshed
+⑥ Portfolio Update: Total units increased, XIRR recalibrated
+```
+
+**Live Market Sync:**
+- **Daily Price Updates**: Scheduled job at 9:00 PM IST
+- **Mutual Funds**: NAV from mfapi.in (India's official MF API)
+- **Stocks**: Real-time prices via yfinance
+- **Auto-Snapshots**: Daily value tracking for Prophet forecasting
+
+**Professional-Grade Analytics:**
+- **XIRR Calculation**: scipy.optimize.newton for accurate annualized returns
+- **Historical Performance**: Complete transaction history with date-wise snapshots
+- **Asset-Level Drill-Down**: Click any holding to see detailed growth chart
+- **Portfolio Aggregation**: Net worth, total invested, absolute returns
+
+**AI-Powered Forecasting:**
+- **Facebook Prophet**: Statistical time-series analysis on daily snapshots
+- **10-20 Year Projections**: Confidence intervals with upper/lower bounds
+- **Simulation Mode**: Adjust monthly SIP, see instant forecast updates
+- **Category Breakdown**: Equity, Debt, Liquid, Fixed Income allocation
+
+**Supported Asset Types:**
+- ✅ **SIP** (Systematic Investment Plans)
+- ✅ **Mutual Funds** (Lump sum)
+- ✅ **Stocks** (Equity holdings)
+- ✅ **FD/RD** (Fixed/Recurring Deposits - manual input)
+- ✅ **PF/Gratuity** (Retirement accruals - formulaic)
+- ✅ **Gold, Real Estate** (Manual tracking)
+
+**Human-in-the-Loop:**
+- **Transaction Linker**: Manually map undetected investment transactions
+- **Mapping Rules**: Create patterns for future auto-detection
+- **Adjustments**: Override AI suggestions, edit units/prices
+- **Add Holdings**: Manually add assets not tracked via email
+
+**Future-Proof:**
+- **Tax Engine Placeholder**: Ready for LTCG/STCG calculations
+- **Multi-Asset Support**: Extensible for crypto, bonds, commodities
+- **Consolidated View**: Liquid cash + Fixed income + Market-linked in one dashboard
 
 ### 🧠 AI-Powered Intelligence
 
@@ -319,6 +387,7 @@ Result: Prevents overspending before rent is due ✅
 ✅ Debit card purchases         (POS transactions)
 ✅ NEFT/RTGS/IMPS alerts       (Fund transfers)
 ✅ Wallet transactions          (Paytm, Mobikwik)
+✅ Investment confirmations     (SIP, MF purchases)
 ```
 
 ### 🔐 Privacy & Security (Core Differentiator)
@@ -375,106 +444,39 @@ Masked:   "UPI: ****@paytm paid ****@phonepe"
 
 ---
 
-## 📱 Transaction Management & Ingestion
-
-### 📥 Three Ways to Add Transactions
-
-**1. OAuth Email Sync (Recommended)**
-- Connect Gmail via OAuth 2.0
-- Manual trigger: Click "Sync Now" anytime
-- Scheduled: Set up automatic periodic sync
-- Fetches transaction emails from last N days
-- Background processing (non-blocking)
-
-**2. Webhook Push (Real-Time)**
-- Google Apps Script integration
-- Pings backend with raw email content in real-time
-- Header-based authentication (`X-GRIP-SECRET`)
-- Secure production-ready endpoint
-- Zero latency from email arrival to transaction creation
-
-**3. Manual Entry**
-- For cash transactions or non-email sources
-- Click "+" button → Enter details → Save
-- Automatically marked as `VERIFIED` (no AI review needed)
-- Supports all account types: Cash, Credit Card, Savings, UPI
-- Instant addition to dashboard
-
-### 📊 Dashboard & Portfolio Insights
-
-**Liquidity View**
-- Aggregated balance across all savings accounts
-- Cash on hand tracking
-- Real-time available liquid funds
-- Trend charts showing liquidity over time
-
-**Investment Portfolio Tracking**
-- Mutual Funds with current value and returns
-- Stocks and equity holdings
-- Fixed Deposits (FDs) with maturity dates
-- Portfolio distribution pie charts
-- Total investment value and growth tracking
-
-**Financial Health Overview**
-- Safe-to-Spend amount (hero metric)
-- Frozen funds breakdown
-- Upcoming bills and due dates
-- Credit card payment reminders
-- Month-end expense forecast
-
-### 🔄 Email Sync Features (OAuth)
-
-**Gmail Integration**
-- OAuth 2.0 secure connection
-- One-click authorization
-- Searches for transaction keywords automatically
-- Real-time sync (manual trigger or webhook)
-- Processes last N emails efficiently
-
-**Sync Features**
-- Connection status monitoring
-- Sync history with logs
-- Error tracking and retry logic
-- One-click disconnect
-- Background processing (non-blocking)
-
-**Supported Email Types**
-- Bank transaction alerts (ICICI, HDFC, SBI, etc.)
-- Credit card statements and alerts
-- UPI payment confirmations
-- Debit card purchase notifications
-- Any financial transaction email
-
----
-
 ## 🛠️ Technology Stack
 
 ### Backend
-- **Framework**: FastAPI (Python 3.11+) - High-performance async API
+- **Framework**: FastAPI (Python 3.12+) - High-performance async API
 - **Database**: PostgreSQL with SQLAlchemy (async) + asyncpg
 - **AI/ML**:
   - **Groq** (Llama 3.3 70B) - Transaction extraction & forecasting
   - **Meta Prophet** - Statistical time-series forecasting
+  - **scipy** - XIRR calculation (Newton-Raphson optimization)
+- **Data APIs**:
+  - **mfapi.in** - Mutual fund NAV data (India)
+  - **yfinance** - Stock prices (global)
+- **Scheduler**: APScheduler (async) - Daily price sync jobs
 - **Authentication**: JWT + bcrypt
 - **Email**: SMTP for OTP delivery
 - **OAuth**: Google OAuth 2.0 for Gmail
-- **Deployment**: Vercel-ready (Prophet auto-falls back to Groq)
+- **Deployment**: Render/Vercel-ready
 
 ### Frontend
 - **Framework**: React 19 with TypeScript
 - **Build**: Vite (lightning-fast HMR)
 - **Styling**: Vanilla CSS (no framework bloat)
 - **State**: Zustand (lightweight)
-- **Data Fetching**: TanStack Query (React Query)
-- **Charts**: Recharts
+- **Data Fetching**: Axios with interceptors
+- **Charts**: Recharts (responsive, composable)
 - **Icons**: Lucide React
 - **Animations**: Framer Motion
-- **PWA**: Service workers for offline support
+- **Routing**: React Router DOM
 
 ### Infrastructure
 - **Package Manager**: uv (Rust-based, 10-100x faster than pip)
-- **Database**: NeonDB / Supabase (serverless Postgres)
-- **Hosting**: Vercel (backend + frontend)
+- **Database**: Supabase / NeonDB (serverless Postgres)
+- **Hosting**: Render (backend) + Vercel (frontend)
 - **Version Control**: Git / GitHub
 
 ---
@@ -482,7 +484,7 @@ Masked:   "UPI: ****@paytm paid ****@phonepe"
 ## ⚡ Quick Start
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.12+
 - Node.js 18+
 - PostgreSQL database
 - Gmail account (for email sync)
@@ -537,7 +539,7 @@ APP_NAME=Grip
 APP_TAGLINE=Money that minds itself.
 ```
 
-**Frontend (`Frontend/.env.local`):**
+**Frontend (`Frontend/.env`):**
 ```bash
 VITE_API_BASE_URL=http://localhost:8000/api/v1
 VITE_APP_NAME=Grip
@@ -612,14 +614,22 @@ See **[Gmail Sync Setup Guide](GMAIL_SYNC_QUICKSTART.md)** for detailed instruct
    - Add recurring bills (rent, utilities, subscriptions)
    - Mark predictable expenses as "Surety"
 
+5. **Track Investments** (NEW!)
+   - Go to Wealth tab
+   - Click "Link Transaction" to map investment expenses
+   - Or manually add holdings (MF, Stocks, FDs)
+   - Watch portfolio grow with daily NAV updates
+
 ### Daily Workflow
 
 **Automated (Recommended):**
 1. Gmail Sync runs automatically (or click "Sync Now")
 2. AI extracts transaction details
-3. Review pending transactions in Transactions tab
-4. Verify or edit as needed
-5. Check Dashboard for safe-to-spend amount
+3. Investment transactions auto-mapped to portfolio
+4. Review pending transactions in Transactions tab
+5. Verify or edit as needed
+6. Check Dashboard for safe-to-spend amount
+7. Monitor Wealth tab for portfolio performance
 
 **Manual Entry:**
 1. Click "+" button
@@ -664,6 +674,16 @@ DELETE /api/v1/transactions/{id}            # Delete
 POST /api/v1/transactions/{id}/verify       # Verify
 ```
 
+#### Wealth & Investments (NEW!)
+```bash
+GET  /api/v1/wealth/holdings                # List portfolio
+GET  /api/v1/wealth/holdings/{id}           # Holding details with snapshots
+POST /api/v1/wealth/holdings                # Add new asset
+POST /api/v1/wealth/forecast                # AI forecast (Prophet)
+POST /api/v1/wealth/map-transaction         # Link transaction to holding
+GET  /api/v1/wealth/sync-prices             # Trigger manual price sync
+```
+
 #### Analytics
 ```bash
 GET /api/v1/analytics/safe-to-spend  # Real-time calculation
@@ -678,45 +698,19 @@ GET /api/v1/dashboard/forecast  # 30-day AI prediction
 
 ---
 
-## 🎨 Screenshots
-
-### Dashboard
-- Safe-to-spend amount with visual health indicator
-- AI forecast for next 30 days
-- Frozen funds breakdown
-- Spending variance vs last month
-
-### Gmail Sync
-- One-click OAuth connection
-- Manual sync trigger
-- Sync history with status
-- Connection management
-
-### Transactions
-- Grouped by time periods (Today, Yesterday, Last Week, etc.)
-- Pending verification workflow
-- Category and tag filters
-- Quick edit/delete actions
-
-### Credit Cards
-- All cards overview with unbilled amounts
-- Billing cycle progress
-- Statement date countdown
-- Credit utilization tracking
-
----
-
 ## 🚀 Deployment
 
-### Vercel (Recommended)
+### Render (Recommended for Backend)
 
 **Backend:**
 ```bash
 cd Backend
-vercel --prod
+# Connect to Render via GitHub
+# Add environment variables in Render dashboard
+# Deploy automatically on push
 ```
 
-**Frontend:**
+**Frontend (Vercel):**
 ```bash
 cd Frontend
 npm run build
@@ -724,9 +718,10 @@ vercel --prod
 ```
 
 **Environment Variables:**
-- Add all `.env` variables in Vercel dashboard
+- Add all `.env` variables in platform dashboards
 - Update `GOOGLE_CLIENT_ID` redirect URIs with production URL
 - Ensure `DATABASE_URL` points to production database
+- Set `FRONTEND_ORIGIN` to production frontend URL
 
 ### Docker (Alternative)
 
@@ -741,6 +736,7 @@ docker-compose up -d
 
 ### What We Store
 - Transaction metadata (amount, merchant, category, dates)
+- Investment snapshots (units, prices, dates)
 - Encrypted OAuth tokens (Gmail access)
 - User preferences and mappings
 - Sync logs (for debugging)
@@ -759,7 +755,9 @@ docker-compose up -d
 4. **Sanitization happens locally** (regex masking)
 5. Sanitized text sent to Groq for extraction
 6. Extracted JSON stored in database
-7. Original email remains in your Gmail (unchanged)
+7. Investment transactions auto-mapped to holdings
+8. Daily price sync updates portfolio values
+9. Original email remains in your Gmail (unchanged)
 
 ---
 
@@ -783,7 +781,11 @@ Built with incredible open-source tools:
 - **FastAPI** - Modern Python web framework
 - **React** - UI library
 - **PostgreSQL** - Robust database
-- **Vercel** - Deployment platform
+- **scipy** - Scientific computing for XIRR
+- **yfinance** - Stock market data
+- **mfapi.in** - Indian mutual fund NAV data
+- **Render** - Backend deployment
+- **Vercel** - Frontend deployment
 
 ---
 

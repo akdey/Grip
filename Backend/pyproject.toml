@@ -1,5 +1,5 @@
 [project]
-name = "private-financial-intelligence-engine"
+name = "Grip"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -20,4 +20,10 @@ dependencies = [
     "google-api-python-client",
     "google-auth",
     "google-auth-oauthlib",
+    "apscheduler>=3.11.2",
+    "scipy>=1.17.0",
+    "pandas>=2.3.3",
+    "numpy>=2.4.1",
+    "prophet>=1.2.1",
+    "yfinance>=1.0",
 ]

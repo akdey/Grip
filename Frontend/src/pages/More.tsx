@@ -8,18 +8,15 @@ import {
     Smartphone,
     Calendar,
     Filter,
-    ChevronRight,
     Sparkles,
-
     CircleUserRound,
-    ArrowLeft,
     CalendarClock,
     Wallet,
     Mail,
-    Download
+    Download,
+    Target
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
-import { Loader } from '../components/ui/Loader';
 import { api } from '../lib/api';
 
 const FEATURE_CARDS = [
@@ -31,6 +28,7 @@ const FEATURE_CARDS = [
     { id: 'categories', label: 'Categories', icon: LayoutGrid, action: 'OPEN_CATEGORIES', color: 'text-cyan-400', bgColor: 'bg-cyan-500/10' },
     { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-indigo-400', bgColor: 'bg-indigo-500/10' },
     { id: 'backup', label: 'Backup Data', icon: Download, action: 'BACKUP_DATA', color: 'text-amber-400', bgColor: 'bg-amber-500/10' },
+    { id: 'vault', label: 'Vault', icon: Target, path: '/credit-cards', color: 'text-purple-400', bgColor: 'bg-purple-500/10' },
 ];
 
 const More: React.FC = () => {

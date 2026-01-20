@@ -61,9 +61,8 @@ const Dashboard: React.FC = () => {
             maximumFractionDigits: 0
         }).format(amount);
 
-    if (isSummaryLoading || isSafeLoading || isTxnLoading || isForecastLoading || isVarianceLoading) {
-        return <Loader fullPage text="Synchronizing Intelligence" />;
-    }
+    // Progressive loading - removed blocking loader
+    // Blocking loader removed for progressive loading
 
     const scopes = [
         { id: 'month', label: 'This Month' },
@@ -72,11 +71,11 @@ const Dashboard: React.FC = () => {
     ];
 
     return (
-        <div className="text-white pb-24 overflow-x-hidden relative">
-            {/* Liquid Header */}
-            <header className="px-5 pt-safe pt-10 pb-4 flex items-center justify-between relative z-50">
+        <div className="min-h-screen bg-[#050505] text-white p-6 pb-24 overflow-x-hidden relative">
+            {/* Header */}
+            <header className="flex items-center justify-between mb-8 relative z-50">
                 <div className="flex flex-col">
-                    <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-indigo-400">
+                    <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600 pb-1">
                         {import.meta.env.VITE_APP_NAME || 'Grip'}
                     </h1>
                     <p className="text-[8px] text-gray-500 font-bold uppercase tracking-[3px] mt-1">{import.meta.env.VITE_APP_TAGLINE || 'Money that minds itself.'}</p>
@@ -136,37 +135,69 @@ const Dashboard: React.FC = () => {
                 </div>
             </header>
 
-            <div className="px-5 space-y-5 animate-enter">
+            <div className="space-y-5 animate-enter">
                 {/* Summary Grid */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex flex-col gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                            <ArrowUpRight size={20} />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-1.5 mb-1">
-                                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Inflow</p>
-                                {!showSensitive && <Lock size={10} className="text-gray-600" />}
+                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex flex-col gap-4 relative overflow-hidden">
+                        {isSummaryLoading ? (
+                            <div className="animate-pulse flex flex-col gap-4 h-full">
+                                <div className="w-10 h-10 rounded-2xl bg-white/[0.05]" />
+                                <div className="space-y-2">
+                                    <div className="h-2 w-12 bg-white/[0.05] rounded" />
+                                    <div className="h-6 w-24 bg-white/[0.05] rounded" />
+                                </div>
                             </div>
-                            <p className="text-xl font-black text-white leading-none whitespace-nowrap">
-                                {showSensitive ? formatCurrency(summary?.total_income || 0) : '******'}
-                            </p>
-                        </div>
+                        ) : (
+                            <>
+                                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                                    <ArrowUpRight size={20} />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Inflow</p>
+                                        {!showSensitive && <Lock size={10} className="text-gray-600" />}
+                                    </div>
+                                    <p className="text-xl font-black text-white leading-none whitespace-nowrap">
+                                        {showSensitive ? formatCurrency(summary?.total_income || 0) : '******'}
+                                    </p>
+                                </div>
+                            </>
+                        )}
                     </div>
 
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex flex-col gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
-                            <ArrowDownRight size={20} />
-                        </div>
-                        <div>
-                            <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Outflow</p>
-                            <p className="text-xl font-black text-white leading-none whitespace-nowrap">{formatCurrency(summary?.total_expense || 0)}</p>
-                        </div>
+                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex flex-col gap-4 relative overflow-hidden">
+                        {isSummaryLoading ? (
+                            <div className="animate-pulse flex flex-col gap-4 h-full">
+                                <div className="w-10 h-10 rounded-2xl bg-white/[0.05]" />
+                                <div className="space-y-2">
+                                    <div className="h-2 w-12 bg-white/[0.05] rounded" />
+                                    <div className="h-6 w-24 bg-white/[0.05] rounded" />
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
+                                    <ArrowDownRight size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Outflow</p>
+                                    <p className="text-xl font-black text-white leading-none whitespace-nowrap">{formatCurrency(summary?.total_expense || 0)}</p>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 
                 {/* Accrual Accounting - Outflow Composition */}
-                {summary && (() => {
+                {isSummaryLoading ? (
+                    <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] animate-pulse">
+                        <div className="h-3 w-32 bg-white/[0.05] rounded mb-6" />
+                        <div className="space-y-4">
+                            <div className="h-8 w-full bg-white/[0.05] rounded" />
+                            <div className="h-8 w-full bg-white/[0.05] rounded" />
+                        </div>
+                    </div>
+                ) : summary && (() => {
                     const currentExpense = Number(summary.current_period_expense || 0);
                     const priorSettlement = Number(summary.prior_period_settlement || 0);
                     const total = currentExpense + priorSettlement;
@@ -224,7 +255,16 @@ const Dashboard: React.FC = () => {
                 })()}
 
                 {/* Safe to Spend - Liquid Glass Hero */}
-                {(() => {
+                {isSafeLoading ? (
+                    <div className="relative p-8 rounded-[3.5rem] bg-white/[0.01] border border-white/[0.05] overflow-hidden animate-pulse min-h-[400px]">
+                        <div className="flex flex-col items-center">
+                            <div className="h-6 w-24 bg-white/[0.05] rounded-full mb-6" />
+                            <div className="h-16 w-32 bg-white/[0.05] rounded-lg mb-3" />
+                            <div className="h-3 w-40 bg-white/[0.05] rounded mb-8" />
+                            <div className="w-full max-w-[200px] h-1 bg-white/[0.05] rounded-full" />
+                        </div>
+                    </div>
+                ) : (() => {
                     const safe = Number(safeToSpend?.safe_to_spend || 0);
                     const balance = Number(safeToSpend?.current_balance || 0);
 
@@ -364,82 +404,108 @@ const Dashboard: React.FC = () => {
                 })()}
 
                 {/* Intelligence Breakdown - Frozen Funds */}
-                <div className="space-y-4 pt-2">
-                    <div className="flex items-center justify-between px-2">
-                        <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Frozen Allocation</h3>
-                        <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/10">
-                            {formatCurrency(Number(safeToSpend?.frozen_funds?.total_frozen) || 0)}
-                        </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3">
-                        <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center shadow-inner">
-                                    <Receipt size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-black text-white/90 uppercase tracking-tight">Unpaid Obligations</p>
-                                    <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mt-0.5">Surety / Bills</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className="font-black text-white text-sm tracking-tighter">{formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills) || 0)}</p>
-                                <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Projected: {formatCurrency(Number(safeToSpend?.frozen_funds?.projected_surety) || 0)}</p>
-                            </div>
+                {isSafeLoading ? (
+                    <div className="space-y-4 pt-2 animate-pulse">
+                        <div className="flex items-center justify-between px-2">
+                            <div className="h-3 w-32 bg-white/[0.05] rounded" />
+                            <div className="h-6 w-16 bg-white/[0.05] rounded-full" />
                         </div>
-
-                        <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-inner">
-                                    <Lock size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-black text-white/90 uppercase tracking-tight">Card Exposure</p>
-                                    <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mt-0.5">Pending CC Swipes</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className="font-black text-white text-sm tracking-tighter">{formatCurrency(Number(safeToSpend?.frozen_funds?.unbilled_cc) || 0)}</p>
-                                <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Settlement Limit</p>
-                            </div>
+                        <div className="grid grid-cols-1 gap-3">
+                            <div className="h-24 bg-white/[0.05] rounded-[2rem]" />
+                            <div className="h-24 bg-white/[0.05] rounded-[2rem]" />
                         </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="space-y-4 pt-2">
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Frozen Allocation</h3>
+                            <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/10">
+                                {formatCurrency(Number(safeToSpend?.frozen_funds?.total_frozen) || 0)}
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3">
+                            <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center shadow-inner">
+                                        <Receipt size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black text-white/90 uppercase tracking-tight">Unpaid Obligations</p>
+                                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mt-0.5">Surety / Bills</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-black text-white text-sm tracking-tighter">{formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills) || 0)}</p>
+                                    <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Projected: {formatCurrency(Number(safeToSpend?.frozen_funds?.projected_surety) || 0)}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-inner">
+                                        <Lock size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black text-white/90 uppercase tracking-tight">Card Exposure</p>
+                                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mt-0.5">Pending CC Swipes</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-black text-white text-sm tracking-tighter">{formatCurrency(Number(safeToSpend?.frozen_funds?.unbilled_cc) || 0)}</p>
+                                    <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Settlement Limit</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Forecast Card - New AI Feature */}
-                <div
-                    onClick={() => setShowForecastDetails(true)}
-                    className={`bg-gradient-to-r ${forecast?.confidence === 'low' ? 'from-amber-600/10 via-orange-600/10' : 'from-cyan-600/10 via-purple-600/10'} to-transparent border border-white/[0.05] p-6 rounded-[2.5rem] relative overflow-hidden group cursor-pointer active:scale-95 transition-all`}
-                >
-                    <div className="absolute right-6 top-6 animate-pulse text-cyan-400/20">
-                        <Sparkles size={40} />
+                {isForecastLoading ? (
+                    <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2.5rem] relative overflow-hidden animate-pulse h-[160px]">
+                        <div className="flex gap-4">
+                            <div className="w-6 h-6 rounded-full bg-white/[0.05]" />
+                            <div className="h-3 w-32 bg-white/[0.05] rounded" />
+                        </div>
+                        <div className="mt-4 space-y-3">
+                            <div className="h-8 w-40 bg-white/[0.05] rounded" />
+                            <div className="h-3 w-60 bg-white/[0.05] rounded" />
+                        </div>
                     </div>
-                    <div className="relative z-10 flex flex-col gap-4">
-                        <div className="flex items-center gap-2">
-                            <div className={`w-6 h-6 rounded-full ${forecast?.confidence === 'low' ? 'bg-amber-400/10 text-amber-400' : 'bg-cyan-400/10 text-cyan-400'} flex items-center justify-center`}>
-                                <Activity size={14} />
+                ) : (
+                    <div
+                        onClick={() => setShowForecastDetails(true)}
+                        className={`bg-gradient-to-r ${forecast?.confidence === 'low' ? 'from-amber-600/10 via-orange-600/10' : 'from-cyan-600/10 via-purple-600/10'} to-transparent border border-white/[0.05] p-6 rounded-[2.5rem] relative overflow-hidden group cursor-pointer active:scale-95 transition-all`}
+                    >
+                        <div className="absolute right-6 top-6 animate-pulse text-cyan-400/20">
+                            <Sparkles size={40} />
+                        </div>
+                        <div className="relative z-10 flex flex-col gap-4">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-6 h-6 rounded-full ${forecast?.confidence === 'low' ? 'bg-amber-400/10 text-amber-400' : 'bg-cyan-400/10 text-cyan-400'} flex items-center justify-center`}>
+                                    <Activity size={14} />
+                                </div>
+                                <span className="text-[9px] font-black uppercase tracking-[3px] text-white/40">AI Forecast (30d)</span>
+                                {forecast?.confidence === 'low' && (
+                                    <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                        ⚠ Low Data
+                                    </span>
+                                )}
                             </div>
-                            <span className="text-[9px] font-black uppercase tracking-[3px] text-white/40">AI Forecast (30d)</span>
-                            {forecast?.confidence === 'low' && (
-                                <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                                    ⚠ Low Data
-                                </span>
-                            )}
-                        </div>
-                        <div>
-                            <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(forecast?.predicted_burden_30d || 0)}</p>
-                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Predicted Burden • {forecast?.time_frame}</p>
-                            <p className={`text-[10px] font-medium leading-tight mt-3 max-w-[260px] ${forecast?.confidence === 'low' ? 'text-amber-200/60' : 'text-cyan-200/60'}`}>
-                                {forecast?.description}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-2 mt-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                            <span className="text-[8px] font-bold text-cyan-400 uppercase tracking-widest">Tap for breakdown</span>
-                            <ArrowUpRight size={10} className="text-cyan-400" />
+                            <div>
+                                <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(forecast?.predicted_burden_30d || 0)}</p>
+                                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Predicted Burden • {forecast?.time_frame}</p>
+                                <p className={`text-[10px] font-medium leading-tight mt-3 max-w-[260px] ${forecast?.confidence === 'low' ? 'text-amber-200/60' : 'text-cyan-200/60'}`}>
+                                    {forecast?.description}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                <span className="text-[8px] font-bold text-cyan-400 uppercase tracking-widest">Tap for breakdown</span>
+                                <ArrowUpRight size={10} className="text-cyan-400" />
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Forecast Details Modal */}
                 {showForecastDetails && (
@@ -496,7 +562,7 @@ const Dashboard: React.FC = () => {
                 )}
 
                 {/* Activity Feed */}
-                <RecentActivity transactions={transactions} formatCurrency={formatCurrency} />
+                <RecentActivity transactions={transactions} formatCurrency={formatCurrency} isLoading={isTxnLoading} />
             </div>
 
             <React.Suspense fallback={null}>

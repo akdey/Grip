@@ -187,6 +187,17 @@ const AddEntry: React.FC = () => {
     const handleSubCategorySelect = (sub: any) => {
         setCategory(tempCategory.name);
         setSubCategory(sub.name);
+        // Auto-set surety based on sub-category definition
+        if (sub.is_surety) {
+            setIsSurety(true);
+        } else {
+            // Keep existing state or reset? Generally safer to reset unless user manually set it?
+            // User requested: "change toggle to ON... And disabled"
+            // If sub-category says NO surety, we should probably allow manual usage.
+            // If sub-category says YES surety, we force it ON.
+            setIsSurety(false);
+        }
+
         setCategoryOpen(false);
         setTimeout(() => {
             setView('CATEGORIES');
@@ -511,8 +522,13 @@ const AddEntry: React.FC = () => {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => setIsSurety(!isSurety)}
-                                    className="p-1 transition-all active:scale-90"
+                                    onClick={() => {
+                                        // Only toggle if not forced by sub-category
+                                        if (getSelectedSubCategory()?.is_surety) return;
+                                        setIsSurety(!isSurety);
+                                    }}
+                                    className={`p-1 transition-all active:scale-90 ${getSelectedSubCategory()?.is_surety ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    disabled={!!getSelectedSubCategory()?.is_surety}
                                 >
                                     {isSurety ? (
                                         <ToggleRight size={32} className="text-amber-500 opacity-80" />

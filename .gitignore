@@ -23,5 +23,6 @@ Backend/logs/
 alembic/*
 Backend/scripts/
 scripts/
+UnusedDocs
 
 

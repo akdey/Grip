@@ -40,7 +40,8 @@ class CategoryService:
             color=data.color,
             type=data.type,
             category_id=data.category_id,
-            user_id=user_id
+            user_id=user_id,
+            is_surety=data.is_surety
         )
         self.db.add(sub_category)
         await self.db.commit()

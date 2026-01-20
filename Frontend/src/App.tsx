@@ -14,6 +14,7 @@ const AddEntry = React.lazy(() => import('./pages/AddEntry'));
 const Bills = React.lazy(() => import('./features/bills/BillsPage'));
 const Categories = React.lazy(() => import('./pages/Categories'));
 const More = React.lazy(() => import('./pages/More'));
+const Wealth = React.lazy(() => import('./pages/Wealth'));
 const Tags = React.lazy(() => import('./pages/Tags'));
 const Goals = React.lazy(() => import('./pages/Goals'));
 const Sync = React.lazy(() => import('./pages/Sync'));
@@ -44,6 +45,7 @@ function App() {
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/add" element={<AddEntry />} />
               <Route path="/settings/categories" element={<Categories />} />
+              <Route path="/wealth" element={<Wealth />} />
               <Route path="/more" element={<More />} />
               <Route path="/tags" element={<Tags />} />
               <Route path="/goals" element={<Goals />} />

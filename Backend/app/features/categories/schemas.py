@@ -9,6 +9,7 @@ class SubCategoryBase(BaseModel):
     icon: Optional[str] = None
     color: Optional[str] = None
     type: CategoryType = "EXPENSE"
+    is_surety: bool = False
 
 class SubCategoryCreate(SubCategoryBase):
     category_id: uuid.UUID
@@ -23,6 +24,7 @@ class SubCategoryResponse(SubCategoryBase):
     id: uuid.UUID
     category_id: uuid.UUID
     user_id: Optional[uuid.UUID] = None
+    is_surety: bool = False
 
     class Config:
         from_attributes = True

@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from sqlalchemy import String, ForeignKey, Text
+from sqlalchemy import String, ForeignKey, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
@@ -24,6 +24,7 @@ class SubCategory(Base):
     icon: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     color: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     type: Mapped[str] = mapped_column(String, default="EXPENSE")
+    is_surety: Mapped[bool] = mapped_column(Boolean, default=False)
     category_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("categories.id"))
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
 
