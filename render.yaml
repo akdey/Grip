@@ -8,10 +8,6 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
-      - key: DATABASE_URL
-        fromDatabase:
-          name: grip-db
-          property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: GRIP_SECRET
@@ -20,9 +16,3 @@ services:
         value: production
     plan: free
 
-databases:
-  - name: grip-db
-    databaseName: grip
-    user: grip
-    plan: free
-    region: singapore # Optional
