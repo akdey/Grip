@@ -75,3 +75,27 @@ async def trigger_price_sync(
     
     # Placeholder for now
     return {"message": "Sync triggered"}
+
+@router.post("/import-cams", response_model=schemas.CAMSImportResponse)
+async def import_cams_statement(
+    request: schemas.CAMSImportRequest,
+    current_user: User = Depends(get_current_user),
+    service: WealthService = Depends()
+):
+    """Import CAMS consolidated account statement."""
+    return await service.import_cams_statement(current_user.id, request)
+
+@router.get("/holdings/{holding_id}/sip-analysis", response_model=schemas.SIPDateAnalysisResponse)
+async def analyze_sip_date_performance(
+    holding_id: UUID,
+    current_user: User = Depends(get_current_user),
+    service: WealthService = Depends()
+):
+    """
+    Analyze SIP date-specific performance.
+    Compares user's actual SIP dates against alternative dates (1st, 5th, 10th, 15th, 20th, 25th).
+    """
+    try:
+        return await service.analyze_sip_date_performance(holding_id, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

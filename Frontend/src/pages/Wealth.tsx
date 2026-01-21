@@ -3,14 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { HoldingDetailsModal } from '../components/wealth/HoldingDetailsModal';
 import { WealthLinker } from '../components/wealth/WealthLinker';
 import { AddHoldingModal } from '../components/wealth/AddHoldingModal';
+import { CAMSImportModal } from '../components/wealth/CAMSImportModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     TrendingUp, Wallet, ArrowUpRight, Plus, RefreshCw,
-    MoreHorizontal, Link as LinkIcon, Activity, PieChart
+    MoreHorizontal, Link as LinkIcon, Activity, PieChart, Upload
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
 } from 'recharts';
+
 import { api } from '../lib/api';
 
 // Types
@@ -47,7 +49,9 @@ const Wealth: React.FC = () => {
     // Modal States
     const [isLinkerOpen, setIsLinkerOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isCAMSImportOpen, setIsCAMSImportOpen] = useState(false);
     const [selectedHolding, setSelectedHolding] = useState<any | null>(null);
+
 
     // Simulation State
     const [monthlySIP, setMonthlySIP] = useState(5000);
@@ -158,6 +162,13 @@ const Wealth: React.FC = () => {
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">Your Financial Core</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setIsCAMSImportOpen(true)}
+                        className="p-2 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 transition-colors"
+                        title="Import CAMS Statement"
+                    >
+                        <Upload size={20} />
+                    </button>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
                         className="p-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors"
@@ -420,6 +431,12 @@ const Wealth: React.FC = () => {
                 isOpen={!!selectedHolding}
                 onClose={() => setSelectedHolding(null)}
                 holding={selectedHolding}
+            />
+
+            <CAMSImportModal
+                isOpen={isCAMSImportOpen}
+                onClose={() => setIsCAMSImportOpen(false)}
+                onSuccess={fetchData}
             />
 
             <style>{`

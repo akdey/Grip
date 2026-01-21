@@ -107,3 +107,44 @@ class ForecastResponse(BaseModel):
 class InvestmentHoldingDetail(InvestmentHoldingOut):
     snapshots: List[InvestmentSnapshotOut]
 
+# CAMS Import Schemas
+class CAMSTransaction(BaseModel):
+    transaction_date: date
+    scheme_name: str
+    folio_number: Optional[str] = None
+    amount: float
+    units: float
+    nav: float
+    transaction_type: str  # "Purchase", "Redemption", "Dividend", etc.
+
+class CAMSImportRequest(BaseModel):
+    transactions: List[CAMSTransaction]
+    auto_create_holdings: bool = True
+    detect_sip_patterns: bool = True
+
+class CAMSImportResponse(BaseModel):
+    holdings_created: int
+    holdings_updated: int
+    transactions_processed: int
+    sip_patterns_detected: int
+    errors: List[str] = []
+
+# SIP Date Analysis Schemas
+class SIPDatePerformance(BaseModel):
+    sip_date: int  # Day of month (1-31)
+    total_invested: float
+    current_value: float
+    absolute_return: float
+    return_percentage: float
+    xirr: Optional[float] = None
+
+class SIPDateAnalysisResponse(BaseModel):
+    holding_id: UUID
+    holding_name: str
+    user_sip_date: int
+    user_performance: SIPDatePerformance
+    alternatives: dict[int, SIPDatePerformance]  # {date: performance}
+    best_alternative: dict  # {"date": int, "performance": SIPDatePerformance, "improvement": float}
+    insight: str
+    historical_pattern: Optional[str] = None
+

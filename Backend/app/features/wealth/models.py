@@ -64,6 +64,14 @@ class InvestmentSnapshot(Base):
     amount_invested_delta: Mapped[float] = mapped_column(Float, default=0.0) # For flow tracking (buy/sell amount on this day)
     
     is_projected: Mapped[bool] = mapped_column(Boolean, default=False) # For Prophet forecasts
+    
+    # SIP tracking metadata
+    is_sip: Mapped[bool] = mapped_column(Boolean, default=False)
+    sip_amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # Expected SIP amount
+    is_step_up: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_skip: Mapped[bool] = mapped_column(Boolean, default=False)
+    skip_reason: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # Additional metadata
 
     holding: Mapped["InvestmentHolding"] = relationship("InvestmentHolding", back_populates="snapshots")
 
