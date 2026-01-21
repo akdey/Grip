@@ -60,10 +60,10 @@ try:
                 print("   -> If you are on the Supabase Free Tier, direct IPv4 connections to port 5432 might be blocked.")
                 print("   -> Render uses IPv4. Switch to the Transaction Pooler (Port 6543).")
             
-            # For Supabase, use 'require' mode which enables SSL without strict certificate verification
-            # This is the recommended approach for Supabase with asyncpg
-            print(f"DATABASE: Configuring SSL for Supabase (sslmode=require)")
-            connect_args["ssl"] = "require"
+            # For Supabase with asyncpg, use ssl=True (not 'require' string)
+            # asyncpg will use default SSL context which works with Supabase
+            print(f"DATABASE: Configuring SSL for Supabase (ssl=True)")
+            connect_args["ssl"] = True
         elif use_ssl:
             print(f"DATABASE: Enforcing SSL for {settings.ENVIRONMENT} (Target: Cloud/Remote)")
             # For other cloud providers, use a permissive SSL context
