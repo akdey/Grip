@@ -27,21 +27,43 @@ try:
         connect_args = {
             "statement_cache_size": 0,
             "server_settings": {
-                "application_name": "grip_backend"
-            },
         }
-        # Only enforce SSL if we are NOT in a local environment OR if we detect a Cloud database URL (Render, Supabase, etc)
-        # This prevents connection timeouts on Cloud DBs (which need SSL) while keeping it off for localhost
-        if settings.ENVIRONMENT != "local" or "render.com" in db_url or "dpg-" in db_url or "supabase" in db_url:
+        
+        # Robust SSL Detection Logic
+        # 1. Default to NO SSL
+        use_ssl = False
+        
+        # 2. Check for known Cloud Providers (Supabase, Render, Neon, etc.)
+        # These ALWAYS require SSL, regardless of 'ENVIRONMENT' variable
+        url_str = db_url.lower()
+        cloud_domains = ["supabase", "render.com", "neon.tech", "aws.com", "azure.com", "dpg-"]
+        is_cloud_db = any(domain in url_str for domain in cloud_domains)
+
+        # 3. Check for Localhost/SQLite
+        is_local = "localhost" in url_str or "127.0.0.1" in url_str or "sqlite" in url_str
+
+        # 4. Determine final state
+        # If it's a cloud DB, OR if we are in production/non-local env (and it's not explicitly localhost)
+        if is_cloud_db or (settings.ENVIRONMENT != "local" and not is_local):
+            use_ssl = True
+
+        if use_ssl:
+            print("DATABASE: Enforcing SSL (Cloud/Production DB detected)")
             connect_args["ssl"] = ssl_context
+        else:
+            print("DATABASE: SSL Disabled (Local/Dev DB detected)")
+
+        # Add timeouts to prevent indefinite hangs
+        connect_args["timeout"] = 30
+        connect_args["command_timeout"] = 30
 
     engine = create_async_engine(
         db_url, 
         echo=False,
-        pool_pre_ping=True, # Re-enabling to ensure connections are valid
+        pool_pre_ping=True, 
         pool_recycle=300, 
-        pool_size=5, # Increased to handle concurrency better
-        max_overflow=10, # Allow more temporary burst connections
+        pool_size=10, 
+        max_overflow=20, 
         connect_args=connect_args
     )
 except Exception as e:
