@@ -99,3 +99,19 @@ async def analyze_sip_date_performance(
         return await service.analyze_sip_date_performance(holding_id, current_user.id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/simulate", response_model=schemas.SimulateInvestmentResponse)
+async def simulate_investment(
+    req: schemas.SimulateInvestmentRequest,
+    current_user: User = Depends(get_current_user),
+    service: WealthService = Depends()
+):
+    """
+    Simulate a past investment to check "What If" returns.
+    """
+    try:
+        return await service.simulate_historical_investment(req.scheme_code, req.amount, req.date)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+

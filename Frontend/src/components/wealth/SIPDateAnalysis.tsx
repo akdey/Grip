@@ -142,59 +142,57 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
                     <h4 className="font-semibold">What if you had chosen different dates?</h4>
                 </div>
 
-                <div className="space-y-2">
+                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
                     {alternativeDates.map(date => {
                         const perf = analysis.alternatives[date];
-                        if (!perf) return null;
+                        if (!perf) return <div key={date} className="aspect-square bg-white/5 rounded-xl opacity-20" />;
 
                         const isUserDate = date === analysis.user_sip_date;
                         const isBestDate = date === analysis.best_alternative.date;
+                        const diff = perf.absolute_return - analysis.user_performance.absolute_return;
+
+                        // Determine styling
+                        let bgClass = "bg-white/5 border-transparent text-gray-500";
+                        if (isBestDate) bgClass = "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-[0_0_15px_-5px_rgba(16,185,129,0.3)]";
+                        else if (isUserDate) bgClass = "bg-blue-500/20 border-blue-500/50 text-blue-400 shadow-[0_0_15px_-5px_rgba(59,130,246,0.3)]";
+                        else if (diff > 0) bgClass = "bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10 text-gray-300";
+                        else if (diff < 0) bgClass = "bg-red-500/5 border-red-500/10 hover:bg-red-500/10 text-gray-300";
 
                         return (
                             <motion.div
                                 key={date}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className={`flex items-center justify-between p-3 rounded-xl transition-colors ${isBestDate
-                                        ? 'bg-emerald-500/10 border border-emerald-500/30'
-                                        : isUserDate
-                                            ? 'bg-blue-500/10 border border-blue-500/30'
-                                            : 'bg-white/5 border border-white/5 hover:bg-white/[0.07]'
-                                    }`}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: date * 0.01 }}
+                                className={`aspect-square rounded-xl border p-1 sm:p-2 flex flex-col items-center justify-center transition-all cursor-default group relative ${bgClass}`}
                             >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold ${isBestDate
-                                            ? 'bg-emerald-500/20 text-emerald-400'
-                                            : isUserDate
-                                                ? 'bg-blue-500/20 text-blue-400'
-                                                : 'bg-white/10 text-gray-400'
-                                        }`}>
-                                        {date}th
+                                <span className="text-xs sm:text-sm font-bold">{date}</span>
+
+                                {isBestDate && <span className="text-[8px] sm:text-[10px] uppercase font-bold tracking-wider mt-0.5">Best</span>}
+                                {isUserDate && <span className="text-[8px] sm:text-[10px] uppercase font-bold tracking-wider mt-0.5">You</span>}
+
+                                {/* Difference Indicator (Dot) */}
+                                {!isBestDate && !isUserDate && (
+                                    <div className={`w-1.5 h-1.5 rounded-full mt-1 ${diff > 0 ? 'bg-emerald-500' : diff < 0 ? 'bg-red-500/50' : 'bg-gray-700'}`} />
+                                )}
+
+                                {/* Hover Tooltip */}
+                                <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20 bg-[#1A1A1A] border border-white/20 p-3 rounded-xl shadow-2xl min-w-[140px] pointer-events-none">
+                                    <p className="text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">{date}th of Month</p>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-medium text-white flex justify-between">
+                                            <span>XIRR</span>
+                                            <span>{perf.xirr ? perf.xirr.toFixed(2) : '-'}%</span>
+                                        </p>
+                                        <p className="text-xs text-gray-400 flex justify-between">
+                                            <span>Diff</span>
+                                            <span className={diff >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                                {diff >= 0 ? '+' : ''}{Math.round(diff).toLocaleString()}
+                                            </span>
+                                        </p>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-medium">
-                                            SIP on {date}th
-                                            {isUserDate && <span className="ml-2 text-xs text-blue-400">← You</span>}
-                                            {isBestDate && <span className="ml-2 text-xs text-emerald-400">✓ Best</span>}
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                            {formatCurrency(perf.absolute_return)} ({perf.return_percentage.toFixed(1)}%)
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-mono font-medium">
-                                        XIRR: {perf.xirr ? `${perf.xirr.toFixed(2)}%` : 'N/A'}
-                                    </p>
-                                    {!isUserDate && (
-                                        <p className={`text-xs ${perf.absolute_return > analysis.user_performance.absolute_return
-                                                ? 'text-emerald-400'
-                                                : 'text-red-400'
-                                            }`}>
-                                            {perf.absolute_return > analysis.user_performance.absolute_return ? '+' : ''}
-                                            {formatCurrency(perf.absolute_return - analysis.user_performance.absolute_return)}
-                                        </p>
-                                    )}
+                                    {/* Arrow */}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#1A1A1A]" />
                                 </div>
                             </motion.div>
                         );

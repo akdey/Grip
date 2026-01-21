@@ -3,11 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { HoldingDetailsModal } from '../components/wealth/HoldingDetailsModal';
 import { WealthLinker } from '../components/wealth/WealthLinker';
 import { AddHoldingModal } from '../components/wealth/AddHoldingModal';
+import { InvestmentSimulatorModal } from '../components/wealth/InvestmentSimulatorModal';
 import { CAMSImportModal } from '../components/wealth/CAMSImportModal';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
+import WealthIntelligence from '../components/wealth/WealthIntelligence';
+import { motion, AnimatePresence } from 'framer-motion'; import {
     TrendingUp, Wallet, ArrowUpRight, Plus, RefreshCw,
-    MoreHorizontal, Link as LinkIcon, Activity, PieChart, Upload
+    MoreHorizontal, Link as LinkIcon, Activity, PieChart, Upload, Calculator
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
@@ -45,10 +46,12 @@ const Wealth: React.FC = () => {
     const [holdingsLoading, setHoldingsLoading] = useState(true);
     const [forecastLoading, setForecastLoading] = useState(true);
     const [simulating, setSimulating] = useState(false);
+    const [activeMainTab, setActiveMainTab] = useState<'trajectory' | 'intelligence'>('trajectory');
 
     // Modal States
     const [isLinkerOpen, setIsLinkerOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
     const [isCAMSImportOpen, setIsCAMSImportOpen] = useState(false);
     const [selectedHolding, setSelectedHolding] = useState<any | null>(null);
 
@@ -163,6 +166,13 @@ const Wealth: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                     <button
+                        onClick={() => setIsSimulatorOpen(true)}
+                        className="p-2 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 transition-colors hidden md:block" // Hidden on mobile to save space? Or visible?
+                        title="Simulate Investment (Time Machine)"
+                    >
+                        <Calculator size={20} />
+                    </button>
+                    <button
                         onClick={() => setIsCAMSImportOpen(true)}
                         className="p-2 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 transition-colors"
                         title="Import CAMS Statement"
@@ -262,81 +272,99 @@ const Wealth: React.FC = () => {
                     className="lg:col-span-2 bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 min-h-[400px]"
                 >
                     <div className="flex justify-between items-center mb-6">
-                        <h3 className="font-semibold text-lg flex items-center gap-2">
-                            <Activity size={18} className="text-emerald-500" />
-                            Wealth Trajectory
-                        </h3>
-                        {/* Simulation Controls Snippet */}
-                        <div className="flex items-center gap-4 text-xs">
-                            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
-                                <span className="text-gray-400">SIP:</span>
-                                <input
-                                    type="number"
-                                    value={monthlySIP}
-                                    onChange={(e) => setMonthlySIP(Number(e.target.value))}
-                                    className="w-16 bg-transparent outline-none text-right font-mono"
-                                />
-                            </div>
+                        <div className="flex space-x-4">
                             <button
-                                onClick={runSimulation}
-                                disabled={simulating}
-                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white disabled:opacity-50 transition-colors"
+                                onClick={() => setActiveMainTab('trajectory')}
+                                className={`text-lg font-semibold flex items-center gap-2 transition-colors ${activeMainTab === 'trajectory' ? 'text-white' : 'text-gray-500'}`}
                             >
-                                {simulating ? "..." : "Simulate"}
+                                <Activity size={18} className={activeMainTab === 'trajectory' ? "text-emerald-500" : "text-gray-600"} />
+                                Wealth Trajectory
+                            </button>
+                            <button
+                                onClick={() => setActiveMainTab('intelligence')}
+                                className={`text-lg font-semibold flex items-center gap-2 transition-colors ${activeMainTab === 'intelligence' ? 'text-white' : 'text-gray-500'}`}
+                            >
+                                <TrendingUp size={18} className={activeMainTab === 'intelligence' ? "text-purple-500" : "text-gray-600"} />
+                                Intelligence
                             </button>
                         </div>
+
+                        {activeMainTab === 'trajectory' && (
+                            <div className="flex items-center gap-4 text-xs">
+                                <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+                                    <span className="text-gray-400">SIP:</span>
+                                    <input
+                                        type="number"
+                                        value={monthlySIP}
+                                        onChange={(e) => setMonthlySIP(Number(e.target.value))}
+                                        className="w-16 bg-transparent outline-none text-right font-mono"
+                                    />
+                                </div>
+                                <button
+                                    onClick={runSimulation}
+                                    disabled={simulating}
+                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white disabled:opacity-50 transition-colors"
+                                >
+                                    {simulating ? "..." : "Simulate"}
+                                </button>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="h-[320px] w-full">
-                        {forecastLoading ? (
-                            <div className="w-full h-full flex items-center justify-center animate-pulse bg-white/[0.02] rounded-xl">
-                                <div className="text-gray-600 text-xs">Generating Forecast...</div>
-                            </div>
+                    <div className={`w-full relative ${activeMainTab === 'trajectory' ? 'h-[320px]' : 'min-h-[320px]'}`}>
+                        {activeMainTab === 'trajectory' ? (
+                            forecastLoading ? (
+                                <div className="w-full h-full flex items-center justify-center animate-pulse bg-white/[0.02] rounded-xl">
+                                    <div className="text-gray-600 text-xs">Generating Forecast...</div>
+                                </div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={chartData}>
+                                        <defs>
+                                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                        <XAxis dataKey="date" stroke="#666" tick={{ fontSize: 12 }} minTickGap={30} />
+                                        <YAxis
+                                            stroke="#666"
+                                            tick={{ fontSize: 12 }}
+                                            tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '12px' }}
+                                            formatter={(val: number) => formatCurrency(val)}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="value"
+                                            stroke="#10b981"
+                                            strokeWidth={2}
+                                            fillOpacity={1}
+                                            fill="url(#colorValue)"
+                                            name="Historical"
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="forecast"
+                                            stroke="#6366f1"
+                                            strokeDasharray="5 5"
+                                            strokeWidth={2}
+                                            fillOpacity={1}
+                                            fill="url(#colorForecast)"
+                                            name="Forecast"
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            )
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData}>
-                                    <defs>
-                                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                                    <XAxis dataKey="date" stroke="#666" tick={{ fontSize: 12 }} minTickGap={30} />
-                                    <YAxis
-                                        stroke="#666"
-                                        tick={{ fontSize: 12 }}
-                                        tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '12px' }}
-                                        formatter={(val: number) => formatCurrency(val)}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="value"
-                                        stroke="#10b981"
-                                        strokeWidth={2}
-                                        fillOpacity={1}
-                                        fill="url(#colorValue)"
-                                        name="Historical"
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="forecast"
-                                        stroke="#6366f1"
-                                        strokeDasharray="5 5"
-                                        strokeWidth={2}
-                                        fillOpacity={1}
-                                        fill="url(#colorForecast)"
-                                        name="Forecast"
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                            <WealthIntelligence holdings={holdings} />
                         )}
                     </div>
                 </motion.div>
@@ -437,6 +465,11 @@ const Wealth: React.FC = () => {
                 isOpen={isCAMSImportOpen}
                 onClose={() => setIsCAMSImportOpen(false)}
                 onSuccess={fetchData}
+            />
+
+            <InvestmentSimulatorModal
+                isOpen={isSimulatorOpen}
+                onClose={() => setIsSimulatorOpen(false)}
             />
 
             <style>{`

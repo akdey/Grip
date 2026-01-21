@@ -155,3 +155,19 @@ class SIPDateAnalysisResponse(BaseModel):
     insight: str
     historical_pattern: Optional[str] = None
 
+class SimulateInvestmentRequest(BaseModel):
+    scheme_code: str
+    amount: float
+    date: date
+
+class SimulateInvestmentResponse(BaseModel):
+    scheme_code: str
+    invested_date: date
+    invested_amount: float
+    start_nav: float
+    current_nav: float
+    units_allotted: float
+    current_value: float
+    absolute_return: float
+    return_percentage: float
+
