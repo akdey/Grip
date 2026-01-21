@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -19,11 +20,13 @@ if not db_url:
 
 try:
     connect_args = {}
+    poolclass = None  # Default to SQLAlchemy's pooling
+    
     if "sqlite" in db_url:
         connect_args = {"check_same_thread": False}
     else:
         connect_args = {
-            "statement_cache_size": 0,
+            "statement_cache_size": 0,  # Critical for Supabase pooler - disables prepared statements
             "server_settings": {
                 "application_name": "grip_backend"
             },
@@ -44,14 +47,19 @@ try:
 
         # Supabase Specific Configuration
         if "supabase" in url_str:
-            if ":5432" in url_str:
+            # Check if using Transaction Pooler (port 6543)
+            if ":6543" in url_str:
+                print("DATABASE: Detected Supabase Transaction Pooler (Port 6543)")
+                print("   -> Using NullPool (no SQLAlchemy pooling) - Supabase pooler handles connections")
+                poolclass = NullPool  # Critical: Let Supabase handle pooling
+            elif ":5432" in url_str:
                 print("WARNING: Detected Supabase usage on Port 5432.")
                 print("   -> If you are on the Supabase Free Tier, direct IPv4 connections to port 5432 might be blocked.")
                 print("   -> Render uses IPv4. Switch to the Transaction Pooler (Port 6543).")
             
-            # For Supabase pooler, use 'require' mode which enables SSL without strict certificate verification
+            # For Supabase, use 'require' mode which enables SSL without strict certificate verification
             # This is the recommended approach for Supabase with asyncpg
-            print(f"DATABASE: Configuring SSL for Supabase pooler (sslmode=require)")
+            print(f"DATABASE: Configuring SSL for Supabase (sslmode=require)")
             connect_args["ssl"] = "require"
         elif use_ssl:
             print(f"DATABASE: Enforcing SSL for {settings.ENVIRONMENT} (Target: Cloud/Remote)")
@@ -67,15 +75,24 @@ try:
         connect_args["timeout"] = 20
         connect_args["command_timeout"] = 20
 
-    engine = create_async_engine(
-        db_url, 
-        echo=False,
-        pool_pre_ping=True, 
-        pool_recycle=300, 
-        pool_size=10, 
-        max_overflow=20, 
-        connect_args=connect_args
-    )
+    # Create engine with appropriate pooling strategy
+    engine_kwargs = {
+        "echo": False,
+        "connect_args": connect_args
+    }
+    
+    # Only add pooling params if NOT using NullPool (i.e., not Supabase Transaction Mode)
+    if poolclass is NullPool:
+        engine_kwargs["poolclass"] = NullPool
+    else:
+        engine_kwargs.update({
+            "pool_pre_ping": True,
+            "pool_recycle": 300,
+            "pool_size": 10,
+            "max_overflow": 20,
+        })
+    
+    engine = create_async_engine(db_url, **engine_kwargs)
 except Exception as e:
     print(f"CRITICAL: Failed to create database engine: {e}")
     # Don't raise here, let the app start so logs can be seen, but DB will fail later
