@@ -37,7 +37,8 @@ async def lifespan(app: FastAPI):
         else:
             logger.info(f"Environment: {settings.ENVIRONMENT}. Skipping table creation.")
     except Exception as e:
-        logger.error(f"Startup Database Error: {e}. properly. proceeding without db initialization.")
+        logger.error(f"Startup Database Error: {str(e)}")
+        logger.exception("Full traceback:")  # This will log the full stack trace
 
     # Start Scheduler
     from app.core.scheduler import start_scheduler

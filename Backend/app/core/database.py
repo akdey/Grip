@@ -18,6 +18,9 @@ if not db_url:
 # This avoids certificate verification issues while still using SSL
 # We'll set this via connection parameters instead of a custom context
 
+# Initialize engine variable
+engine = None
+
 try:
     connect_args = {}
     poolclass = None  # Default to SQLAlchemy's pooling
@@ -92,11 +95,16 @@ try:
             "max_overflow": 20,
         })
     
+    print(f"DATABASE: Creating engine with config: poolclass={poolclass}, ssl={connect_args.get('ssl', 'None')}")
     engine = create_async_engine(db_url, **engine_kwargs)
+    print("DATABASE: Engine created successfully")
 except Exception as e:
     print(f"CRITICAL: Failed to create database engine: {e}")
-    # Don't raise here, let the app start so logs can be seen, but DB will fail later
-    pass
+    import traceback
+    traceback.print_exc()
+    # Create a dummy engine for SQLite to allow app to start
+    print("DATABASE: Falling back to in-memory SQLite")
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=NullPool)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
@@ -109,7 +117,5 @@ class Base(DeclarativeBase):
     pass
 
 async def get_db():
-    if engine is None:
-        raise Exception("Database engine not initialized")
     async with AsyncSessionLocal() as session:
         yield session
