@@ -4,6 +4,10 @@
 
 An AI-powered personal finance platform that transforms your inbox into a complete financial intelligence system. Track spending, forecast expenses, grow investments—all while keeping your data private and secure.
 
+**🎯 The Only Platform in India That Shows If Your SIP Date is Costing You Money.**
+
+Import your CAMS statement in 60 seconds. Discover if switching your SIP date could earn you thousands more. No other platform does this.
+
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org)
@@ -13,17 +17,41 @@ An AI-powered personal finance platform that transforms your inbox into a comple
 ## 🌟 What Makes Grip Different
 
 ### 💰 Know Your True Spending Power
-- **Safe-to-Spend Engine**: See what you can *actually* spend after bills, credit cards, and commitments—not just your bank balance
-- **Real-Time Intelligence**: Automatically accounts for unpaid bills, upcoming rent, unbilled credit card purchases, and safety buffer
-- **Visual Health Indicators**: 4-stage color system (Negative, Critical, Warning, Healthy) shows your financial status at a glance
-- **Predictive Budgeting**: Includes projected recurring expenses ("Surety") before they even arrive
+- **Safe-to-Spend Engine**: See what you can *actually* spend after bills, credit cards, and commitments—not just your bank balance.
+- **Real-Time Intelligence**: Automatically accounts for unpaid bills, upcoming rent, and unbilled credit card purchases.
+- **Predictive Budgeting**: Includes projected recurring expenses ("Surety") before they even arrive.
 
-### 📈 Investment Intelligence Platform (NEW!)
-- **Automated Portfolio Tracking**: Link investment transactions once, track growth forever
-- **Live Market Sync**: Daily NAV updates for mutual funds (mfapi.in) and stocks (yfinance)
-- **XIRR Calculation**: Professional-grade returns using scipy optimization
-- **AI-Powered Forecasting**: 10-20 year projections using Facebook Prophet with confidence intervals
-- **Email-to-Wealth Pipeline**: SIP/MF purchases auto-detected from bank emails and converted to portfolio units
+### 🎯 Timing Alpha: The Only Platform for Precision Wealth Analytics
+Most investment apps are "lazy"—they show you generic fund returns or XIRR calculated with approximate dates. Grip is built for the precision-obsessed investor.
+
+**The "Average" Problem with Other Platforms:**
+- ❌ **Lazy Pricing**: Use month-end NAVs or weekly averages to calculate your returns.
+- ❌ **Generic XIRR**: Show you a number that assumes your transactions happened at a "standard" time.
+- ❌ **The Blind Spot**: No insight into whether your SIP date is actually helping or hurting you.
+
+**The Grip Precision Advantage:**
+- ✅ **Day-Specific NAV**: We fetch the *exact* NAV of the day your transaction hit the bank. If you invest on the 7th, we calculate parity with the 7th, not a "monthly average".
+- ✅ **Timing Leakage Analysis (WORLD FIRST)**: We analyze every SIP you've ever made and cross-reference them with the volatility schedules of that specific fund. 
+- ✅ **What-If Date Simulation**: Grip simulates your entire investment history against every other day of the month (1st to 28th) to determine if a simple change in your salary-cycle could yield an extra 1-2% in "Timing Alpha".
+
+**Why this is a Big Deal:**
+Mutual Fund NAVs fluctuates daily. An investor who does a SIP on the 10th vs. the 15th might see a **1.5% difference in lifetime XIRR** for the exact same fund. Most platforms hide this "Timing Leakage." Grip exposes it and shows you how to fix it.
+
+> **Our Claim:** No other retail investment platform in India—not Zerodha Coin, INDMoney, or Groww—performs historical date-permutation analysis on your *actual* transactions to optimize your future returns.
+
+### 🛡️ Frictionless, Private Onboarding
+While others make you wait for "syncs" or manual entries, Grip is built to get you from zero to "Deep Insights" in under a minute.
+
+- **CAMS One-Click Import**: Upload your Consolidated Account Statement (Excel/CSV), and we reconstruct your entire investment life—identifying SIPs, step-ups, and even "missed" months—instantly.
+- **Step-Up & Skip Detection**: We don't just show total units; we map the *evolution* of your discipline. See exactly when you increased your SIPs and where you missed a beat.
+- **Privacy-First Intelligence**: All your data is processed with local sanitization. Your bank details and PAN are masked *before* our analysis engines ever touch the data.
+
+### 📊 Professional-Grade Portfolio Simulation
+- **AI-Powered Forecasting**: We use Facebook Prophet (the same engine used by data scientists for revenue forecasting) to project your portfolio 10-20 years into the future with realistic confidence intervals.
+- **Simulation Mode**: Instantly see how a ₹2,000 "Step-Up" in your monthly SIP today changes your net worth 15 years from now.
+- **Email-to-Wealth Pipeline**: Once imported, Grip auto-extracts your future buys from your bank alert emails. No more manual tracking.
+- **Precision XIRR**: Calculated using the Newton-Raphson method for accurate annualized returns based on daily cashflows.
+- **Timing Leakage Reports**: Detailed breakdown of how much "extra" money you could have made by simply shifting your SIP date.
 
 ### 🤖 AI Does the Heavy Lifting
 - **Automatic Transaction Extraction**: Connect Gmail once; AI extracts transaction details from bank alerts forever
@@ -36,6 +64,7 @@ An AI-powered personal finance platform that transforms your inbox into a comple
 - **No Data Selling**: Your financial data stays yours. Period.
 - **Self-Hostable**: Open architecture—you control the deployment and data
 - **Read-Only Gmail**: OAuth 2.0 with minimal scopes; we can't send or modify your emails
+
 
 ---
 
@@ -665,10 +694,23 @@ See **[Gmail Sync Setup Guide](GMAIL_SYNC_QUICKSTART.md)** for detailed instruct
    - Mark predictable expenses as "Surety"
 
 5. **Track Investments** (NEW!)
-   - Go to Wealth tab
+   
+   **Option A: CAMS Import (Fastest)**
+   - Go to Wealth tab → Click purple Upload icon
+   - Upload CAMS consolidated statement (CSV)
+   - Preview transactions → Click Import
+   - System auto-detects SIPs, step-ups, and skips
+   
+   **Option B: Manual Entry**
    - Click "Link Transaction" to map investment expenses
    - Or manually add holdings (MF, Stocks, FDs)
-   - Watch portfolio grow with daily NAV updates
+   
+   **Analyze Your SIPs**
+   - Click any SIP holding → Switch to "SIP Date Analysis" tab
+   - See your actual performance vs alternative dates
+   - Get optimization recommendations
+   
+   Watch portfolio grow with daily NAV updates!
 
 ### Daily Workflow
 
@@ -726,12 +768,14 @@ POST /api/v1/transactions/{id}/verify       # Verify
 
 #### Wealth & Investments (NEW!)
 ```bash
-GET  /api/v1/wealth/holdings                # List portfolio
-GET  /api/v1/wealth/holdings/{id}           # Holding details with snapshots
-POST /api/v1/wealth/holdings                # Add new asset
-POST /api/v1/wealth/forecast                # AI forecast (Prophet)
-POST /api/v1/wealth/map-transaction         # Link transaction to holding
-GET  /api/v1/wealth/sync-prices             # Trigger manual price sync
+GET  /api/v1/wealth/holdings                     # List portfolio
+GET  /api/v1/wealth/holdings/{id}                # Holding details with snapshots
+POST /api/v1/wealth/holdings                     # Add new asset
+POST /api/v1/wealth/forecast                     # AI forecast (Prophet)
+POST /api/v1/wealth/map-transaction              # Link transaction to holding
+GET  /api/v1/wealth/sync-prices                  # Trigger manual price sync
+POST /api/v1/wealth/import-cams                  # Import CAMS statement (NEW!)
+GET  /api/v1/wealth/holdings/{id}/sip-analysis   # SIP date performance analysis (NEW!)
 ```
 
 #### Analytics
@@ -1020,6 +1064,7 @@ Built with incredible open-source tools:
 ## 📚 Documentation
 
 - **[Quick Start Guide](GMAIL_SYNC_QUICKSTART.md)** - 15-minute setup
+- **[CAMS Import Guide](CAMS_IMPORT_GUIDE.md)** - Import years of history in 60s
 - **[Implementation Details](GMAIL_SYNC_IMPLEMENTATION.md)** - Technical deep-dive
 - **[Session Summary](SESSION_SUMMARY.md)** - Recent updates
 

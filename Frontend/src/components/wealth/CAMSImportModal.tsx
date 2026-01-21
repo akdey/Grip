@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { api } from '../../lib/api';
+import * as XLSX from 'xlsx';
 
 interface CAMSImportModalProps {
     isOpen: boolean;
@@ -25,6 +26,8 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
     const [importResult, setImportResult] = useState<any>(null);
     const [error, setError] = useState<string>('');
 
+
+
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -32,15 +35,135 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const text = event.target?.result as string;
-                const parsed = parseCAMSCSV(text);
-                setTransactions(parsed);
-                setError('');
+                const data = event.target?.result;
+                let parsed: CAMSTransaction[] = [];
+
+                if (file.name.endsWith('.csv')) {
+                    parsed = parseCAMSCSV(data as string);
+                } else {
+                    // Excel parsing
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    // Usually transactions are in the first sheet or named "Transaction Details"
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    parsed = parseCAMSExcel(jsonData as any[][]);
+                }
+
+                if (parsed.length === 0) {
+                    setError('No valid transactions found. Please check if you uploaded the "Transaction Details" report.');
+                } else {
+                    setTransactions(parsed);
+                    setError('');
+                }
             } catch (err) {
-                setError('Failed to parse CSV file. Please ensure it\'s a valid CAMS statement.');
+                console.error(err);
+                setError('Failed to parse file. Please ensure it\'s a valid CAMS "Transaction Details" Excel/CSV.');
             }
         };
-        reader.readAsText(file);
+
+        if (file.name.endsWith('.csv')) {
+            reader.readAsText(file);
+        } else {
+            reader.readAsBinaryString(file);
+        }
+    };
+
+    const parseCAMSExcel = (rows: any[][]): CAMSTransaction[] => {
+        const transactions: CAMSTransaction[] = [];
+        // CAMS Header row usually starts after some metadata.
+        // We look for a row containing "Scheme" or "User Transaction"
+
+        let headerRowIndex = -1;
+
+        // Dynamic header detection
+        for (let i = 0; i < Math.min(rows.length, 20); i++) {
+            const rowStr = rows[i].join(' ').toLowerCase();
+            if (rowStr.includes('scheme') && rowStr.includes('amount') && rowStr.includes('units')) {
+                headerRowIndex = i;
+                break;
+            }
+        }
+
+        if (headerRowIndex === -1) return []; // Headers not found
+
+        // Map column indices
+        const headers = rows[headerRowIndex].map(h => String(h).toLowerCase().trim());
+        const dateIdx = headers.findIndex(h => h.includes('date'));
+        const schemeIdx = headers.findIndex(h => h.includes('scheme'));
+        const folioIdx = headers.findIndex(h => h.includes('folio'));
+        const typeIdx = headers.findIndex(h => h.includes('transaction') || h.includes('nature') || h.includes('desc'));
+        const amountIdx = headers.findIndex(h => h.includes('amount'));
+        const unitsIdx = headers.findIndex(h => h.includes('unit'));
+        const navIdx = headers.findIndex(h => h.includes('nav') || h.includes('price'));
+
+        if (dateIdx === -1 || amountIdx === -1) return [];
+
+        for (let i = headerRowIndex + 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row[dateIdx] || !row[amountIdx]) continue;
+
+            // Date parsing (Excel dates are sometimes numbers)
+            let dateStr = row[dateIdx];
+            if (typeof dateStr === 'number') {
+                // Excel serial date to JS Date
+                const d = new Date((dateStr - (25567 + 2)) * 86400 * 1000);
+                dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
+            } else {
+                // Try parsing DD-MMM-YYYY (e.g., 05-Jan-2023) or DD/MM/YYYY
+                // Excel might return "15-Jan-2023" as a string if not formatted as date
+                const dStr = String(dateStr).trim();
+
+                // Handle DD-MMM-YYYY (Common in CAMS reports)
+                const mmmMatch = dStr.match(/^(\d{1,2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{4})$/i);
+
+                if (mmmMatch) {
+                    const monthMap: Record<string, string> = {
+                        jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+                        jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
+                    };
+                    const day = mmmMatch[1].padStart(2, '0');
+                    const month = monthMap[mmmMatch[2].toLowerCase()];
+                    const year = mmmMatch[3];
+                    dateStr = `${year}-${month}-${day}`;
+                } else {
+                    // Fallback for DD/MM/YYYY or DD-MM-YYYY
+                    // 15/01/2023 or 15-01-2023
+                    const parts = dStr.split(/[-/]/);
+                    if (parts.length === 3) {
+                        // Assume DD-MM-YYYY order which is standard in India
+                        // Check if first part is year (YYYY-MM-DD or YYYY/MM/DD)
+                        if (parts[0].length === 4) {
+                            dateStr = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                        } else {
+                            // Assume DD-MM-YYYY
+                            dateStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                        }
+                    }
+                }
+            }
+
+            // Cleanup Amount (remove commas, negative signs if redemption is handled by type)
+            let amt = parseFloat(String(row[amountIdx]).replace(/,/g, ''));
+            let units = parseFloat(String(row[unitsIdx] || '0').replace(/,/g, ''));
+
+            // Handle Redemptions (Amount might be negative in some reports, or positive with type 'Redemption')
+            // Detailed CAMS reports often sign amounts correctly, or we depend on type.
+            // We'll normalize to positive numbers here and rely on Type logic in backend/frontend.
+            amt = Math.abs(amt);
+            units = Math.abs(units);
+
+            transactions.push({
+                transaction_date: dateStr,
+                scheme_name: row[schemeIdx],
+                folio_number: row[folioIdx] ? String(row[folioIdx]) : undefined,
+                transaction_type: row[typeIdx],
+                amount: amt,
+                units: units,
+                nav: parseFloat(String(row[navIdx] || '0'))
+            });
+        }
+        return transactions;
     };
 
     const parseCAMSCSV = (csvText: string): CAMSTransaction[] => {
@@ -126,11 +249,11 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
                                     <label className="block w-full">
                                         <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-emerald-500/50 transition-colors cursor-pointer bg-white/[0.02]">
                                             <Upload size={48} className="mx-auto mb-4 text-gray-500" />
-                                            <p className="text-sm font-medium mb-1">Click to upload CAMS CSV file</p>
-                                            <p className="text-xs text-gray-500">Supports CSV format only</p>
+                                            <p className="text-sm font-medium mb-1">Click to upload CAMS statement</p>
+                                            <p className="text-xs text-gray-500">Supports CSV and Excel (.xlsx, .xls) formats</p>
                                             <input
                                                 type="file"
-                                                accept=".csv"
+                                                accept=".csv,.xlsx,.xls"
                                                 onChange={handleFileUpload}
                                                 className="hidden"
                                             />
@@ -166,8 +289,8 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
                                                             <td className="p-2 truncate max-w-[200px]">{txn.scheme_name}</td>
                                                             <td className="p-2">
                                                                 <span className={`px-2 py-0.5 rounded text-[10px] ${txn.transaction_type.toLowerCase().includes('purchase')
-                                                                        ? 'bg-emerald-500/10 text-emerald-500'
-                                                                        : 'bg-red-500/10 text-red-500'
+                                                                    ? 'bg-emerald-500/10 text-emerald-500'
+                                                                    : 'bg-red-500/10 text-red-500'
                                                                     }`}>
                                                                     {txn.transaction_type}
                                                                 </span>
