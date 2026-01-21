@@ -29,33 +29,36 @@ try:
             "server_settings": {
         }
         
-        # Robust SSL Detection Logic
-        # 1. Default to NO SSL
+        # Robust SSL/Connection Logic
+        url_str = db_url.lower()
         use_ssl = False
         
-        # 2. Check for known Cloud Providers (Supabase, Render, Neon, etc.)
-        # These ALWAYS require SSL, regardless of 'ENVIRONMENT' variable
-        url_str = db_url.lower()
+        # Detect Cloud Providers
         cloud_domains = ["supabase", "render.com", "neon.tech", "aws.com", "azure.com", "dpg-"]
         is_cloud_db = any(domain in url_str for domain in cloud_domains)
-
-        # 3. Check for Localhost/SQLite
         is_local = "localhost" in url_str or "127.0.0.1" in url_str or "sqlite" in url_str
 
-        # 4. Determine final state
-        # If it's a cloud DB, OR if we are in production/non-local env (and it's not explicitly localhost)
+        # Determine SSL requirement
         if is_cloud_db or (settings.ENVIRONMENT != "local" and not is_local):
             use_ssl = True
 
+        # Supabase Specific Check for Port 5432 (IPv4 Deprecation issue on Free Tier)
+        if "supabase" in url_str and ":5432" in url_str:
+            print("WARNING: Detected Supabase usage on Port 5432.")
+            print("   -> If you are on the Supabase Free Tier, direct IPv4 connections to port 5432 might be blocked.")
+            print("   -> Render uses IPv4. If you experience timeouts, switch to the Transaction Pooler (Port 6543).")
+
         if use_ssl:
-            print("DATABASE: Enforcing SSL (Cloud/Production DB detected)")
+            print(f"DATABASE: Enforcing SSL for {settings.ENVIRONMENT} (Target: Cloud/Remote)")
+            # Create a permissive SSL context associated with the context settings
+            # This is critical for avoiding hostname mismatches on some cloud load balancers
             connect_args["ssl"] = ssl_context
         else:
-            print("DATABASE: SSL Disabled (Local/Dev DB detected)")
+            print(f"DATABASE: SSL Disabled for {settings.ENVIRONMENT} (Target: Local/Dev)")
 
-        # Add timeouts to prevent indefinite hangs
-        connect_args["timeout"] = 30
-        connect_args["command_timeout"] = 30
+        # Timeout Settings
+        connect_args["timeout"] = 20
+        connect_args["command_timeout"] = 20
 
     engine = create_async_engine(
         db_url, 
@@ -68,7 +71,8 @@ try:
     )
 except Exception as e:
     print(f"CRITICAL: Failed to create database engine: {e}")
-    raise e
+    # Don't raise here, let the app start so logs can be seen, but DB will fail later
+    pass
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
@@ -81,5 +85,7 @@ class Base(DeclarativeBase):
     pass
 
 async def get_db():
+    if engine is None:
+        raise Exception("Database engine not initialized")
     async with AsyncSessionLocal() as session:
         yield session
