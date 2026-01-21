@@ -171,6 +171,53 @@ Transform your investment expenses into a live-tracked portfolio with zero manua
 ⑥ Portfolio Update: Total units increased, XIRR recalibrated
 ```
 
+**🆕 CAMS Statement Import (Instant Onboarding):**
+- **One-Click Import**: Upload CAMS consolidated account statement (CSV)
+- **Bulk Processing**: Import years of transactions in seconds
+- **Auto-Detection**: Automatically identifies SIP patterns vs lump sum
+- **Step-Up Tracking**: Detects when SIP amount increases (e.g., ₹5k → ₹7k)
+- **Skip Detection**: Identifies missed SIP months with gap analysis
+- **Smart Metadata**: Stores change percentages, skip reasons, historical patterns
+- **Zero Manual Work**: Auto-creates holdings, fetches historical NAVs, calculates units
+- **Preview Before Import**: Review all transactions before committing
+
+**🎯 SIP Date-Specific Performance Analysis (UNIQUE USP!):**
+
+*No other platform in India offers this!*
+
+**What Others Show:**
+- ❌ Generic monthly average returns
+- ❌ Hypothetical "if you invested on 1st Jan every year"
+- ❌ Fund-level performance only
+
+**What Grip Shows:**
+- ✅ **YOUR Actual SIP Dates**: Analyzes your real purchase dates (e.g., 15th of every month)
+- ✅ **Alternative Date Comparison**: Simulates 6 alternative dates (1st, 5th, 10th, 15th, 20th, 25th)
+- ✅ **Exact NAV on Your Dates**: Fetches historical NAV for your specific purchase days
+- ✅ **Potential Improvement**: Shows how much more you could have earned with different dates
+- ✅ **Historical Win Rate**: "10th-date SIPs outperformed 15th in 16/24 months (67%)"
+- ✅ **AI Insights**: "Switching to 10th could earn you ₹1,100 more (4.4% better)"
+- ✅ **Optimization Recommendations**: Actionable suggestions for future SIPs
+
+**Example Analysis:**
+```
+Your SIP Date: 15th of every month
+Your Performance:
+  • Total Invested: ₹1,20,000
+  • Current Value: ₹1,45,000
+  • Returns: +₹25,000 (20.8%)
+  • XIRR: 12.5%
+
+Best Alternative: 10th of every month
+  • Returns: +₹26,100 (21.8%)
+  • XIRR: 13.2%
+  • Improvement: ₹1,100 (0.9% better)
+
+💡 Insight: "Your 15th date SIP performed well, but switching 
+to 10th could have earned you ₹1,100 more. Consider adjusting 
+your SIP date for future investments."
+```
+
 **Live Market Sync:**
 - **Daily Price Updates**: Scheduled job at 9:00 PM IST
 - **Mutual Funds**: NAV from mfapi.in (India's official MF API)
@@ -180,8 +227,9 @@ Transform your investment expenses into a live-tracked portfolio with zero manua
 **Professional-Grade Analytics:**
 - **XIRR Calculation**: scipy.optimize.newton for accurate annualized returns
 - **Historical Performance**: Complete transaction history with date-wise snapshots
-- **Asset-Level Drill-Down**: Click any holding to see detailed growth chart
+- **Asset-Level Drill-Down**: Click any holding to see detailed growth chart + SIP analysis
 - **Portfolio Aggregation**: Net worth, total invested, absolute returns
+- **Step-Up/Skip Visualization**: Timeline showing SIP changes and missed months
 
 **AI-Powered Forecasting:**
 - **Facebook Prophet**: Statistical time-series analysis on daily snapshots
@@ -190,7 +238,7 @@ Transform your investment expenses into a live-tracked portfolio with zero manua
 - **Category Breakdown**: Equity, Debt, Liquid, Fixed Income allocation
 
 **Supported Asset Types:**
-- ✅ **SIP** (Systematic Investment Plans)
+- ✅ **SIP** (Systematic Investment Plans) - *with date optimization*
 - ✅ **Mutual Funds** (Lump sum)
 - ✅ **Stocks** (Equity holdings)
 - ✅ **FD/RD** (Fixed/Recurring Deposits - manual input)
@@ -198,6 +246,7 @@ Transform your investment expenses into a live-tracked portfolio with zero manua
 - ✅ **Gold, Real Estate** (Manual tracking)
 
 **Human-in-the-Loop:**
+- **CAMS Import**: Upload consolidated statement for instant portfolio creation
 - **Transaction Linker**: Manually map undetected investment transactions
 - **Mapping Rules**: Create patterns for future auto-detection
 - **Adjustments**: Override AI suggestions, edit units/prices
@@ -207,6 +256,7 @@ Transform your investment expenses into a live-tracked portfolio with zero manua
 - **Tax Engine Placeholder**: Ready for LTCG/STCG calculations
 - **Multi-Asset Support**: Extensible for crypto, bonds, commodities
 - **Consolidated View**: Liquid cash + Fixed income + Market-linked in one dashboard
+- **Multi-Fund Optimization**: Find best SIP dates across entire portfolio (coming soon)
 
 ### 🧠 AI-Powered Intelligence
 
