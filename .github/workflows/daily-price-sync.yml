@@ -33,7 +33,7 @@ jobs:
           cd Backend
           python -c "
           import asyncio
-          from app.features.sync.service import run_daily_price_sync
+          from app.core.scheduler import run_daily_price_sync
           
           async def main():
               print('Starting daily price sync...')
