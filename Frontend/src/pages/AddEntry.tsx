@@ -139,7 +139,7 @@ const AddEntry: React.FC = () => {
             if (id) {
                 await api.put(`/transactions/${id}`, payload);
             } else {
-                await api.post('/transactions', payload);
+                await api.post('/transactions/', payload);
             }
         },
         onSuccess: () => {
