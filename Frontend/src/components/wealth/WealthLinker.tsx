@@ -38,7 +38,7 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
         setLoading(true);
         try {
             // Fetch all recent transactions
-            const res = await api.get('/transactions', {
+            const res = await api.get('/transactions/', {
                 params: { limit: 100 }
             });
             // Filter for Investment category client-side
