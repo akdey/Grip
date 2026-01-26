@@ -59,6 +59,10 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
     const sipHoldings = holdings.filter(h => h.asset_type === 'MUTUAL_FUND');
 
     const [showInfo, setShowInfo] = useState(false);
+    const [selectedHoldingId, setSelectedHoldingId] = useState<string>('');
+    const [analysis, setAnalysis] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (sipHoldings.length > 0 && !selectedHoldingId) {
