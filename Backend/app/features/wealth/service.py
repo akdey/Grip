@@ -578,7 +578,7 @@ class WealthService:
         
         # Extract relevant points
         # Filter strictly future
-        last_date = df['ds'].max()
+        last_date = pd.to_datetime(df['ds'].max())
         future_forecast = forecast[forecast['ds'] > last_date]
         
         # Downsample to weekly or monthly to save bandwidth? 
