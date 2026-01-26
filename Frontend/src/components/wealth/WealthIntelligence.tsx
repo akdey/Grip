@@ -195,7 +195,7 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
                             <p className="text-xs text-gray-500 uppercase">Best Date</p>
                             <p className="text-xl font-bold mt-1 text-emerald-400">{analysis.best_alternative.date}<span className="text-xs font-normal text-emerald-500/70 align-top">th</span></p>
                             <p className="text-xs text-emerald-500 mt-1">
-                                +{(analysis.best_alternative.improvement || 0).toFixed(2)}% Extra
+                                +₹{(analysis.best_alternative.improvement || 0).toFixed(0)} Extra Return
                             </p>
                         </div>
                         <div className="bg-white/5 rounded-xl p-4 border border-white/5">
