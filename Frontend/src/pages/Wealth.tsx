@@ -424,10 +424,7 @@ const Wealth: React.FC = () => {
                                 holdings={typeHoldings}
                                 onHoldingClick={fetchHoldingDetails}
                                 onSimulate={type === 'MUTUAL_FUND' || type === 'STOCK' ? () => setIsSimulatorOpen(true) : undefined}
-                                onAnalyze={() => {
-                                    // Trigger analysis tab? Or open details of top holding?
-                                    // For now, simpler to just let them click holding to see analysis
-                                }}
+                                onAnalyze={type === 'MUTUAL_FUND' ? () => setActiveMainTab('intelligence') : undefined}
                             />
                         ))}
 

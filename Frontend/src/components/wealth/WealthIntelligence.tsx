@@ -54,26 +54,34 @@ const WealthIntelligence: React.FC<{ holdings: Holding[] }> = ({ holdings }) => 
 };
 
 const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
+    // Filter for Mutual Funds only as SIP analysis is relevant for them
+    const sipHoldings = holdings.filter(h => h.asset_type === 'MUTUAL_FUND');
+
     const [selectedHoldingId, setSelectedHoldingId] = useState<string>('');
     const [analysis, setAnalysis] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (holdings.length > 0 && !selectedHoldingId) {
-            setSelectedHoldingId(holdings[0].id);
+        if (sipHoldings.length > 0 && !selectedHoldingId) {
+            setSelectedHoldingId(sipHoldings[0].id);
         }
-    }, [holdings]);
+    }, [sipHoldings]);
 
     useEffect(() => {
         if (!selectedHoldingId) return;
 
         const fetchAnalysis = async () => {
             setLoading(true);
+            setError(null);
+            setAnalysis(null);
             try {
                 const res = await api.get(`/wealth/holdings/${selectedHoldingId}/sip-analysis`);
                 setAnalysis(res.data);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Analysis failed", error);
+                const msg = error.response?.data?.detail || "Could not analyze this holding. It might not have enough SIP history.";
+                setError(msg);
             } finally {
                 setLoading(false);
             }
@@ -90,6 +98,15 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
         diff: perf.return_percentage - analysis.user_performance.return_percentage
     })).sort((a, b) => a.day - b.day) : [];
 
+    if (sipHoldings.length === 0) {
+        return (
+            <div className="text-center py-20 text-gray-500">
+                <p>No Mutual Fund holdings found.</p>
+                <p className="text-xs mt-2">Add a Mutual Fund with SIP transactions to see timing analysis.</p>
+            </div>
+        );
+    }
+
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -102,13 +119,19 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
                     onChange={(e) => setSelectedHoldingId(e.target.value)}
                     className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none focus:border-emerald-500/50"
                 >
-                    {holdings.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+                    {sipHoldings.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
                 </select>
             </div>
 
             {loading ? (
                 <div className="h-64 flex items-center justify-center animate-pulse">
                     <div className="text-emerald-500 text-sm">Crunching historical data...</div>
+                </div>
+            ) : error ? (
+                <div className="h-64 flex flex-col items-center justify-center text-center p-6 border border-red-500/10 rounded-xl bg-red-500/5">
+                    <AlertCircle className="text-red-500 mb-2" size={32} />
+                    <p className="text-red-400 font-medium mb-1">Analysis Unavailable</p>
+                    <p className="text-xs text-gray-500 max-w-sm">{error}</p>
                 </div>
             ) : analysis ? (
                 <div className="space-y-6">
