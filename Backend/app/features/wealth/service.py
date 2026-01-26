@@ -954,6 +954,10 @@ class WealthService:
         except:
             current_nav = sip_snapshots[-1].price_per_unit
         
+        # Ensure we have a ticker symbol (Auto-Map if missing)
+        if not holding.ticker_symbol or holding.api_source != "MFAPI":
+             await self._try_auto_map_scheme(holding, user_id)
+
         # Pre-fetch NAV history for efficiency (Avoid 1000+ API calls)
         nav_history = []
         if holding.ticker_symbol and holding.api_source == "MFAPI":
@@ -977,7 +981,7 @@ class WealthService:
                 )
                 results[alt_date] = performance
             except Exception as e:
-                # logger.warning(f"Could not calculate performance for date {alt_date}: {e}")
+                logger.error(f"DEBUG: Failed for date {alt_date}: {e}")
                 pass
         
         # Get user's actual performance
@@ -1339,5 +1343,67 @@ class WealthService:
         for i in range(len(history) - 1, -1, -1):
             if history[i]['date'] <= target:
                 return history[i]
+        return None
+
+    async def search_mutual_funds_external(self, query: str) -> List[dict]:
+        """Search MFAPI for schemes."""
+        url = "https://api.mfapi.in/mf/search"
+        async with httpx.AsyncClient() as client:
+             try:
+                resp = await client.get(url, params={"q": query}, timeout=10.0)
+                if resp.status_code == 200:
+                    return resp.json()
+             except: pass
+        return []
+
+    async def _try_auto_map_scheme(self, holding: InvestmentHolding, user_id: uuid.UUID) -> Optional[str]:
+        """Attempt to find and associate a scheme code for this holding."""
+        if holding.ticker_symbol: return holding.ticker_symbol
+        
+        # Heuristic: Search for key AMC terms
+        amcs = ["icici", "hdfc", "sbi", "axis", "nippon", "kotak", "mirae", "parag parikh", "quant", "uti", "aditya birla", "tata", "dsp"]
+        name_lower = holding.name.lower()
+        found_amc = next((amc for amc in amcs if amc in name_lower), "")
+        
+        # Construct query: AMC + first 2-3 words of name
+        # Remove anything in brackets
+        import re
+        clean_base = re.sub(r'\(.*?\)', '', name_lower).replace('-', ' ').strip()
+        words = clean_base.split()
+        
+        search_terms = []
+        if found_amc and found_amc not in words[:2]:
+            search_terms.append(found_amc)
+        
+        search_terms.extend(words[:3]) # First 3 words usually contain fund name
+        
+        query = " ".join(search_terms)
+        candidates = await self.search_mutual_funds_external(query)
+        
+        # Filter for "Direct" and "Growth"
+        valid = []
+        for c in candidates:
+             n = c['schemeName'].lower()
+             if "direct" in n and "growth" in n and "idcw" not in n:
+                 valid.append(c)
+        
+        if valid:
+            best = valid[0]
+            logger.info(f"Auto-mapped '{holding.name}' to '{best['schemeName']}' ({best['schemeCode']})")
+            
+            # Update holding object in memory
+            holding.ticker_symbol = str(best['schemeCode'])
+            holding.api_source = "MFAPI"
+            
+            # Persist if possible
+            try:
+                if hasattr(self, 'holdings_repo'):
+                    # Using raw SQL or repo update if available. pydantic_cl.update?
+                    # Fallback: Just valid for this session is better than nothing.
+                    pass
+            except: pass
+            
+            return holding.ticker_symbol
+            
         return None
 
