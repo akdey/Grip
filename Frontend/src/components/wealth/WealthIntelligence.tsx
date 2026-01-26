@@ -70,6 +70,36 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
         }
     }, [sipHoldings]);
 
+    useEffect(() => {
+        if (!selectedHoldingId) return;
+
+        const fetchAnalysis = async () => {
+            setLoading(true);
+            setError(null);
+            setAnalysis(null);
+            try {
+                const res = await api.get(`/wealth/holdings/${selectedHoldingId}/sip-analysis`);
+                setAnalysis(res.data);
+            } catch (error: any) {
+                console.error("Analysis failed", error);
+                const msg = error.response?.data?.detail || "Could not analyze this holding. It might not have enough SIP history.";
+                setError(msg);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAnalysis();
+    }, [selectedHoldingId]);
+
+    const chartData = analysis ? Object.entries(analysis.alternatives).map(([day, perf]: [string, any]) => ({
+        day: parseInt(day),
+        return: perf.return_percentage,
+        isUserDate: parseInt(day) === analysis.user_sip_date,
+        isBest: parseInt(day) === analysis.best_alternative.date,
+        diff: perf.return_percentage - analysis.user_performance.return_percentage
+    })).sort((a, b) => a.day - b.day) : [];
+
     // ... (fetch logic same)
 
     if (sipHoldings.length === 0) {
@@ -217,6 +247,7 @@ const InvestmentSimulator: React.FC = () => {
     const [scheme, setScheme] = useState('');
     const [amount, setAmount] = useState<number>(10000);
     const [date, setDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
     const [result, setResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -267,7 +298,8 @@ const InvestmentSimulator: React.FC = () => {
             const res = await api.post('/wealth/simulate', {
                 scheme_code: String(scheme),
                 amount: Number(amount),
-                date: date
+                date: date,
+                end_date: endDate || undefined
             });
             setResult(res.data);
         } catch (err) {
@@ -327,6 +359,19 @@ const InvestmentSimulator: React.FC = () => {
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
                             className="bg-transparent outline-none w-full text-sm text-gray-300 [color-scheme:dark]"
+                        />
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-xs text-gray-500 uppercase">End Date (Optional)</label>
+                    <div className="bg-white/5 border border-white/10 rounded-lg flex items-center px-3 py-2">
+                        <Calendar size={16} className="text-gray-500 mr-2" />
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="bg-transparent outline-none w-full text-sm text-gray-300 [color-scheme:dark]"
+                            placeholder="Today"
                         />
                     </div>
                 </div>
