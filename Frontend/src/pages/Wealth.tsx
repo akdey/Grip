@@ -336,7 +336,7 @@ const Wealth: React.FC = () => {
                         )}
                     </div>
 
-                    <div className="h-[280px] w-full">
+                    <div className={`w-full ${activeMainTab === 'trajectory' ? 'h-[280px]' : ''}`}>
                         {activeMainTab === 'trajectory' ? (
                             forecastLoading ? (
                                 <div className="w-full h-full flex items-center justify-center animate-pulse bg-white/[0.02] rounded-xl">

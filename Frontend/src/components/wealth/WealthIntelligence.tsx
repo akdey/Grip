@@ -18,7 +18,7 @@ const WealthIntelligence: React.FC<{ holdings: Holding[] }> = ({ holdings }) => 
     const [activeTab, setActiveTab] = useState<'timing' | 'simulator'>('timing');
 
     return (
-        <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 sm:p-6 min-h-[500px]">
+        <div className="min-h-[500px]">
             <div className="flex space-x-6 border-b border-white/5 pb-4 mb-6 overflow-x-auto scrollbar-hide">
                 <button
                     onClick={() => setActiveTab('timing')}
