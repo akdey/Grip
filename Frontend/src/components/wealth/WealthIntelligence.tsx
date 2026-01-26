@@ -111,6 +111,12 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
                             We used a historical simulator to re-run your exact SIP transactions on <strong>every day of the month (1st–28th)</strong>.
                             The Top 3 performing dates are highlighted below, and the chart shows the return potential for all other days.
                         </p>
+                        {analysis?.analysis_start && (
+                            <p className="mt-3 text-xs text-indigo-300 font-mono border-t border-indigo-500/20 pt-2 flex items-center justify-between">
+                                <span>Period: {new Date(analysis.analysis_start).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} — {new Date(analysis.analysis_end).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+                                <span className="opacity-50">Based on actual transaction history</span>
+                            </p>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
