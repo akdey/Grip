@@ -134,11 +134,14 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
                 }
             }
 
-            // Number Parsing (Handle "1,00,000.00")
+            // Number Parsing (Handle "1,00,000.00" or "₹ 1,00,000")
             const parseNum = (val: any) => {
                 if (typeof val === 'number') return val;
                 if (!val) return 0;
-                return parseFloat(String(val).replace(/,/g, '').trim());
+                // Robust cleaning: remove currency symbols, commas, spaces
+                const cleaned = String(val).replace(/[^0-9.-]/g, '');
+                const num = parseFloat(cleaned);
+                return isNaN(num) ? 0 : num;
             };
 
             const amt = Math.abs(parseNum(row[amountIdx]));
@@ -163,14 +166,14 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
     };
 
     const parseCAMSCSV = (csvText: string): CAMSTransaction[] => {
-        // Simple CSV parser for now - robust library better but keeping simple
         const lines = csvText.split('\n');
         const transactions: CAMSTransaction[] = [];
 
         let headerIdx = -1;
-        // Dynamic search for header in first few lines
         for (let i = 0; i < Math.min(lines.length, 10); i++) {
-            if (lines[i].toLowerCase().includes('amount') && lines[i].toLowerCase().includes('units')) {
+            // Lowercase check
+            const l = lines[i].toLowerCase();
+            if ((l.includes('amount') && l.includes('units')) || (l.includes('mf_name') && l.includes('amount'))) {
                 headerIdx = i;
                 break;
             }
@@ -185,32 +188,70 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
             date: find('date'),
             scheme: find('scheme') !== -1 ? find('scheme') : find('mf_name'),
             folio: find('folio'),
-            // Prioritize transaction type keywords
             type: find('trasaction') !== -1 ? find('trasaction') : (find('transaction') !== -1 ? find('transaction') : find('nature')),
             amount: find('amount'),
             units: find('unit'),
             nav: find('price') !== -1 ? find('price') : find('nav')
         };
 
+        const cleanNum = (val: string) => {
+            if (!val) return 0;
+            // Remove everything except digits, dots, and minus signs
+            const cleaned = val.replace(/[^0-9.-]/g, '');
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? 0 : num;
+        };
+
+        // Helper to parse date strings like "02-Jan-2025" or "02/01/2025"
+        const parseDate = (dateStr: string) => {
+            if (!dateStr) return null;
+            const dStr = dateStr.trim();
+
+            // Handle 02-Jan-2025
+            const mmmMatch = dStr.match(/^(\d{1,2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{4})$/i);
+            if (mmmMatch) {
+                const months: Record<string, string> = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
+                return `${mmmMatch[3]}-${months[mmmMatch[2].toLowerCase()]}-${mmmMatch[1].padStart(2, '0')}`;
+            }
+
+            // Handle DD/MM/YYYY or DD-MM-YYYY
+            const parts = dStr.split(/[-/]/);
+            if (parts.length === 3) {
+                // Assume DD-MM-YYYY
+                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+
+            return null; // Fallback or let backend handle ISO
+        };
+
         for (let i = headerIdx + 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
 
-            // Handle quoted CSV fields basic way
+            // Regex to split by comma ignoring quotes
             const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, ''));
 
             if (cols.length < 5) continue;
+            if (!cols[idx.date] && !cols[idx.amount]) continue;
 
-            const parseNum = (v: string) => parseFloat(v.replace(/,/g, '') || '0');
+            const pAmount = cleanNum(cols[idx.amount]);
+            const pUnits = cleanNum(cols[idx.units]);
+            const pNav = idx.nav !== -1 ? cleanNum(cols[idx.nav]) : 0;
+
+            // Explicit ignore of "0" amount rows if they are just headers/empty
+            if (pAmount === 0 && pUnits === 0) continue;
+
+            const parsedDate = parseDate(cols[idx.date]);
+            if (!parsedDate) continue;
 
             transactions.push({
-                transaction_date: cols[idx.date], // Assume standard format or handled by backend? CAMS CSV usually nice.
+                transaction_date: parsedDate,
                 scheme_name: cols[idx.scheme],
                 folio_number: idx.folio !== -1 ? cols[idx.folio] : undefined,
                 transaction_type: idx.type !== -1 ? cols[idx.type] : 'Purchase',
-                amount: Math.abs(parseNum(cols[idx.amount])),
-                units: Math.abs(parseNum(cols[idx.units])),
-                nav: idx.nav !== -1 ? parseNum(cols[idx.nav]) : 0
+                amount: Math.abs(pAmount),
+                units: Math.abs(pUnits),
+                nav: pNav
             });
         }
 
