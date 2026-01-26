@@ -5,7 +5,7 @@ import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import {
-    Search, Calendar, DollarSign, TrendingUp, AlertCircle, CheckCircle2, Info, BrainCircuit
+    Search, Calendar, DollarSign, TrendingUp, AlertCircle, CheckCircle2
 } from 'lucide-react';
 
 interface Holding {
@@ -57,56 +57,7 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
     // Filter for Mutual Funds only as SIP analysis is relevant for them
     const sipHoldings = holdings.filter(h => h.asset_type === 'MUTUAL_FUND');
 
-    const [selectedHoldingId, setSelectedHoldingId] = useState<string>('');
-    const [analysis, setAnalysis] = useState<any>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [showInfo, setShowInfo] = useState(false);
-
-    useEffect(() => {
-        if (sipHoldings.length > 0 && !selectedHoldingId) {
-            setSelectedHoldingId(sipHoldings[0].id);
-        }
-    }, [sipHoldings]);
-
-    useEffect(() => {
-        if (!selectedHoldingId) return;
-
-        const fetchAnalysis = async () => {
-            setLoading(true);
-            setError(null);
-            setAnalysis(null);
-            try {
-                const res = await api.get(`/wealth/holdings/${selectedHoldingId}/sip-analysis`);
-                setAnalysis(res.data);
-            } catch (error: any) {
-                console.error("Analysis failed", error);
-                const msg = error.response?.data?.detail || "Could not analyze this holding. It might not have enough SIP history.";
-                setError(msg);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAnalysis();
-    }, [selectedHoldingId]);
-
-    const chartData = analysis ? Object.entries(analysis.alternatives).map(([day, perf]: [string, any]) => ({
-        day: parseInt(day),
-        return: perf.return_percentage,
-        isUserDate: parseInt(day) === analysis.user_sip_date,
-        isBest: parseInt(day) === analysis.best_alternative.date,
-        diff: perf.return_percentage - analysis.user_performance.return_percentage
-    })).sort((a, b) => a.day - b.day) : [];
-
-    if (sipHoldings.length === 0) {
-        return (
-            <div className="text-center py-20 text-gray-500">
-                <p>No Mutual Fund holdings found.</p>
-                <p className="text-xs mt-2">Add a Mutual Fund with SIP transactions to see timing analysis.</p>
-            </div>
-        );
-    }
 
     useEffect(() => {
         if (sipHoldings.length > 0 && !selectedHoldingId) {
@@ -400,12 +351,7 @@ const InvestmentSimulator: React.FC = () => {
                         <div>
                             <p className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Invested Value</p>
                             <h3 className="text-2xl font-bold text-gray-200 mt-1">₹{result.invested_amount.toLocaleString()}</h3>
-                            <p className="text-xs text-gray-500 mt-1 bg-white/5 w-fit px-2 py-0.5 rounded border border-white/5 flex items-center gap-2">
-                                <Calendar size={12} />
-                                {new Date(result.invested_date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
-                                <span className="text-gray-600">to</span>
-                                {new Date(result.end_date || new Date()).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </p>
+                            <p className="text-xs text-gray-500 mt-1 bg-white/5 w-fit px-2 py-0.5 rounded border border-white/5">on {new Date(result.invested_date).toLocaleDateString()}</p>
                         </div>
                         <div className="sm:text-right">
                             <p className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Current Value</p>
