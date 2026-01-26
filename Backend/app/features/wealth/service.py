@@ -951,20 +951,31 @@ class WealthService:
         # Ensure we have a ticker symbol (Auto-Map if missing)
         if not holding.ticker_symbol or holding.api_source != "MFAPI":
              await self._try_auto_map_scheme(holding, user_id)
-
-        # Get current NAV (Using updated ticker)
-        try:
-            current_nav = await self.get_asset_price(holding, date.today())
-        except:
-            current_nav = sip_snapshots[-1].price_per_unit
         
-        if current_nav <= 0: current_nav = 1.0 # Safety fallback
-
-        # Pre-fetch NAV history for efficiency (Avoid 1000+ API calls)
+        # Pre-fetch NAV history
         nav_history = []
+        parsed_history = []
         if holding.ticker_symbol and holding.api_source == "MFAPI":
              nav_history = await self.get_mf_nav_history(holding.ticker_symbol)
+             # Optimize: Pre-parse history
+             try:
+                 for entry in nav_history:
+                     d = datetime.strptime(entry['date'], "%d-%m-%Y").date()
+                     parsed_history.append({'date': d, 'nav': float(entry['nav'])})
+             except: pass
         
+        # Determine Current NAV
+        # Use latest available NAV from history (Safe against API lags/weekends)
+        current_nav = 0.0
+        if parsed_history:
+            current_nav = parsed_history[0]['nav']
+            
+        if current_nav <= 0:
+            # Fallback to last snapshot price
+            current_nav = sip_snapshots[-1].price_per_unit
+            
+        if current_nav <= 0: current_nav = 1.0 # Ultimate safety
+
         # Test all days from 1st to 28th (Timing Alpha)
         alternative_dates = list(range(1, 29))
         
@@ -979,7 +990,7 @@ class WealthService:
                     target_date=alt_date,
                     avg_sip_amount=avg_sip_amount,
                     current_nav=current_nav,
-                    nav_history=nav_history
+                    nav_history=parsed_history
                 )
                 results[alt_date] = performance
             except Exception as e:
@@ -1062,7 +1073,7 @@ class WealthService:
             # Loop optimization: Use history
             nav = 0.0
             if nav_history:
-                nav = self._find_nav_in_history(nav_history, target_dt)
+                nav = self._find_nearest_nav(nav_history, target_dt)
             
             if nav <= 0:
                 # Fallback to API/DB if history missing or lookup failed
@@ -1185,22 +1196,13 @@ class WealthService:
                 logger.error(f"Failed to fetch MF history: {e}")
         return []
 
-    def _find_nav_in_history(self, history: List[dict], target_date: date) -> float:
-        """Find NAV in history list (descending order). Returns 0.0 if not found."""
-        target_str = target_date.strftime("%d-%m-%Y")
-        
-        # Exact match attempt
-        # Since history is sorted desc, we can scan. average case O(N/2). 
-        # For simulation, caching this map is better, but this is fast enough for 30 lookup items.
+    def _find_nearest_nav(self, history: List[dict], target_date: date) -> float:
+        """Find Nearest NAV (Previous Trading Day). History must be sorted Descending (Newest first)."""
+        # Linear scan is O(N) but simple. Since we iterate newest (2024) backwards, 
+        # for a target date in 2024, we find it quickly.
         for entry in history:
-            if entry['date'] == target_str:
-                return float(entry['nav'])
-                
-            # If we passed the date (entry date is older than target), stop? No, history is DESC (2025 -> 2020)
-            # If entry['date'] < target_date: break? 
-            # Date parsing is slow. String comparison... "20-01-2024" vs "19-01-2024".
-            # String comparison of DD-MM-YYYY is NOT chronological. Cannot optimize easily without parsing.
-            
+            if entry['date'] <= target_date:
+                return entry['nav']
         return 0.0
 
     async def simulate_historical_investment(
