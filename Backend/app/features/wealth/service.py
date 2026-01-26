@@ -1019,7 +1019,9 @@ class WealthService:
                 "improvement": improvement
             },
             insight=insight,
-            historical_pattern=historical_pattern
+            historical_pattern=historical_pattern,
+            analysis_start=sip_snapshots[0].captured_at,
+            analysis_end=sip_snapshots[-1].captured_at
         )
     
     async def _calculate_date_performance(

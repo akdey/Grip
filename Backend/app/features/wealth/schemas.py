@@ -153,7 +153,10 @@ class SIPDateAnalysisResponse(BaseModel):
     alternatives: dict[int, SIPDatePerformance]  # {date: performance}
     best_alternative: dict  # {"date": int, "performance": SIPDatePerformance, "improvement": float}
     insight: str
+    insight: str
     historical_pattern: Optional[str] = None
+    analysis_start: Optional[date] = None
+    analysis_end: Optional[date] = None
 
 class SimulateInvestmentRequest(BaseModel):
     scheme_code: str
