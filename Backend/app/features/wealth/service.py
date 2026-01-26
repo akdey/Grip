@@ -412,42 +412,18 @@ class WealthService:
         existing = (await self.db.execute(stmt)).scalar_one_or_none()
         
         if existing:
-            # Reconciliation Logic:
-            # If the snapshot already has a delta close to this transaction,
-            # we assume they are the same event (e.g. CAMS import already covered it).
-            # We skip adding the delta but record the transaction ID in metadata for tracking.
-            
-            # Initialize metadata if not present
-            if not existing.extra_data:
-                existing.extra_data = {}
-            
-            linked_txns = existing.extra_data.get('linked_transaction_ids', [])
-            txn_id_str = str(transaction.id)
-            
-            if txn_id_str in linked_txns:
-                # Already linked!
-                return
-                
-            # Check if amount matches existing delta
-            # This prevents doubling if CAMS import already created this snapshot
-            amount_already_matched = abs(existing.amount_invested_delta - invested_delta) < 1.0
-            
-            if amount_already_matched:
-                # Match! Just record the link
-                linked_txns.append(txn_id_str)
-                existing.extra_data['linked_transaction_ids'] = linked_txns
-                # We don't add units or delta because it's already there
-            else:
-                # Different amount, so it's likely an additional transaction on the same day
-                existing.units_held += units
-                existing.amount_invested_delta += invested_delta
-                existing.price_per_unit = price
-                existing.total_value = existing.units_held * price
-                
-                linked_txns.append(txn_id_str)
-                existing.extra_data['linked_transaction_ids'] = linked_txns
+            existing.units_held += units
+            existing.amount_invested_delta += invested_delta
+            # Update total value based on new units * price (which we just fetched)
+            existing.price_per_unit = price
+            existing.total_value = existing.units_held * price
         else:
             # We need to know previous units to add to?
+            # Or is this snapshot just the delta? 
+            # "Time-series table... total_value". It implies Cumulative State.
+            # So we need previous day's units.
+            
+            # Find closest previous snapshot
             prev_stmt = (
                 select(InvestmentSnapshot)
                 .where(
@@ -468,8 +444,7 @@ class WealthService:
                 units_held=new_units,
                 price_per_unit=price,
                 total_value=new_units * price,
-                amount_invested_delta=invested_delta,
-                extra_data={'linked_transaction_ids': [str(transaction.id)]}
+                amount_invested_delta=invested_delta
             )
             self.db.add(snap)
             
@@ -802,17 +777,7 @@ class WealthService:
                         sip_patterns_detected += 1
                 
                 # Process each transaction
-                # IMPORTANT: Initialize running_units from previous state if available
-                prev_snap_stmt = select(InvestmentSnapshot).where(
-                    and_(
-                        InvestmentSnapshot.holding_id == holding.id,
-                        InvestmentSnapshot.captured_at < txns[0].transaction_date
-                    )
-                ).order_by(desc(InvestmentSnapshot.captured_at)).limit(1)
-                prev_snap = (await self.db.execute(prev_snap_stmt)).scalar_one_or_none()
-                running_units = prev_snap.units_held if prev_snap else 0.0
-                
-                processed_dates = set()
+                running_units = 0.0
                 prev_txn = None
                 
                 for txn in txns:
@@ -823,29 +788,26 @@ class WealthService:
                     # Broad matching for Sell transactions 
                     is_sell = any(x in t_type for x in ['redemption', 'sell', 'switch out', 'withdraw'])
 
-                    if is_buy or is_sell:
-                        if is_buy:
-                            running_units += txn.units
-                            invested_delta = txn.amount
-                        else:
-                            running_units -= txn.units
-                            invested_delta = -txn.amount
-                            
-                        # Detect step-up or skip (only for buys)
+                    if is_buy:
+                        # Buy transaction
+                        running_units += txn.units
+                        invested_delta = txn.amount
+                        
+                        # Detect step-up or skip
                         is_step_up = False
                         is_skip = False
                         skip_reason = None
                         sip_amount = None
                         metadata = {}
                         
-                        if is_buy and is_sip_pattern and prev_txn:
+                        if is_sip_pattern and prev_txn:
                             # Check for step-up
-                            if abs(txn.amount - prev_txn.amount) > 100:
+                            if abs(txn.amount - prev_txn.amount) > 100:  # Threshold
                                 is_step_up = True
                                 metadata['previous_amount'] = prev_txn.amount
                                 metadata['change_percentage'] = ((txn.amount - prev_txn.amount) / prev_txn.amount) * 100
                             
-                            # Check for skip
+                            # Check for skip (gap > 35 days for monthly SIP)
                             days_gap = (txn.transaction_date - prev_txn.transaction_date).days
                             if days_gap > 35:
                                 is_skip = True
@@ -867,22 +829,7 @@ class WealthService:
                             existing_snap.units_held = running_units
                             existing_snap.price_per_unit = txn.nav
                             existing_snap.total_value = running_units * txn.nav
-                            
-                            # IDEMPOTENCY: Reset delta if this is the first time we touch this date in this import
-                            if txn.transaction_date not in processed_dates:
-                                existing_snap.amount_invested_delta = invested_delta
-                                processed_dates.add(txn.transaction_date)
-                            else:
-                                existing_snap.amount_invested_delta += invested_delta
-                            
-                            if is_buy:
-                                existing_snap.is_sip = is_sip_pattern
-                                existing_snap.sip_amount = sip_amount
-                                existing_snap.is_step_up = is_step_up
-                                existing_snap.is_skip = is_skip
-                                existing_snap.skip_reason = skip_reason
-                                if metadata:
-                                    existing_snap.extra_data = metadata
+                            existing_snap.amount_invested_delta += invested_delta
                         else:
                             snapshot = InvestmentSnapshot(
                                 holding_id=holding.id,
@@ -892,46 +839,57 @@ class WealthService:
                                 price_per_unit=txn.nav,
                                 total_value=running_units * txn.nav,
                                 amount_invested_delta=invested_delta,
-                                is_sip=is_sip_pattern if is_buy else False,
-                                sip_amount=sip_amount if is_buy else None,
-                                is_step_up=is_step_up if is_buy else False,
-                                is_skip=is_skip if is_buy else False,
-                                skip_reason=skip_reason if is_buy else None,
-                                extra_data=metadata if (is_buy and metadata) else None
+                                is_sip=is_sip_pattern,
+                                sip_amount=sip_amount,
+                                is_step_up=is_step_up,
+                                is_skip=is_skip,
+                                skip_reason=skip_reason,
+                                extra_data=metadata if metadata else None
                             )
                             self.db.add(snapshot)
-                            processed_dates.add(txn.transaction_date)
                         
                         transactions_processed += 1
                         prev_txn = txn
+                    
+                    elif is_sell:
+                        # Sell transaction
+                        running_units -= txn.units
+                        invested_delta = -txn.amount
+                        
+                        snapshot = InvestmentSnapshot(
+                            holding_id=holding.id,
+                            user_id=user_id,
+                            captured_at=txn.transaction_date,
+                            units_held=running_units,
+                            price_per_unit=txn.nav,
+                            total_value=running_units * txn.nav,
+                            amount_invested_delta=invested_delta
+                        )
+                        self.db.add(snapshot)
+                        transactions_processed += 1
                 
                 # Update holding totals manually to preserve unit counts from CSV
                 # (recalculate_holding_history is destructive if NAV is missing)
                 
-                # Update holding totals by summing all snapshots (Source of Truth)
-                # This prevents doubling if the same CAMS data is imported twice
-                total_invested_stmt = select(func.sum(InvestmentSnapshot.amount_invested_delta)).where(
-                    InvestmentSnapshot.holding_id == holding.id
-                )
-                holding.total_invested = (await self.db.execute(total_invested_stmt)).scalar() or 0.0
+                # Calculate net investment for this batch
+                net_investment = 0.0
+                for txn in txns:
+                    t_type = txn.transaction_type.lower()
+                    if any(x in t_type for x in ['purchase', 'sip', 'switch in', 'dividend', 'invest', 'reinvest']):
+                        net_investment += txn.amount
+                    elif any(x in t_type for x in ['redemption', 'sell', 'switch out', 'withdraw']):
+                        net_investment -= txn.amount
                 
-                # Update current value using last known NAV and final units
+                holding.total_invested += net_investment
+                
+                # Update current value using last known NAV from import
                 last_nav = txns[-1].nav if txns else 0.0
                 if last_nav > 0:
-                    holding.current_value = running_units * last_nav
+                     holding.current_value = running_units * last_nav
                 
                 holding.last_updated_at = datetime.now()
                 
-                # Finally, calculate XIRR
-                try:
-                    # Fetch all snapshots to pass to calculate_xirr
-                    all_snaps_stmt = select(InvestmentSnapshot).where(
-                        InvestmentSnapshot.holding_id == holding.id
-                    ).order_by(InvestmentSnapshot.captured_at)
-                    all_snaps = (await self.db.execute(all_snaps_stmt)).scalars().all()
-                    holding.xirr = self.calculate_xirr(all_snaps)
-                except Exception as e:
-                    logger.warning(f"Failed to calculate XIRR for {holding.name}: {e}")
+                # await self.recalculate_holding_history(holding.id) # DISABLED: Destructive
                 
             except Exception as e:
                 logger.error(f"Error processing scheme {scheme_name}: {e}")
