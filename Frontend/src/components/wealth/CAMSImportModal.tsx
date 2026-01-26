@@ -94,10 +94,9 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
         const findCol = (aliases: string[]) => headers.findIndex(h => aliases.some(a => h.includes(a)));
 
         const dateIdx = findCol(['date', 'trade date', 'transaction date']);
-        const schemeIdx = findCol(['scheme', 'mf name', 'product code']); // prioritize scheme name if multiple
-        // Refined scheme logic: prefer "scheme name" or "mf name" over "product code" usually, 
-        // but user listed PRODUCT_CODE, SCHEME_NAME. We want SCHEME_NAME.
-        const schemeNameIdx = findCol(['scheme name', 'mf name']);
+        const schemeIdx = findCol(['scheme', 'product code']); // prioritize scheme name if multiple
+        // Refined scheme logic: prefer "scheme" over "product code"
+        const schemeNameIdx = findCol(['scheme']);
 
         const folioIdx = findCol(['folio']);
         // Fix: Removed 'type' to avoid matching asset class column (e.g. "Equity")
