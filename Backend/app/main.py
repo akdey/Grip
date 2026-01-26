@@ -96,9 +96,6 @@ app.include_router(goals_router, prefix=f"{settings.API_V1_STR}/goals", tags=["g
 app.include_router(wealth_router, prefix=f"{settings.API_V1_STR}/wealth", tags=["wealth"])
 app.include_router(export_router, prefix=f"{settings.API_V1_STR}/export", tags=["export"])
 
-from app.features.notifications.router import router as notifications_router
-app.include_router(notifications_router, prefix=f"{settings.API_V1_STR}/notifications", tags=["notifications"])
-
 @app.get("/")
 async def root():
     return {"message": f"Welcome to {settings.PROJECT_NAME} - The financial diet that sticks."}
