@@ -268,36 +268,7 @@ const Dashboard: React.FC = () => {
                     const safe = Number(safeToSpend?.safe_to_spend || 0);
                     const balance = Number(safeToSpend?.current_balance || 0);
 
-                    // Status determination based on financial state
-                    // Determine user state from recommendation message
-                    const isNewUser = safeToSpend?.recommendation?.includes('Welcome');
-                    const isNegativeBalance = balance < 0;
-                    const isZeroBalance = balance === 0 && !isNewUser;
-
-                    let status: 'negative' | 'critical' | 'warning' | 'success';
-
-                    if (isNewUser) {
-                        // New user - neutral/welcoming state
-                        status = 'success';
-                    } else if (isNegativeBalance || safe < 0) {
-                        // Negative balance or negative safe-to-spend - critical red
-                        status = 'negative';
-                    } else if (isZeroBalance) {
-                        // Existing user with zero balance - warning
-                        status = 'warning';
-                    } else if (safe === 0) {
-                        // Overextended (frozen + buffer > balance) - critical
-                        status = 'critical';
-                    } else if (safe < 1000) {
-                        // Very low capacity - critical
-                        status = 'critical';
-                    } else if (safe < 3000) {
-                        // Low capacity - warning
-                        status = 'warning';
-                    } else {
-                        // Healthy - success
-                        status = 'success';
-                    }
+                    const status = safeToSpend?.status || 'success';
 
                     const themes = {
                         negative: {

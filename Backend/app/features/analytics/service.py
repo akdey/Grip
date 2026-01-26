@@ -269,20 +269,28 @@ class AnalyticsService:
             salary_str = salary_date.strftime("%b %d")
             
             # Generate recommendation based on user state
+            status = "success"
+            
             if is_new_user:
                 recommendation = "👋 Welcome! Add your first transaction to start tracking your finances."
+                status = "success"
             elif current_balance < 0:
                 deficit = abs(current_balance)
                 recommendation = f"📉 Balance is ₹{deficit:.0f} in deficit. Add income to recover."
+                status = "negative"
             elif current_balance == 0:
                 recommendation = "⚠️ No liquid balance available. Please add income transactions."
+                status = "warning"
             elif safe_amount == 0:
                 overextended = frozen_breakdown.total_frozen + buffer - current_balance
                 recommendation = f"🔒 Overextended by ₹{overextended:.0f}. Frozen + Buffer exceed balance."
+                status = "critical"
             elif safe_amount < (current_balance * Decimal("0.20")):
                 recommendation = f"⚡ Low capacity. ₹{buffer:.0f} reserved till salary ({salary_str})"
+                status = "warning"
             else:
                 recommendation = f"✅ Healthy! ₹{buffer:.0f} buffered till salary ({salary_str})"
+                status = "success"
             
             return SafeToSpendResponse(
                 current_balance=current_balance,
@@ -290,7 +298,8 @@ class AnalyticsService:
                 buffer_amount=buffer,
                 buffer_percentage=buffer_percentage,
                 safe_to_spend=safe_amount,
-                recommendation=recommendation
+                recommendation=recommendation,
+                status=status
             )
         except Exception as e:
             logger.error(f"Error calculating safe to spend: {e}")
@@ -310,7 +319,8 @@ class AnalyticsService:
                 buffer_amount=zero,
                 buffer_percentage=0.0,
                 safe_to_spend=zero,
-                recommendation="⚠️ Unable to calculate. Please check system logs."
+                recommendation="⚠️ Unable to calculate. Please check system logs.",
+                status="warning"
             )
 
     async def debug_buffer_Calculation(self, db: AsyncSession, user_id: UUID):

@@ -948,15 +948,17 @@ class WealthService:
         # Calculate average SIP amount
         avg_sip_amount = sum(s.amount_invested_delta for s in sip_snapshots) / len(sip_snapshots)
         
-        # Get current NAV
+        # Ensure we have a ticker symbol (Auto-Map if missing)
+        if not holding.ticker_symbol or holding.api_source != "MFAPI":
+             await self._try_auto_map_scheme(holding, user_id)
+
+        # Get current NAV (Using updated ticker)
         try:
             current_nav = await self.get_asset_price(holding, date.today())
         except:
             current_nav = sip_snapshots[-1].price_per_unit
         
-        # Ensure we have a ticker symbol (Auto-Map if missing)
-        if not holding.ticker_symbol or holding.api_source != "MFAPI":
-             await self._try_auto_map_scheme(holding, user_id)
+        if current_nav <= 0: current_nav = 1.0 # Safety fallback
 
         # Pre-fetch NAV history for efficiency (Avoid 1000+ API calls)
         nav_history = []
