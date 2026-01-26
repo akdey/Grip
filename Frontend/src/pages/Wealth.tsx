@@ -154,116 +154,113 @@ const Wealth: React.FC = () => {
     return (
         <div className="min-h-screen text-white p-6 pb-24 overflow-x-hidden">
             {/* Header */}
-            <header className="mb-12 relative z-10">
-                <div className="flex justify-between items-end">
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="h-1 w-8 bg-indigo-500 rounded-full" />
-                            <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-400">Financial Command</p>
-                        </div>
-                        <h1 className="text-5xl font-black tracking-tighter text-white mb-2">
-                            Multi<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Verse</span>
-                        </h1>
-                        <p className="text-gray-500 font-medium">Your complete wealth ecosystem.</p>
-                    </div>
-
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => setIsSimulatorOpen(true)}
-                            className="group flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 transition-all hover:scale-105 active:scale-95"
-                        >
-                            <Calculator size={18} className="text-indigo-400 group-hover:text-indigo-300" />
-                            <span className="text-sm font-semibold">Simulator</span>
-                        </button>
-                        <button
-                            onClick={() => setIsCAMSImportOpen(true)}
-                            className="group flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/30 hover:to-teal-600/30 border border-emerald-500/20 transition-all hover:scale-105 active:scale-95"
-                        >
-                            <Upload size={18} className="text-emerald-400 group-hover:text-emerald-300" />
-                            <span className="text-sm font-semibold text-emerald-100">Import CAMS</span>
-                        </button>
-                        <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="p-3 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/30 transition-all hover:scale-110 active:scale-95"
-                        >
-                            <Plus size={20} />
-                        </button>
-                    </div>
+            <div className="flex justify-between items-center mb-8">
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-[3px] text-gray-500 mb-0.5 opacity-60">
+                        {import.meta.env.VITE_APP_NAME || 'Grip'}
+                    </p>
+                    <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
+                        Wealth
+                    </h1>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">Your Financial Core</p>
                 </div>
-            </header>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setIsSimulatorOpen(true)}
+                        className="p-2 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 transition-colors hidden md:block" // Hidden on mobile to save space? Or visible?
+                        title="Simulate Investment (Time Machine)"
+                    >
+                        <Calculator size={20} />
+                    </button>
+                    <button
+                        onClick={() => setIsCAMSImportOpen(true)}
+                        className="p-2 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 transition-colors"
+                        title="Import CAMS Statement"
+                    >
+                        <Upload size={20} />
+                    </button>
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="p-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors"
+                        title="Add Asset"
+                    >
+                        <Plus size={20} />
+                    </button>
+                    <button
+                        onClick={fetchData}
+                        className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                        <RefreshCw size={20} className={holdingsLoading || forecastLoading ? "animate-spin" : ""} />
+                    </button>
+                </div>
+            </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                {/* Net Worth Card */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                    className="col-span-1 md:col-span-1 bg-gradient-to-br from-[#151515] to-[#0A0A0A] border border-white/5 rounded-[2rem] p-8 relative overflow-hidden group hover:border-white/10 transition-colors"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 relative overflow-hidden"
                 >
-                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <Wallet size={120} />
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Wallet size={64} />
                     </div>
-
-                    <div className="relative z-10">
-                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">Total Net Worth</p>
-                        {holdingsLoading ? (
-                            <div className="h-12 w-48 bg-white/5 rounded-lg animate-pulse mt-2" />
-                        ) : (
-                            <h2 className="text-5xl font-black tracking-tighter text-white mt-2">
-                                {formatCurrency(totalWealth)}
-                            </h2>
-                        )}
-
-                        <div className="mt-6 flex items-center gap-3">
-                            <div className={`px-3 py-1 rounded-full text-xs font-bold border ${absoluteReturn >= 0 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
-                                {absoluteReturn >= 0 ? "+" : ""}{formatCurrency(absoluteReturn)}
-                            </div>
-                            <span className="text-xs text-gray-500 font-medium">All Time Return</span>
+                    {holdingsLoading ? (
+                        <div className="animate-pulse space-y-3">
+                            <div className="h-4 w-20 bg-white/10 rounded" />
+                            <div className="h-8 w-32 bg-white/10 rounded" />
                         </div>
-                    </div>
-
-                    {/* Glow */}
-                    <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-600/20 blur-[100px] rounded-full pointer-events-none" />
+                    ) : (
+                        <>
+                            <p className="text-gray-500 text-sm font-medium">Net Worth</p>
+                            <h2 className="text-3xl font-bold mt-2">{formatCurrency(totalWealth)}</h2>
+                            <div className="flex items-center mt-2 space-x-2">
+                                <span className={`text-sm px-2 py-0.5 rounded-full ${absoluteReturn >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}>
+                                    {absoluteReturn >= 0 ? "+" : ""}{formatCurrency(absoluteReturn)}
+                                </span>
+                            </div>
+                        </>
+                    )}
                 </motion.div>
 
-                {/* Stats & Projections */}
-                <div className="col-span-1 md:col-span-2 grid grid-cols-2 gap-6">
-                    {/* Returns Card */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                        className="bg-[#0A0A0A] border border-white/5 rounded-[2rem] p-6 relative overflow-hidden flex flex-col justify-center"
-                    >
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[60px] rounded-full" />
-                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Portfolio Yield</p>
-                        <div className="flex items-baseline gap-1 mt-2">
-                            <h3 className={`text-4xl font-black tracking-tighter ${returnPercentage >= 0 ? "text-white" : "text-red-400"}`}>
-                                {returnPercentage.toFixed(2)}
-                            </h3>
-                            <span className="text-lg font-bold text-gray-600">%</span>
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6"
+                >
+                    {holdingsLoading ? (
+                        <div className="animate-pulse space-y-3">
+                            <div className="h-4 w-20 bg-white/10 rounded" />
+                            <div className="h-8 w-32 bg-white/10 rounded" />
                         </div>
-                        <p className="text-xs text-emerald-500/60 mt-2 font-mono">XIRR Optimized</p>
-                    </motion.div>
+                    ) : (
+                        <>
+                            <p className="text-gray-500 text-sm font-medium">Portfolio Returns</p>
+                            <h2 className={`text-3xl font-bold mt-2 ${returnPercentage >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                {returnPercentage.toFixed(2)}%
+                            </h2>
+                            <p className="text-xs text-gray-600 mt-2">Overall Absolute Return</p>
+                        </>
+                    )}
+                </motion.div>
 
-                    {/* Forecast Card */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                        className="bg-[#0A0A0A] border border-white/5 rounded-[2rem] p-6 relative overflow-hidden flex flex-col justify-center"
-                    >
-                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 blur-[60px] rounded-full" />
-                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">10Y Projection</p>
-                        <div className="mt-2">
-                            {forecastLoading ? (
-                                <div className="h-8 w-24 bg-white/5 rounded animate-pulse" />
-                            ) : (
-                                <h3 className="text-3xl font-black tracking-tighter text-purple-200">
-                                    {forecastData?.forecast.length ? formatCurrency(forecastData.forecast[forecastData.forecast.length - 1].yhat) : "N/A"}
-                                </h3>
-                            )}
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 bg-gradient-to-br from-indigo-900/10 to-purple-900/10"
+                >
+                    {forecastLoading ? (
+                        <div className="animate-pulse space-y-3">
+                            <div className="h-4 w-20 bg-white/10 rounded" />
+                            <div className="h-8 w-32 bg-white/10 rounded" />
                         </div>
-                        <p className="text-[10px] text-purple-400/60 mt-2 leading-tight max-w-[150px]">
-                            Based on current trajectory & market conditions
-                        </p>
-                    </motion.div>
-                </div>
+                    ) : (
+                        <>
+                            <p className="text-gray-500 text-sm font-medium">Projected (10Y)</p>
+                            <h2 className="text-3xl font-bold mt-2 text-indigo-400">
+                                {forecastData?.forecast.length ? formatCurrency(forecastData.forecast[forecastData.forecast.length - 1].yhat) : "..."}
+                            </h2>
+                            <p className="text-xs text-gray-500 mt-2 line-clamp-1">{forecastData?.summary_text}</p>
+                        </>
+                    )}
+                </motion.div>
             </div>
 
             {/* Main Content Area */}
