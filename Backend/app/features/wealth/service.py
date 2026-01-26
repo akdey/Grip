@@ -1003,8 +1003,8 @@ class WealthService:
         if not user_performance:
             raise ValueError("Could not calculate user's actual performance")
         
-        # Find best alternative
-        best_date = max(results.keys(), key=lambda d: results[d].xirr or 0)
+        # Find best alternative (Maximize total money, not just rate)
+        best_date = max(results.keys(), key=lambda d: results[d].absolute_return or 0.0)
         best_performance = results[best_date]
         improvement = best_performance.absolute_return - user_performance.absolute_return
         
@@ -1148,6 +1148,25 @@ class WealthService:
         best_perf: schemas.SIPDatePerformance,
         improvement: float
     ) -> str:
+        """Generate smart insight text based on performance difference."""
+        if user_date == best_date or improvement < 50:
+             if user_perf.absolute_return >= 0:
+                 return f"Excellent! Your {user_date}th date SIP is already optimal. You're earning the best possible returns."
+             else:
+                 return f"Your {user_date}th date is optimal. Even in this negative trend, this date minimizes your loss best."
+
+        improvement_pct = (improvement / user_perf.total_invested * 100) if user_perf.total_invested > 0 else 0
+        
+        # Scenario: User Loss -> Reduced Loss
+        if user_perf.absolute_return < 0 and best_perf.absolute_return < 0:
+            return f"Your {user_date}th date SIP is in loss, but switching to the {best_date}th could have reduced this loss by ₹{improvement:,.0f}."
+
+        # Scenario: User Loss -> Profit
+        if user_perf.absolute_return < 0 and best_perf.absolute_return >= 0:
+             return f"Investing on the {best_date}th would have turned your loss into a profit of ₹{best_perf.absolute_return:,.0f} (+₹{improvement:,.0f} difference)."
+             
+        # Scenario: Profit -> More Profit
+        return f"Your {user_date}th date SIP performed well, but switching to {best_date}th could have earned you ₹{improvement:,.0f} more ({improvement_pct:.1f}% boost)."
         """Generate human-readable insight about SIP date performance."""
         if user_date == best_date:
             return f"Excellent! Your {user_date}th date SIP is already optimal. You're earning the best possible returns with this timing."
