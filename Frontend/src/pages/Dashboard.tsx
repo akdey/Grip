@@ -284,7 +284,7 @@ const Dashboard: React.FC = () => {
                             glow: 'bg-rose-500/20',
                             border: 'border-rose-500/20',
                             text: 'text-rose-400',
-                            amountText: 'text-white',
+                            amountText: 'text-rose-500',
                             shadow: 'shadow-[0_40px_80px_-15px_rgba(225,29,72,0.15)]',
                             pill: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
                             bgIntensity: 'bg-rose-500/5'
@@ -334,7 +334,7 @@ const Dashboard: React.FC = () => {
                                     <span>{formatCurrency(Math.abs(safe))}</span>
                                 </h3>
 
-                                <p className="text-[11px] font-medium text-gray-400 max-w-[240px] leading-relaxed">
+                                <p className={`text-[11px] font-medium max-w-[240px] leading-relaxed ${status === 'negative' ? theme.text : 'text-gray-400'}`}>
                                     {safeToSpend?.recommendation}
                                 </p>
 
