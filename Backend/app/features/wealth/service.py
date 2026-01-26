@@ -868,8 +868,28 @@ class WealthService:
                         self.db.add(snapshot)
                         transactions_processed += 1
                 
-                # Update holding totals
-                await self.recalculate_holding_history(holding.id)
+                # Update holding totals manually to preserve unit counts from CSV
+                # (recalculate_holding_history is destructive if NAV is missing)
+                
+                # Calculate net investment for this batch
+                net_investment = 0.0
+                for txn in txns:
+                    t_type = txn.transaction_type.lower()
+                    if any(x in t_type for x in ['purchase', 'sip', 'switch in', 'dividend', 'invest', 'reinvest']):
+                        net_investment += txn.amount
+                    elif any(x in t_type for x in ['redemption', 'sell', 'switch out', 'withdraw']):
+                        net_investment -= txn.amount
+                
+                holding.total_invested += net_investment
+                
+                # Update current value using last known NAV from import
+                last_nav = txns[-1].nav if txns else 0.0
+                if last_nav > 0:
+                     holding.current_value = running_units * last_nav
+                
+                holding.last_updated_at = datetime.now()
+                
+                # await self.recalculate_holding_history(holding.id) # DISABLED: Destructive
                 
             except Exception as e:
                 logger.error(f"Error processing scheme {scheme_name}: {e}")
