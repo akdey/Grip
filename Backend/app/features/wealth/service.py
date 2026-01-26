@@ -1184,13 +1184,10 @@ class WealthService:
         if not history:
              raise ValueError("Could not fetch scheme history")
         
-        # Sort history ascending for easier iteration (history from API is usually desc)
-        history_asc = sorted(history, key=lambda x: x['date'], reverse=False) # Convert to list of dicts first?
         # Data format: [{date: "dd-mm-yyyy", nav: "123.45"}]
-        # Let's map to datetime objects for efficiency
-        
+        # Parse first, then sort
         parsed_history = []
-        for h in history_asc:
+        for h in history:
             try:
                  d = datetime.strptime(h['date'], "%d-%m-%Y").date()
                  parsed_history.append({'date': d, 'nav': float(h['nav'])})
@@ -1198,6 +1195,9 @@ class WealthService:
             
         if not parsed_history:
             raise ValueError("Invalid history data")
+
+        # Sort ascending by date
+        parsed_history.sort(key=lambda x: x['date'])
             
         start_date = date_obj
         final_date = end_date if end_date else date.today()
@@ -1208,28 +1208,49 @@ class WealthService:
         # Find start NAV
         start_entry = self._find_entry_closest_to(parsed_history, start_date)
         if not start_entry:
-            raise ValueError(f"No NAV found near start date {start_date}")
+            # Try finding ANY entry before or after?
+            # If start date is way in the past/future relative to data?
+            if start_date > parsed_history[-1]['date']:
+                raise ValueError(f"Start date {start_date} is in the future relative to available data (Last: {parsed_history[-1]['date']})")
+            if start_date < parsed_history[0]['date']:
+                 # Use inception NAV?
+                 start_entry = parsed_history[0]
+            else:
+                 raise ValueError(f"No NAV found near start date {start_date}")
+
         start_nav = start_entry['nav']
         
         total_invested = 0.0
         total_units = 0.0
+        months_invested = 0
+        skipped_months = 0
         
         if investment_type == "LUMPSUM":
             total_invested = amount
             total_units = amount / start_nav
+            months_invested = 1
         else: # SIP
             # Iterate monthly
             curr = start_date
             while curr <= final_date:
                 # Find closest NAV for this month's date
-                entry = self._find_entry_closest_to(parsed_history, curr)
+                # Use a wider window (10 days) or fallback to last known
+                entry = self._find_entry_closest_to(parsed_history, curr, window=10)
+                
+                if not entry:
+                    # Fallback: Find the last available NAV before this date
+                    # This handles cases where data might be sparse
+                    entry = self._find_last_entry_before(parsed_history, curr)
+                
                 if entry:
                     units = amount / entry['nav']
                     total_units += units
                     total_invested += amount
+                    months_invested += 1
+                else:
+                    skipped_months += 1
                 
-                # Next month
-                # Handle month rollover correctly
+                # Next month handling
                 y = curr.year
                 m = curr.month + 1
                 if m > 12:
@@ -1244,8 +1265,7 @@ class WealthService:
         # Calculate final value
         final_entry = self._find_entry_closest_to(parsed_history, final_date)
         if not final_entry:
-            # Fallback to last available
-            final_entry = parsed_history[-1]
+            final_entry = parsed_history[-1] # Fallback to very last data point available
             
         current_nav = final_entry['nav']
         current_value = total_units * current_nav
@@ -1253,6 +1273,10 @@ class WealthService:
         abs_return = current_value - total_invested
         pct_return = (abs_return / total_invested * 100) if total_invested > 0 else 0
         
+        notes = f"Simulated {months_invested} installments from {start_date} to {final_entry['date']}."
+        if skipped_months > 0:
+            notes += f" Skipped {skipped_months} months due to missing data."
+
         return schemas.SimulateInvestmentResponse(
             scheme_code=scheme_code,
             invested_date=start_date,
@@ -1264,17 +1288,27 @@ class WealthService:
             current_value=current_value,
             absolute_return=abs_return,
             return_percentage=pct_return,
-            notes=f"Simulated from {start_date} to {final_entry['date']}"
+            notes=notes
         )
 
     def _find_entry_closest_to(self, history: List[dict], target: date, window: int = 5) -> Optional[dict]:
         """Finds closest date entry within +/- window days. Assumes history is sorted asc."""
-        # Binary search could be better, but linear scan ok for <5000 items
-        # Filter mostly relevant
+        # Optimization: Filter roughly relevant first?
+        # Since history is sorted, we can use bisect-like logic or just linear scan for small N
+        
         candidates = [x for x in history if abs((x['date'] - target).days) <= window]
         if not candidates:
             return None
         # Sort by proximity
         candidates.sort(key=lambda x: abs((x['date'] - target).days))
         return candidates[0]
+
+    def _find_last_entry_before(self, history: List[dict], target: date) -> Optional[dict]:
+        """Finds the last available entry <= target date."""
+        # History is sorted asc
+        # Iterate backwards
+        for i in range(len(history) - 1, -1, -1):
+            if history[i]['date'] <= target:
+                return history[i]
+        return None
 

@@ -372,6 +372,11 @@ const InvestmentSimulator: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                    {result.notes && (
+                        <div className="mt-4 pt-4 border-t border-white/5">
+                            <p className="text-xs text-gray-500 font-mono">{result.notes}</p>
+                        </div>
+                    )}
                 </motion.div>
             )}
         </motion.div>
