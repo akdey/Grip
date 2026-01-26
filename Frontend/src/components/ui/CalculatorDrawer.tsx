@@ -117,5 +117,4 @@ export const CalculatorDrawer: React.FC<CalculatorDrawerProps> = ({ isOpen, onCl
             </div>
         </Drawer>
     );
-    );
 };
