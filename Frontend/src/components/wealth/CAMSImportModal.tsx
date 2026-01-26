@@ -71,122 +71,145 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
 
     const parseCAMSExcel = (rows: any[][]): CAMSTransaction[] => {
         const transactions: CAMSTransaction[] = [];
-        // CAMS Header row usually starts after some metadata.
-        // We look for a row containing "Scheme" or "User Transaction"
-
         let headerRowIndex = -1;
 
-        // Dynamic header detection
+        // Dynamic header detection - look for specific columns mentioned by user
         for (let i = 0; i < Math.min(rows.length, 20); i++) {
             const rowStr = rows[i].join(' ').toLowerCase();
-            if (rowStr.includes('scheme') && rowStr.includes('amount') && rowStr.includes('units')) {
+            // User provided: SCHEME_NAME, AMOUNT, UNITS, TRADE_DATE (or similar)
+            if (
+                (rowStr.includes('scheme') && rowStr.includes('amount')) ||
+                (rowStr.includes('mf_name') && rowStr.includes('amount'))
+            ) {
                 headerRowIndex = i;
                 break;
             }
         }
 
-        if (headerRowIndex === -1) return []; // Headers not found
+        if (headerRowIndex === -1) return [];
 
-        // Map column indices
-        const headers = rows[headerRowIndex].map(h => String(h).toLowerCase().trim());
-        const dateIdx = headers.findIndex(h => h.includes('date'));
-        const schemeIdx = headers.findIndex(h => h.includes('scheme'));
-        const folioIdx = headers.findIndex(h => h.includes('folio'));
-        const typeIdx = headers.findIndex(h => h.includes('transaction') || h.includes('nature') || h.includes('desc'));
-        const amountIdx = headers.findIndex(h => h.includes('amount'));
-        const unitsIdx = headers.findIndex(h => h.includes('unit'));
-        const navIdx = headers.findIndex(h => h.includes('nav') || h.includes('price'));
+        const headers = rows[headerRowIndex].map(h => String(h).toLowerCase().trim().replace(/_/g, ' '));
+        
+        // Helper to find column index by multiple potential aliases
+        const findCol = (aliases: string[]) => headers.findIndex(h => aliases.some(a => h.includes(a)));
+
+        const dateIdx = findCol(['date', 'trade date', 'transaction date']);
+        const schemeIdx = findCol(['scheme', 'mf name', 'product code']); // prioritize scheme name if multiple
+        // Refined scheme logic: prefer "scheme name" or "mf name" over "product code" usually, 
+        // but user listed PRODUCT_CODE, SCHEME_NAME. We want SCHEME_NAME.
+        const schemeNameIdx = findCol(['scheme name', 'mf name']);
+        
+        const folioIdx = findCol(['folio']);
+        const typeIdx = findCol(['type', 'description', 'nature', 'trasaction_type', 'transaction type']);
+        const amountIdx = findCol(['amount']);
+        const unitsIdx = findCol(['unit']);
+        const navIdx = findCol(['nav', 'price']);
 
         if (dateIdx === -1 || amountIdx === -1) return [];
 
         for (let i = headerRowIndex + 1; i < rows.length; i++) {
             const row = rows[i];
-            if (!row[dateIdx] || !row[amountIdx]) continue;
+            // Skip empty rows
+            if (!row[dateIdx] && !row[amountIdx]) continue;
 
-            // Date parsing (Excel dates are sometimes numbers)
+            // Date parsing
             let dateStr = row[dateIdx];
             if (typeof dateStr === 'number') {
-                // Excel serial date to JS Date
                 const d = new Date((dateStr - (25567 + 2)) * 86400 * 1000);
-                dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
-            } else {
-                // Try parsing DD-MMM-YYYY (e.g., 05-Jan-2023) or DD/MM/YYYY
-                // Excel might return "15-Jan-2023" as a string if not formatted as date
+                dateStr = d.toISOString().split('T')[0];
+            } else if (dateStr) {
                 const dStr = String(dateStr).trim();
-
-                // Handle DD-MMM-YYYY (Common in CAMS reports)
+                // Handle 02-Jan-2025
                 const mmmMatch = dStr.match(/^(\d{1,2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{4})$/i);
-
                 if (mmmMatch) {
-                    const monthMap: Record<string, string> = {
-                        jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
-                        jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
-                    };
-                    const day = mmmMatch[1].padStart(2, '0');
-                    const month = monthMap[mmmMatch[2].toLowerCase()];
-                    const year = mmmMatch[3];
-                    dateStr = `${year}-${month}-${day}`;
+                   const months = {jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'};
+                   dateStr = `${mmmMatch[3]}-${months[mmmMatch[2].toLowerCase() as keyof typeof months]}-${mmmMatch[1].padStart(2, '0')}`;
                 } else {
-                    // Fallback for DD/MM/YYYY or DD-MM-YYYY
-                    // 15/01/2023 or 15-01-2023
+                    // Try parsing DD/MM/YYYY or DD-MM-YYYY
                     const parts = dStr.split(/[-/]/);
                     if (parts.length === 3) {
-                        // Assume DD-MM-YYYY order which is standard in India
-                        // Check if first part is year (YYYY-MM-DD or YYYY/MM/DD)
-                        if (parts[0].length === 4) {
-                            dateStr = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-                        } else {
-                            // Assume DD-MM-YYYY
-                            dateStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                        }
+                         // Fallback: DD-MM-YYYY
+                         dateStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
                     }
                 }
             }
 
-            // Cleanup Amount (remove commas, negative signs if redemption is handled by type)
-            let amt = parseFloat(String(row[amountIdx]).replace(/,/g, ''));
-            let units = parseFloat(String(row[unitsIdx] || '0').replace(/,/g, ''));
+            // Number Parsing (Handle "1,00,000.00")
+            const parseNum = (val: any) => {
+                if (typeof val === 'number') return val;
+                if (!val) return 0;
+                return parseFloat(String(val).replace(/,/g, '').trim());
+            };
 
-            // Handle Redemptions (Amount might be negative in some reports, or positive with type 'Redemption')
-            // Detailed CAMS reports often sign amounts correctly, or we depend on type.
-            // We'll normalize to positive numbers here and rely on Type logic in backend/frontend.
-            amt = Math.abs(amt);
-            units = Math.abs(units);
+            const amt = Math.abs(parseNum(row[amountIdx]));
+            const units = Math.abs(parseNum(row[unitsIdx]));
+            
+            // Scheme Name preference
+            const schemeName = schemeNameIdx !== -1 ? row[schemeNameIdx] : (schemeIdx !== -1 ? row[schemeIdx] : "Unknown Scheme");
 
-            transactions.push({
-                transaction_date: dateStr,
-                scheme_name: row[schemeIdx],
-                folio_number: row[folioIdx] ? String(row[folioIdx]) : undefined,
-                transaction_type: row[typeIdx],
-                amount: amt,
-                units: units,
-                nav: parseFloat(String(row[navIdx] || '0'))
-            });
+            if (schemeName && dateStr) {
+                 transactions.push({
+                    transaction_date: dateStr,
+                    scheme_name: String(schemeName).trim(),
+                    folio_number: folioIdx !== -1 ? String(row[folioIdx]) : undefined,
+                    transaction_type: typeIdx !== -1 ? String(row[typeIdx]) : 'Purchase', // Default if missing? dangerous.
+                    amount: amt,
+                    units: units,
+                    nav: navIdx !== -1 ? parseNum(row[navIdx]) : 0
+                });
+            }
         }
         return transactions;
     };
 
     const parseCAMSCSV = (csvText: string): CAMSTransaction[] => {
+        // Simple CSV parser for now - robust library better but keeping simple
         const lines = csvText.split('\n');
         const transactions: CAMSTransaction[] = [];
+        
+        let headerIdx = -1;
+        // Dynamic search for header in first few lines
+        for(let i=0; i<Math.min(lines.length, 10); i++) {
+             if (lines[i].toLowerCase().includes('amount') && lines[i].toLowerCase().includes('units')) {
+                 headerIdx = i;
+                 break;
+             }
+        }
+        
+        if (headerIdx === -1) return [];
+        
+        const headers = lines[headerIdx].toLowerCase().split(',').map(h => h.trim());
+        const find = (k: string) => headers.findIndex(h => h.includes(k));
+        
+        const idx = {
+            date: find('date'),
+            scheme: find('scheme') !== -1 ? find('scheme') : find('mf_name'),
+            folio: find('folio'),
+            type: find('type') !== -1 ? find('type') : find('nature'),
+            amount: find('amount'),
+            units: find('unit'),
+            nav: find('price') !== -1 ? find('price') : find('nav')
+        };
 
-        // Skip header row
-        for (let i = 1; i < lines.length; i++) {
+        for (let i = headerIdx + 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
-
-            const columns = line.split(',');
-            if (columns.length < 7) continue;
-
-            // Typical CAMS CSV format: Date, Scheme, Folio, Type, Amount, Units, NAV
+            
+            // Handle quoted CSV fields basic way
+            const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, ''));
+            
+            if (cols.length < 5) continue;
+            
+            const parseNum = (v: string) => parseFloat(v.replace(/,/g, '') || '0');
+            
             transactions.push({
-                transaction_date: columns[0].trim(),
-                scheme_name: columns[1].trim(),
-                folio_number: columns[2].trim(),
-                transaction_type: columns[3].trim(),
-                amount: parseFloat(columns[4].trim()),
-                units: parseFloat(columns[5].trim()),
-                nav: parseFloat(columns[6].trim())
+                transaction_date: cols[idx.date], // Assume standard format or handled by backend? CAMS CSV usually nice.
+                scheme_name: cols[idx.scheme],
+                folio_number: idx.folio !== -1 ? cols[idx.folio] : undefined,
+                transaction_type: idx.type !== -1 ? cols[idx.type] : 'Purchase',
+                amount: Math.abs(parseNum(cols[idx.amount])),
+                units: Math.abs(parseNum(cols[idx.units])),
+                nav: idx.nav !== -1 ? parseNum(cols[idx.nav]) : 0
             });
         }
 

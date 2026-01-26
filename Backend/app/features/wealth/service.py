@@ -1168,42 +1168,113 @@ class WealthService:
             
         return 0.0
 
-    async def simulate_historical_investment(self, scheme_code: str, amount: float, date_obj: date) -> dict:
+    async def simulate_historical_investment(
+        self, 
+        scheme_code: str, 
+        amount: float, 
+        date_obj: date, 
+        investment_type: str = "LUMPSUM",
+        end_date: Optional[date] = None
+    ) -> schemas.SimulateInvestmentResponse:
         """
-        Simulate a one-time investment on a specific past date.
-        Returns the hypothetical current value and return %.
+        Simulate a past investment to check "What If" returns.
+        Supports Lumpsum and monthly SIP.
         """
         history = await self.get_mf_nav_history(scheme_code)
         if not history:
              raise ValueError("Could not fetch scheme history")
-             
-        start_nav = self._find_nav_in_history(history, date_obj)
-        if start_nav <= 0:
-            # Try +/- 3 days for weekends
-            for i in range(1, 4):
-                 start_nav = self._find_nav_in_history(history, date_obj + timedelta(days=i))
-                 if start_nav > 0: break
-                 start_nav = self._find_nav_in_history(history, date_obj - timedelta(days=i))
-                 if start_nav > 0: break
         
-        if start_nav <= 0:
-            raise ValueError(f"No NAV found for date {date_obj}")
+        # Sort history ascending for easier iteration (history from API is usually desc)
+        history_asc = sorted(history, key=lambda x: x['date'], reverse=False) # Convert to list of dicts first?
+        # Data format: [{date: "dd-mm-yyyy", nav: "123.45"}]
+        # Let's map to datetime objects for efficiency
+        
+        parsed_history = []
+        for h in history_asc:
+            try:
+                 d = datetime.strptime(h['date'], "%d-%m-%Y").date()
+                 parsed_history.append({'date': d, 'nav': float(h['nav'])})
+            except: pass
             
-        current_nav = float(history[0]['nav']) # Latest
+        if not parsed_history:
+            raise ValueError("Invalid history data")
+            
+        start_date = date_obj
+        final_date = end_date if end_date else date.today()
         
-        units = amount / start_nav
-        current_value = units * current_nav
-        abs_return = current_value - amount
-        pct_return = (abs_return / amount) * 100
+        if final_date < start_date:
+            raise ValueError("End date cannot be before start date")
+            
+        # Find start NAV
+        start_entry = self._find_entry_closest_to(parsed_history, start_date)
+        if not start_entry:
+            raise ValueError(f"No NAV found near start date {start_date}")
+        start_nav = start_entry['nav']
         
-        return {
-            "scheme_code": scheme_code,
-            "invested_date": date_obj,
-            "invested_amount": amount,
-            "start_nav": start_nav,
-            "current_nav": current_nav,
-            "units_allotted": units,
-            "current_value": current_value,
-            "absolute_return": abs_return,
-            "return_percentage": pct_return
-        }
+        total_invested = 0.0
+        total_units = 0.0
+        
+        if investment_type == "LUMPSUM":
+            total_invested = amount
+            total_units = amount / start_nav
+        else: # SIP
+            # Iterate monthly
+            curr = start_date
+            while curr <= final_date:
+                # Find closest NAV for this month's date
+                entry = self._find_entry_closest_to(parsed_history, curr)
+                if entry:
+                    units = amount / entry['nav']
+                    total_units += units
+                    total_invested += amount
+                
+                # Next month
+                # Handle month rollover correctly
+                y = curr.year
+                m = curr.month + 1
+                if m > 12:
+                    m = 1
+                    y += 1
+                
+                # Try to keep same day, cap at month end
+                import calendar
+                day = min(date_obj.day, calendar.monthrange(y, m)[1])
+                curr = date(y, m, day)
+        
+        # Calculate final value
+        final_entry = self._find_entry_closest_to(parsed_history, final_date)
+        if not final_entry:
+            # Fallback to last available
+            final_entry = parsed_history[-1]
+            
+        current_nav = final_entry['nav']
+        current_value = total_units * current_nav
+        
+        abs_return = current_value - total_invested
+        pct_return = (abs_return / total_invested * 100) if total_invested > 0 else 0
+        
+        return schemas.SimulateInvestmentResponse(
+            scheme_code=scheme_code,
+            invested_date=start_date,
+            end_date=final_entry['date'],
+            invested_amount=total_invested,
+            start_nav=start_nav,
+            current_nav=current_nav,
+            units_allotted=total_units,
+            current_value=current_value,
+            absolute_return=abs_return,
+            return_percentage=pct_return,
+            notes=f"Simulated from {start_date} to {final_entry['date']}"
+        )
+
+    def _find_entry_closest_to(self, history: List[dict], target: date, window: int = 5) -> Optional[dict]:
+        """Finds closest date entry within +/- window days. Assumes history is sorted asc."""
+        # Binary search could be better, but linear scan ok for <5000 items
+        # Filter mostly relevant
+        candidates = [x for x in history if abs((x['date'] - target).days) <= window]
+        if not candidates:
+            return None
+        # Sort by proximity
+        candidates.sort(key=lambda x: abs((x['date'] - target).days))
+        return candidates[0]
+
