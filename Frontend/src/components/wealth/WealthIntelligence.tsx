@@ -5,7 +5,8 @@ import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import {
-    Search, Calendar, DollarSign, TrendingUp, AlertCircle, CheckCircle2
+    Search, Calendar, DollarSign, TrendingUp, AlertCircle, CheckCircle2,
+    Info, BrainCircuit
 } from 'lucide-react';
 
 interface Holding {
