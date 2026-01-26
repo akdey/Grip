@@ -781,7 +781,14 @@ class WealthService:
                 prev_txn = None
                 
                 for txn in txns:
-                    if txn.transaction_type.lower() in ['purchase', 'sip']:
+                    t_type = txn.transaction_type.lower()
+                    
+                    # Broad matching for Buy transactions
+                    is_buy = any(x in t_type for x in ['purchase', 'sip', 'switch in', 'dividend', 'invest', 'reinvest'])
+                    # Broad matching for Sell transactions 
+                    is_sell = any(x in t_type for x in ['redemption', 'sell', 'switch out', 'withdraw'])
+
+                    if is_buy:
                         # Buy transaction
                         running_units += txn.units
                         invested_delta = txn.amount
@@ -844,7 +851,7 @@ class WealthService:
                         transactions_processed += 1
                         prev_txn = txn
                     
-                    elif txn.transaction_type.lower() in ['redemption', 'sell']:
+                    elif is_sell:
                         # Sell transaction
                         running_units -= txn.units
                         invested_delta = -txn.amount
