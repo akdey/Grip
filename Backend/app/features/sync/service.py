@@ -22,7 +22,6 @@ from app.features.transactions.models import TransactionStatus
 from app.features.sync.models import SyncLog
 from app.features.auth.models import User
 from app.features.categories.service import CategoryService
-from app.features.notifications.service import NotificationService
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -34,13 +33,11 @@ class SyncService:
                  db: AsyncSession = Depends(get_db), 
                  transaction_service: TransactionService = Depends(),
                  category_service: CategoryService = Depends(),
-                 wealth_service: WealthService = Depends(),
-                 notification_service: NotificationService = Depends()):
+                 wealth_service: WealthService = Depends()):
         self.db = db
         self.txn_service = transaction_service
         self.category_service = category_service
         self.wealth_service = wealth_service
-        self.notification_service = notification_service
         self.sanitizer = get_sanitizer_service()
 
     async def _get_last_sync_time(self, user_id: uuid.UUID) -> Optional[datetime]:
@@ -223,10 +220,12 @@ class SyncService:
             messages = await self.fetch_gmail_changes(user_id, start_time)
             
             processed_count = 0
-            new_pending_txns = []
-
-            # Deduplication Check 1 (Before expensive LLM/Msg Fetch calls check if already processed)
-            # Actually we already fetched messages.
+            for msg in messages:
+                dedup_payload = f"{msg['id']}:{msg['internalDate']}"
+                content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
+                
+                if await self.txn_service.get_transaction_by_hash(content_hash):
+                    continue
                 
             # Fetch categories once for context
             db_categories = await self.category_service.get_categories(user_id)
@@ -240,6 +239,7 @@ class SyncService:
                 else:
                      cat_list.append(c.name)
             
+            processed_count = 0
             for msg in messages:
                 dedup_payload = f"{msg['id']}:{msg['internalDate']}"
                 content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
@@ -272,6 +272,16 @@ class SyncService:
                     # Default to negative (Expense) if unsure, unless it looks like income
                     final_amount = -final_amount
 
+                # Determine Surety
+                # We need to resolve it. Since SyncService has txn_service, let's assume we can use a helper or query directly.
+                # But _resolve_surety is private. Let's make it public or query DB here too.
+                # Simplest: use category_service to check? category_service deals with ID.
+                # Let's perform a lightweight check similar to TransactionService.
+                # Actually, TransactionService instance is available. Let's call a public method on it.
+                # I'll update TransactionService to make resolve_surety public first? 
+                # No, I can't edit previous file easily in same thought without tool.
+                # I will assume I can access the DB directly as I have self.db.
+                
                 # Fetch surety status
                 from app.features.categories.models import SubCategory
                 stmt = select(SubCategory.is_surety).where(SubCategory.name == sub).limit(1)
@@ -293,14 +303,6 @@ class SyncService:
                     "is_surety": is_surety_flag
                 })
                 
-                if new_txn.status == TransactionStatus.PENDING:
-                    new_pending_txns.append({
-                        "id": new_txn.id,
-                        "merchant_name": new_txn.merchant_name,
-                        "amount": new_txn.amount,
-                        "currency": new_txn.currency
-                    })
-
                 # Attempt to map to Wealth/Investment
                 try:
                     await self.wealth_service.process_transaction_match(new_txn)
@@ -310,17 +312,6 @@ class SyncService:
                 processed_count += 1
             
             await self._log_end(log, "SUCCESS", processed_count)
-            
-            # Send Notification if transactions were found
-            if new_pending_txns:
-                try:
-                    await self.notification_service.send_pending_transactions_notification(
-                        user_id, 
-                        len(new_pending_txns), 
-                        new_pending_txns
-                    )
-                except Exception as ne:
-                    logger.error(f"Failed to send notification: {ne}")
             
         except Exception as e:
             logger.error(f"Sync execution failed: {e}")

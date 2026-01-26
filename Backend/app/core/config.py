@@ -35,8 +35,6 @@ class Settings(BaseSettings):
     FRONTEND_ORIGIN: str = "http://localhost:5173"  # Frontend URL for OAuth origin parameter
     GOOGLE_REDIRECT_URI: str = "postmessage"
     
-
-    
     # Firebase Settings
     FIREBASE_CREDENTIALS_PATH: str = "firebase_credentials.json"
     
