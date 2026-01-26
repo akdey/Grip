@@ -279,8 +279,8 @@ const Dashboard: React.FC = () => {
                     if (isNewUser) {
                         // New user - neutral/welcoming state
                         status = 'success';
-                    } else if (isNegativeBalance) {
-                        // Negative balance - critical red
+                    } else if (isNegativeBalance || safe < 0) {
+                        // Negative balance or negative safe-to-spend - critical red
                         status = 'negative';
                     } else if (isZeroBalance) {
                         // Existing user with zero balance - warning
@@ -304,7 +304,7 @@ const Dashboard: React.FC = () => {
                             glow: 'bg-red-600/30',
                             border: 'border-red-600/30',
                             text: 'text-red-500',
-                            amountText: 'text-white',
+                            amountText: 'text-red-500',
                             shadow: 'shadow-[0_40px_80px_-15px_rgba(220,38,38,0.25)]',
                             pill: 'bg-red-600/20 text-red-400 border-red-600/30',
                             bgIntensity: 'bg-red-600/10'
