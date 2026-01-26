@@ -160,236 +160,271 @@ const Wealth: React.FC = () => {
 
     return (
         <div className="min-h-screen text-white p-6 pb-24 overflow-x-hidden">
-            {/* Header & Global Actions */}
-            <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8 px-1">
-                <div className="space-y-1">
-                    <h1 className="text-5xl font-black tracking-tighter text-white">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                    <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
                         Wealth
                     </h1>
-                    <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[3px]">Real-Time Portfolio Tracking</p>
-                    </div>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">Your Financial Core</p>
                 </div>
-
-                <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsLinkerOpen(true)}
-                        className="px-4 py-2 rounded-xl hover:bg-white/5 text-gray-400 text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2"
+                        className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium border border-white/5 transition-colors flex items-center gap-2"
                     >
-                        <LinkIcon size={14} /> Link
+                        <LinkIcon size={14} /> Link Transaction
                     </button>
                     <button
                         onClick={() => setIsCAMSImportOpen(true)}
-                        className="px-4 py-2 rounded-xl hover:bg-white/5 text-gray-400 text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2"
+                        className="p-2 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 transition-colors border border-purple-500/20"
+                        title="Import CAMS Statement"
                     >
-                        <Upload size={14} /> CAMS
+                        <Upload size={20} />
                     </button>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="px-4 py-2 rounded-xl bg-emerald-500 text-black text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/10"
+                        className="p-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors border border-emerald-500/20"
+                        title="Add Asset Manually"
                     >
-                        <Plus size={14} /> Asset
+                        <Plus size={20} />
                     </button>
-                    <div className="w-px h-4 bg-white/10 mx-1" />
                     <button
                         onClick={fetchData}
-                        className="p-2 rounded-xl hover:bg-white/5 text-gray-500 transition-colors"
+                        className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
                     >
-                        <RefreshCw size={16} className={holdingsLoading || forecastLoading ? "animate-spin" : ""} />
+                        <RefreshCw size={20} className={holdingsLoading || forecastLoading ? "animate-spin" : ""} />
                     </button>
                 </div>
             </div>
 
-            {/* Executive Summary Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
-                <div className="md:col-span-2 bg-gradient-to-br from-white/5 to-transparent border border-white/10 rounded-[2.5rem] p-10 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <Wallet size={120} />
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 relative overflow-hidden"
+                >
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Wallet size={64} />
                     </div>
                     {holdingsLoading ? (
-                        <div className="animate-pulse space-y-4">
-                            <div className="h-4 w-24 bg-white/10 rounded" />
-                            <div className="h-12 w-48 bg-white/10 rounded" />
+                        <div className="animate-pulse space-y-3">
+                            <div className="h-4 w-20 bg-white/10 rounded" />
+                            <div className="h-8 w-32 bg-white/10 rounded" />
                         </div>
                     ) : (
-                        <div className="relative z-10">
-                            <p className="text-[10px] font-black uppercase tracking-[2px] text-gray-500">Global Net Worth</p>
-                            <h2 className="text-6xl font-black mt-4 tracking-tighter">{formatCurrency(totalWealth)}</h2>
-                            <div className="flex items-center mt-6 gap-3">
-                                <span className={`text-xs font-black px-3 py-1 rounded-full ${absoluteReturn >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-500"}`}>
-                                    {absoluteReturn >= 0 ? "▲" : "▼"} {formatCurrency(Math.abs(absoluteReturn))} Profit
+                        <>
+                            <p className="text-gray-500 text-sm font-medium">Net Worth</p>
+                            <h2 className="text-3xl font-bold mt-2">{formatCurrency(totalWealth)}</h2>
+                            <div className="flex items-center mt-2 space-x-2">
+                                <span className={`text-sm px-2 py-0.5 rounded-full ${absoluteReturn >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}>
+                                    {absoluteReturn >= 0 ? "+" : ""}{formatCurrency(absoluteReturn)}
                                 </span>
-                                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider">Invested: {formatCurrency(totalInvested)}</p>
                             </div>
-                        </div>
-                    )}
-                </div>
-
-                <div className="bg-[#0A0A0A] border border-white/5 rounded-[2.5rem] p-10 flex flex-col justify-center">
-                    {holdingsLoading ? (
-                        <div className="animate-pulse space-y-4">
-                            <div className="h-4 w-20 bg-white/10 rounded" />
-                            <div className="h-10 w-24 bg-white/10 rounded" />
-                        </div>
-                    ) : (
-                        <>
-                            <p className="text-[10px] font-black uppercase tracking-[2px] text-gray-600">ROI Health</p>
-                            <h2 className={`text-5xl font-black mt-4 tracking-tighter ${returnPercentage >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                                {returnPercentage.toFixed(1)}<span className="text-2xl opacity-50">%</span>
-                            </h2>
-                            <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider mt-2">Overall Performance</p>
                         </>
                     )}
-                </div>
-
-                <div className="bg-[#0A0A0A] border border-white/5 rounded-[2.5rem] p-10 flex flex-col justify-center bg-gradient-to-br from-indigo-500/5 to-transparent">
-                    {forecastLoading ? (
-                        <div className="animate-pulse space-y-4">
-                            <div className="h-4 w-20 bg-white/10 rounded" />
-                            <div className="h-10 w-24 bg-white/10 rounded" />
-                        </div>
-                    ) : (
-                        <>
-                            <p className="text-[10px] font-black uppercase tracking-[2px] text-gray-600">10Y Projection</p>
-                            <h2 className="text-5xl font-black mt-4 tracking-tighter text-indigo-400">
-                                {forecastData?.forecast.length ? formatCurrency(forecastData.forecast[forecastData.forecast.length - 1].yhat) : "..."}
-                            </h2>
-                            <p className="text-[10px] text-indigo-500/50 font-bold uppercase tracking-wider mt-2 line-clamp-1">{forecastData?.summary_text}</p>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* Hero Forecast Section */}
-            <div className="space-y-6 mb-12">
-                <div className="flex items-center justify-between px-1">
-                    <div className="flex items-center gap-2">
-                        <LineChart size={18} className="text-indigo-400" />
-                        <h2 className="text-sm font-black uppercase tracking-widest text-gray-500">Growth Trajectory</h2>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                            <span className="text-[10px] text-gray-500 uppercase font-bold">Monthly SIP</span>
-                            <input
-                                type="number"
-                                value={monthlySIP}
-                                onChange={(e) => setMonthlySIP(Number(e.target.value))}
-                                className="w-16 bg-transparent outline-none text-right font-mono text-sm text-indigo-300"
-                            />
-                        </div>
-                        <button
-                            onClick={runSimulation}
-                            disabled={simulating}
-                            className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/20 rounded-xl text-indigo-400 text-xs font-bold transition-all"
-                        >
-                            {simulating ? "..." : "Simulate"}
-                        </button>
-                    </div>
-                </div>
+                </motion.div>
 
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.99 }} animate={{ opacity: 1, scale: 1 }}
-                    className="bg-[#050505] border border-white/5 rounded-3xl p-8 min-h-[400px] relative overflow-hidden"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6"
                 >
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 blur-[120px] rounded-full -mr-48 -mt-48" />
-
-                    {forecastLoading ? (
-                        <div className="w-full h-[320px] flex items-center justify-center animate-pulse">
-                            <div className="text-gray-600 text-xs font-mono uppercase tracking-widest">Crunching Market Dynamics...</div>
+                    {holdingsLoading ? (
+                        <div className="animate-pulse space-y-3">
+                            <div className="h-4 w-20 bg-white/10 rounded" />
+                            <div className="h-8 w-32 bg-white/10 rounded" />
                         </div>
                     ) : (
-                        <div className="h-[320px] w-full relative z-10">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData}>
-                                    <defs>
-                                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
-                                    <XAxis dataKey="date" stroke="#333" tick={{ fontSize: 10, fontWeight: 700 }} minTickGap={50} axisLine={false} tickLine={false} />
-                                    <YAxis
-                                        stroke="#333"
-                                        tick={{ fontSize: 10, fontWeight: 700 }}
-                                        tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
-                                        axisLine={false} tickLine={false}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#000', border: '1px solid #222', borderRadius: '16px', padding: '12px' }}
-                                        formatter={(val: number) => [formatCurrency(val), ""]}
-                                        itemStyle={{ color: '#fff', fontSize: '14px', fontWeight: 900 }}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="value"
-                                        stroke="#10b981"
-                                        strokeWidth={3}
-                                        fillOpacity={1}
-                                        fill="url(#colorValue)"
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="forecast"
-                                        stroke="#6366f1"
-                                        strokeDasharray="8 4"
-                                        strokeWidth={3}
-                                        fillOpacity={1}
-                                        fill="url(#colorForecast)"
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                        <>
+                            <p className="text-gray-500 text-sm font-medium">Portfolio Returns</p>
+                            <h2 className={`text-3xl font-bold mt-2 ${returnPercentage >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                {returnPercentage.toFixed(2)}%
+                            </h2>
+                            <p className="text-xs text-gray-600 mt-2">Overall Absolute Return</p>
+                        </>
+                    )}
+                </motion.div>
+
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 bg-gradient-to-br from-indigo-900/10 to-purple-900/10"
+                >
+                    {forecastLoading ? (
+                        <div className="animate-pulse space-y-3">
+                            <div className="h-4 w-20 bg-white/10 rounded" />
+                            <div className="h-8 w-32 bg-white/10 rounded" />
                         </div>
+                    ) : (
+                        <>
+                            <p className="text-gray-500 text-sm font-medium">Projected (10Y)</p>
+                            <h2 className="text-3xl font-bold mt-2 text-indigo-400">
+                                {forecastData?.forecast.length ? formatCurrency(forecastData.forecast[forecastData.forecast.length - 1].yhat) : "..."}
+                            </h2>
+                            <p className="text-xs text-gray-500 mt-2 line-clamp-1">{forecastData?.summary_text}</p>
+                        </>
                     )}
                 </motion.div>
             </div>
 
-            {/* Intelligence Section */}
-            <div className="mb-20">
-                <div className="flex items-center gap-2 mb-6 px-1">
-                    <BrainCircuit size={18} className="text-emerald-400" />
-                    <h2 className="text-sm font-black uppercase tracking-widest text-gray-500">Deep Intelligence</h2>
-                </div>
-                <div className="bg-[#0A0A0A] border border-white/5 rounded-[2.5rem] p-4 md:p-10">
-                    <WealthIntelligence holdings={holdings} />
-                </div>
+            {/* Simulations & Intelligence Banner */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+                {/* Financial Time Machine Card */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
+                    className="lg:col-span-1 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden group cursor-pointer"
+                    onClick={() => setIsSimulatorOpen(true)}
+                >
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Calculator size={80} />
+                    </div>
+                    <div>
+                        <div className="p-2 bg-indigo-500/20 rounded-lg w-fit mb-3 text-indigo-400">
+                            <BrainCircuit size={24} />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-1">Time Machine</h3>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            Simulate "What-If" scenarios. See how your investments would have performed if you timed them differently.
+                        </p>
+                    </div>
+                    <button className="mt-4 w-full py-2.5 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 rounded-xl text-xs font-bold text-indigo-300 uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+                        Run Simulator <Calculator size={14} />
+                    </button>
+                </motion.div>
+
+                {/* Main Predictions Chart */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
+                    className="lg:col-span-3 bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 min-h-[350px]"
+                >
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="flex space-x-4">
+                            <button
+                                onClick={() => setActiveMainTab('trajectory')}
+                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'trajectory' ? 'text-indigo-400' : 'text-gray-600'}`}
+                            >
+                                <LineChart size={16} />
+                                Future Predictions
+                            </button>
+                            <button
+                                onClick={() => setActiveMainTab('intelligence')}
+                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'intelligence' ? 'text-emerald-400' : 'text-gray-600'}`}
+                            >
+                                <BrainCircuit size={16} />
+                                Intelligence
+                            </button>
+                        </div>
+
+                        {activeMainTab === 'trajectory' && (
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+                                    <span className="text-[10px] text-gray-500 uppercase font-bold">Monthly SIP</span>
+                                    <input
+                                        type="number"
+                                        value={monthlySIP}
+                                        onChange={(e) => setMonthlySIP(Number(e.target.value))}
+                                        className="w-16 bg-transparent outline-none text-right font-mono text-sm"
+                                    />
+                                </div>
+                                <button
+                                    onClick={runSimulation}
+                                    disabled={simulating}
+                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white text-xs font-bold disabled:opacity-50 transition-colors"
+                                >
+                                    {simulating ? "..." : "Update"}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className={`w-full ${activeMainTab === 'trajectory' ? 'h-[280px]' : ''}`}>
+                        {activeMainTab === 'trajectory' ? (
+                            forecastLoading ? (
+                                <div className="w-full h-full flex items-center justify-center animate-pulse bg-white/[0.02] rounded-xl">
+                                    <div className="text-gray-600 text-xs">Generating Prediction Model...</div>
+                                </div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={chartData}>
+                                        <defs>
+                                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                                        <XAxis dataKey="date" stroke="#444" tick={{ fontSize: 10 }} minTickGap={30} />
+                                        <YAxis
+                                            stroke="#444"
+                                            tick={{ fontSize: 10 }}
+                                            tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '8px', fontSize: '12px' }}
+                                            formatter={(val: number) => formatCurrency(val)}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="value"
+                                            stroke="#10b981"
+                                            strokeWidth={2}
+                                            fillOpacity={1}
+                                            fill="url(#colorValue)"
+                                            name="Historical"
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="forecast"
+                                            stroke="#6366f1"
+                                            strokeDasharray="5 5"
+                                            strokeWidth={2}
+                                            fillOpacity={1}
+                                            fill="url(#colorForecast)"
+                                            name="Forecast"
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            )
+                        ) : (
+                            <WealthIntelligence holdings={holdings} />
+                        )}
+                    </div>
+                </motion.div>
             </div>
 
-            {/* Asset Categories */}
-            <div className="space-y-8">
-                <div className="flex items-center justify-between px-1">
-                    <div className="flex items-center gap-2">
-                        <Layers size={18} className="text-gray-400" />
-                        <h2 className="text-sm font-black uppercase tracking-widest text-gray-500">Portfolio Details</h2>
-                    </div>
+            {/* Investment Categories */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <Layers className="text-emerald-500" size={20} />
+                    <h2 className="text-xl font-bold text-gray-200">Portfolio Breakdown</h2>
                 </div>
 
                 {holdingsLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="h-48 bg-white/[0.02] border border-white/5 rounded-3xl animate-pulse" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {[1, 2].map(i => (
+                            <div key={i} className="h-40 bg-[#0A0A0A] border border-white/5 rounded-2xl animate-pulse" />
                         ))}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {Object.entries(holdingsByType).map(([type, typeHoldings]) => (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {/* Map over grouped holdings */}
+                        {Object.entries(holdingsByType).map(([type, typeHoldings], index) => (
                             <WealthCategoryCard
                                 key={type}
                                 title={type === 'MUTUAL_FUND' ? 'Mutual Funds' : type === 'STOCK' ? 'Stocks' : type}
                                 type={type}
                                 icon={
-                                    type === 'MUTUAL_FUND' ? <PieChart size={18} className="text-emerald-400" /> :
-                                        type === 'STOCK' ? <Activity size={18} className="text-blue-400" /> :
-                                            <Wallet size={18} className="text-purple-400" />
+                                    type === 'MUTUAL_FUND' ? <PieChart size={20} className="text-emerald-400" /> :
+                                        type === 'STOCK' ? <Activity size={20} className="text-blue-400" /> :
+                                            <Wallet size={20} className="text-purple-400" />
                                 }
                                 holdings={typeHoldings}
                                 onHoldingClick={fetchHoldingDetails}
-                                onSimulate={() => setIsSimulatorOpen(true)}
+                                onSimulate={type === 'MUTUAL_FUND' || type === 'STOCK' ? () => setIsSimulatorOpen(true) : undefined}
+                                onAnalyze={type === 'MUTUAL_FUND' ? () => setActiveMainTab('intelligence') : undefined}
                             />
                         ))}
 
