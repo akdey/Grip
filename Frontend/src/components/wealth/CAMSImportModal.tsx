@@ -89,7 +89,7 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
         if (headerRowIndex === -1) return [];
 
         const headers = rows[headerRowIndex].map(h => String(h).toLowerCase().trim().replace(/_/g, ' '));
-        
+
         // Helper to find column index by multiple potential aliases
         const findCol = (aliases: string[]) => headers.findIndex(h => aliases.some(a => h.includes(a)));
 
@@ -98,9 +98,10 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
         // Refined scheme logic: prefer "scheme name" or "mf name" over "product code" usually, 
         // but user listed PRODUCT_CODE, SCHEME_NAME. We want SCHEME_NAME.
         const schemeNameIdx = findCol(['scheme name', 'mf name']);
-        
+
         const folioIdx = findCol(['folio']);
-        const typeIdx = findCol(['type', 'description', 'nature', 'trasaction_type', 'transaction type']);
+        // Fix: Removed 'type' to avoid matching asset class column (e.g. "Equity")
+        const typeIdx = findCol(['trasaction_type', 'transaction type', 'transaction_type', 'nature', 'description']);
         const amountIdx = findCol(['amount']);
         const unitsIdx = findCol(['unit']);
         const navIdx = findCol(['nav', 'price']);
@@ -122,14 +123,14 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
                 // Handle 02-Jan-2025
                 const mmmMatch = dStr.match(/^(\d{1,2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{4})$/i);
                 if (mmmMatch) {
-                   const months = {jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'};
-                   dateStr = `${mmmMatch[3]}-${months[mmmMatch[2].toLowerCase() as keyof typeof months]}-${mmmMatch[1].padStart(2, '0')}`;
+                    const months = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
+                    dateStr = `${mmmMatch[3]}-${months[mmmMatch[2].toLowerCase() as keyof typeof months]}-${mmmMatch[1].padStart(2, '0')}`;
                 } else {
                     // Try parsing DD/MM/YYYY or DD-MM-YYYY
                     const parts = dStr.split(/[-/]/);
                     if (parts.length === 3) {
-                         // Fallback: DD-MM-YYYY
-                         dateStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                        // Fallback: DD-MM-YYYY
+                        dateStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
                     }
                 }
             }
@@ -143,16 +144,16 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
 
             const amt = Math.abs(parseNum(row[amountIdx]));
             const units = Math.abs(parseNum(row[unitsIdx]));
-            
+
             // Scheme Name preference
             const schemeName = schemeNameIdx !== -1 ? row[schemeNameIdx] : (schemeIdx !== -1 ? row[schemeIdx] : "Unknown Scheme");
 
             if (schemeName && dateStr) {
-                 transactions.push({
+                transactions.push({
                     transaction_date: dateStr,
                     scheme_name: String(schemeName).trim(),
                     folio_number: folioIdx !== -1 ? String(row[folioIdx]) : undefined,
-                    transaction_type: typeIdx !== -1 ? String(row[typeIdx]) : 'Purchase', // Default if missing? dangerous.
+                    transaction_type: typeIdx !== -1 ? String(row[typeIdx]) : 'Purchase',
                     amount: amt,
                     units: units,
                     nav: navIdx !== -1 ? parseNum(row[navIdx]) : 0
@@ -166,26 +167,27 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
         // Simple CSV parser for now - robust library better but keeping simple
         const lines = csvText.split('\n');
         const transactions: CAMSTransaction[] = [];
-        
+
         let headerIdx = -1;
         // Dynamic search for header in first few lines
-        for(let i=0; i<Math.min(lines.length, 10); i++) {
-             if (lines[i].toLowerCase().includes('amount') && lines[i].toLowerCase().includes('units')) {
-                 headerIdx = i;
-                 break;
-             }
+        for (let i = 0; i < Math.min(lines.length, 10); i++) {
+            if (lines[i].toLowerCase().includes('amount') && lines[i].toLowerCase().includes('units')) {
+                headerIdx = i;
+                break;
+            }
         }
-        
+
         if (headerIdx === -1) return [];
-        
+
         const headers = lines[headerIdx].toLowerCase().split(',').map(h => h.trim());
         const find = (k: string) => headers.findIndex(h => h.includes(k));
-        
+
         const idx = {
             date: find('date'),
             scheme: find('scheme') !== -1 ? find('scheme') : find('mf_name'),
             folio: find('folio'),
-            type: find('type') !== -1 ? find('type') : find('nature'),
+            // Prioritize transaction type keywords
+            type: find('trasaction') !== -1 ? find('trasaction') : (find('transaction') !== -1 ? find('transaction') : find('nature')),
             amount: find('amount'),
             units: find('unit'),
             nav: find('price') !== -1 ? find('price') : find('nav')
@@ -194,14 +196,14 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
         for (let i = headerIdx + 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
-            
+
             // Handle quoted CSV fields basic way
             const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, ''));
-            
+
             if (cols.length < 5) continue;
-            
+
             const parseNum = (v: string) => parseFloat(v.replace(/,/g, '') || '0');
-            
+
             transactions.push({
                 transaction_date: cols[idx.date], // Assume standard format or handled by backend? CAMS CSV usually nice.
                 scheme_name: cols[idx.scheme],
