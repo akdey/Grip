@@ -1216,13 +1216,14 @@ class WealthService:
         return []
 
     def _find_nearest_nav(self, history: List[dict], target_date: date) -> float:
-        """Find Nearest NAV (Previous Trading Day). History must be sorted Descending (Newest first)."""
-        # Linear scan is O(N) but simple. Since we iterate newest (2024) backwards, 
-        # for a target date in 2024, we find it quickly.
+        """Find the first available NAV on or AFTER the target date (Market Rule). History is Descending."""
+        last_found = 0.0
         for entry in history:
-            if entry['date'] <= target_date:
-                return entry['nav']
-        return 0.0
+            if entry['date'] >= target_date:
+                last_found = entry['nav']
+            else:
+                break
+        return last_found
 
     async def simulate_historical_investment(
         self, 
@@ -1252,91 +1253,87 @@ class WealthService:
         if not parsed_history:
             raise ValueError("Invalid history data")
 
-        # Sort ascending by date
-        parsed_history.sort(key=lambda x: x['date'])
-            
-        start_date = date_obj
+        # Define end date
         final_date = end_date if end_date else date.today()
-        
-        if final_date < start_date:
+        if final_date < date_obj:
             raise ValueError("End date cannot be before start date")
-            
-        # Find start NAV
-        start_entry = self._find_entry_closest_to(parsed_history, start_date)
-        if not start_entry:
-            # Try finding ANY entry before or after?
-            # If start date is way in the past/future relative to data?
-            if start_date > parsed_history[-1]['date']:
-                raise ValueError(f"Start date {start_date} is in the future relative to available data (Last: {parsed_history[-1]['date']})")
-            if start_date < parsed_history[0]['date']:
-                 # Use inception NAV?
-                 start_entry = parsed_history[0]
-            else:
-                 raise ValueError(f"No NAV found near start date {start_date}")
-
-        start_nav = start_entry['nav']
-        
         total_invested = 0.0
         total_units = 0.0
         months_invested = 0
         skipped_months = 0
-        
+        monthly_breakdown = []
+        start_nav = 0.0
+
         if investment_type == "LUMPSUM":
+            nav = self._find_nearest_nav(parsed_history, date_obj)
+            if nav <= 0:
+                 nav = parsed_history[0]['nav'] if parsed_history else 1.0
+            
+            start_nav = nav
             total_invested = amount
-            total_units = amount / start_nav
+            total_units = amount / nav
             months_invested = 1
+            
+            monthly_breakdown.append(schemas.MonthlySimulationPoint(
+                date=date_obj,
+                nav=nav,
+                units_allotted=total_units,
+                total_units_so_far=total_units,
+                invested_amount=amount,
+                total_invested_so_far=amount,
+                current_value_so_far=amount
+            ))
         else: # SIP
-            # Iterate monthly
-            curr = start_date
+            curr = date_obj
             while curr <= final_date:
-                # Find closest NAV for this month's date
-                # Use a wider window (10 days) or fallback to last known
-                entry = self._find_entry_closest_to(parsed_history, curr, window=10)
+                nav = self._find_nearest_nav(parsed_history, curr)
                 
-                if not entry:
-                    # Fallback: Find the last available NAV before this date
-                    # This handles cases where data might be sparse
-                    entry = self._find_last_entry_before(parsed_history, curr)
-                
-                if entry:
-                    units = amount / entry['nav']
+                if nav > 0:
+                    if months_invested == 0:
+                        start_nav = nav
+                        
+                    units = amount / nav
                     total_units += units
                     total_invested += amount
                     months_invested += 1
+                    
+                    monthly_breakdown.append(schemas.MonthlySimulationPoint(
+                        date=curr,
+                        nav=nav,
+                        units_allotted=units,
+                        total_units_so_far=total_units,
+                        invested_amount=amount,
+                        total_invested_so_far=total_invested,
+                        current_value_so_far=total_units * nav
+                    ))
                 else:
                     skipped_months += 1
                 
-                # Next month handling
+                # Next month
                 y = curr.year
                 m = curr.month + 1
                 if m > 12:
                     m = 1
                     y += 1
-                
-                # Try to keep same day, cap at month end
                 import calendar
                 day = min(date_obj.day, calendar.monthrange(y, m)[1])
                 curr = date(y, m, day)
         
         # Calculate final value
-        final_entry = self._find_entry_closest_to(parsed_history, final_date)
-        if not final_entry:
-            final_entry = parsed_history[-1] # Fallback to very last data point available
-            
-        current_nav = final_entry['nav']
+        current_nav = parsed_history[0]['nav'] if parsed_history else 0.0
         current_value = total_units * current_nav
         
         abs_return = current_value - total_invested
         pct_return = (abs_return / total_invested * 100) if total_invested > 0 else 0
         
-        notes = f"Simulated {months_invested} installments from {start_date} to {final_entry['date']}."
+        notes = f"Simulated {months_invested} installments from {date_obj} to {final_date}."
         if skipped_months > 0:
             notes += f" Skipped {skipped_months} months due to missing data."
 
         return schemas.SimulateInvestmentResponse(
             scheme_code=scheme_code,
-            invested_date=start_date,
-            end_date=final_entry['date'],
+            invested_date=date_obj,
+            end_date=final_date,
             invested_amount=total_invested,
             start_nav=start_nav,
             current_nav=current_nav,
@@ -1344,7 +1341,8 @@ class WealthService:
             current_value=current_value,
             absolute_return=abs_return,
             return_percentage=pct_return,
-            notes=notes
+            notes=notes,
+            monthly_breakdown=monthly_breakdown
         )
 
     def _find_entry_closest_to(self, history: List[dict], target: date, window: int = 5) -> Optional[dict]:
