@@ -268,43 +268,14 @@ const Dashboard: React.FC = () => {
                     const safe = Number(safeToSpend?.safe_to_spend || 0);
                     const balance = Number(safeToSpend?.current_balance || 0);
 
-                    // Status determination based on financial state
-                    // Determine user state from recommendation message
-                    const isNewUser = safeToSpend?.recommendation?.includes('Welcome');
-                    const isNegativeBalance = balance < 0;
-                    const isZeroBalance = balance === 0 && !isNewUser;
-
-                    let status: 'negative' | 'critical' | 'warning' | 'success';
-
-                    if (isNewUser) {
-                        // New user - neutral/welcoming state
-                        status = 'success';
-                    } else if (isNegativeBalance) {
-                        // Negative balance - critical red
-                        status = 'negative';
-                    } else if (isZeroBalance) {
-                        // Existing user with zero balance - warning
-                        status = 'warning';
-                    } else if (safe === 0) {
-                        // Overextended (frozen + buffer > balance) - critical
-                        status = 'critical';
-                    } else if (safe < 1000) {
-                        // Very low capacity - critical
-                        status = 'critical';
-                    } else if (safe < 3000) {
-                        // Low capacity - warning
-                        status = 'warning';
-                    } else {
-                        // Healthy - success
-                        status = 'success';
-                    }
+                    const status = safeToSpend?.status || 'success';
 
                     const themes = {
                         negative: {
                             glow: 'bg-red-600/30',
                             border: 'border-red-600/30',
                             text: 'text-red-500',
-                            amountText: 'text-white',
+                            amountText: 'text-red-500',
                             shadow: 'shadow-[0_40px_80px_-15px_rgba(220,38,38,0.25)]',
                             pill: 'bg-red-600/20 text-red-400 border-red-600/30',
                             bgIntensity: 'bg-red-600/10'
@@ -313,7 +284,7 @@ const Dashboard: React.FC = () => {
                             glow: 'bg-rose-500/20',
                             border: 'border-rose-500/20',
                             text: 'text-rose-400',
-                            amountText: 'text-white',
+                            amountText: 'text-rose-500',
                             shadow: 'shadow-[0_40px_80px_-15px_rgba(225,29,72,0.15)]',
                             pill: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
                             bgIntensity: 'bg-rose-500/5'
@@ -363,7 +334,7 @@ const Dashboard: React.FC = () => {
                                     <span>{formatCurrency(Math.abs(safe))}</span>
                                 </h3>
 
-                                <p className="text-[11px] font-medium text-gray-400 max-w-[240px] leading-relaxed">
+                                <p className={`text-[11px] font-medium max-w-[240px] leading-relaxed ${status === 'negative' ? theme.text : 'text-gray-400'}`}>
                                     {safeToSpend?.recommendation}
                                 </p>
 

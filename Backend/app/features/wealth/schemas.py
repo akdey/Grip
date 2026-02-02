@@ -153,12 +153,18 @@ class SIPDateAnalysisResponse(BaseModel):
     alternatives: dict[int, SIPDatePerformance]  # {date: performance}
     best_alternative: dict  # {"date": int, "performance": SIPDatePerformance, "improvement": float}
     insight: str
+    insight: str
     historical_pattern: Optional[str] = None
+    analysis_start: Optional[date] = None
+    analysis_end: Optional[date] = None
 
 class SimulateInvestmentRequest(BaseModel):
     scheme_code: str
     amount: float
     date: date
+    # New fields
+    investment_type: str = "LUMPSUM" # LUMPSUM or SIP
+    end_date: Optional[date] = None # Defaults to today if not provided
     
     @field_validator('scheme_code', mode='before')
     @classmethod
@@ -169,11 +175,13 @@ class SimulateInvestmentRequest(BaseModel):
 class SimulateInvestmentResponse(BaseModel):
     scheme_code: str
     invested_date: date
-    invested_amount: float
+    end_date: Optional[date] = None # Return the effective end date
+    invested_amount: float # Total invested
     start_nav: float
     current_nav: float
     units_allotted: float
     current_value: float
     absolute_return: float
     return_percentage: float
-
+    # Extra check
+    notes: Optional[str] = None

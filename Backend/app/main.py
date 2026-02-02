@@ -54,7 +54,7 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan
 )
-
+#app.router.redirect_slashes = False
 app.add_middleware(AuthenticationMiddleware)
 app.add_middleware(
     CORSMiddleware,
