@@ -135,36 +135,72 @@ class AnalyticsService:
         db: AsyncSession,
         user_id: UUID
     ) -> FrozenFundsBreakdown:
-        """Calculate total frozen funds (burden)."""
+        """Calculate total frozen funds (burden) with a detailed obligation ledger."""
         try:
-            # Unpaid bills
-            unpaid_bills = await self.bill_service.get_unpaid_bills_total(db, user_id)
-            projected_surety = await self.bill_service.get_projected_surety_bills(db, user_id, days_ahead=30)
+            from app.features.wealth.service import WealthService
+            from app.features.analytics.schemas import IdentifiedObligation
+            wealth_service = WealthService(db)
+            
+            # 1. Get Bill/Surety Ledger (includes unpaid bills and projected recurring)
+            ledger_data = await self.bill_service.get_obligations_ledger(db, user_id, days_ahead=30)
+            unpaid_bills_total = ledger_data["unpaid_total"]
+            projected_surety_bills = ledger_data["projected_total"]
+            all_obligations = ledger_data["items"]
+            
+            # 2. Credit Card Exposure
             unbilled_cc = await self.cc_service.get_all_unbilled_for_user(db, user_id)
             
-            # Monthly Goal contribution
-            active_goals = 0.0
+            # 3. SIP Commitments from Wealth Module
+            sip_obligations = await wealth_service.get_sip_obligations(user_id)
+            sip_total = sum(o.amount for o in sip_obligations)
+            all_obligations.extend(sip_obligations)
+            
+            # Total projected surety includes recurring bills, surety transactions, and SIPs
+            total_projected_surety = projected_surety_bills + sip_total
+            
+            # 4. Monthly Goal contributions
+            active_goals_total = Decimal("0")
             try:
+                # Fetch detailed goals to add to ledger
                 goal_stmt = (
-                    select(func.sum(Goal.monthly_contribution))
+                    select(Goal)
                     .where(Goal.user_id == user_id)
                     .where(Goal.is_active == True)
                 )
                 goal_res = await db.execute(goal_stmt)
-                active_goals = goal_res.scalar() or 0.0
+                goals = goal_res.scalars().all()
+                
+                for g in goals:
+                    amt = Decimal(str(g.monthly_contribution))
+                    active_goals_total += amt
+                    # Goals don't have a specific due date, but they are monthly. 
+                    # We project them for the end of the month or today+15.
+                    all_obligations.append(IdentifiedObligation(
+                        id=f"goal-{g.id}",
+                        title=f"Goal: {g.name}",
+                        amount=amt,
+                        due_date=date.today() + timedelta(days=15),
+                        type="GOAL",
+                        status="PROJECTED",
+                        category="Goal",
+                        sub_category=g.category
+                    ))
             except Exception as e:
-                logger.warning(f"Failed to calculate goals: {e}")
-                active_goals = 0.0
+                logger.warning(f"Failed to calculate detailed goals: {e}")
+                active_goals_total = Decimal("0")
             
-            total_frozen = calculate_frozen_funds(unpaid_bills, projected_surety, unbilled_cc) + Decimal(str(active_goals))
+            total_frozen = calculate_frozen_funds(unpaid_bills_total, total_projected_surety, unbilled_cc) + active_goals_total
             
             return FrozenFundsBreakdown(
-                unpaid_bills=unpaid_bills,
-                projected_surety=projected_surety,
+                unpaid_bills=unpaid_bills_total,
+                projected_surety=total_projected_surety,
                 unbilled_cc=unbilled_cc,
-                active_goals=Decimal(str(active_goals)),
-                total_frozen=total_frozen
+                active_goals=active_goals_total,
+                total_frozen=total_frozen,
+                obligations=all_obligations
             )
+
+
         except Exception as e:
             logger.error(f"Error calculating burden: {e}")
             # Return safe zeros to prevent 500

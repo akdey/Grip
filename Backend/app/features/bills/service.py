@@ -34,9 +34,14 @@ class BillService:
         bill_data: BillCreate
     ) -> Bill:
         """Create a new bill."""
+        data = bill_data.model_dump()
+        # Default recurrence_day to due_date day if it's recurring but day not specified
+        if data.get("is_recurring") and not data.get("recurrence_day"):
+            data["recurrence_day"] = data["due_date"].day
+            
         bill = Bill(
             user_id=user_id,
-            **bill_data.model_dump()
+            **data
         )
         db.add(bill)
         await db.commit()
@@ -89,6 +94,11 @@ class BillService:
             return None
         
         update_data = bill_data.model_dump(exclude_unset=True)
+        # If toggling recurring on but no recurrence_day, default from existing or new due_date
+        if update_data.get("is_recurring") and not update_data.get("recurrence_day") and not bill.recurrence_day:
+            due_date = update_data.get("due_date") or bill.due_date
+            update_data["recurrence_day"] = due_date.day
+
         for field, value in update_data.items():
             setattr(bill, field, value)
         
@@ -104,16 +114,34 @@ class BillService:
         user_id: UUID,
         paid: bool = True
     ) -> Optional[Bill]:
-        """Mark a bill as paid or unpaid."""
+        """Mark a bill as paid or unpaid. For recurring bills, advances the due date."""
         bill = await self.get_bill_by_id(db, bill_id, user_id)
         
         if not bill:
             return None
         
-        bill.is_paid = paid
+        if paid and bill.is_recurring:
+            # Advance due date to next month
+            today = self._get_today()
+            r_day = bill.recurrence_day or bill.due_date.day
+            next_due = self._calculate_next_recurrence(r_day, today)
+            
+            # If next_due is same as current due_date (e.g. paying today's bill), 
+            # we must ensure we move to the month AFTER.
+            if next_due <= bill.due_date:
+                # Force next month
+                next_month = bill.due_date + timedelta(days=32)
+                next_due = self._calculate_next_recurrence(r_day, next_month)
+            
+            bill.due_date = next_due
+            bill.is_paid = False # Reset for next cycle
+            logger.info(f"Advanced recurring bill {bill_id} to {next_due}")
+        else:
+            bill.is_paid = paid
+            
         await db.commit()
         await db.refresh(bill)
-        logger.info(f"Marked bill {bill_id} as {'paid' if paid else 'unpaid'}")
+        logger.info(f"Marked bill {bill_id} status updated (paid={paid})")
         return bill
     
     async def get_upcoming_bills(
@@ -130,7 +158,6 @@ class BillService:
             select(Bill)
             .where(Bill.user_id == user_id)
             .where(Bill.is_paid == False)
-            .where(Bill.due_date >= today)
             .where(Bill.due_date <= threshold_date)
             .order_by(Bill.due_date)
         )
@@ -138,73 +165,151 @@ class BillService:
         result = await db.execute(stmt)
         return list(result.scalars().all())
     
-    async def get_unpaid_bills_total(
+    async def get_obligations_ledger(
         self,
         db: AsyncSession,
-        user_id: UUID
-    ) -> Decimal:
-        """Get total amount of all unpaid bills."""
-        stmt = (
-            select(func.sum(Bill.amount))
-            .where(Bill.user_id == user_id)
-            .where(Bill.is_paid == False)
+        user_id: UUID,
+        days_ahead: int = 30
+    ) -> dict:
+        """
+        Get a full ledger of all identified obligations.
+        Returns: {
+            "unpaid_total": Decimal,
+            "projected_total": Decimal,
+            "items": List[IdentifiedObligation]
+        }
+        """
+        from app.features.analytics.schemas import IdentifiedObligation
+        from app.features.transactions.models import Transaction
+        from sqlalchemy import or_
+        
+        today = self._get_today()
+        threshold_date = today + timedelta(days=days_ahead)
+        
+        ledger_items = []
+        unpaid_total = Decimal("0.00")
+        projected_total = Decimal("0.00")
+        
+        # 1. Fetch ALL unpaid bills (one-time or recurring)
+        # Note: For recurring, if it's unpaid, it usually means current instance is overdue or due soon.
+        bill_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_paid == False)
+        bill_res = await db.execute(bill_stmt)
+        unpaid_bills = bill_res.scalars().all()
+        
+        covered_subcategories = set()
+        
+        for bill in unpaid_bills:
+            status = "OVERDUE" if bill.due_date < today else "PENDING"
+            ledger_items.append(IdentifiedObligation(
+                id=str(bill.id),
+                title=bill.title,
+                amount=bill.amount,
+                due_date=bill.due_date,
+                type="BILL",
+                status=status,
+                category=bill.category,
+                sub_category=bill.sub_category
+            ))
+            unpaid_total += bill.amount
+            if bill.is_recurring:
+                covered_subcategories.add(bill.sub_category.lower())
+
+        # 2. Project NEXT instances for Recurring Bills
+        rec_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_recurring == True)
+        rec_res = await db.execute(rec_stmt)
+        recurring_bills = rec_res.scalars().all()
+        
+        for bill in recurring_bills:
+            r_day = bill.recurrence_day or bill.due_date.day
+            next_due = self._calculate_next_recurrence(r_day, today)
+            
+            # If the next instance is in the FUTURE (not the current unpaid one)
+            if today <= next_due <= threshold_date:
+                # Avoid double counting if the bill is already in ledger as PENDING (unpaid)
+                # But typically next_due will be > bill.due_date if bill is for this month.
+                if next_due > bill.due_date or bill.is_paid:
+                    ledger_items.append(IdentifiedObligation(
+                        id=f"proj-{bill.id}",
+                        title=f"{bill.title} (Projected)",
+                        amount=bill.amount,
+                        due_date=next_due,
+                        type="BILL",
+                        status="PROJECTED",
+                        category=bill.category,
+                        sub_category=bill.sub_category
+                    ))
+                    projected_total += bill.amount
+                    covered_subcategories.add(bill.sub_category.lower())
+
+        # 3. Automated Projections from Surety Transactions
+        sub_stmt = select(SubCategory.name).where(SubCategory.is_surety == True)
+        sub_res = await db.execute(sub_stmt)
+        surety_subs = set(name.lower() for name in sub_res.scalars().all())
+        
+        lookback_date = today - timedelta(days=45)
+        txn_stmt = (
+            select(
+                Transaction.sub_category,
+                Transaction.merchant_name,
+                func.avg(Transaction.amount).label("avg_amount"),
+                func.count(Transaction.id).label("freq")
+            )
+            .where(Transaction.user_id == user_id)
+            .where(Transaction.transaction_date >= lookback_date)
+            .where(or_(
+                Transaction.is_surety == True,
+                func.lower(Transaction.sub_category).in_(list(surety_subs))
+            ))
+            .group_by(Transaction.sub_category, Transaction.merchant_name)
         )
         
-        result = await db.execute(stmt)
-        total = result.scalar()
-        return total or Decimal("0.00")
-    
+        txn_res = await db.execute(txn_stmt)
+        for row in txn_res.all():
+            sub_name = (row.sub_category or "").lower()
+            merchant = row.merchant_name or "Unknown Surety"
+            
+            if sub_name in covered_subcategories:
+                continue
+                
+            if row.freq >= 1:
+                amount = abs(Decimal(str(row.avg_amount or 0)))
+                # Project for next month (estimated)
+                ledger_items.append(IdentifiedObligation(
+                    id=f"auto-{sub_name}",
+                    title=f"{merchant} (Auto-detected)",
+                    amount=amount,
+                    due_date=today + timedelta(days=15), # Rough estimate as middle of cycle
+                    type="SURETY_TXN",
+                    status="PROJECTED",
+                    sub_category=row.sub_category
+                ))
+                projected_total += amount
+        
+        return {
+            "unpaid_total": unpaid_total,
+            "projected_total": projected_total,
+            "items": ledger_items
+        }
+
     async def get_projected_surety_bills(
         self,
         db: AsyncSession,
         user_id: UUID,
         days_ahead: int = 30
     ) -> Decimal:
-        """
-        Calculate projected surety bills (recurring predictable bills).
-        This uses the 'is_surety' flag from the SubCategory table.
-        """
-        today = self._get_today()
-        threshold_date = today + timedelta(days=days_ahead)
-        
-        # Get all recurring bills
-        # We need to filter by those which are linked to a Surety SubCategory
-        # Since Bill stores sub_category as String name (legacy design), we might need to join or subquery.
-        # But we don't have a direct FK for sub_category. 
-        # So we fetch all recurring bills, and then filtering Python or use a subquery on name.
-        
-        # Let's fetch all recurring bills first
-        stmt = (
-            select(Bill)
-            .where(Bill.user_id == user_id)
-            .where(Bill.is_recurring == True)
-        )
-        result = await db.execute(stmt)
-        recurring_bills = result.scalars().all()
-        
-        # Get list of surety sub-category names
-        sub_stmt = select(SubCategory.name).where(SubCategory.is_surety == True)
-        sub_res = await db.execute(sub_stmt)
-        surety_subs = set(sub_res.scalars().all())
-        
-        projected_total = Decimal("0.00")
-        
-        for bill in recurring_bills:
-            # Check if this bill's sub-category is in our surety list
-            if bill.sub_category not in surety_subs:
-                continue
-            
-            # Calculate next occurrence
-            if bill.recurrence_day:
-                next_due = self._calculate_next_recurrence(
-                    bill.recurrence_day,
-                    today
-                )
-                
-                if next_due <= threshold_date and not bill.is_paid:
-                    projected_total += bill.amount
-        
-        return projected_total
+        """Legay wrapper for projection total."""
+        res = await self.get_obligations_ledger(db, user_id, days_ahead)
+        return res["projected_total"]
+
+    async def get_unpaid_bills_total(
+        self,
+        db: AsyncSession,
+        user_id: UUID
+    ) -> Decimal:
+        """Legacy wrapper for unpaid total."""
+        res = await self.get_obligations_ledger(db, user_id)
+        return res["unpaid_total"]
+
     
     def _calculate_next_recurrence(
         self,

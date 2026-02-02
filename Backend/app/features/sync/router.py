@@ -20,6 +20,14 @@ def get_google_flow(redirect_uri: str = None):
     if redirect_uri is None:
         redirect_uri = settings.GOOGLE_REDIRECT_URI
     
+    # Check credentials
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        logger.error("GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not configured")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Google OAuth credentials not configured on server"
+        )
+    
     flow = Flow.from_client_config(
         {
             "web": {
@@ -27,6 +35,7 @@ def get_google_flow(redirect_uri: str = None):
                 "client_secret": settings.GOOGLE_CLIENT_SECRET,
                 "auth_uri": "https://accounts.google.com/o/oauth2/v2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [redirect_uri] if redirect_uri else []
             }
         },
         scopes=["https://www.googleapis.com/auth/gmail.readonly"]
