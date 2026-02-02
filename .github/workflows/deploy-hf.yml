@@ -1,0 +1,55 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Backend/**'
+      - '.github/workflows/deploy-hf.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Install Hugging Face Hub
+        run: pip install huggingface_hub
+
+      - name: Prepare Deployment Directory
+        run: |
+          mkdir -p deploy_hf
+          cp -r Backend/* deploy_hf/
+          
+          # Prepare README with HF metadata
+          cat <<EOF > deploy_hf/README.md
+          ---
+          title: Grip Backend
+          emoji: 💰
+          colorFrom: green
+          colorTo: blue
+          sdk: docker
+          app_port: 7860
+          ---
+
+          EOF
+          cat README.md >> deploy_hf/README.md
+
+      - name: Push to HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd deploy_hf
+          git init
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -b main
+          git add .
+          git commit -m "Deploy to Hugging Face"
+          # Replace 'YOUR_HF_USERNAME/YOUR_SPACE_NAME' with your actual username and space name
+          # You can also use an environment variable for the space name if you prefer
+          git remote add origin https://x-token:${HF_TOKEN}@huggingface.co/spaces/${{ secrets.HF_USERNAME }}/${{ secrets.HF_SPACE_NAME }}
+          git push -f origin main
