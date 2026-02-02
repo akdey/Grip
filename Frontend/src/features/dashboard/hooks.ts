@@ -1,13 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 
+export interface IdentifiedObligation {
+    id: string;
+    title: string;
+    amount: number;
+    due_date: string;
+    type: 'BILL' | 'SIP' | 'SURETY_TXN' | 'GOAL';
+    status: 'OVERDUE' | 'PENDING' | 'PROJECTED';
+    category?: string;
+    sub_category?: string;
+}
+
 export interface SafeToSpend {
     current_balance: number;
     frozen_funds: {
         unpaid_bills: number;
         projected_surety: number;
         unbilled_cc: number;
+        active_goals: number;
         total_frozen: number;
+        obligations: IdentifiedObligation[];
     };
     buffer_amount: number;
     safe_to_spend: number;

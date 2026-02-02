@@ -41,6 +41,67 @@ class WealthService:
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
+    async def get_sip_obligations(self, user_id: uuid.UUID) -> List[any]:
+        """Calculate total monthly SIP amount across all holdings and return as obligations."""
+        from app.features.analytics.schemas import IdentifiedObligation
+        from decimal import Decimal
+        from datetime import date, timedelta
+        
+        # Subquery to get the latest snapshot date for each holding
+        subq = (
+            select(
+                InvestmentSnapshot.holding_id,
+                func.max(InvestmentSnapshot.captured_at).label("max_date")
+            )
+            .where(InvestmentSnapshot.user_id == user_id)
+            .group_by(InvestmentSnapshot.holding_id)
+            .subquery()
+        )
+        
+        # Join with snapshots to get the actual data, specifically where is_sip is True
+        stmt = (
+            select(InvestmentSnapshot, InvestmentHolding.name)
+            .join(subq, (InvestmentSnapshot.holding_id == subq.c.holding_id) & (InvestmentSnapshot.captured_at == subq.c.max_date))
+            .join(InvestmentHolding, InvestmentHolding.id == InvestmentSnapshot.holding_id)
+            .where(InvestmentSnapshot.is_sip == True)
+        )
+        
+        result = await self.db.execute(stmt)
+        rows = result.all()
+        
+        obligations = []
+        for snapshot, holding_name in rows:
+            if not snapshot.sip_amount:
+                continue
+                
+            amount = Decimal(str(snapshot.sip_amount))
+            # Estimate next SIP date based on captured_at (roughly 1 month later)
+            # In a real system, we might have a specific sip_day field in Holding.
+            # Here we assume the capture day is the SIP day.
+            last_date = snapshot.captured_at
+            next_date = last_date + timedelta(days=30)
+            if next_date <= date.today():
+                # If 30 days puts us in the past, move further
+                next_date = date.today() + timedelta(days=1)
+
+            obligations.append(IdentifiedObligation(
+                id=f"sip-{snapshot.holding_id}",
+                title=f"SIP: {holding_name}",
+                amount=amount,
+                due_date=next_date,
+                type="SIP",
+                status="PROJECTED",
+                category="Investment",
+                sub_category="Mutual Fund SIP"
+            ))
+            
+        return obligations
+
+    async def get_total_monthly_sip(self, user_id: uuid.UUID) -> float:
+        """Legacy wrapper."""
+        obls = await self.get_sip_obligations(user_id)
+        return float(sum(o.amount for o in obls))
+
     async def get_holding_details(self, holding_id: uuid.UUID, user_id: uuid.UUID) -> InvestmentHolding:
         # Use selectinload to fetch snapshots efficiently
         from sqlalchemy.orm import selectinload

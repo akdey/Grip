@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
 from pydantic import BaseModel
 from decimal import Decimal
+from datetime import date
 
 class CategoryVariance(BaseModel):
     current: Decimal
@@ -16,12 +17,23 @@ class VarianceAnalysis(BaseModel):
     variance_percentage: float
     category_breakdown: Dict[str, CategoryVariance]
 
+class IdentifiedObligation(BaseModel):
+    id: str
+    title: str
+    amount: Decimal
+    due_date: date
+    type: str # "BILL", "SIP", "SURETY_TXN", "GOAL"
+    status: str # "OVERDUE", "PENDING", "PROJECTED"
+    category: Optional[str] = None
+    sub_category: Optional[str] = None
+
 class FrozenFundsBreakdown(BaseModel):
     unpaid_bills: Decimal
     projected_surety: Decimal
     unbilled_cc: Decimal
     active_goals: Decimal = Decimal(0)
     total_frozen: Decimal
+    obligations: List[IdentifiedObligation] = []
 
 class SafeToSpendResponse(BaseModel):
     current_balance: Decimal

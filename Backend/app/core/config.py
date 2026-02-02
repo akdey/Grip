@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     GRIP_SECRET: str = "GripSecret"
     
     EXCEPTION_ROUTES: list[str] = [
+        "/",
         "/docs", 
         "/redoc", 
         "/openapi.json", 

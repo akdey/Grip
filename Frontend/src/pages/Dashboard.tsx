@@ -13,7 +13,10 @@ import {
     EyeOff,
     Check,
     ChevronDown,
-    Receipt
+    Receipt,
+    X,
+    Calendar,
+    ArrowRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '../components/ui/Loader';
@@ -26,6 +29,7 @@ const Dashboard: React.FC = () => {
     const [showSensitive, setShowSensitive] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showForecastDetails, setShowForecastDetails] = useState(false);
+    const [showObligations, setShowObligations] = useState(false);
     const [scope, setScope] = useState('month');
     const [showScopeMenu, setShowScopeMenu] = useState(false);
 
@@ -396,9 +400,12 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-1 gap-3">
-                            <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all">
+                            <div
+                                onClick={() => setShowObligations(true)}
+                                className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all cursor-pointer group active:scale-[0.98]"
+                            >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center shadow-inner">
+                                    <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
                                         <Receipt size={18} />
                                     </div>
                                     <div>
@@ -406,9 +413,12 @@ const Dashboard: React.FC = () => {
                                         <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mt-0.5">Surety / Bills</p>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="font-black text-white text-sm tracking-tighter">{formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills) || 0)}</p>
-                                    <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Projected: {formatCurrency(Number(safeToSpend?.frozen_funds?.projected_surety) || 0)}</p>
+                                <div className="text-right flex items-center gap-3">
+                                    <div>
+                                        <p className="font-black text-white text-sm tracking-tighter">{formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills) || 0)}</p>
+                                        <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Projected: {formatCurrency(Number(safeToSpend?.frozen_funds?.projected_surety) || 0)}</p>
+                                    </div>
+                                    <ArrowRight size={14} className="text-gray-700 group-hover:text-rose-400 group-hover:translate-x-1 transition-all" />
                                 </div>
                             </div>
 
@@ -546,6 +556,91 @@ const Dashboard: React.FC = () => {
                     }}
                 />
             </React.Suspense>
+
+            {/* Obligations Ledger Modal */}
+            <AnimatePresence>
+                {showObligations && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowObligations(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-lg bg-[#0A0A0A] border border-white/[0.1] rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[80vh]"
+                        >
+                            <div className="p-8 border-b border-white/[0.05] flex items-center justify-between bg-gradient-to-b from-white/[0.02] to-transparent">
+                                <div>
+                                    <h2 className="text-xl font-black text-white tracking-tighter uppercase">Obligation Ledger</h2>
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[3px] mt-1">Identified commitments & surety</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowObligations(false)}
+                                    className="w-10 h-10 rounded-full bg-white/[0.05] flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar">
+                                {safeToSpend?.frozen_funds?.obligations && safeToSpend.frozen_funds.obligations.length > 0 ? (
+                                    safeToSpend.frozen_funds.obligations.map((obl) => (
+                                        <div
+                                            key={obl.id}
+                                            className="p-4 rounded-3xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between group hover:bg-white/[0.04] transition-all"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${obl.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-500' :
+                                                        obl.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500' : 'bg-cyan-500/10 text-cyan-400'
+                                                    }`}>
+                                                    <Calendar size={18} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-white uppercase tracking-tight">{obl.title}</p>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${obl.type === 'BILL' ? 'bg-blue-500/10 text-blue-400' :
+                                                                obl.type === 'SIP' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                                    obl.type === 'GOAL' ? 'bg-purple-500/10 text-purple-400' : 'bg-gray-500/10 text-gray-400'
+                                                            }`}>
+                                                            {obl.type}
+                                                        </span>
+                                                        <span className="text-[8px] text-gray-600 font-bold uppercase tracking-wider">
+                                                            {format(new Date(obl.due_date), 'MMM dd')} • {obl.status}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-black text-white tracking-tighter">{formatCurrency(obl.amount)}</p>
+                                                <p className="text-[7px] text-gray-700 font-bold uppercase tracking-widest mt-0.5">{obl.sub_category || obl.category || 'General'}</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="py-20 text-center">
+                                        <Receipt size={32} className="mx-auto text-gray-800 mb-4 opacity-20" />
+                                        <p className="text-gray-600 font-black uppercase tracking-[4px] text-xs">No obligations identified</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-8 bg-white/[0.02] border-t border-white/[0.05]">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Total Burden</span>
+                                    <span className="text-xl font-black text-rose-400 tracking-tighter">
+                                        {formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills || 0) + Number(safeToSpend?.frozen_funds?.projected_surety || 0))}
+                                    </span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
