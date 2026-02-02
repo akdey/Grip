@@ -172,6 +172,15 @@ class SimulateInvestmentRequest(BaseModel):
         if v is None: return ""
         return str(v)
 
+class MonthlySimulationPoint(BaseModel):
+    date: date
+    nav: float
+    units_allotted: float
+    total_units_so_far: float
+    invested_amount: float
+    total_invested_so_far: float
+    current_value_so_far: float
+
 class SimulateInvestmentResponse(BaseModel):
     scheme_code: str
     invested_date: date
@@ -185,3 +194,4 @@ class SimulateInvestmentResponse(BaseModel):
     return_percentage: float
     # Extra check
     notes: Optional[str] = None
+    monthly_breakdown: Optional[List[MonthlySimulationPoint]] = None

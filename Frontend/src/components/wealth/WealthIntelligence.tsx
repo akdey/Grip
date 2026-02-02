@@ -251,6 +251,7 @@ const InvestmentSimulator: React.FC = () => {
     const [amount, setAmount] = useState<number>(10000);
     const [date, setDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
+    const [investmentType, setInvestmentType] = useState<'LUMPSUM' | 'SIP'>('LUMPSUM');
     const [result, setResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -302,7 +303,8 @@ const InvestmentSimulator: React.FC = () => {
                 scheme_code: String(scheme),
                 amount: Number(amount),
                 date: date,
-                end_date: endDate || undefined
+                end_date: endDate || undefined,
+                investment_type: investmentType
             });
             setResult(res.data);
         } catch (err) {
@@ -314,9 +316,25 @@ const InvestmentSimulator: React.FC = () => {
 
     return (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-            <div>
-                <h3 className="text-lg font-semibold text-gray-200">History Simulator</h3>
-                <p className="text-xs text-gray-500">"What if I had invested..." calculator</p>
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-200">History Simulator</h3>
+                    <p className="text-xs text-gray-500">"What if I had invested..." calculator</p>
+                </div>
+                <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                    <button
+                        onClick={() => setInvestmentType('LUMPSUM')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${investmentType === 'LUMPSUM' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        Lumpsum
+                    </button>
+                    <button
+                        onClick={() => setInvestmentType('SIP')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${investmentType === 'SIP' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        Monthly SIP
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -428,6 +446,55 @@ const InvestmentSimulator: React.FC = () => {
                             <p className="text-xs text-gray-500 font-mono">{result.notes}</p>
                         </div>
                     )}
+                </motion.div>
+            )}
+
+            {result?.monthly_breakdown && (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-3"
+                >
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-gray-400">Monthly Breakdown</h4>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">{result.monthly_breakdown.length} Installments</p>
+                    </div>
+                    <div className="border border-white/5 rounded-2xl overflow-hidden bg-white/5">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-[11px] border-collapse">
+                                <thead className="bg-white/5 text-gray-500 uppercase tracking-tighter">
+                                    <tr>
+                                        <th className="px-4 py-3 font-semibold">Date</th>
+                                        <th className="px-4 py-3 font-semibold text-right">NAV</th>
+                                        <th className="px-4 py-3 font-semibold text-right">Units</th>
+                                        <th className="px-4 py-3 font-semibold text-right">Invested</th>
+                                        <th className="px-4 py-3 font-semibold text-right">Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {result.monthly_breakdown.map((point: any, idx: number) => (
+                                        <tr key={idx} className="hover:bg-white/[0.02] transition-colors group">
+                                            <td className="px-4 py-3 text-gray-300 font-medium">
+                                                {new Date(point.date).toLocaleDateString(undefined, { month: 'short', year: 'numeric', day: 'numeric' })}
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-400 text-right font-mono">
+                                                ₹{point.nav.toFixed(2)}
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-500 text-right">
+                                                {point.units_allotted.toFixed(3)}
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-400 text-right">
+                                                ₹{point.total_invested_so_far.toLocaleString()}
+                                            </td>
+                                            <td className="px-4 py-3 text-emerald-400 text-right font-bold group-hover:scale-105 transition-transform origin-right">
+                                                ₹{Math.round(point.current_value_so_far).toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </motion.div>
             )}
         </motion.div>
