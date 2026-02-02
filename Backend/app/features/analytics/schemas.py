@@ -30,6 +30,7 @@ class SafeToSpendResponse(BaseModel):
     buffer_percentage: float
     safe_to_spend: Decimal
     recommendation: str
+    status: str # "success", "warning", "critical", "negative"
 
 class MonthlySummaryResponse(BaseModel):
     total_income: Decimal

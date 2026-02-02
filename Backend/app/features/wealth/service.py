@@ -578,7 +578,7 @@ class WealthService:
         
         # Extract relevant points
         # Filter strictly future
-        last_date = df['ds'].max()
+        last_date = pd.to_datetime(df['ds'].max())
         future_forecast = forecast[forecast['ds'] > last_date]
         
         # Downsample to weekly or monthly to save bandwidth? 
@@ -781,7 +781,14 @@ class WealthService:
                 prev_txn = None
                 
                 for txn in txns:
-                    if txn.transaction_type.lower() in ['purchase', 'sip']:
+                    t_type = txn.transaction_type.lower()
+                    
+                    # Broad matching for Buy transactions
+                    is_buy = any(x in t_type for x in ['purchase', 'sip', 'switch in', 'dividend', 'invest', 'reinvest'])
+                    # Broad matching for Sell transactions 
+                    is_sell = any(x in t_type for x in ['redemption', 'sell', 'switch out', 'withdraw'])
+
+                    if is_buy:
                         # Buy transaction
                         running_units += txn.units
                         invested_delta = txn.amount
@@ -844,7 +851,7 @@ class WealthService:
                         transactions_processed += 1
                         prev_txn = txn
                     
-                    elif txn.transaction_type.lower() in ['redemption', 'sell']:
+                    elif is_sell:
                         # Sell transaction
                         running_units -= txn.units
                         invested_delta = -txn.amount
@@ -861,8 +868,28 @@ class WealthService:
                         self.db.add(snapshot)
                         transactions_processed += 1
                 
-                # Update holding totals
-                await self.recalculate_holding_history(holding.id)
+                # Update holding totals manually to preserve unit counts from CSV
+                # (recalculate_holding_history is destructive if NAV is missing)
+                
+                # Calculate net investment for this batch
+                net_investment = 0.0
+                for txn in txns:
+                    t_type = txn.transaction_type.lower()
+                    if any(x in t_type for x in ['purchase', 'sip', 'switch in', 'dividend', 'invest', 'reinvest']):
+                        net_investment += txn.amount
+                    elif any(x in t_type for x in ['redemption', 'sell', 'switch out', 'withdraw']):
+                        net_investment -= txn.amount
+                
+                holding.total_invested += net_investment
+                
+                # Update current value using last known NAV from import
+                last_nav = txns[-1].nav if txns else 0.0
+                if last_nav > 0:
+                     holding.current_value = running_units * last_nav
+                
+                holding.last_updated_at = datetime.now()
+                
+                # await self.recalculate_holding_history(holding.id) # DISABLED: Destructive
                 
             except Exception as e:
                 logger.error(f"Error processing scheme {scheme_name}: {e}")
@@ -921,17 +948,34 @@ class WealthService:
         # Calculate average SIP amount
         avg_sip_amount = sum(s.amount_invested_delta for s in sip_snapshots) / len(sip_snapshots)
         
-        # Get current NAV
-        try:
-            current_nav = await self.get_asset_price(holding, date.today())
-        except:
-            current_nav = sip_snapshots[-1].price_per_unit
+        # Ensure we have a ticker symbol (Auto-Map if missing)
+        if not holding.ticker_symbol or holding.api_source != "MFAPI":
+             await self._try_auto_map_scheme(holding, user_id)
         
-        # Pre-fetch NAV history for efficiency (Avoid 1000+ API calls)
+        # Pre-fetch NAV history
         nav_history = []
+        parsed_history = []
         if holding.ticker_symbol and holding.api_source == "MFAPI":
              nav_history = await self.get_mf_nav_history(holding.ticker_symbol)
+             # Optimize: Pre-parse history
+             try:
+                 for entry in nav_history:
+                     d = datetime.strptime(entry['date'], "%d-%m-%Y").date()
+                     parsed_history.append({'date': d, 'nav': float(entry['nav'])})
+             except: pass
         
+        # Determine Current NAV
+        # Use latest available NAV from history (Safe against API lags/weekends)
+        current_nav = 0.0
+        if parsed_history:
+            current_nav = parsed_history[0]['nav']
+            
+        if current_nav <= 0:
+            # Fallback to last snapshot price
+            current_nav = sip_snapshots[-1].price_per_unit
+            
+        if current_nav <= 0: current_nav = 1.0 # Ultimate safety
+
         # Test all days from 1st to 28th (Timing Alpha)
         alternative_dates = list(range(1, 29))
         
@@ -946,11 +990,11 @@ class WealthService:
                     target_date=alt_date,
                     avg_sip_amount=avg_sip_amount,
                     current_nav=current_nav,
-                    nav_history=nav_history
+                    nav_history=parsed_history
                 )
                 results[alt_date] = performance
             except Exception as e:
-                # logger.warning(f"Could not calculate performance for date {alt_date}: {e}")
+                logger.error(f"DEBUG: Failed for date {alt_date}: {e}")
                 pass
         
         # Get user's actual performance
@@ -959,8 +1003,8 @@ class WealthService:
         if not user_performance:
             raise ValueError("Could not calculate user's actual performance")
         
-        # Find best alternative
-        best_date = max(results.keys(), key=lambda d: results[d].xirr or 0)
+        # Find best alternative (Maximize total money, not just rate)
+        best_date = max(results.keys(), key=lambda d: results[d].absolute_return or 0.0)
         best_performance = results[best_date]
         improvement = best_performance.absolute_return - user_performance.absolute_return
         
@@ -992,7 +1036,9 @@ class WealthService:
                 "improvement": improvement
             },
             insight=insight,
-            historical_pattern=historical_pattern
+            historical_pattern=historical_pattern,
+            analysis_start=sip_snapshots[0].captured_at,
+            analysis_end=sip_snapshots[-1].captured_at
         )
     
     async def _calculate_date_performance(
@@ -1027,7 +1073,7 @@ class WealthService:
             # Loop optimization: Use history
             nav = 0.0
             if nav_history:
-                nav = self._find_nav_in_history(nav_history, target_dt)
+                nav = self._find_nearest_nav(nav_history, target_dt)
             
             if nav <= 0:
                 # Fallback to API/DB if history missing or lookup failed
@@ -1102,6 +1148,25 @@ class WealthService:
         best_perf: schemas.SIPDatePerformance,
         improvement: float
     ) -> str:
+        """Generate smart insight text based on performance difference."""
+        if user_date == best_date or improvement < 50:
+             if user_perf.absolute_return >= 0:
+                 return f"Excellent! Your {user_date}th date SIP is already optimal. You're earning the best possible returns."
+             else:
+                 return f"Your {user_date}th date is optimal. Even in this negative trend, this date minimizes your loss best."
+
+        improvement_pct = (improvement / user_perf.total_invested * 100) if user_perf.total_invested > 0 else 0
+        
+        # Scenario: User Loss -> Reduced Loss
+        if user_perf.absolute_return < 0 and best_perf.absolute_return < 0:
+            return f"Your {user_date}th date SIP is in loss, but switching to the {best_date}th could have reduced this loss by ₹{improvement:,.0f}."
+
+        # Scenario: User Loss -> Profit
+        if user_perf.absolute_return < 0 and best_perf.absolute_return >= 0:
+             return f"Investing on the {best_date}th would have turned your loss into a profit of ₹{best_perf.absolute_return:,.0f} (+₹{improvement:,.0f} difference)."
+             
+        # Scenario: Profit -> More Profit
+        return f"Your {user_date}th date SIP performed well, but switching to {best_date}th could have earned you ₹{improvement:,.0f} more ({improvement_pct:.1f}% boost)."
         """Generate human-readable insight about SIP date performance."""
         if user_date == best_date:
             return f"Excellent! Your {user_date}th date SIP is already optimal. You're earning the best possible returns with this timing."
@@ -1150,60 +1215,218 @@ class WealthService:
                 logger.error(f"Failed to fetch MF history: {e}")
         return []
 
-    def _find_nav_in_history(self, history: List[dict], target_date: date) -> float:
-        """Find NAV in history list (descending order). Returns 0.0 if not found."""
-        target_str = target_date.strftime("%d-%m-%Y")
-        
-        # Exact match attempt
-        # Since history is sorted desc, we can scan. average case O(N/2). 
-        # For simulation, caching this map is better, but this is fast enough for 30 lookup items.
+    def _find_nearest_nav(self, history: List[dict], target_date: date) -> float:
+        """Find Nearest NAV (Previous Trading Day). History must be sorted Descending (Newest first)."""
+        # Linear scan is O(N) but simple. Since we iterate newest (2024) backwards, 
+        # for a target date in 2024, we find it quickly.
         for entry in history:
-            if entry['date'] == target_str:
-                return float(entry['nav'])
-                
-            # If we passed the date (entry date is older than target), stop? No, history is DESC (2025 -> 2020)
-            # If entry['date'] < target_date: break? 
-            # Date parsing is slow. String comparison... "20-01-2024" vs "19-01-2024".
-            # String comparison of DD-MM-YYYY is NOT chronological. Cannot optimize easily without parsing.
-            
+            if entry['date'] <= target_date:
+                return entry['nav']
         return 0.0
 
-    async def simulate_historical_investment(self, scheme_code: str, amount: float, date_obj: date) -> dict:
+    async def simulate_historical_investment(
+        self, 
+        scheme_code: str, 
+        amount: float, 
+        date_obj: date, 
+        investment_type: str = "LUMPSUM",
+        end_date: Optional[date] = None
+    ) -> schemas.SimulateInvestmentResponse:
         """
-        Simulate a one-time investment on a specific past date.
-        Returns the hypothetical current value and return %.
+        Simulate a past investment to check "What If" returns.
+        Supports Lumpsum and monthly SIP.
         """
         history = await self.get_mf_nav_history(scheme_code)
         if not history:
              raise ValueError("Could not fetch scheme history")
-             
-        start_nav = self._find_nav_in_history(history, date_obj)
-        if start_nav <= 0:
-            # Try +/- 3 days for weekends
-            for i in range(1, 4):
-                 start_nav = self._find_nav_in_history(history, date_obj + timedelta(days=i))
-                 if start_nav > 0: break
-                 start_nav = self._find_nav_in_history(history, date_obj - timedelta(days=i))
-                 if start_nav > 0: break
         
-        if start_nav <= 0:
-            raise ValueError(f"No NAV found for date {date_obj}")
+        # Data format: [{date: "dd-mm-yyyy", nav: "123.45"}]
+        # Parse first, then sort
+        parsed_history = []
+        for h in history:
+            try:
+                 d = datetime.strptime(h['date'], "%d-%m-%Y").date()
+                 parsed_history.append({'date': d, 'nav': float(h['nav'])})
+            except: pass
             
-        current_nav = float(history[0]['nav']) # Latest
+        if not parsed_history:
+            raise ValueError("Invalid history data")
+
+        # Sort ascending by date
+        parsed_history.sort(key=lambda x: x['date'])
+            
+        start_date = date_obj
+        final_date = end_date if end_date else date.today()
         
-        units = amount / start_nav
-        current_value = units * current_nav
-        abs_return = current_value - amount
-        pct_return = (abs_return / amount) * 100
+        if final_date < start_date:
+            raise ValueError("End date cannot be before start date")
+            
+        # Find start NAV
+        start_entry = self._find_entry_closest_to(parsed_history, start_date)
+        if not start_entry:
+            # Try finding ANY entry before or after?
+            # If start date is way in the past/future relative to data?
+            if start_date > parsed_history[-1]['date']:
+                raise ValueError(f"Start date {start_date} is in the future relative to available data (Last: {parsed_history[-1]['date']})")
+            if start_date < parsed_history[0]['date']:
+                 # Use inception NAV?
+                 start_entry = parsed_history[0]
+            else:
+                 raise ValueError(f"No NAV found near start date {start_date}")
+
+        start_nav = start_entry['nav']
         
-        return {
-            "scheme_code": scheme_code,
-            "invested_date": date_obj,
-            "invested_amount": amount,
-            "start_nav": start_nav,
-            "current_nav": current_nav,
-            "units_allotted": units,
-            "current_value": current_value,
-            "absolute_return": abs_return,
-            "return_percentage": pct_return
-        }
+        total_invested = 0.0
+        total_units = 0.0
+        months_invested = 0
+        skipped_months = 0
+        
+        if investment_type == "LUMPSUM":
+            total_invested = amount
+            total_units = amount / start_nav
+            months_invested = 1
+        else: # SIP
+            # Iterate monthly
+            curr = start_date
+            while curr <= final_date:
+                # Find closest NAV for this month's date
+                # Use a wider window (10 days) or fallback to last known
+                entry = self._find_entry_closest_to(parsed_history, curr, window=10)
+                
+                if not entry:
+                    # Fallback: Find the last available NAV before this date
+                    # This handles cases where data might be sparse
+                    entry = self._find_last_entry_before(parsed_history, curr)
+                
+                if entry:
+                    units = amount / entry['nav']
+                    total_units += units
+                    total_invested += amount
+                    months_invested += 1
+                else:
+                    skipped_months += 1
+                
+                # Next month handling
+                y = curr.year
+                m = curr.month + 1
+                if m > 12:
+                    m = 1
+                    y += 1
+                
+                # Try to keep same day, cap at month end
+                import calendar
+                day = min(date_obj.day, calendar.monthrange(y, m)[1])
+                curr = date(y, m, day)
+        
+        # Calculate final value
+        final_entry = self._find_entry_closest_to(parsed_history, final_date)
+        if not final_entry:
+            final_entry = parsed_history[-1] # Fallback to very last data point available
+            
+        current_nav = final_entry['nav']
+        current_value = total_units * current_nav
+        
+        abs_return = current_value - total_invested
+        pct_return = (abs_return / total_invested * 100) if total_invested > 0 else 0
+        
+        notes = f"Simulated {months_invested} installments from {start_date} to {final_entry['date']}."
+        if skipped_months > 0:
+            notes += f" Skipped {skipped_months} months due to missing data."
+
+        return schemas.SimulateInvestmentResponse(
+            scheme_code=scheme_code,
+            invested_date=start_date,
+            end_date=final_entry['date'],
+            invested_amount=total_invested,
+            start_nav=start_nav,
+            current_nav=current_nav,
+            units_allotted=total_units,
+            current_value=current_value,
+            absolute_return=abs_return,
+            return_percentage=pct_return,
+            notes=notes
+        )
+
+    def _find_entry_closest_to(self, history: List[dict], target: date, window: int = 5) -> Optional[dict]:
+        """Finds closest date entry within +/- window days. Assumes history is sorted asc."""
+        # Optimization: Filter roughly relevant first?
+        # Since history is sorted, we can use bisect-like logic or just linear scan for small N
+        
+        candidates = [x for x in history if abs((x['date'] - target).days) <= window]
+        if not candidates:
+            return None
+        # Sort by proximity
+        candidates.sort(key=lambda x: abs((x['date'] - target).days))
+        return candidates[0]
+
+    def _find_last_entry_before(self, history: List[dict], target: date) -> Optional[dict]:
+        """Finds the last available entry <= target date."""
+        # History is sorted asc
+        # Iterate backwards
+        for i in range(len(history) - 1, -1, -1):
+            if history[i]['date'] <= target:
+                return history[i]
+        return None
+
+    async def search_mutual_funds_external(self, query: str) -> List[dict]:
+        """Search MFAPI for schemes."""
+        url = "https://api.mfapi.in/mf/search"
+        async with httpx.AsyncClient() as client:
+             try:
+                resp = await client.get(url, params={"q": query}, timeout=10.0)
+                if resp.status_code == 200:
+                    return resp.json()
+             except: pass
+        return []
+
+    async def _try_auto_map_scheme(self, holding: InvestmentHolding, user_id: uuid.UUID) -> Optional[str]:
+        """Attempt to find and associate a scheme code for this holding."""
+        if holding.ticker_symbol: return holding.ticker_symbol
+        
+        # Heuristic: Search for key AMC terms
+        amcs = ["icici", "hdfc", "sbi", "axis", "nippon", "kotak", "mirae", "parag parikh", "quant", "uti", "aditya birla", "tata", "dsp"]
+        name_lower = holding.name.lower()
+        found_amc = next((amc for amc in amcs if amc in name_lower), "")
+        
+        # Construct query: AMC + first 2-3 words of name
+        # Remove anything in brackets
+        import re
+        clean_base = re.sub(r'\(.*?\)', '', name_lower).replace('-', ' ').strip()
+        words = clean_base.split()
+        
+        search_terms = []
+        if found_amc and found_amc not in words[:2]:
+            search_terms.append(found_amc)
+        
+        search_terms.extend(words[:3]) # First 3 words usually contain fund name
+        
+        query = " ".join(search_terms)
+        candidates = await self.search_mutual_funds_external(query)
+        
+        # Filter for "Direct" and "Growth"
+        valid = []
+        for c in candidates:
+             n = c['schemeName'].lower()
+             if "direct" in n and "growth" in n and "idcw" not in n:
+                 valid.append(c)
+        
+        if valid:
+            best = valid[0]
+            logger.info(f"Auto-mapped '{holding.name}' to '{best['schemeName']}' ({best['schemeCode']})")
+            
+            # Update holding object in memory
+            holding.ticker_symbol = str(best['schemeCode'])
+            holding.api_source = "MFAPI"
+            
+            # Persist if possible
+            try:
+                if hasattr(self, 'holdings_repo'):
+                    # Using raw SQL or repo update if available. pydantic_cl.update?
+                    # Fallback: Just valid for this session is better than nothing.
+                    pass
+            except: pass
+            
+            return holding.ticker_symbol
+            
+        return None
+

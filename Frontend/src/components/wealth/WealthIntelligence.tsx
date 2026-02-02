@@ -5,20 +5,22 @@ import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import {
-    Search, Calendar, DollarSign, TrendingUp, AlertCircle, CheckCircle2
+    Search, Calendar, DollarSign, TrendingUp, AlertCircle, CheckCircle2,
+    Info, BrainCircuit
 } from 'lucide-react';
 
 interface Holding {
     id: string;
     name: string;
     ticker_symbol: string | null;
+    asset_type?: string;
 }
 
 const WealthIntelligence: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
     const [activeTab, setActiveTab] = useState<'timing' | 'simulator'>('timing');
 
     return (
-        <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 sm:p-6 min-h-[500px]">
+        <div className="min-h-[500px]">
             <div className="flex space-x-6 border-b border-white/5 pb-4 mb-6 overflow-x-auto scrollbar-hide">
                 <button
                     onClick={() => setActiveTab('timing')}
@@ -54,26 +56,35 @@ const WealthIntelligence: React.FC<{ holdings: Holding[] }> = ({ holdings }) => 
 };
 
 const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
+    // Filter for Mutual Funds only as SIP analysis is relevant for them
+    const sipHoldings = holdings.filter(h => h.asset_type === 'MUTUAL_FUND');
+
+    const [showInfo, setShowInfo] = useState(false);
     const [selectedHoldingId, setSelectedHoldingId] = useState<string>('');
     const [analysis, setAnalysis] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (holdings.length > 0 && !selectedHoldingId) {
-            setSelectedHoldingId(holdings[0].id);
+        if (sipHoldings.length > 0 && !selectedHoldingId) {
+            setSelectedHoldingId(sipHoldings[0].id);
         }
-    }, [holdings]);
+    }, [sipHoldings]);
 
     useEffect(() => {
         if (!selectedHoldingId) return;
 
         const fetchAnalysis = async () => {
             setLoading(true);
+            setError(null);
+            setAnalysis(null);
             try {
                 const res = await api.get(`/wealth/holdings/${selectedHoldingId}/sip-analysis`);
                 setAnalysis(res.data);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Analysis failed", error);
+                const msg = error.response?.data?.detail || "Could not analyze this holding. It might not have enough SIP history.";
+                setError(msg);
             } finally {
                 setLoading(false);
             }
@@ -90,11 +101,28 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
         diff: perf.return_percentage - analysis.user_performance.return_percentage
     })).sort((a, b) => a.day - b.day) : [];
 
+    if (sipHoldings.length === 0) {
+        return (
+            <div className="h-64 flex flex-col items-center justify-center text-center p-6 border border-white/5 rounded-xl bg-white/5">
+                <p className="text-gray-400">No Mutual Fund holdings found for SIP analysis.</p>
+            </div>
+        );
+    }
+
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-200">SIP Timing Analysis</h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-gray-200">SIP Timing Analysis</h3>
+                        <button
+                            onClick={() => setShowInfo(!showInfo)}
+                            className={`transition-colors ${showInfo ? "text-emerald-400" : "text-gray-500 hover:text-white"}`}
+                            title="How is this calculated?"
+                        >
+                            <Info size={16} />
+                        </button>
+                    </div>
                     <p className="text-xs text-gray-500">Discover how your SIP date affects returns</p>
                 </div>
                 <select
@@ -102,13 +130,44 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
                     onChange={(e) => setSelectedHoldingId(e.target.value)}
                     className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none focus:border-emerald-500/50"
                 >
-                    {holdings.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+                    {sipHoldings.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
                 </select>
             </div>
+
+            <AnimatePresence>
+                {showInfo && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-sm text-indigo-200 overflow-hidden"
+                    >
+                        <p className="font-semibold text-indigo-400 mb-1 flex items-center gap-2">
+                            <BrainCircuit size={16} /> How calculation works
+                        </p>
+                        <p className="leading-relaxed opacity-90">
+                            We used a historical simulator to re-run your exact SIP transactions on <strong>every day of the month (1st–28th)</strong>.
+                            The Top 3 performing dates are highlighted below, and the chart shows the return potential for all other days.
+                        </p>
+                        {analysis?.analysis_start && (
+                            <p className="mt-3 text-xs text-indigo-300 font-mono border-t border-indigo-500/20 pt-2 flex items-center justify-between">
+                                <span>Period: {new Date(analysis.analysis_start).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} — {new Date(analysis.analysis_end).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+                                <span className="opacity-50">Based on actual transaction history</span>
+                            </p>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {loading ? (
                 <div className="h-64 flex items-center justify-center animate-pulse">
                     <div className="text-emerald-500 text-sm">Crunching historical data...</div>
+                </div>
+            ) : error ? (
+                <div className="h-64 flex flex-col items-center justify-center text-center p-6 border border-red-500/10 rounded-xl bg-red-500/5">
+                    <AlertCircle className="text-red-500 mb-2" size={32} />
+                    <p className="text-red-400 font-medium mb-1">Analysis Unavailable</p>
+                    <p className="text-xs text-gray-500 max-w-sm">{error}</p>
                 </div>
             ) : analysis ? (
                 <div className="space-y-6">
@@ -139,7 +198,7 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
                             <p className="text-xs text-gray-500 uppercase">Best Date</p>
                             <p className="text-xl font-bold mt-1 text-emerald-400">{analysis.best_alternative.date}<span className="text-xs font-normal text-emerald-500/70 align-top">th</span></p>
                             <p className="text-xs text-emerald-500 mt-1">
-                                +{(analysis.best_alternative.improvement || 0).toFixed(2)}% Extra
+                                {(analysis.best_alternative.improvement || 0) >= 0 ? "+" : "-"}₹{Math.abs(analysis.best_alternative.improvement || 0).toFixed(0)} Total Extra Return
                             </p>
                         </div>
                         <div className="bg-white/5 rounded-xl p-4 border border-white/5">
@@ -191,6 +250,7 @@ const InvestmentSimulator: React.FC = () => {
     const [scheme, setScheme] = useState('');
     const [amount, setAmount] = useState<number>(10000);
     const [date, setDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
     const [result, setResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -241,7 +301,8 @@ const InvestmentSimulator: React.FC = () => {
             const res = await api.post('/wealth/simulate', {
                 scheme_code: String(scheme),
                 amount: Number(amount),
-                date: date
+                date: date,
+                end_date: endDate || undefined
             });
             setResult(res.data);
         } catch (err) {
@@ -305,6 +366,19 @@ const InvestmentSimulator: React.FC = () => {
                     </div>
                 </div>
                 <div className="space-y-2">
+                    <label className="text-xs text-gray-500 uppercase">End Date (Optional)</label>
+                    <div className="bg-white/5 border border-white/10 rounded-lg flex items-center px-3 py-2">
+                        <Calendar size={16} className="text-gray-500 mr-2" />
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="bg-transparent outline-none w-full text-sm text-gray-300 [color-scheme:dark]"
+                            placeholder="Today"
+                        />
+                    </div>
+                </div>
+                <div className="space-y-2">
                     <label className="text-xs text-gray-500 uppercase">Amount (₹)</label>
                     <div className="bg-white/5 border border-white/10 rounded-lg flex items-center px-3 py-2">
                         <DollarSign size={16} className="text-gray-500 mr-2" />
@@ -349,6 +423,11 @@ const InvestmentSimulator: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                    {result.notes && (
+                        <div className="mt-4 pt-4 border-t border-white/5">
+                            <p className="text-xs text-gray-500 font-mono">{result.notes}</p>
+                        </div>
+                    )}
                 </motion.div>
             )}
         </motion.div>

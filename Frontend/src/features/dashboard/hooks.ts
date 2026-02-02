@@ -12,6 +12,7 @@ export interface SafeToSpend {
     buffer_amount: number;
     safe_to_spend: number;
     recommendation: string;
+    status: 'success' | 'warning' | 'critical' | 'negative';
 }
 
 export interface VarianceAnalysis {

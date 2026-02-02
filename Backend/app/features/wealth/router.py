@@ -110,7 +110,13 @@ async def simulate_investment(
     Simulate a past investment to check "What If" returns.
     """
     try:
-        return await service.simulate_historical_investment(req.scheme_code, req.amount, req.date)
+        return await service.simulate_historical_investment(
+            req.scheme_code, 
+            req.amount, 
+            req.date,
+            investment_type=req.investment_type,
+            end_date=req.end_date
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

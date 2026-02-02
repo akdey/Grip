@@ -1,17 +1,19 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { HoldingDetailsModal } from '../components/wealth/HoldingDetailsModal';
 import { WealthLinker } from '../components/wealth/WealthLinker';
 import { AddHoldingModal } from '../components/wealth/AddHoldingModal';
 import { InvestmentSimulatorModal } from '../components/wealth/InvestmentSimulatorModal';
 import { CAMSImportModal } from '../components/wealth/CAMSImportModal';
+import { WealthCategoryCard } from '../components/wealth/WealthCategoryCard';
 import WealthIntelligence from '../components/wealth/WealthIntelligence';
-import { motion, AnimatePresence } from 'framer-motion'; import {
-    TrendingUp, Wallet, ArrowUpRight, Plus, RefreshCw,
-    MoreHorizontal, Link as LinkIcon, Activity, PieChart, Upload, Calculator
+import { motion } from 'framer-motion';
+import {
+    TrendingUp, Wallet, Plus, RefreshCw, Link as LinkIcon,
+    Activity, PieChart, Upload, Calculator, BrainCircuit,
+    Layers, LineChart
 } from 'lucide-react';
 import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
 import { api } from '../lib/api';
@@ -46,6 +48,8 @@ const Wealth: React.FC = () => {
     const [holdingsLoading, setHoldingsLoading] = useState(true);
     const [forecastLoading, setForecastLoading] = useState(true);
     const [simulating, setSimulating] = useState(false);
+
+    // UI Tabs
     const [activeMainTab, setActiveMainTab] = useState<'trajectory' | 'intelligence'>('trajectory');
 
     // Modal States
@@ -55,8 +59,7 @@ const Wealth: React.FC = () => {
     const [isCAMSImportOpen, setIsCAMSImportOpen] = useState(false);
     const [selectedHolding, setSelectedHolding] = useState<any | null>(null);
 
-
-    // Simulation State
+    // Simulation State (Quick Forecast params)
     const [monthlySIP, setMonthlySIP] = useState(5000);
     const [years, setYears] = useState(10);
 
@@ -106,19 +109,24 @@ const Wealth: React.FC = () => {
     }, []);
 
     // Derived Metrics
+    // Group holdings by asset_type
+    const holdingsByType = useMemo(() => {
+        return holdings.reduce((acc, h) => {
+            const type = h.asset_type || 'Other';
+            if (!acc[type]) acc[type] = [];
+            acc[type].push(h);
+            return acc;
+        }, {} as Record<string, Holding[]>);
+    }, [holdings]);
+
     const totalWealth = holdings.reduce((sum, h) => sum + h.current_value, 0);
     const totalInvested = holdings.reduce((sum, h) => sum + h.total_invested, 0);
     const absoluteReturn = totalWealth - totalInvested;
     const returnPercentage = totalInvested > 0 ? (absoluteReturn / totalInvested) * 100 : 0;
 
     // Chart Data Preparation
-    const chartData = React.useMemo(() => {
+    const chartData = useMemo(() => {
         if (!forecastData) return [];
-
-        // Combine history and forecast
-        // History: Solid Line
-        // Forecast: Dashed Line (conceptually, but Recharts handles single data stream better slightly differently)
-        // We will output a single array with "value" (history) and "forecast" (prophet) keys.
 
         const historyPoints = forecastData.history.map(p => ({
             date: new Date(p.date).toLocaleDateString([], { month: 'short', year: '2-digit' }),
@@ -136,7 +144,6 @@ const Wealth: React.FC = () => {
             fullDate: p.date
         }));
 
-        // Connect the lines: Add last history point as first forecast point
         if (lastHistory && forecastPoints.length > 0) {
             forecastPoints.unshift({
                 ...lastHistory,
@@ -154,11 +161,8 @@ const Wealth: React.FC = () => {
     return (
         <div className="min-h-screen text-white p-6 pb-24 overflow-x-hidden">
             {/* Header */}
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <p className="text-[10px] font-black uppercase tracking-[3px] text-gray-500 mb-0.5 opacity-60">
-                        {import.meta.env.VITE_APP_NAME || 'Grip'}
-                    </p>
                     <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
                         Wealth
                     </h1>
@@ -166,23 +170,22 @@ const Wealth: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => setIsSimulatorOpen(true)}
-                        className="p-2 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 transition-colors hidden md:block" // Hidden on mobile to save space? Or visible?
-                        title="Simulate Investment (Time Machine)"
+                        onClick={() => setIsLinkerOpen(true)}
+                        className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium border border-white/5 transition-colors flex items-center gap-2"
                     >
-                        <Calculator size={20} />
+                        <LinkIcon size={14} /> Link Transaction
                     </button>
                     <button
                         onClick={() => setIsCAMSImportOpen(true)}
-                        className="p-2 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 transition-colors"
+                        className="p-2 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 transition-colors border border-purple-500/20"
                         title="Import CAMS Statement"
                     >
                         <Upload size={20} />
                     </button>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="p-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors"
-                        title="Add Asset"
+                        className="p-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors border border-emerald-500/20"
+                        title="Add Asset Manually"
                     >
                         <Plus size={20} />
                     </button>
@@ -263,59 +266,81 @@ const Wealth: React.FC = () => {
                 </motion.div>
             </div>
 
-            {/* Main Content Area */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-                {/* Chart Section */}
+            {/* Simulations & Intelligence Banner */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+                {/* Financial Time Machine Card */}
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                    className="lg:col-span-2 bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 min-h-[400px]"
+                    initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
+                    className="lg:col-span-1 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden group cursor-pointer"
+                    onClick={() => setIsSimulatorOpen(true)}
+                >
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Calculator size={80} />
+                    </div>
+                    <div>
+                        <div className="p-2 bg-indigo-500/20 rounded-lg w-fit mb-3 text-indigo-400">
+                            <BrainCircuit size={24} />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-1">Time Machine</h3>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            Simulate "What-If" scenarios. See how your investments would have performed if you timed them differently.
+                        </p>
+                    </div>
+                    <button className="mt-4 w-full py-2.5 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 rounded-xl text-xs font-bold text-indigo-300 uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+                        Run Simulator <Calculator size={14} />
+                    </button>
+                </motion.div>
+
+                {/* Main Predictions Chart */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
+                    className="lg:col-span-3 bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 min-h-[350px]"
                 >
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex space-x-4">
                             <button
                                 onClick={() => setActiveMainTab('trajectory')}
-                                className={`text-lg font-semibold flex items-center gap-2 transition-colors ${activeMainTab === 'trajectory' ? 'text-white' : 'text-gray-500'}`}
+                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'trajectory' ? 'text-indigo-400' : 'text-gray-600'}`}
                             >
-                                <Activity size={18} className={activeMainTab === 'trajectory' ? "text-emerald-500" : "text-gray-600"} />
-                                Wealth Trajectory
+                                <LineChart size={16} />
+                                Future Predictions
                             </button>
                             <button
                                 onClick={() => setActiveMainTab('intelligence')}
-                                className={`text-lg font-semibold flex items-center gap-2 transition-colors ${activeMainTab === 'intelligence' ? 'text-white' : 'text-gray-500'}`}
+                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'intelligence' ? 'text-emerald-400' : 'text-gray-600'}`}
                             >
-                                <TrendingUp size={18} className={activeMainTab === 'intelligence' ? "text-purple-500" : "text-gray-600"} />
+                                <BrainCircuit size={16} />
                                 Intelligence
                             </button>
                         </div>
 
                         {activeMainTab === 'trajectory' && (
-                            <div className="flex items-center gap-4 text-xs">
+                            <div className="flex items-center gap-3">
                                 <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
-                                    <span className="text-gray-400">SIP:</span>
+                                    <span className="text-[10px] text-gray-500 uppercase font-bold">Monthly SIP</span>
                                     <input
                                         type="number"
                                         value={monthlySIP}
                                         onChange={(e) => setMonthlySIP(Number(e.target.value))}
-                                        className="w-16 bg-transparent outline-none text-right font-mono"
+                                        className="w-16 bg-transparent outline-none text-right font-mono text-sm"
                                     />
                                 </div>
                                 <button
                                     onClick={runSimulation}
                                     disabled={simulating}
-                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white disabled:opacity-50 transition-colors"
+                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white text-xs font-bold disabled:opacity-50 transition-colors"
                                 >
-                                    {simulating ? "..." : "Simulate"}
+                                    {simulating ? "..." : "Update"}
                                 </button>
                             </div>
                         )}
                     </div>
 
-                    <div className={`w-full relative ${activeMainTab === 'trajectory' ? 'h-[320px]' : 'min-h-[320px]'}`}>
+                    <div className={`w-full ${activeMainTab === 'trajectory' ? 'h-[280px]' : ''}`}>
                         {activeMainTab === 'trajectory' ? (
                             forecastLoading ? (
                                 <div className="w-full h-full flex items-center justify-center animate-pulse bg-white/[0.02] rounded-xl">
-                                    <div className="text-gray-600 text-xs">Generating Forecast...</div>
+                                    <div className="text-gray-600 text-xs">Generating Prediction Model...</div>
                                 </div>
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
@@ -330,15 +355,15 @@ const Wealth: React.FC = () => {
                                                 <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                                        <XAxis dataKey="date" stroke="#666" tick={{ fontSize: 12 }} minTickGap={30} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                                        <XAxis dataKey="date" stroke="#444" tick={{ fontSize: 10 }} minTickGap={30} />
                                         <YAxis
-                                            stroke="#666"
-                                            tick={{ fontSize: 12 }}
+                                            stroke="#444"
+                                            tick={{ fontSize: 10 }}
                                             tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
                                         />
                                         <Tooltip
-                                            contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '12px' }}
+                                            contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '8px', fontSize: '12px' }}
                                             formatter={(val: number) => formatCurrency(val)}
                                         />
                                         <Area
@@ -368,80 +393,57 @@ const Wealth: React.FC = () => {
                         )}
                     </div>
                 </motion.div>
-
-                {/* Holdings List */}
-                <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 flex flex-col h-full">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="font-semibold text-lg flex items-center gap-2">
-                            <PieChart size={18} className="text-purple-500" />
-                            Holdings
-                        </h3>
-                        <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/5 transition-colors"
-                        >
-                            Manage
-                        </button>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-                        {holdingsLoading ? (
-                            [...Array(4)].map((_, i) => (
-                                <div key={i} className="flex justify-between items-center p-3 rounded-xl border border-white/5 animate-pulse">
-                                    <div className="space-y-2">
-                                        <div className="h-4 w-24 bg-white/10 rounded" />
-                                        <div className="h-3 w-16 bg-white/10 rounded" />
-                                    </div>
-                                    <div className="space-y-2 flex flex-col items-end">
-                                        <div className="h-4 w-20 bg-white/10 rounded" />
-                                        <div className="h-3 w-12 bg-white/10 rounded" />
-                                    </div>
-                                </div>
-                            ))
-                        ) : holdings.length === 0 ? (
-                            <div className="text-center text-gray-500 py-10">
-                                <p>No holdings yet.</p>
-                                <p className="text-xs mt-2">Map transactions to get started.</p>
-                            </div>
-                        ) : (
-                            holdings.map((h, i) => (
-                                <motion.div
-                                    key={h.id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: i * 0.05 }}
-                                    onClick={() => fetchHoldingDetails(h.id)}
-                                    className="group flex justify-between items-center p-3 rounded-xl hover:bg-white/[0.03] transition-colors border border-transparent hover:border-white/5 cursor-pointer"
-                                    title="View details"
-                                >
-                                    <div>
-                                        <h4 className="font-medium text-gray-200">{h.name}</h4>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-gray-400">{h.asset_type}</span>
-                                            {h.xirr && <span className="text-xs text-emerald-500 font-mono">XIRR {h.xirr.toFixed(1)}%</span>}
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-semibold">{formatCurrency(h.current_value)}</p>
-                                        <p className="text-xs text-gray-500">
-                                            Inv: {formatCurrency(h.total_invested)}
-                                        </p>
-                                    </div>
-                                </motion.div>
-                            ))
-                        )}
-                    </div>
-                    <button
-                        onClick={() => setIsLinkerOpen(true)}
-                        className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/20"
-                    >
-                        <LinkIcon size={18} />
-                        Link Transaction
-                    </button>
-
-                </div>
             </div>
 
+            {/* Investment Categories */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <Layers className="text-emerald-500" size={20} />
+                    <h2 className="text-xl font-bold text-gray-200">Portfolio Breakdown</h2>
+                </div>
+
+                {holdingsLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {[1, 2].map(i => (
+                            <div key={i} className="h-40 bg-[#0A0A0A] border border-white/5 rounded-2xl animate-pulse" />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {/* Map over grouped holdings */}
+                        {Object.entries(holdingsByType).map(([type, typeHoldings], index) => (
+                            <WealthCategoryCard
+                                key={type}
+                                title={type === 'MUTUAL_FUND' ? 'Mutual Funds' : type === 'STOCK' ? 'Stocks' : type}
+                                type={type}
+                                icon={
+                                    type === 'MUTUAL_FUND' ? <PieChart size={20} className="text-emerald-400" /> :
+                                        type === 'STOCK' ? <Activity size={20} className="text-blue-400" /> :
+                                            <Wallet size={20} className="text-purple-400" />
+                                }
+                                holdings={typeHoldings}
+                                onHoldingClick={fetchHoldingDetails}
+                                onSimulate={type === 'MUTUAL_FUND' || type === 'STOCK' ? () => setIsSimulatorOpen(true) : undefined}
+                                onAnalyze={type === 'MUTUAL_FUND' ? () => setActiveMainTab('intelligence') : undefined}
+                            />
+                        ))}
+
+                        {holdings.length === 0 && (
+                            <div className="col-span-full py-12 text-center border dashed border-white/10 rounded-2xl bg-[#0A0A0A]">
+                                <p className="text-gray-500">No investments found.</p>
+                                <button
+                                    onClick={() => setIsAddModalOpen(true)}
+                                    className="mt-4 px-6 py-2 bg-emerald-600 rounded-xl text-sm font-bold hover:bg-emerald-500 transition-colors"
+                                >
+                                    Add your first investment
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Modals */}
             <WealthLinker
                 isOpen={isLinkerOpen}
                 onClose={() => setIsLinkerOpen(false)}
