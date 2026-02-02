@@ -12,7 +12,17 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # 1. Check for Bypass/Exception Routes
         path = request.url.path
-        if any(path.startswith(route) for route in settings.EXCEPTION_ROUTES):
+        is_exception = False
+        for route in settings.EXCEPTION_ROUTES:
+            if route == "/":
+                if path == "/":
+                    is_exception = True
+                    break
+            elif path.startswith(route):
+                is_exception = True
+                break
+        
+        if is_exception:
             logger.debug(f"Bypassing authentication for path: {path}")
             return await call_next(request)
         
