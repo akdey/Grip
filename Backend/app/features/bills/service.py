@@ -236,91 +236,105 @@ class BillService:
                         type="BILL",
                         status="PROJECTED",
                         category=bill.category,
-                        sub_category=bill.sub_category
+            sub_category=bill.sub_category
                     ))
                     projected_total += bill.amount
                     covered_subcategories.add(bill.sub_category.lower())
 
-        # 3. Automated Projections from Surety Transactions
-        sub_stmt = select(SubCategory.name).where(SubCategory.is_surety == True)
-        sub_res = await db.execute(sub_stmt)
-        surety_subs = set(name.lower() for name in sub_res.scalars().all())
+        # 3. Simple Surety Projections (Last Month vs Current Month)
+        # We look at exactly what you did last month and check if you've done it yet this month.
+        from app.utils.finance_utils import get_month_date_range, get_previous_month_date_range
         
-        lookback_date = today - timedelta(days=50) # Slightly longer lookback to catch previous month's same-day
-        txn_stmt = (
+        prev_range = get_previous_month_date_range(today)
+        curr_range = get_month_date_range(today)
+        
+        # Get all surety transactions from last month (the "templates")
+        past_stmt = (
             select(Transaction)
             .where(Transaction.user_id == user_id)
-            .where(Transaction.transaction_date >= lookback_date)
+            .where(Transaction.transaction_date >= prev_range["month_start"])
+            .where(Transaction.transaction_date <= prev_range["month_end"])
             .where(or_(
                 Transaction.is_surety == True,
                 func.lower(Transaction.sub_category).in_(list(surety_subs))
             ))
-            .order_by(Transaction.transaction_date.desc())
         )
         
-        txn_res = await db.execute(txn_stmt)
-        all_txns = txn_res.scalars().all()
+        # Get all surety transactions from the current month (to check against)
+        curr_stmt = (
+            select(Transaction)
+            .where(Transaction.user_id == user_id)
+            .where(Transaction.transaction_date >= curr_range["month_start"])
+            .where(Transaction.transaction_date <= curr_range["month_end"])
+            .where(or_(
+                Transaction.is_surety == True,
+                func.lower(Transaction.sub_category).in_(list(surety_subs))
+            ))
+        )
         
-        # Group in Python to handle multiple SIPs with same merchant/amount
-        # Fingerprint: (merchant, amount, day_of_month)
-        # We use a small window for day_of_month (±2 days) to handle weekends
-        processed_fingerprints = []
+        past_res = await db.execute(past_stmt)
+        curr_res = await db.execute(curr_stmt)
         
-        for txn in all_txns:
-            merchant = (txn.merchant_name or "Unknown").lower()
-            amount = abs(txn.amount)
-            day = txn.transaction_date.day
-            
-            # Check if we already have a track for this
-            is_duplicate = False
-            for f_merchant, f_amount, f_day in processed_fingerprints:
-                if f_merchant == merchant and f_amount == amount and abs(f_day - day) <= 3:
-                    is_duplicate = True
-                    break
-            
-            if is_duplicate:
+        past_txns = list(past_res.scalars().all())
+        curr_txns = list(curr_res.scalars().all())
+        
+        # Greedy matching to handle multiple identical SIPs
+        matched_curr_ids = set()
+        
+        for p_txn in past_txns:
+            # Skip if this sub-category is already handled by a formal Bill object
+            if (p_txn.sub_category or "").lower() in covered_subcategories:
                 continue
                 
-            processed_fingerprints.append((merchant, amount, day))
+            # Try to find a partner in the current month by Merchant and Amount
+            partner_found = False
+            for c_txn in curr_txns:
+                if c_txn.id not in matched_curr_ids:
+                    # Simple match: same merchant and same absolute amount
+                    if (p_txn.merchant_name == c_txn.merchant_name) and (abs(p_txn.amount) == abs(c_txn.amount)):
+                        matched_curr_ids.add(c_txn.id)
+                        partner_found = True
+                        break
             
-            sub_name = (txn.sub_category or "").lower()
-            if sub_name in covered_subcategories:
-                continue
-
-            # Project next instance
-            next_due = txn.transaction_date + timedelta(days=30)
-            
-            # If the next instance is within our 30-day window
-            if today <= next_due <= threshold_date:
-                ledger_items.append(IdentifiedObligation(
-                    id=f"auto-{txn.id}",
-                    title=f"{txn.merchant_name or 'Surety'} (Auto-detected)",
-                    amount=amount,
-                    due_date=next_due,
-                    type="SURETY_TXN",
-                    status="PROJECTED",
-                    sub_category=txn.sub_category
-                ))
-                projected_total += amount
-            elif next_due < today:
-                # If last payment was > 30 days ago and we haven't seen the current month's payment
-                ledger_items.append(IdentifiedObligation(
-                    id=f"auto-{txn.id}",
-                    title=f"{txn.merchant_name or 'Surety'} (Auto-detected)",
-                    amount=amount,
-                    due_date=next_due,
-                    type="SURETY_TXN",
-                    status="OVERDUE",
-                    sub_category=txn.sub_category
-                ))
-                unpaid_total += amount
+            if not partner_found:
+                # Project the missing payment based on last month's date
+                due_day = p_txn.transaction_date.day
+                # Estimate due date for this month
+                try:
+                    p_date = today.replace(day=min(due_day, curr_range["month_end"].day))
+                except:
+                    p_date = today
+                
+                # If the projected date falls within our viewing window
+                if today <= p_date <= threshold_date:
+                    ledger_items.append(IdentifiedObligation(
+                        id=f"auto-{p_txn.id}",
+                        title=f"{p_txn.merchant_name or p_txn.sub_category} (Auto-detected)",
+                        amount=abs(p_txn.amount),
+                        due_date=p_date,
+                        type="SURETY_TXN",
+                        status="PROJECTED",
+                        sub_category=p_txn.sub_category
+                    ))
+                    projected_total += abs(p_txn.amount)
+                elif p_date < today:
+                    # Overdue but not yet seen in current month
+                    ledger_items.append(IdentifiedObligation(
+                        id=f"auto-{p_txn.id}",
+                        title=f"{p_txn.merchant_name or p_txn.sub_category} (Auto-detected)",
+                        amount=abs(p_txn.amount),
+                        due_date=p_date,
+                        type="SURETY_TXN",
+                        status="OVERDUE",
+                        sub_category=p_txn.sub_category
+                    ))
+                    unpaid_total += abs(p_txn.amount)
         
         return {
             "unpaid_total": unpaid_total,
             "projected_total": projected_total,
             "items": ledger_items
         }
-
     async def get_projected_surety_bills(
         self,
         db: AsyncSession,
