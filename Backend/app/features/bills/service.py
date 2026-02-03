@@ -242,6 +242,11 @@ class BillService:
                     covered_subcategories.add(bill.sub_category.lower())
 
         # 3. Simple Surety Projections (Last Month vs Current Month)
+        # 3a. Identify Surety Subcategories
+        sub_stmt = select(SubCategory.name).where(SubCategory.is_surety == True)
+        sub_res = await db.execute(sub_stmt)
+        surety_subs = set(name.lower() for name in sub_res.scalars().all())
+        
         # We look at exactly what you did last month and check if you've done it yet this month.
         from app.utils.finance_utils import get_month_date_range, get_previous_month_date_range
         
@@ -291,7 +296,9 @@ class BillService:
             for c_txn in curr_txns:
                 if c_txn.id not in matched_curr_ids:
                     # Simple match: same merchant and same absolute amount
-                    if (p_txn.merchant_name == c_txn.merchant_name) and (abs(p_txn.amount) == abs(c_txn.amount)):
+                    p_m = (p_txn.merchant_name or "").lower()
+                    c_m = (c_txn.merchant_name or "").lower()
+                    if (p_m == c_m) and (abs(p_txn.amount) == abs(c_txn.amount)):
                         matched_curr_ids.add(c_txn.id)
                         partner_found = True
                         break
