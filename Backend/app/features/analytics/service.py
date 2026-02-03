@@ -139,10 +139,17 @@ class AnalyticsService:
         try:
             from app.features.wealth.service import WealthService
             from app.features.analytics.schemas import IdentifiedObligation
+            import calendar
             wealth_service = WealthService(db)
             
-            # 1. Get Bill/Surety Ledger (includes unpaid bills and projected recurring)
-            ledger_data = await self.bill_service.get_obligations_ledger(db, user_id, days_ahead=30)
+            # Calculate days till end of month to align with salary cycle
+            today = self._get_today()
+            _, last_day = calendar.monthrange(today.year, today.month)
+            days_till_month_end = last_day - today.day
+            
+            # 1. Get Bill/Surety Ledger 
+            # We use days_till_month_end so we only freeze items for the CURRENT month's cycle
+            ledger_data = await self.bill_service.get_obligations_ledger(db, user_id, days_ahead=days_till_month_end)
             unpaid_bills_total = ledger_data["unpaid_total"]
             projected_surety_bills = ledger_data["projected_total"]
             all_obligations = ledger_data["items"]
