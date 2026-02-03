@@ -246,44 +246,74 @@ class BillService:
         sub_res = await db.execute(sub_stmt)
         surety_subs = set(name.lower() for name in sub_res.scalars().all())
         
-        lookback_date = today - timedelta(days=45)
+        lookback_date = today - timedelta(days=50) # Slightly longer lookback to catch previous month's same-day
         txn_stmt = (
-            select(
-                Transaction.sub_category,
-                Transaction.merchant_name,
-                func.avg(Transaction.amount).label("avg_amount"),
-                func.count(Transaction.id).label("freq")
-            )
+            select(Transaction)
             .where(Transaction.user_id == user_id)
             .where(Transaction.transaction_date >= lookback_date)
             .where(or_(
                 Transaction.is_surety == True,
                 func.lower(Transaction.sub_category).in_(list(surety_subs))
             ))
-            .group_by(Transaction.sub_category, Transaction.merchant_name)
+            .order_by(Transaction.transaction_date.desc())
         )
         
         txn_res = await db.execute(txn_stmt)
-        for row in txn_res.all():
-            sub_name = (row.sub_category or "").lower()
-            merchant = row.merchant_name or "Unknown Surety"
+        all_txns = txn_res.scalars().all()
+        
+        # Group in Python to handle multiple SIPs with same merchant/amount
+        # Fingerprint: (merchant, amount, day_of_month)
+        # We use a small window for day_of_month (±2 days) to handle weekends
+        processed_fingerprints = []
+        
+        for txn in all_txns:
+            merchant = (txn.merchant_name or "Unknown").lower()
+            amount = abs(txn.amount)
+            day = txn.transaction_date.day
             
-            if sub_name in covered_subcategories:
+            # Check if we already have a track for this
+            is_duplicate = False
+            for f_merchant, f_amount, f_day in processed_fingerprints:
+                if f_merchant == merchant and f_amount == amount and abs(f_day - day) <= 3:
+                    is_duplicate = True
+                    break
+            
+            if is_duplicate:
                 continue
                 
-            if row.freq >= 1:
-                amount = abs(Decimal(str(row.avg_amount or 0)))
-                # Project for next month (estimated)
+            processed_fingerprints.append((merchant, amount, day))
+            
+            sub_name = (txn.sub_category or "").lower()
+            if sub_name in covered_subcategories:
+                continue
+
+            # Project next instance
+            next_due = txn.transaction_date + timedelta(days=30)
+            
+            # If the next instance is within our 30-day window
+            if today <= next_due <= threshold_date:
                 ledger_items.append(IdentifiedObligation(
-                    id=f"auto-{sub_name}",
-                    title=f"{merchant} (Auto-detected)",
+                    id=f"auto-{txn.id}",
+                    title=f"{txn.merchant_name or 'Surety'} (Auto-detected)",
                     amount=amount,
-                    due_date=today + timedelta(days=15), # Rough estimate as middle of cycle
+                    due_date=next_due,
                     type="SURETY_TXN",
                     status="PROJECTED",
-                    sub_category=row.sub_category
+                    sub_category=txn.sub_category
                 ))
                 projected_total += amount
+            elif next_due < today:
+                # If last payment was > 30 days ago and we haven't seen the current month's payment
+                ledger_items.append(IdentifiedObligation(
+                    id=f"auto-{txn.id}",
+                    title=f"{txn.merchant_name or 'Surety'} (Auto-detected)",
+                    amount=amount,
+                    due_date=next_due,
+                    type="SURETY_TXN",
+                    status="OVERDUE",
+                    sub_category=txn.sub_category
+                ))
+                unpaid_total += amount
         
         return {
             "unpaid_total": unpaid_total,
