@@ -3,7 +3,7 @@ import { HoldingDetailsModal } from '../components/wealth/HoldingDetailsModal';
 import { WealthLinker } from '../components/wealth/WealthLinker';
 import { AddHoldingModal } from '../components/wealth/AddHoldingModal';
 import { InvestmentSimulatorModal } from '../components/wealth/InvestmentSimulatorModal';
-import { CAMSImportModal } from '../components/wealth/CAMSImportModal';
+import { StatementImportModal } from '../components/wealth/StatementImportModal';
 import { WealthCategoryCard } from '../components/wealth/WealthCategoryCard';
 import WealthIntelligence from '../components/wealth/WealthIntelligence';
 import { motion } from 'framer-motion';
@@ -56,7 +56,7 @@ const Wealth: React.FC = () => {
     const [isLinkerOpen, setIsLinkerOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
-    const [isCAMSImportOpen, setIsCAMSImportOpen] = useState(false);
+    const [isStatementImportOpen, setIsStatementImportOpen] = useState(false);
     const [selectedHolding, setSelectedHolding] = useState<any | null>(null);
 
     // Simulation State (Quick Forecast params)
@@ -176,9 +176,9 @@ const Wealth: React.FC = () => {
                         <LinkIcon size={14} /> Link Transaction
                     </button>
                     <button
-                        onClick={() => setIsCAMSImportOpen(true)}
+                        onClick={() => setIsStatementImportOpen(true)}
                         className="p-2 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 transition-colors border border-purple-500/20"
-                        title="Import CAMS Statement"
+                        title="Import Statement (CAMS/KFin/MFCentral)"
                     >
                         <Upload size={20} />
                     </button>
@@ -463,9 +463,9 @@ const Wealth: React.FC = () => {
                 holding={selectedHolding}
             />
 
-            <CAMSImportModal
-                isOpen={isCAMSImportOpen}
-                onClose={() => setIsCAMSImportOpen(false)}
+            <StatementImportModal
+                isOpen={isStatementImportOpen}
+                onClose={() => setIsStatementImportOpen(false)}
                 onSuccess={fetchData}
             />
 
