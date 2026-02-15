@@ -26,18 +26,16 @@ from app.features.categories.service import CategoryService
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
-from app.features.wealth.service import WealthService
+
 
 class SyncService:
     def __init__(self, 
                  db: AsyncSession = Depends(get_db), 
                  transaction_service: TransactionService = Depends(),
-                 category_service: CategoryService = Depends(),
-                 wealth_service: WealthService = Depends()):
+                 category_service: CategoryService = Depends()):
         self.db = db
         self.txn_service = transaction_service
         self.category_service = category_service
-        self.wealth_service = wealth_service
         self.sanitizer = get_sanitizer_service()
 
     async def _get_last_sync_time(self, user_id: uuid.UUID) -> Optional[datetime]:
@@ -295,11 +293,11 @@ class SyncService:
                     "is_surety": is_surety_flag
                 })
                 
-                # Attempt to map to Wealth/Investment
-                try:
-                    await self.wealth_service.process_transaction_match(new_txn)
-                except Exception as w_ex:
-                    logger.error(f"Wealth mapping failed for txn {new_txn.id}: {w_ex}")
+                # Attempt to map to Wealth/Investment (DISCONNECTED)
+                # try:
+                #     await self.wealth_service.process_transaction_match(new_txn)
+                # except Exception as w_ex:
+                #     logger.error(f"Wealth mapping failed for txn {new_txn.id}: {w_ex}")
 
                 processed_count += 1
             

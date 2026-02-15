@@ -6,7 +6,7 @@ An AI-powered personal finance platform that transforms your inbox into a comple
 
 **🎯 The Only Platform in India That Shows If Your SIP Date is Costing You Money.**
 
-Import your CAMS statement in 60 seconds. Discover if switching your SIP date could earn you thousands more. No other platform does this.
+Import your Consolidated Account Statement (CAMS, KFin, MFCentral) in 60 seconds. Discover if switching your SIP date could earn you thousands more. No other platform does this.
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org)
@@ -42,7 +42,7 @@ Mutual Fund NAVs fluctuates daily. An investor who does a SIP on the 10th vs. th
 ### 🛡️ Frictionless, Private Onboarding
 While others make you wait for "syncs" or manual entries, Grip is built to get you from zero to "Deep Insights" in under a minute.
 
-- **CAMS One-Click Import**: Upload your Consolidated Account Statement (Excel/CSV), and we reconstruct your entire investment life—identifying SIPs, step-ups, and even "missed" months—instantly.
+- **Universal Statement Import**: Upload your Consolidated Account Statement (CAS) from CAMS, KFin, or MFCentral. We reconstruct your entire investment life—identifying SIPs, step-ups, and even "missed" months—instantly.
 - **Step-Up & Skip Detection**: We don't just show total units; we map the *evolution* of your discipline. See exactly when you increased your SIPs and where you missed a beat.
 - **Privacy-First Intelligence**: All your data is processed with local sanitization. Your bank details and PAN are masked *before* our analysis engines ever touch the data.
 
@@ -200,8 +200,9 @@ Transform your investment expenses into a live-tracked portfolio with zero manua
 ⑥ Portfolio Update: Total units increased, XIRR recalibrated
 ```
 
-**🆕 CAMS Statement Import (Instant Onboarding):**
-- **One-Click Import**: Upload CAMS consolidated account statement (CSV)
+**🆕 Universal Statement Import (Instant Onboarding):**
+- **Broad Support**: Import statements from CAMS, KFin, or MFCentral
+- **Format Agnostic**: Supports both CSV and Excel formats
 - **Bulk Processing**: Import years of transactions in seconds
 - **Auto-Detection**: Automatically identifies SIP patterns vs lump sum
 - **Step-Up Tracking**: Detects when SIP amount increases (e.g., ₹5k → ₹7k)
@@ -275,7 +276,7 @@ your SIP date for future investments."
 - ✅ **Gold, Real Estate** (Manual tracking)
 
 **Human-in-the-Loop:**
-- **CAMS Import**: Upload consolidated statement for instant portfolio creation
+- **Statement Import**: Upload consolidated statement (CAMS/KFin/MFCentral) for instant portfolio creation
 - **Transaction Linker**: Manually map undetected investment transactions
 - **Mapping Rules**: Create patterns for future auto-detection
 - **Adjustments**: Override AI suggestions, edit units/prices
@@ -695,9 +696,10 @@ See **[Gmail Sync Setup Guide](GMAIL_SYNC_QUICKSTART.md)** for detailed instruct
 
 5. **Track Investments** (NEW!)
    
-   **Option A: CAMS Import (Fastest)**
+   **Option A: Statement Import (Fastest)**
    - Go to Wealth tab → Click purple Upload icon
-   - Upload CAMS consolidated statement (CSV)
+   - Select Source (CAMS / KFin / MFCentral)
+   - Upload statement file (CSV/Excel)
    - Preview transactions → Click Import
    - System auto-detects SIPs, step-ups, and skips
    
