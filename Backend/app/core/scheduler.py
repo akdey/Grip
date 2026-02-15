@@ -48,7 +48,7 @@ async def run_gmail_sync():
         cat_service = CategoryService(db)
         wealth_service = WealthService(db)
         txn_service = TransactionService(db) # TransactionService only needs db in __init__
-        sync_service = SyncService(db, txn_service, cat_service, wealth_service)
+        sync_service = SyncService(db, txn_service, cat_service)
         
         # Fetch users with gmail credentials
         stmt = select(User).where(User.gmail_credentials.isnot(None))
