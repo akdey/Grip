@@ -137,10 +137,10 @@ class AnalyticsService:
     ) -> FrozenFundsBreakdown:
         """Calculate total frozen funds (burden) with a detailed obligation ledger."""
         try:
-            from app.features.wealth.service import WealthService
             from app.features.analytics.schemas import IdentifiedObligation
             import calendar
-            wealth_service = WealthService(db)
+            # wealth_service removed for decoupling
+
             
             # Calculate days till end of month to align with salary cycle
             today = self._get_today()
@@ -157,12 +157,13 @@ class AnalyticsService:
             # 2. Credit Card Exposure
             unbilled_cc = await self.cc_service.get_all_unbilled_for_user(db, user_id)
             
-            # 3. SIP Commitments from Wealth Module
-            sip_obligations = await wealth_service.get_sip_obligations(user_id)
-            sip_total = sum(o.amount for o in sip_obligations)
-            all_obligations.extend(sip_obligations)
+            # 3. SIP Commitments from Wealth Module (DISCONNECTED)
+            # sip_obligations = await wealth_service.get_sip_obligations(user_id)
+            # sip_total = sum(o.amount for o in sip_obligations)
+            # all_obligations.extend(sip_obligations)
+            sip_total = Decimal("0")
             
-            # Total projected surety includes recurring bills, surety transactions, and SIPs
+            # Total projected surety includes recurring bills, surety transactions, and SIPs (now 0)
             total_projected_surety = projected_surety_bills + sip_total
             
             # 4. Monthly Goal contributions
