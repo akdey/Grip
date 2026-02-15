@@ -11,6 +11,8 @@ from app.features.sync.service import SyncService
 from app.features.transactions.service import TransactionService
 from app.features.categories.service import CategoryService
 from app.features.auth.models import User
+from app.features.credit_cards.models import CreditCard
+from app.features.bills.models import Bill
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
