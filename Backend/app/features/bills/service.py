@@ -322,10 +322,11 @@ class BillService:
                 exclusion_reason = "SKIPPED"
 
             # Check Manual Paid
-            if p_txn.id in manual_paid_ids:
+            if str(p_txn.id) in {str(id) for id in manual_paid_ids}:
                 is_excluded = True
-                exclusion_reason = "PAID" 
+                exclusion_reason = "PAID"
             
+            # Check Permanent Exclusion
             # Check Permanent Exclusion
             if not is_excluded:
                 p_m = (p_txn.merchant_name or "").lower()
@@ -358,11 +359,21 @@ class BillService:
             partner_found = False
             for c_txn in curr_txns:
                 if c_txn.id not in matched_curr_ids:
-                    c_m = (c_txn.merchant_name or "").lower()
-                    if ((p_txn.merchant_name or "").lower() == c_m) and (abs(p_txn.amount) == abs(c_txn.amount)):
-                        matched_curr_ids.add(c_txn.id)
-                        partner_found = True
-                        break
+                    if abs(p_txn.amount) == abs(c_txn.amount):
+                        p_m = (p_txn.merchant_name or "").lower()
+                        c_m = (c_txn.merchant_name or "").lower()
+                        
+                        match_merch = (p_m == c_m)
+                        # Relaxed match: SubCategory match is sufficient if amount is exact
+                        match_sub = (p_txn.sub_category.lower() == c_txn.sub_category.lower())
+                        
+                        # Even more relaxed: If one merchant contains the other (e.g. "Google" vs "Google Services")
+                        match_fuzzy = (p_m and c_m) and (p_m in c_m or c_m in p_m)
+                        
+                        if match_merch or match_sub or match_fuzzy:
+                            matched_curr_ids.add(c_txn.id)
+                            partner_found = True
+                            break
             
             if partner_found:
                 if include_hidden:
@@ -397,7 +408,7 @@ class BillService:
             # If excluded, we include it regardless of date if include_hidden is True?
             # Or still respect threshold? Let's respect threshold for "Upcoming" logic, but maybe relax for "Management"?
             # Let's keep threshold strict for now.
-            if today <= p_date <= threshold_date or final_status in ["OVERDUE", "SKIPPED", "TERMINATED", "COVERED"]:
+            if today <= p_date <= threshold_date or final_status in ["OVERDUE", "SKIPPED", "TERMINATED", "COVERED", "PAID"]:
                  if include_hidden or not is_excluded:
                     ledger_items.append(IdentifiedObligation(
                         id=f"auto-{p_txn.id}",
