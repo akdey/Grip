@@ -31,6 +31,5 @@ export const useCategories = () => {
             const { data } = await api.get<Category[]>('/categories/');
             return data;
         },
-        staleTime: 1000 * 60 * 5, // 5 minutes
     });
 };
