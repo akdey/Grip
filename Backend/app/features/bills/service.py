@@ -3,21 +3,19 @@ from uuid import UUID
 from datetime import date, datetime, timedelta
 import zoneinfo
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Optional, Set, Tuple
 from calendar import monthrange
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from app.core.config import get_settings
-from app.features.bills.models import Bill
-from app.features.bills.schemas import BillCreate, BillUpdate
+from app.features.bills.models import Bill, BillExclusion
+from app.features.bills.schemas import BillCreate, BillUpdate, SuretyExclusionCreate
 
 settings = get_settings()
-# Constants
-import logging
 logger = logging.getLogger(__name__)
 
 from app.features.categories.models import SubCategory
-
+from app.features.transactions.models import Transaction
 
 class BillService:
     def __init__(self):
@@ -164,12 +162,33 @@ class BillService:
         
         result = await db.execute(stmt)
         return list(result.scalars().all())
+
+    async def create_surety_exclusion(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        data: SuretyExclusionCreate
+    ) -> BillExclusion:
+        """Create an exclusion rule for auto-detected sureties."""
+        excl = BillExclusion(
+            user_id=user_id,
+            source_transaction_id=data.source_transaction_id,
+            merchant_pattern=data.merchant_pattern,
+            subcategory_pattern=data.subcategory_pattern,
+            exclusion_type=data.exclusion_type
+        )
+        db.add(excl)
+        await db.commit()
+        await db.refresh(excl)
+        logger.info(f"Created exclusion rule type {data.exclusion_type} for user {user_id}")
+        return excl
     
     async def get_obligations_ledger(
         self,
         db: AsyncSession,
         user_id: UUID,
-        days_ahead: int = 30
+        days_ahead: int = 30,
+        include_hidden: bool = False
     ) -> dict:
         """
         Get a full ledger of all identified obligations.
@@ -180,8 +199,6 @@ class BillService:
         }
         """
         from app.features.analytics.schemas import IdentifiedObligation
-        from app.features.transactions.models import Transaction
-        from sqlalchemy import or_
         
         today = self._get_today()
         threshold_date = today + timedelta(days=days_ahead)
@@ -190,13 +207,24 @@ class BillService:
         unpaid_total = Decimal("0.00")
         projected_total = Decimal("0.00")
         
+        # Fetch Exclusions
+        excl_stmt = select(BillExclusion).where(BillExclusion.user_id == user_id)
+        excl_res = await db.execute(excl_stmt)
+        exclusions = excl_res.scalars().all()
+        
+        skipped_source_ids = {e.source_transaction_id for e in exclusions if e.exclusion_type == 'SKIP' and e.source_transaction_id}
+        permanent_patterns = [
+            (e.merchant_pattern.lower() if e.merchant_pattern else None, 
+             e.subcategory_pattern.lower() if e.subcategory_pattern else None)
+            for e in exclusions if e.exclusion_type == 'PERMANENT'
+        ]
+
         # 1. Fetch ALL unpaid bills (one-time or recurring)
-        # Note: For recurring, if it's unpaid, it usually means current instance is overdue or due soon.
         bill_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_paid == False)
         bill_res = await db.execute(bill_stmt)
         unpaid_bills = bill_res.scalars().all()
         
-        covered_subcategories = set()
+        covered_signatures: Set[Tuple[str, Decimal]] = set()
         
         for bill in unpaid_bills:
             status = "OVERDUE" if bill.due_date < today else "PENDING"
@@ -208,11 +236,12 @@ class BillService:
                 type="BILL",
                 status=status,
                 category=bill.category,
-                sub_category=bill.sub_category
+                sub_category=bill.sub_category,
+                source_id=None
             ))
             unpaid_total += bill.amount
             if bill.is_recurring:
-                covered_subcategories.add(bill.sub_category.lower())
+                covered_signatures.add((bill.sub_category.lower(), bill.amount))
 
         # 2. Project NEXT instances for Recurring Bills
         rec_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_recurring == True)
@@ -225,8 +254,6 @@ class BillService:
             
             # If the next instance is in the FUTURE (not the current unpaid one)
             if today <= next_due <= threshold_date:
-                # Avoid double counting if the bill is already in ledger as PENDING (unpaid)
-                # But typically next_due will be > bill.due_date if bill is for this month.
                 if next_due > bill.due_date or bill.is_paid:
                     ledger_items.append(IdentifiedObligation(
                         id=f"proj-{bill.id}",
@@ -236,10 +263,11 @@ class BillService:
                         type="BILL",
                         status="PROJECTED",
                         category=bill.category,
-            sub_category=bill.sub_category
+                        sub_category=bill.sub_category,
+                        source_id=None
                     ))
                     projected_total += bill.amount
-                    covered_subcategories.add(bill.sub_category.lower())
+                    covered_signatures.add((bill.sub_category.lower(), bill.amount))
 
         # 3. Simple Surety Projections (Last Month vs Current Month)
         # 3a. Identify Surety Subcategories
@@ -247,13 +275,11 @@ class BillService:
         sub_res = await db.execute(sub_stmt)
         surety_subs = set(name.lower() for name in sub_res.scalars().all())
         
-        # We look at exactly what you did last month and check if you've done it yet this month.
         from app.utils.finance_utils import get_month_date_range, get_previous_month_date_range
         
         prev_range = get_previous_month_date_range(today)
         curr_range = get_month_date_range(today)
         
-        # Get all surety transactions from last month (the "templates")
         past_stmt = (
             select(Transaction)
             .where(Transaction.user_id == user_id)
@@ -265,7 +291,6 @@ class BillService:
             ))
         )
         
-        # Get all surety transactions from the current month (to check against)
         curr_stmt = (
             select(Transaction)
             .where(Transaction.user_id == user_id)
@@ -283,65 +308,112 @@ class BillService:
         past_txns = list(past_res.scalars().all())
         curr_txns = list(curr_res.scalars().all())
         
-        # Greedy matching to handle multiple identical SIPs
         matched_curr_ids = set()
         
         for p_txn in past_txns:
-            # Skip if this sub-category is already handled by a formal Bill object
-            if (p_txn.sub_category or "").lower() in covered_subcategories:
-                continue
-                
-            # Try to find a partner in the current month by Merchant and Amount
+            # Prepare status
+            is_excluded = False
+            exclusion_reason = ""
+            
+            # Check Skip Exclusion
+            if p_txn.id in skipped_source_ids:
+                is_excluded = True
+                exclusion_reason = "SKIPPED"
+            
+            # Check Permanent Exclusion
+            if not is_excluded:
+                p_m = (p_txn.merchant_name or "").lower()
+                p_s = (p_txn.sub_category or "").lower()
+                for emp, esp in permanent_patterns:
+                    match_m = (emp == p_m) if emp is not None else True
+                    match_s = (esp == p_s) if esp is not None else True
+                    if match_m and match_s:
+                        is_excluded = True
+                        exclusion_reason = "TERMINATED"
+                        break
+            
+            # Check Covered by Bill
+            # Relaxed check: subcategory AND amount
+            if not is_excluded:
+                # Need to handle Decimal comparison carefully? set handles it.
+                if (p_txn.sub_category.lower(), p_txn.amount) in covered_signatures:
+                    is_excluded = True
+                    exclusion_reason = "COVERED"
+            
+            # estimated due date
+            due_day = p_txn.transaction_date.day
+            try:
+                p_date = today.replace(day=min(due_day, curr_range["month_end"].day))
+            except:
+                p_date = today
+
+            # Find partner in current month (regardless of exclusion, to determine projected vs done?)
+            # Actually if it's already done (partner found), we don't project anyway.
             partner_found = False
             for c_txn in curr_txns:
                 if c_txn.id not in matched_curr_ids:
-                    # Simple match: same merchant and same absolute amount
-                    p_m = (p_txn.merchant_name or "").lower()
                     c_m = (c_txn.merchant_name or "").lower()
-                    if (p_m == c_m) and (abs(p_txn.amount) == abs(c_txn.amount)):
+                    if ((p_txn.merchant_name or "").lower() == c_m) and (abs(p_txn.amount) == abs(c_txn.amount)):
                         matched_curr_ids.add(c_txn.id)
                         partner_found = True
                         break
             
-            if not partner_found:
-                # Project the missing payment based on last month's date
-                due_day = p_txn.transaction_date.day
-                # Estimate due date for this month
-                try:
-                    p_date = today.replace(day=min(due_day, curr_range["month_end"].day))
-                except:
-                    p_date = today
+            if partner_found:
+                if include_hidden:
+                     ledger_items.append(IdentifiedObligation(
+                        id=f"auto-{p_txn.id}",
+                        title=f"{p_txn.merchant_name or p_txn.sub_category} (Auto-detected)",
+                        amount=abs(p_txn.amount),
+                        due_date=p_date, # Use estimated date
+                        type="SURETY_TXN",
+                        status="PAID",
+                        sub_category=p_txn.sub_category,
+                        source_id=str(p_txn.id)
+                    ))
+                continue # Already paid this month, no obligation
+
+
+            # Does it pass filter?
+            if is_excluded and not include_hidden:
+                continue
                 
-                # If the projected date falls within our viewing window
-                if today <= p_date <= threshold_date:
+
+            
+            date_status = "PROJECTED"
+            if p_date < today:
+                date_status = "OVERDUE"
+            
+            final_status = date_status
+            if is_excluded:
+                final_status = exclusion_reason
+            
+            # Date filter only applies if active (PROJECTED/OVERDUE)
+            # If excluded, we include it regardless of date if include_hidden is True?
+            # Or still respect threshold? Let's respect threshold for "Upcoming" logic, but maybe relax for "Management"?
+            # Let's keep threshold strict for now.
+            if today <= p_date <= threshold_date or final_status in ["OVERDUE", "SKIPPED", "TERMINATED", "COVERED"]:
+                 if include_hidden or not is_excluded:
                     ledger_items.append(IdentifiedObligation(
                         id=f"auto-{p_txn.id}",
                         title=f"{p_txn.merchant_name or p_txn.sub_category} (Auto-detected)",
                         amount=abs(p_txn.amount),
                         due_date=p_date,
                         type="SURETY_TXN",
-                        status="PROJECTED",
-                        sub_category=p_txn.sub_category
+                        status=final_status,
+                        sub_category=p_txn.sub_category,
+                        source_id=str(p_txn.id)
                     ))
-                    projected_total += abs(p_txn.amount)
-                elif p_date < today:
-                    # Overdue but not yet seen in current month
-                    ledger_items.append(IdentifiedObligation(
-                        id=f"auto-{p_txn.id}",
-                        title=f"{p_txn.merchant_name or p_txn.sub_category} (Auto-detected)",
-                        amount=abs(p_txn.amount),
-                        due_date=p_date,
-                        type="SURETY_TXN",
-                        status="OVERDUE",
-                        sub_category=p_txn.sub_category
-                    ))
-                    unpaid_total += abs(p_txn.amount)
+                    if final_status == "PROJECTED":
+                        projected_total += abs(p_txn.amount)
+                    elif final_status == "OVERDUE":
+                        unpaid_total += abs(p_txn.amount)
         
         return {
             "unpaid_total": unpaid_total,
             "projected_total": projected_total,
             "items": ledger_items
         }
+
     async def get_projected_surety_bills(
         self,
         db: AsyncSession,
@@ -368,7 +440,6 @@ class BillService:
         reference_date: date
     ) -> date:
         """Calculate the next occurrence date for a recurring bill."""
-        # Try current month first
         try:
             next_date = date(
                 reference_date.year,

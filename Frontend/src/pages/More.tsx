@@ -14,7 +14,8 @@ import {
     Wallet,
     Mail,
     Download,
-    Target
+    Target,
+    RefreshCw
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
@@ -29,6 +30,7 @@ const FEATURE_CARDS = [
     { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-indigo-400', bgColor: 'bg-indigo-500/10' },
     { id: 'backup', label: 'Backup Data', icon: Download, action: 'BACKUP_DATA', color: 'text-amber-400', bgColor: 'bg-amber-500/10' },
     { id: 'vault', label: 'Vault', icon: Target, path: '/credit-cards', color: 'text-purple-400', bgColor: 'bg-purple-500/10' },
+    { id: 'sureties', label: 'Sureties', icon: RefreshCw, path: '/sureties', color: 'text-rose-400', bgColor: 'bg-rose-500/10' }, // Changed color to rose to differentiate
 ];
 
 const More: React.FC = () => {

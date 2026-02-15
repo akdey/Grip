@@ -3,8 +3,6 @@ from uuid import UUID
 from datetime import datetime, date
 from decimal import Decimal
 from pydantic import BaseModel, Field
-# Using strings for category/sub_category
-
 
 class BillBase(BaseModel):
     title: str = Field(..., description="Bill title (e.g., 'Rent', 'Electricity')")
@@ -15,10 +13,8 @@ class BillBase(BaseModel):
     category: str
     sub_category: str
 
-
 class BillCreate(BillBase):
     pass
-
 
 class BillUpdate(BaseModel):
     title: Optional[str] = None
@@ -29,7 +25,6 @@ class BillUpdate(BaseModel):
     category: Optional[str] = None
     sub_category: Optional[str] = None
 
-
 class BillResponse(BillBase):
     id: UUID
     user_id: UUID
@@ -39,12 +34,16 @@ class BillResponse(BillBase):
     class Config:
         from_attributes = True
 
-
 class MarkPaidRequest(BaseModel):
     paid: bool = True
-
 
 class UpcomingBillsResponse(BaseModel):
     upcoming_bills: list[BillResponse]
     total_amount: Decimal
     count: int
+
+class SuretyExclusionCreate(BaseModel):
+    source_transaction_id: Optional[UUID] = None
+    merchant_pattern: Optional[str] = None
+    subcategory_pattern: Optional[str] = None
+    exclusion_type: str  # 'SKIP', 'PERMANENT'

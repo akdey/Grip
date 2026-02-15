@@ -26,6 +26,7 @@ class IdentifiedObligation(BaseModel):
     status: str # "OVERDUE", "PENDING", "PROJECTED"
     category: Optional[str] = None
     sub_category: Optional[str] = None
+    source_id: Optional[str] = None
 
 class FrozenFundsBreakdown(BaseModel):
     unpaid_bills: Decimal
