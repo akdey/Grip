@@ -17,6 +17,7 @@ const More = React.lazy(() => import('./pages/More'));
 const Wealth = React.lazy(() => import('./pages/Wealth'));
 const Tags = React.lazy(() => import('./pages/Tags'));
 const Goals = React.lazy(() => import('./pages/Goals'));
+const Sureties = React.lazy(() => import('./pages/Sureties'));
 const Sync = React.lazy(() => import('./pages/Sync'));
 const Privacy = React.lazy(() => import('./pages/Privacy'));
 const Terms = React.lazy(() => import('./pages/Terms'));
@@ -49,6 +50,7 @@ function App() {
               <Route path="/more" element={<More />} />
               <Route path="/tags" element={<Tags />} />
               <Route path="/goals" element={<Goals />} />
+              <Route path="/sureties" element={<Sureties />} />
             </Route>
           </Route>
 

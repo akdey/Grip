@@ -56,3 +56,43 @@ export const useAddBill = () => {
         },
     });
 };
+
+export interface Surety {
+    id: string;
+    title: string;
+    amount: number;
+    due_date: string;
+    type: string;
+    status: string;
+    sub_category: string;
+    source_id?: string;
+}
+
+export const useSureties = () => {
+    return useQuery({
+        queryKey: ['sureties'],
+        queryFn: async () => {
+            const { data } = await api.get<Surety[]>('/bills/surety/list');
+            return data;
+        },
+    });
+};
+
+export const useCreateExclusion = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (exclusion: {
+            source_transaction_id?: string,
+            merchant_pattern?: string,
+            subcategory_pattern?: string,
+            exclusion_type: 'SKIP' | 'PERMANENT'
+        }) => {
+            await api.post('/bills/surety/exclusion', exclusion);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['sureties'] });
+            queryClient.invalidateQueries({ queryKey: ['bills-upcoming'] });
+            queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+        },
+    });
+};

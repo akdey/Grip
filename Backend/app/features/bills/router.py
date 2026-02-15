@@ -11,11 +11,38 @@ from app.features.bills.schemas import (
     BillUpdate,
     BillResponse,
     MarkPaidRequest,
-    UpcomingBillsResponse
+    BillResponse,
+    MarkPaidRequest,
+    UpcomingBillsResponse,
+    SuretyExclusionCreate
 )
 from app.features.bills.service import BillService
 
 router = APIRouter()
+
+@router.get("/surety/list")
+async def list_sureties(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[BillService, Depends()],
+    include_hidden: bool = True
+):
+    """List all detected surety obligations, including hidden/excluded ones."""
+    ledger = await service.get_obligations_ledger(db, current_user.id, days_ahead=60, include_hidden=include_hidden)
+    # Filter only Surety items
+    sureties = [item for item in ledger["items"] if item.type == "SURETY_TXN"]
+    return sureties
+
+@router.post("/surety/exclusion")
+async def create_exclusion(
+    exclusion_data: SuretyExclusionCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[BillService, Depends()]
+):
+    """Create an exclusion rule for a surety."""
+    excl = await service.create_surety_exclusion(db, current_user.id, exclusion_data)
+    return {"status": "success", "id": str(excl.id)}
 
 
 @router.post("", response_model=BillResponse, status_code=status.HTTP_201_CREATED)

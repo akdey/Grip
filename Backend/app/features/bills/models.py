@@ -7,7 +7,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
-
 class Bill(Base):
     __tablename__ = "bills"
 
@@ -24,3 +23,20 @@ class Bill(Base):
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship("User", back_populates="bills")
+
+class BillExclusion(Base):
+    __tablename__ = "bill_exclusions"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    
+    # For skipping a specific projection from a specific transaction
+    source_transaction_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("transactions.id"), nullable=True)
+    
+    # For permanent exclusion logic
+    merchant_pattern: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    subcategory_pattern: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    exclusion_type: Mapped[str] = mapped_column(String)  # 'SKIP', 'PERMANENT'
+    
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
