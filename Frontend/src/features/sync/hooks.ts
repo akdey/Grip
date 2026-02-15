@@ -126,7 +126,10 @@ export const useManualSync = () => {
             setTimeout(() => {
                 queryClient.invalidateQueries({ queryKey: ['gmail-status'] });
                 queryClient.invalidateQueries({ queryKey: ['sync-history'] });
-            }, 2000);
+                queryClient.invalidateQueries({ queryKey: ['transactions'] });
+                queryClient.invalidateQueries({ queryKey: ['monthly-summary'] });
+                queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+            }, 3000);
         },
     });
 };

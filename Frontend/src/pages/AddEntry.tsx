@@ -147,9 +147,34 @@ const AddEntry: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['monthly-summary'] });
             if (id) queryClient.invalidateQueries({ queryKey: ['transaction', id] });
-            navigate(-1);
+
         }
     });
+
+    const handleSave = () => {
+        mutation.mutate(undefined, {
+            onSuccess: () => navigate(-1)
+        });
+    };
+
+    const handleSaveAndNew = () => {
+        mutation.mutate(undefined, {
+            onSuccess: () => {
+                setAmount('');
+                setMerchantName('');
+                setRemarks('');
+                setTags([]);
+                setCategory(null);
+                setSubCategory(null);
+                setIsSurety(false);
+                setTempCategory(null);
+                setView('CATEGORIES');
+                // Keep Date, Time, Account Type, Card ID for faster entry
+                // Maybe focus amount input?
+                document.querySelector('input[type="number"]')?.focus();
+            }
+        });
+    };
 
     const createCategoryMutation = useMutation({
         mutationFn: async (data: any) => await api.post('/categories', data),
@@ -219,7 +244,8 @@ const AddEntry: React.FC = () => {
     const getSelectedCategory = () => categories?.find(c => c.name === category);
     const getSelectedSubCategory = () => getSelectedCategory()?.sub_categories?.find(s => s.name === subCategory);
 
-    if (isCategoriesLoading || (id && isTxnLoading)) return <Loader fullPage text="Assembling Entry" />;
+    // Non-blocking loader for transaction editing
+    if (id && isTxnLoading) return <Loader fullPage text="Retrieving Transaction..." />;
 
     return (
         <LayoutGroup id="add-entry">
@@ -564,16 +590,31 @@ const AddEntry: React.FC = () => {
                             <Check size={20} strokeWidth={3} />
                         </button>
                     ) : (
-                        <button
-                            onClick={() => mutation.mutate()}
-                            disabled={mutation.isPending || !amount || !category}
-                            className={`
-                                w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-2xl shadow-indigo-500/20 active:scale-95 transition-all
-                                ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6'}
-                            `}
-                        >
-                            <Save size={24} strokeWidth={2.5} />
-                        </button>
+                        <>
+                            {!id && (
+                                <button
+                                    onClick={handleSaveAndNew}
+                                    disabled={mutation.isPending || !amount || !category}
+                                    className={`
+                                        w-14 h-14 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/10 active:scale-95 transition-all
+                                        ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white/20'}
+                                    `}
+                                    title="Save & Add Another"
+                                >
+                                    <Plus size={24} strokeWidth={2.5} />
+                                </button>
+                            )}
+                            <button
+                                onClick={handleSave}
+                                disabled={mutation.isPending || !amount || !category}
+                                className={`
+                                    w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-2xl shadow-indigo-500/20 active:scale-95 transition-all
+                                    ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6'}
+                                `}
+                            >
+                                <Save size={24} strokeWidth={2.5} />
+                            </button>
+                        </>
                     )}
                 </div>
 
