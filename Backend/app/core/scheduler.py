@@ -10,9 +10,6 @@ from app.features.wealth.service import WealthService
 from app.features.sync.service import SyncService
 from app.features.transactions.service import TransactionService
 from app.features.categories.service import CategoryService
-from app.features.auth.models import User
-from app.features.credit_cards.models import CreditCard
-from app.features.bills.models import Bill
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
@@ -41,6 +38,12 @@ async def run_gmail_sync():
     """
     logger.info("Starting Gmail Sync...")
     async with AsyncSessionLocal() as db:
+        # Import models inside function to avoid circular imports and ensure registry is ready
+        from app.features.auth.models import User
+        # Ensure relationships are loaded
+        from app.features.credit_cards.models import CreditCard
+        from app.features.bills.models import Bill
+        
         # Instantiate services
         cat_service = CategoryService(db)
         wealth_service = WealthService(db)
