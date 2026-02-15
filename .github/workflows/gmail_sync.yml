@@ -1,0 +1,52 @@
+name: Gmail Sync
+
+on:
+  schedule:
+    # Runs every hour
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync-gmail:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd Backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run Gmail Sync
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          ENVIRONMENT: production
+        run: |
+          cd Backend
+          python -c "
+          import asyncio
+          from app.core.scheduler import run_gmail_sync
+          
+          async def main():
+              print('Starting Gmail sync...')
+              # We need to ensure we run the sync for all users
+              try:
+                  await run_gmail_sync()
+                  print('Gmail sync completed successfully!')
+              except Exception as e:
+                  print(f'Error running Gmail sync: {e}')
+                  exit(1)
+          
+          asyncio.run(main())
+          "
