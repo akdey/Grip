@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Upload, FileText, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import * as XLSX from 'xlsx';
 
-interface CAMSImportModalProps {
+interface StatementImportModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
 }
 
-interface CAMSTransaction {
+interface Transaction {
     transaction_date: string;
     scheme_name: string;
     folio_number?: string;
@@ -20,45 +20,46 @@ interface CAMSTransaction {
     transaction_type: string;
 }
 
-export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClose, onSuccess }) => {
+type ImportSource = 'CAMS' | 'KFin' | 'MFCentral';
+
+export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false);
-    const [transactions, setTransactions] = useState<CAMSTransaction[]>([]);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [importResult, setImportResult] = useState<any>(null);
     const [error, setError] = useState<string>('');
-
-
+    const [source, setSource] = useState<ImportSource>('CAMS');
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        setError('');
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
                 const data = event.target?.result;
-                let parsed: CAMSTransaction[] = [];
+                let parsed: Transaction[] = [];
 
                 if (file.name.endsWith('.csv')) {
-                    parsed = parseCAMSCSV(data as string);
+                    parsed = parseCSV(data as string);
                 } else {
                     // Excel parsing
                     const workbook = XLSX.read(data, { type: 'binary' });
-                    // Usually transactions are in the first sheet or named "Transaction Details"
                     const sheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[sheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    parsed = parseCAMSExcel(jsonData as any[][]);
+                    parsed = parseExcel(jsonData as any[][]);
                 }
 
                 if (parsed.length === 0) {
-                    setError('No valid transactions found. Please check if you uploaded the "Transaction Details" report.');
+                    setError(`No valid transactions found. Please check if matches ${source} format.`);
                 } else {
                     setTransactions(parsed);
                     setError('');
                 }
             } catch (err) {
                 console.error(err);
-                setError('Failed to parse file. Please ensure it\'s a valid CAMS "Transaction Details" Excel/CSV.');
+                setError('Failed to parse file. Please ensure it is a valid statement file.');
             }
         };
 
@@ -69,76 +70,61 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
         }
     };
 
-    const parseCAMSExcel = (rows: any[][]): CAMSTransaction[] => {
-        const transactions: CAMSTransaction[] = [];
+    const parseExcel = (rows: any[][]): Transaction[] => {
         let headerRowIndex = -1;
 
-        // Dynamic header detection - look for specific columns mentioned by user
-        for (let i = 0; i < Math.min(rows.length, 20); i++) {
+        // Dynamic header detection based on source
+        for (let i = 0; i < Math.min(rows.length, 25); i++) {
             const rowStr = rows[i].join(' ').toLowerCase();
-            // User provided: SCHEME_NAME, AMOUNT, UNITS, TRADE_DATE (or similar)
-            if (
-                (rowStr.includes('scheme') && rowStr.includes('amount')) ||
-                (rowStr.includes('mf_name') && rowStr.includes('amount'))
-            ) {
-                headerRowIndex = i;
-                break;
+
+            // Common keywords for all formats
+            if (rowStr.includes('amount') && (rowStr.includes('units') || rowStr.includes('unit'))) {
+                // Additional checks to filter out summary tables
+                if (rowStr.includes('date') || rowStr.includes('scheme') || rowStr.includes('folio')) {
+                    headerRowIndex = i;
+                    break;
+                }
             }
         }
 
         if (headerRowIndex === -1) return [];
 
         const headers = rows[headerRowIndex].map(h => String(h).toLowerCase().trim().replace(/_/g, ' '));
-
-        // Helper to find column index by multiple potential aliases
         const findCol = (aliases: string[]) => headers.findIndex(h => aliases.some(a => h.includes(a)));
 
-        const dateIdx = findCol(['date', 'trade date', 'transaction date']);
-        const schemeIdx = findCol(['scheme', 'product code']); // prioritize scheme name if multiple
-        // Refined scheme logic: prefer "scheme" over "product code"
-        const schemeNameIdx = findCol(['scheme']);
-
-        const folioIdx = findCol(['folio']);
-        // Fix: Removed 'type' to avoid matching asset class column (e.g. "Equity")
-        const typeIdx = findCol(['trasaction_type', 'transaction type', 'transaction_type', 'nature', 'description']);
-        const amountIdx = findCol(['amount']);
-        const unitsIdx = findCol(['unit']);
-        const navIdx = findCol(['nav', 'price']);
+        // Generalized Column Mappings
+        const dateIdx = findCol(['date', 'trade date', 'txn date', 'transaction date']);
+        // Scheme: CAMS=scheme, KFin=fund, desc
+        const schemeIdx = findCol(['scheme', 'product code', 'fund name', 'description', 'security name']);
+        const folioIdx = findCol(['folio', 'account no']);
+        const typeIdx = findCol(['trasaction_type', 'transaction type', 'txn type', 'nature', 'description']);
+        const amountIdx = findCol(['amount', 'value']);
+        const unitsIdx = findCol(['unit', 'quantity']);
+        const navIdx = findCol(['nav', 'price', 'rate']);
 
         if (dateIdx === -1 || amountIdx === -1) return [];
 
+        const transactions: Transaction[] = [];
+
         for (let i = headerRowIndex + 1; i < rows.length; i++) {
             const row = rows[i];
-            // Skip empty rows
             if (!row[dateIdx] && !row[amountIdx]) continue;
 
-            // Date parsing
+            // Date Parsing
             let dateStr = row[dateIdx];
             if (typeof dateStr === 'number') {
+                // Excel serial date
                 const d = new Date((dateStr - (25567 + 2)) * 86400 * 1000);
                 dateStr = d.toISOString().split('T')[0];
             } else if (dateStr) {
-                const dStr = String(dateStr).trim();
-                // Handle 02-Jan-2025
-                const mmmMatch = dStr.match(/^(\d{1,2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{4})$/i);
-                if (mmmMatch) {
-                    const months = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
-                    dateStr = `${mmmMatch[3]}-${months[mmmMatch[2].toLowerCase() as keyof typeof months]}-${mmmMatch[1].padStart(2, '0')}`;
-                } else {
-                    // Try parsing DD/MM/YYYY or DD-MM-YYYY
-                    const parts = dStr.split(/[-/]/);
-                    if (parts.length === 3) {
-                        // Fallback: DD-MM-YYYY
-                        dateStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                    }
-                }
+                dateStr = parseDateString(String(dateStr));
             }
 
-            // Number Parsing (Handle "1,00,000.00" or "₹ 1,00,000")
+            if (!dateStr) continue;
+
             const parseNum = (val: any) => {
                 if (typeof val === 'number') return val;
                 if (!val) return 0;
-                // Robust cleaning: remove currency symbols, commas, spaces
                 const cleaned = String(val).replace(/[^0-9.-]/g, '');
                 const num = parseFloat(cleaned);
                 return isNaN(num) ? 0 : num;
@@ -146,34 +132,42 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
 
             const amt = Math.abs(parseNum(row[amountIdx]));
             const units = Math.abs(parseNum(row[unitsIdx]));
+            const nav = navIdx !== -1 ? parseNum(row[navIdx]) : 0;
 
-            // Scheme Name preference
-            const schemeName = schemeNameIdx !== -1 ? row[schemeNameIdx] : (schemeIdx !== -1 ? row[schemeIdx] : "Unknown Scheme");
-
-            if (schemeName && dateStr) {
-                transactions.push({
-                    transaction_date: dateStr,
-                    scheme_name: String(schemeName).trim(),
-                    folio_number: folioIdx !== -1 ? String(row[folioIdx]) : undefined,
-                    transaction_type: typeIdx !== -1 ? String(row[typeIdx]) : 'Purchase',
-                    amount: amt,
-                    units: units,
-                    nav: navIdx !== -1 ? parseNum(row[navIdx]) : 0
-                });
+            // Fallback for transaction type if missing, try to infer or default
+            let txnType = 'Purchase';
+            if (typeIdx !== -1 && row[typeIdx]) {
+                txnType = String(row[typeIdx]);
+            } else if (schemeIdx !== -1 && row[schemeIdx]) {
+                // Sometimes type is mixed with scheme or description in some formats? 
+                // Usually not, but let's stick to standard columns.
             }
+
+            // MFCentral/KFin might combine strings differently
+            const schemeName = schemeIdx !== -1 ? String(row[schemeIdx]).trim() : "Unknown Scheme";
+
+            if (amt === 0 && units === 0) continue;
+
+            transactions.push({
+                transaction_date: dateStr,
+                scheme_name: schemeName,
+                folio_number: folioIdx !== -1 ? String(row[folioIdx]) : undefined,
+                transaction_type: txnType,
+                amount: amt,
+                units: units,
+                nav: nav
+            });
         }
         return transactions;
     };
 
-    const parseCAMSCSV = (csvText: string): CAMSTransaction[] => {
+    const parseCSV = (csvText: string): Transaction[] => {
         const lines = csvText.split('\n');
-        const transactions: CAMSTransaction[] = [];
-
         let headerIdx = -1;
-        for (let i = 0; i < Math.min(lines.length, 10); i++) {
-            // Lowercase check
+
+        for (let i = 0; i < Math.min(lines.length, 20); i++) {
             const l = lines[i].toLowerCase();
-            if ((l.includes('amount') && l.includes('units')) || (l.includes('mf_name') && l.includes('amount'))) {
+            if (l.includes('amount') && (l.includes('units') || l.includes('unit'))) {
                 headerIdx = i;
                 break;
             }
@@ -181,87 +175,87 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
 
         if (headerIdx === -1) return [];
 
-        const headers = lines[headerIdx].toLowerCase().split(',').map(h => h.trim());
-        const find = (k: string) => headers.findIndex(h => h.includes(k));
+        const headers = lines[headerIdx].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
+        const find = (aliases: string[]) => headers.findIndex(h => aliases.some(a => h.includes(a)));
 
         const idx = {
-            date: find('date'),
-            scheme: find('scheme') !== -1 ? find('scheme') : find('mf_name'),
-            folio: find('folio'),
-            type: find('trasaction') !== -1 ? find('trasaction') : (find('transaction') !== -1 ? find('transaction') : find('nature')),
-            amount: find('amount'),
-            units: find('unit'),
-            nav: find('price') !== -1 ? find('price') : find('nav')
+            date: find(['date', 'txn date']),
+            scheme: find(['scheme', 'fund', 'description']),
+            folio: find(['folio', 'account']),
+            type: find(['type', 'nature', 'trans']),
+            amount: find(['amount']),
+            units: find(['unit', 'quantity']),
+            nav: find(['nav', 'price', 'rate'])
         };
 
-        const cleanNum = (val: string) => {
-            if (!val) return 0;
-            // Remove everything except digits, dots, and minus signs
-            const cleaned = val.replace(/[^0-9.-]/g, '');
-            const num = parseFloat(cleaned);
-            return isNaN(num) ? 0 : num;
-        };
-
-        // Helper to parse date strings like "02-Jan-2025" or "02/01/2025"
-        const parseDate = (dateStr: string) => {
-            if (!dateStr) return null;
-            const dStr = dateStr.trim();
-
-            // Handle 02-Jan-2025
-            const mmmMatch = dStr.match(/^(\d{1,2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{4})$/i);
-            if (mmmMatch) {
-                const months: Record<string, string> = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
-                return `${mmmMatch[3]}-${months[mmmMatch[2].toLowerCase()]}-${mmmMatch[1].padStart(2, '0')}`;
-            }
-
-            // Handle DD/MM/YYYY or DD-MM-YYYY
-            const parts = dStr.split(/[-/]/);
-            if (parts.length === 3) {
-                // Assume DD-MM-YYYY
-                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-            }
-
-            return null; // Fallback or let backend handle ISO
-        };
+        const transactions: Transaction[] = [];
 
         for (let i = headerIdx + 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
 
-            // Regex to split by comma ignoring quotes
+            // CSV split handling quotes
             const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, ''));
 
-            if (cols.length < 5) continue;
-            if (!cols[idx.date] && !cols[idx.amount]) continue;
+            if (cols.length < 3) continue;
 
-            const pAmount = cleanNum(cols[idx.amount]);
-            const pUnits = cleanNum(cols[idx.units]);
-            const pNav = idx.nav !== -1 ? cleanNum(cols[idx.nav]) : 0;
+            const cleanNum = (val: string) => {
+                if (!val) return 0;
+                return parseFloat(val.replace(/[^0-9.-]/g, '')) || 0;
+            };
 
-            // Explicit ignore of "0" amount rows if they are just headers/empty
-            if (pAmount === 0 && pUnits === 0) continue;
+            const amt = Math.abs(cleanNum(cols[idx.amount]));
+            const units = Math.abs(cleanNum(cols[idx.units]));
+            const nav = idx.nav !== -1 ? cleanNum(cols[idx.nav]) : 0;
+            const dateStr = parseDateString(cols[idx.date]);
 
-            const parsedDate = parseDate(cols[idx.date]);
-            if (!parsedDate) continue;
+            if (!dateStr || (amt === 0 && units === 0)) continue;
 
             transactions.push({
-                transaction_date: parsedDate,
-                scheme_name: cols[idx.scheme],
+                transaction_date: dateStr,
+                scheme_name: idx.scheme !== -1 ? cols[idx.scheme] : "Unknown",
                 folio_number: idx.folio !== -1 ? cols[idx.folio] : undefined,
                 transaction_type: idx.type !== -1 ? cols[idx.type] : 'Purchase',
-                amount: Math.abs(pAmount),
-                units: Math.abs(pUnits),
-                nav: pNav
+                amount: amt,
+                units: units,
+                nav: nav
             });
         }
-
         return transactions;
+    };
+
+    const parseDateString = (dateStr: string): string | null => {
+        if (!dateStr) return null;
+        const dStr = String(dateStr).trim();
+
+        // 02-Jan-2025
+        const mmmMatch = dStr.match(/^(\d{1,2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{4})$/i);
+        if (mmmMatch) {
+            const months: any = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
+            return `${mmmMatch[3]}-${months[mmmMatch[2].toLowerCase()]}-${mmmMatch[1].padStart(2, '0')}`;
+        }
+
+        // DD/MM/YYYY or DD-MM-YYYY
+        const parts = dStr.split(/[-/]/);
+        if (parts.length === 3) {
+            // Check if year is first or last? Standard CAS is usually DD-MM-YYYY
+            if (parts[0].length === 4) return `${parts[0]}-${parts[1]}-${parts[2]}`;
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+
+        // Try ISO
+        if (!isNaN(Date.parse(dateStr))) {
+            return new Date(dateStr).toISOString().split('T')[0];
+        }
+
+        return null;
     };
 
     const handleImport = async () => {
         setLoading(true);
         setError('');
         try {
+            // Using CAMS import endpoint as it has a compatible schema
             const response = await api.post('/wealth/import-cams', {
                 transactions,
                 auto_create_holdings: true,
@@ -270,7 +264,7 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
             setImportResult(response.data);
             onSuccess();
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Failed to import CAMS statement');
+            setError(err.response?.data?.detail || 'Failed to import statement');
         } finally {
             setLoading(false);
         }
@@ -297,8 +291,8 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
                     {/* Header */}
                     <div className="p-4 border-b border-white/5 flex justify-between items-center bg-[#0F0F0F] flex-shrink-0">
                         <div>
-                            <h3 className="font-semibold text-lg">Import CAMS Statement</h3>
-                            <p className="text-xs text-gray-500 mt-0.5">Upload your consolidated account statement (CSV format)</p>
+                            <h3 className="font-semibold text-lg">Import Investment Statement</h3>
+                            <p className="text-xs text-gray-500 mt-0.5">Upload consolidated account statements (CAS)</p>
                         </div>
                         <button onClick={handleClose} className="p-1 hover:bg-white/10 rounded-full transition-colors">
                             <X size={20} className="text-gray-400" />
@@ -309,18 +303,39 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
                     <div className="overflow-y-auto flex-1 p-6">
                         {!importResult ? (
                             <>
+                                {/* Source Selector */}
+                                <div className="flex gap-2 mb-6 bg-white/5 p-1 rounded-xl w-fit">
+                                    {['CAMS', 'KFin', 'MFCentral'].map((s) => (
+                                        <button
+                                            key={s}
+                                            onClick={() => {
+                                                setSource(s as ImportSource);
+                                                setTransactions([]);
+                                                setError('');
+                                            }}
+                                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${source === s
+                                                    ? 'bg-emerald-600 text-white shadow-lg'
+                                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                                }`}
+                                        >
+                                            {s}
+                                        </button>
+                                    ))}
+                                </div>
+
                                 {/* File Upload */}
                                 <div className="mb-6">
                                     <label className="block w-full">
-                                        <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-emerald-500/50 transition-colors cursor-pointer bg-white/[0.02]">
-                                            <Upload size={48} className="mx-auto mb-4 text-gray-500" />
-                                            <p className="text-sm font-medium mb-1">Click to upload CAMS statement</p>
-                                            <p className="text-xs text-gray-500">Supports CSV and Excel (.xlsx, .xls) formats</p>
+                                        <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-emerald-500/50 transition-colors cursor-pointer bg-white/[0.02] group">
+                                            <Upload size={48} className="mx-auto mb-4 text-gray-500 group-hover:text-emerald-500 transition-colors" />
+                                            <p className="text-sm font-medium mb-1">Upload {source} Statement</p>
+                                            <p className="text-xs text-gray-500">Supports CSV and Excel (.xlsx, .xls)</p>
                                             <input
                                                 type="file"
                                                 accept=".csv,.xlsx,.xls"
                                                 onChange={handleFileUpload}
                                                 className="hidden"
+                                                key={source} // Reset input on source change
                                             />
                                         </div>
                                     </label>
@@ -336,9 +351,9 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
                                             </h4>
                                         </div>
 
-                                        <div className="bg-[#050505] rounded-xl border border-white/5 max-h-64 overflow-y-auto">
+                                        <div className="bg-[#050505] rounded-xl border border-white/5 max-h-64 overflow-y-auto custom-scrollbar">
                                             <table className="w-full text-xs">
-                                                <thead className="sticky top-0 bg-[#0A0A0A] border-b border-white/5">
+                                                <thead className="sticky top-0 bg-[#0A0A0A] border-b border-white/5 z-10">
                                                     <tr className="text-left text-gray-500">
                                                         <th className="p-2">Date</th>
                                                         <th className="p-2">Scheme</th>
@@ -350,10 +365,10 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
                                                 <tbody>
                                                     {transactions.slice(0, 50).map((txn, idx) => (
                                                         <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.02]">
-                                                            <td className="p-2">{txn.transaction_date}</td>
-                                                            <td className="p-2 truncate max-w-[200px]">{txn.scheme_name}</td>
+                                                            <td className="p-2 whitespace-nowrap">{txn.transaction_date}</td>
+                                                            <td className="p-2 truncate max-w-[200px]" title={txn.scheme_name}>{txn.scheme_name}</td>
                                                             <td className="p-2">
-                                                                <span className={`px-2 py-0.5 rounded text-[10px] ${txn.transaction_type.toLowerCase().includes('purchase')
+                                                                <span className={`px-2 py-0.5 rounded text-[10px] ${txn.transaction_type.toLowerCase().includes('purchase') || txn.transaction_type.toLowerCase().includes('sip')
                                                                     ? 'bg-emerald-500/10 text-emerald-500'
                                                                     : 'bg-red-500/10 text-red-500'
                                                                     }`}>
@@ -389,7 +404,7 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
                                 <div className="text-center py-6">
                                     <CheckCircle size={64} className="mx-auto mb-4 text-emerald-500" />
                                     <h4 className="text-xl font-bold mb-2">Import Successful!</h4>
-                                    <p className="text-sm text-gray-500">Your CAMS statement has been processed</p>
+                                    <p className="text-sm text-gray-500">Your statement has been processed</p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -410,17 +425,6 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
                                         <p className="text-2xl font-bold text-yellow-400">{importResult.sip_patterns_detected}</p>
                                     </div>
                                 </div>
-
-                                {importResult.errors && importResult.errors.length > 0 && (
-                                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-                                        <p className="text-xs font-medium text-red-400 mb-2">Errors:</p>
-                                        <ul className="text-xs text-red-400 space-y-1">
-                                            {importResult.errors.map((err: string, idx: number) => (
-                                                <li key={idx}>• {err}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
                             </div>
                         )}
                     </div>
@@ -448,7 +452,7 @@ export const CAMSImportModal: React.FC<CAMSImportModalProps> = ({ isOpen, onClos
                                     ) : (
                                         <>
                                             <Upload size={18} />
-                                            Import {transactions.length} Transactions
+                                            Import
                                         </>
                                     )}
                                 </button>
