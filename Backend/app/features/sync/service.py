@@ -180,7 +180,7 @@ class SyncService:
             if start_time:
                 query += f" after:{int(start_time.timestamp())}"
             
-            results = service.users().messages().list(userId='me', q=query, maxResults=20).execute()
+            results = service.users().messages().list(userId='me', q=query, maxResults=50, includeSpamTrash=True).execute()
             messages = results.get('messages', [])
             
             detailed_messages = []
@@ -219,14 +219,6 @@ class SyncService:
             start_time = await self._get_last_sync_time(user_id)
             messages = await self.fetch_gmail_changes(user_id, start_time)
             
-            processed_count = 0
-            for msg in messages:
-                dedup_payload = f"{msg['id']}:{msg['internalDate']}"
-                content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
-                
-                if await self.txn_service.get_transaction_by_hash(content_hash):
-                    continue
-                
             # Fetch categories once for context
             db_categories = await self.category_service.get_categories(user_id)
             
