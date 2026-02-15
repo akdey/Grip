@@ -409,14 +409,16 @@ const Dashboard: React.FC = () => {
                                         <Receipt size={18} />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black text-white/90 uppercase tracking-tight">Unpaid Obligations</p>
+                                        <p className="text-xs font-black text-white/90 uppercase tracking-tight">Obligations</p>
                                         <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mt-0.5">Surety / Bills</p>
                                     </div>
                                 </div>
                                 <div className="text-right flex items-center gap-3">
                                     <div>
-                                        <p className="font-black text-white text-sm tracking-tighter">{formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills) || 0)}</p>
-                                        <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Projected: {formatCurrency(Number(safeToSpend?.frozen_funds?.projected_surety) || 0)}</p>
+                                        <p className="font-black text-white text-sm tracking-tighter">
+                                            {formatCurrency((Number(safeToSpend?.frozen_funds?.unpaid_bills) || 0) + (Number(safeToSpend?.frozen_funds?.projected_surety) || 0))}
+                                        </p>
+                                        <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Unpaid: {formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills) || 0)}</p>
                                     </div>
                                     <ArrowRight size={14} className="text-gray-700 group-hover:text-rose-400 group-hover:translate-x-1 transition-all" />
                                 </div>
@@ -596,7 +598,7 @@ const Dashboard: React.FC = () => {
                                         >
                                             <div className="flex items-center gap-4">
                                                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${obl.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-500' :
-                                                        obl.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500' : 'bg-cyan-500/10 text-cyan-400'
+                                                    obl.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500' : 'bg-cyan-500/10 text-cyan-400'
                                                     }`}>
                                                     <Calendar size={18} />
                                                 </div>
@@ -604,8 +606,8 @@ const Dashboard: React.FC = () => {
                                                     <p className="text-sm font-black text-white uppercase tracking-tight">{obl.title}</p>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${obl.type === 'BILL' ? 'bg-blue-500/10 text-blue-400' :
-                                                                obl.type === 'SIP' ? 'bg-emerald-500/10 text-emerald-400' :
-                                                                    obl.type === 'GOAL' ? 'bg-purple-500/10 text-purple-400' : 'bg-gray-500/10 text-gray-400'
+                                                            obl.type === 'SIP' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                                obl.type === 'GOAL' ? 'bg-purple-500/10 text-purple-400' : 'bg-gray-500/10 text-gray-400'
                                                             }`}>
                                                             {obl.type}
                                                         </span>
