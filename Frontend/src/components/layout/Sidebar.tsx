@@ -2,12 +2,13 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     Home,
-    CreditCard,
     Receipt,
-    PieChart,
-    LogOut,
-    FileText,
-    MoreHorizontal
+    Target,
+    CalendarClock,
+    BarChart3,
+    Briefcase,
+    LayoutGrid,
+    LogOut
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/store';
 import { Button } from '../ui/Button';
@@ -16,12 +17,13 @@ export const Sidebar: React.FC = () => {
     const logout = useAuthStore((state) => state.logout);
 
     const NAV_ITEMS = [
-        { path: '/', label: 'Overview', icon: Home },
-        { path: '/transactions', label: 'Transactions', icon: Receipt },
-        { path: '/credit-cards', label: 'My Cards', icon: CreditCard },
-        { path: '/bills', label: 'Bills & Surety', icon: FileText },
-        { path: '/analytics', label: 'Intelligence', icon: PieChart },
-        { path: '/more', label: 'More', icon: MoreHorizontal },
+        { path: '/', label: 'Matrix', icon: Home },
+        { path: '/transactions', label: 'History', icon: Receipt },
+        { path: '/credit-cards', label: 'Vault', icon: Target },
+        { path: '/bills', label: 'Scheduled', icon: CalendarClock },
+        { path: '/analytics', label: 'Flow', icon: BarChart3 },
+        { path: '/wealth', label: 'Wealth', icon: Briefcase },
+        { path: '/more', label: 'Explorer', icon: LayoutGrid },
     ];
 
     return (
