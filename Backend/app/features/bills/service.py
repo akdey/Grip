@@ -213,6 +213,7 @@ class BillService:
         exclusions = excl_res.scalars().all()
         
         skipped_source_ids = {e.source_transaction_id for e in exclusions if e.exclusion_type == 'SKIP' and e.source_transaction_id}
+        manual_paid_ids = {e.source_transaction_id for e in exclusions if e.exclusion_type == 'MANUAL_PAID' and e.source_transaction_id}
         permanent_patterns = [
             (e.merchant_pattern.lower() if e.merchant_pattern else None, 
              e.subcategory_pattern.lower() if e.subcategory_pattern else None)
@@ -319,6 +320,11 @@ class BillService:
             if p_txn.id in skipped_source_ids:
                 is_excluded = True
                 exclusion_reason = "SKIPPED"
+
+            # Check Manual Paid
+            if p_txn.id in manual_paid_ids:
+                is_excluded = True
+                exclusion_reason = "PAID" 
             
             # Check Permanent Exclusion
             if not is_excluded:
