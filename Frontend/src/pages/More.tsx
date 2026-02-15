@@ -23,7 +23,7 @@ const FEATURE_CARDS = [
     { id: 'sync', label: 'Gmail Sync', icon: Mail, path: '/sync', color: 'text-green-400', bgColor: 'bg-green-500/10' },
     { id: 'pending', label: 'Action Center', icon: Sparkles, path: '/transactions?view=pending', color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
     { id: 'transactions', label: 'History', icon: Receipt, path: '/transactions', color: 'text-blue-400', bgColor: 'bg-blue-500/10' },
-    { id: 'scheduled', label: 'Scheduled', icon: CalendarClock, path: '/scheduled', color: 'text-teal-400', bgColor: 'bg-teal-500/10' },
+    { id: 'scheduled', label: 'Scheduled', icon: CalendarClock, path: '/bills', color: 'text-teal-400', bgColor: 'bg-teal-500/10' },
     { id: 'goals', label: 'Goals', icon: Wallet, path: '/goals', color: 'text-rose-400', bgColor: 'bg-rose-500/10' },
     { id: 'categories', label: 'Categories', icon: LayoutGrid, action: 'OPEN_CATEGORIES', color: 'text-cyan-400', bgColor: 'bg-cyan-500/10' },
     { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-indigo-400', bgColor: 'bg-indigo-500/10' },
