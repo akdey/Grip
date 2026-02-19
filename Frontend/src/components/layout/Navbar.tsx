@@ -9,9 +9,6 @@ import {
 } from 'lucide-react';
 
 import { motion } from 'framer-motion';
-import { useQueryClient } from '@tanstack/react-query';
-import { api } from '../../lib/api';
-
 const NAV_ITEMS = [
     { path: '/', label: 'Matrix', icon: Home },
     { path: '/analytics', label: 'Flow', icon: BarChart3 },
@@ -21,18 +18,6 @@ const NAV_ITEMS = [
 ];
 
 export const Navbar: React.FC = () => {
-    const queryClient = useQueryClient();
-
-    const prefetchData = (path: string) => {
-        if (path === '/') {
-            queryClient.prefetchQuery({ queryKey: ['variance'], queryFn: () => api.get('/analytics/variance/').then(r => r.data) });
-            queryClient.prefetchQuery({ queryKey: ['monthly-summary'], queryFn: () => api.get('/analytics/summary/').then(r => r.data) });
-        } else if (path === '/analytics') {
-            queryClient.prefetchQuery({ queryKey: ['spend-trends'], queryFn: () => api.get('/analytics/trends/spend/').then(r => r.data) });
-        } else if (path === '/wealth') {
-            queryClient.prefetchQuery({ queryKey: ['wealth-holdings'], queryFn: () => api.get('/wealth/holdings').then(r => r.data) });
-        }
-    };
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#050505]/95 glass-blur border-t border-white/[0.05] pb-safe pt-2 px-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
@@ -57,8 +42,6 @@ export const Navbar: React.FC = () => {
                         <NavLink
                             key={item.path}
                             to={item.path}
-                            onMouseEnter={() => prefetchData(item.path)}
-                            onTouchStart={() => prefetchData(item.path)}
                             className={({ isActive }) => `
                                 flex flex-col items-center justify-center w-1/5 space-y-1.5 transition-all
                                 ${isActive ? 'text-white' : 'text-gray-600 hover:text-gray-400'}
