@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 import logging
 
 from app.core.config import get_settings
@@ -56,6 +57,7 @@ app = FastAPI(
 )
 #app.router.redirect_slashes = False
 app.add_middleware(AuthenticationMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

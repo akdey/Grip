@@ -87,14 +87,16 @@ class AnalyticsService:
             .group_by(Transaction.category)
         )
         
-        # Execute sequentially
-        current_result = await db.execute(current_stmt)
-        previous_result = await db.execute(previous_stmt)
+        # Execute in parallel
+        current_res, previous_res = await asyncio.gather(
+            db.execute(current_stmt),
+            db.execute(previous_stmt)
+        )
         
-        current_by_category = {row.category: abs(row.total or Decimal("0")) for row in current_result.all()}
+        current_by_category = {row.category: abs(row.total or Decimal("0")) for row in current_res.all()}
         current_total = sum(current_by_category.values())
         
-        previous_by_category = {row.category: abs(row.total or Decimal("0")) for row in previous_result.all()}
+        previous_by_category = {row.category: abs(row.total or Decimal("0")) for row in previous_res.all()}
         previous_total = sum(previous_by_category.values())
         
         # Calculate category-level variance
@@ -455,12 +457,14 @@ class AnalyticsService:
             .where(Transaction.transaction_date <= end_date)
         )
         
-        # Execute sequentially
-        income_result = await db.execute(income_stmt)
-        expense_result = await db.execute(expense_stmt)
+        # Execute in parallel
+        income_res, expense_res = await asyncio.gather(
+            db.execute(income_stmt),
+            db.execute(expense_stmt)
+        )
         
-        total_income = income_result.scalar() or Decimal("0")
-        total_expense_raw = abs(expense_result.scalar() or Decimal("0"))
+        total_income = income_res.scalar() or Decimal("0")
+        total_expense_raw = abs(expense_res.scalar() or Decimal("0"))
         
         
         # Calculate Prior Period Settlement (Strictly Credit Card Payments)

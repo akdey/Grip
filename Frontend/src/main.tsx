@@ -8,8 +8,9 @@ import './index.css';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 0, // Always fetch fresh data
-      refetchOnWindowFocus: true,
+      staleTime: 60 * 1000, // 1 minute of data "freshness"
+      gcTime: 5 * 60 * 1000, // Keep unused data in cache for 5 minutes
+      refetchOnWindowFocus: false, // Don't refetch every time user switches tabs
       retry: 1,
     },
   },

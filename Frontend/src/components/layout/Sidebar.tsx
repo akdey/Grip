@@ -12,9 +12,21 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/store';
 import { Button } from '../ui/Button';
+import { useQueryClient } from '@tanstack/react-query';
+import { api } from '../../lib/api';
 
 export const Sidebar: React.FC = () => {
     const logout = useAuthStore((state) => state.logout);
+    const queryClient = useQueryClient();
+
+    const prefetchData = (path: string) => {
+        if (path === '/') {
+            queryClient.prefetchQuery({ queryKey: ['variance'], queryFn: () => api.get('/analytics/variance/').then(r => r.data) });
+            queryClient.prefetchQuery({ queryKey: ['monthly-summary'], queryFn: () => api.get('/analytics/summary/').then(r => r.data) });
+        } else if (path === '/analytics') {
+            queryClient.prefetchQuery({ queryKey: ['spend-trends'], queryFn: () => api.get('/analytics/trends/spend/').then(r => r.data) });
+        }
+    };
 
     const NAV_ITEMS = [
         { path: '/', label: 'Matrix', icon: Home },
@@ -42,6 +54,7 @@ export const Sidebar: React.FC = () => {
                     <NavLink
                         key={item.path}
                         to={item.path}
+                        onMouseEnter={() => prefetchData(item.path)}
                         className={({ isActive }) => `
               flex items-center space-x-4 px-6 py-4 rounded-2xl transition-all duration-300 group
               ${isActive

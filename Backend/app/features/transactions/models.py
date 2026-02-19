@@ -2,7 +2,7 @@ import uuid
 from decimal import Decimal
 from datetime import date
 from typing import List, Optional
-from sqlalchemy import String, ForeignKey, Numeric, ARRAY, Text, DateTime, Boolean, Date
+from sqlalchemy import String, ForeignKey, Numeric, ARRAY, Text, DateTime, Boolean, Date, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -21,6 +21,9 @@ class AccountType:
 
 class Transaction(Base):
     __tablename__ = "transactions"
+    __table_args__ = (
+        Index("ix_transactions_user_date", "user_id", "transaction_date"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
