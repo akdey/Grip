@@ -1,7 +1,13 @@
+from enum import Enum
 from typing import Dict, List, Optional
 from pydantic import BaseModel
 from decimal import Decimal
 from datetime import date
+
+class SpendTrendFrequency(str, Enum):
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
 
 class CategoryVariance(BaseModel):
     current: Decimal
@@ -53,3 +59,10 @@ class MonthlySummaryResponse(BaseModel):
     year: int
     current_period_expense: Decimal = Decimal(0)
     prior_period_settlement: Decimal = Decimal(0)
+
+class SpendTrendPoint(BaseModel):
+    date: date
+    amount: Decimal
+
+class SpendTrendResponse(BaseModel):
+    trends: List[SpendTrendPoint]

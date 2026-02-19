@@ -122,3 +122,22 @@ export const useForecast = () => {
         },
     });
 };
+
+export interface SpendTrendPoint {
+    date: string;
+    amount: number;
+}
+
+export interface SpendTrend {
+    trends: SpendTrendPoint[];
+}
+
+export const useSpendTrends = (days: number = 30, frequency: 'daily' | 'weekly' | 'monthly' = 'daily') => {
+    return useQuery({
+        queryKey: ['spend-trends', days, frequency],
+        queryFn: async () => {
+            const { data } = await api.get<SpendTrend>(`/analytics/trends/spend/?days=${days}&frequency=${frequency}`);
+            return data;
+        },
+    });
+};

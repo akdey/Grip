@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { useVariance, useInvestments, useMonthlySummary } from '../features/dashboard/hooks';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { TrendingUp, Target, Layers, ChevronLeft, ChevronRight, TrendingDown, Eye, EyeOff, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { Loader } from '../components/ui/Loader';
+import { useVariance, useInvestments, useMonthlySummary, useSpendTrends } from '../features/dashboard/hooks';
+import { SpendTrendChart } from '../components/analytics/SpendTrendChart';
+import { Card } from '../components/ui/Card';
 
 const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
 
@@ -15,6 +16,7 @@ const Analytics: React.FC = () => {
     const [referenceDate, setReferenceDate] = useState(new Date());
     const [showSensitive, setShowSensitive] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
+    const [trendFreq, setTrendFreq] = useState<'weekly' | 'monthly'>('monthly');
 
     const togglePrivacy = () => {
         if (showSensitive) {
@@ -36,6 +38,7 @@ const Analytics: React.FC = () => {
         referenceDate.getMonth() + 1,
         referenceDate.getFullYear()
     );
+    const { data: spendTrends, isLoading: isTrendsLoading } = useSpendTrends(30, trendFreq);
 
     const categoryData = useMemo(() => {
         if (!variance?.category_breakdown) return [];
@@ -342,6 +345,49 @@ const Analytics: React.FC = () => {
                             </div>
                         </div>
                     )}
+                </div>
+
+                {/* Macro Timeline Section */}
+                <div className="space-y-6 pt-10 border-t border-white/[0.05]">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center">
+                                <TrendingUp size={16} />
+                            </div>
+                            <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white/60">Burn Timeline</h2>
+                        </div>
+                        <div className="flex bg-white/[0.03] p-1 rounded-xl border border-white/[0.05]">
+                            <button
+                                onClick={() => setTrendFreq('weekly')}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'weekly' ? 'bg-rose-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                            >
+                                Weekly
+                            </button>
+                            <button
+                                onClick={() => setTrendFreq('monthly')}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'monthly' ? 'bg-rose-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                            >
+                                Monthly
+                            </button>
+                        </div>
+                    </div>
+
+                    <Card className="p-8 bg-gradient-to-br from-rose-600/[0.03] via-transparent to-transparent border-white/[0.05] rounded-[2.5rem]">
+                        <div className="mb-6">
+                            <h4 className="text-xl font-black text-white tracking-tighter uppercase whitespace-nowrap">Macro Spending Trend</h4>
+                            <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">
+                                {trendFreq === 'monthly' ? 'Last 6 Months Data' : 'Last 12 Weeks Analysis'}
+                            </p>
+                        </div>
+
+                        {isTrendsLoading ? (
+                            <div className="h-[240px] flex items-center justify-center animate-pulse">
+                                <div className="text-[10px] font-black uppercase tracking-[3px] text-gray-700">Analyzing History...</div>
+                            </div>
+                        ) : (
+                            <SpendTrendChart data={spendTrends?.trends || []} frequency={trendFreq} />
+                        )}
+                    </Card>
                 </div>
             </div>
 
