@@ -8,7 +8,9 @@ from app.features.analytics.schemas import (
     VarianceAnalysis,
     FrozenFundsBreakdown,
     SafeToSpendResponse,
-    MonthlySummaryResponse
+    MonthlySummaryResponse,
+    SpendTrendResponse,
+    SpendTrendFrequency
 )
 from app.features.analytics.service import AnalyticsService
 
@@ -69,4 +71,15 @@ async def get_safe_to_spend(
     """
     return await service.calculate_safe_to_spend_amount(db, current_user.id)
 
-
+@router.get("/trends/spend/", response_model=SpendTrendResponse)
+async def get_spend_trends(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[AnalyticsService, Depends()],
+    days: int = Query(30, ge=7, le=90),
+    frequency: SpendTrendFrequency = Query(SpendTrendFrequency.DAILY)
+):
+    """
+    Get spending trends for the last N days with specific frequency.
+    """
+    return await service.get_spend_trends(db, current_user.id, days, frequency)

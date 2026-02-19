@@ -497,3 +497,70 @@ class AnalyticsService:
             current_period_expense=current_period_expense,
             prior_period_settlement=prior_period_settlement
         )
+
+    async def get_spend_trends(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        days: int = 30,
+        frequency: str = "daily"
+    ):
+        """Get spending trends for the last N days/weeks/months."""
+        from app.features.analytics.schemas import SpendTrendPoint, SpendTrendResponse
+        
+        today = self._get_today()
+        
+        if frequency == "monthly":
+            # Group by month for last 6 months
+            start_date = (today.replace(day=1) - timedelta(days=180)).replace(day=1)
+            date_field = func.date_trunc('month', Transaction.transaction_date)
+            limit_points = 6
+        elif frequency == "weekly":
+            # Group by week for last 12 weeks
+            start_date = today - timedelta(weeks=12)
+            date_field = func.date_trunc('week', Transaction.transaction_date)
+            limit_points = 12
+        else:
+            # Default Daily
+            start_date = today - timedelta(days=days + 5)
+            date_field = Transaction.transaction_date
+            limit_points = days
+
+        stmt = (
+            select(
+                date_field.label("date"),
+                func.sum(func.abs(Transaction.amount)).label("amount")
+            )
+            .where(Transaction.user_id == user_id)
+            .where(Transaction.category.notin_(["Income", "Transfer"]))
+            .where(Transaction.transaction_date >= start_date)
+            .where(Transaction.transaction_date <= today)
+            .group_by(date_field)
+            .order_by(date_field)
+        )
+        
+        result = await db.execute(stmt)
+        data_points = result.all()
+        
+        if frequency == "daily":
+            # Apply 3-day rolling average for daily
+            trends_map = {row.date: row.amount for row in data_points}
+            all_daily = []
+            full_start = today - timedelta(days=days + 2)
+            for i in range(days + 3):
+                d = full_start + timedelta(days=i)
+                all_daily.append({"date": d, "amount": trends_map.get(d, Decimal("0"))})
+            
+            final_trends = []
+            for i in range(2, len(all_daily)):
+                d = all_daily[i]["date"]
+                if d < today - timedelta(days=days - 1): continue
+                avg_amount = (all_daily[i]["amount"] + all_daily[i-1]["amount"] + all_daily[i-2]["amount"]) / 3
+                final_trends.append(SpendTrendPoint(date=d, amount=avg_amount))
+            return SpendTrendResponse(trends=final_trends)
+
+        # For Weekly and Monthly, just return the data points
+        return SpendTrendResponse(trends=[
+            SpendTrendPoint(date=row.date if isinstance(row.date, date) else row.date.date(), amount=row.amount)
+            for row in data_points
+        ])
