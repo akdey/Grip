@@ -13,7 +13,6 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Loader } from '../components/ui/Loader';
 import { formatDistanceToNow } from 'date-fns';
-
 const Sync: React.FC = () => {
     const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 

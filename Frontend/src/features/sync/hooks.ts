@@ -1,26 +1,10 @@
+// Synchronization Hooks & Types
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 
-export interface GmailStatus {
-    connected: boolean;
-    email: string | null;
-    last_sync: string | null;
-    total_synced: number;
-}
+import type { GmailStatus, SyncHistory, SyncTrend, SyncTrendResponse } from './types';
 
-export interface SyncHistoryItem {
-    id: number;
-    start_time: string;
-    end_time: string | null;
-    status: string;
-    records_processed: number;
-    trigger_source: string;
-    error_message: string | null;
-}
-
-export interface SyncHistory {
-    syncs: SyncHistoryItem[];
-}
+export type { GmailStatus, SyncHistory, SyncTrend, SyncTrendResponse };
 
 export const useGmailStatus = () => {
     return useQuery({
@@ -139,6 +123,18 @@ export const useSyncHistory = () => {
         queryKey: ['sync-history'],
         queryFn: async () => {
             const { data } = await api.get<SyncHistory>('/sync/history');
+            return data;
+        },
+    });
+};
+
+// Trends removed - now in types.ts
+
+export const useSyncTrends = (days: number = 30) => {
+    return useQuery({
+        queryKey: ['sync-trends', days],
+        queryFn: async () => {
+            const { data } = await api.get<SyncTrendResponse>(`/sync/trends?days=${days}`);
             return data;
         },
     });

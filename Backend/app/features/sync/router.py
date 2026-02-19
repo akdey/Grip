@@ -239,3 +239,13 @@ async def get_sync_history(
             for log in logs
         ]
     }
+
+@router.get("/trends")
+async def get_sync_trends(
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[SyncService, Depends()],
+    days: int = 30
+):
+    """Get sync trends for the user."""
+    trends = await service.get_sync_trends(current_user.id, days)
+    return {"trends": trends}

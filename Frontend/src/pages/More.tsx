@@ -15,10 +15,16 @@ import {
     Mail,
     Download,
     Target,
-    RefreshCw
+    RefreshCw,
+    Brain,
+    Cpu,
+    Activity
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
+import { useSyncTrends } from '../features/sync/hooks';
+import { SyncTrendChart } from '../components/sync/SyncTrendChart';
+import { Card } from '../components/ui/Card';
 
 const FEATURE_CARDS = [
     { id: 'sync', label: 'Gmail Sync', icon: Mail, path: '/sync', color: 'text-green-400', bgColor: 'bg-green-500/10' },
@@ -32,6 +38,63 @@ const FEATURE_CARDS = [
     { id: 'vault', label: 'Vault', icon: Target, path: '/credit-cards', color: 'text-purple-400', bgColor: 'bg-purple-500/10' },
     { id: 'sureties', label: 'Sureties', icon: RefreshCw, path: '/sureties', color: 'text-rose-400', bgColor: 'bg-rose-500/10' }, // Changed color to rose to differentiate
 ];
+
+const SystemIntelligence: React.FC = () => {
+    const { data: trendsData, isLoading } = useSyncTrends(30);
+
+    if (isLoading || !trendsData?.trends || trendsData.trends.length === 0) return null;
+
+    const totalTxns = trendsData.trends.reduce((acc, curr) => acc + (curr.manual || 0) + (curr.system || 0), 0);
+    const systemTxns = trendsData.trends.reduce((acc, curr) => acc + (curr.system || 0), 0);
+    const efficiency = totalTxns > 0 ? ((systemTxns / totalTxns) * 100).toFixed(0) : 0;
+
+    return (
+        <Card className="px-6 py-8 bg-[#0a0a0a] border-white/[0.05] rounded-[2.5rem] relative overflow-hidden group mb-8">
+            <div className="absolute right-0 top-0 p-10 opacity-[0.02] rotate-12 group-hover:rotate-0 transition-transform duration-1000">
+                <Cpu size={160} />
+            </div>
+
+            <div className="flex items-center justify-between mb-8 relative z-10">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center animate-pulse">
+                        <Brain size={22} />
+                    </div>
+                    <div>
+                        <h3 className="text-[10px] font-black uppercase tracking-[4px] text-indigo-400">System Autopilot</h3>
+                        <h4 className="text-xl font-black text-white tracking-tighter">Decision Efficiency</h4>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <p className="text-[9px] font-black uppercase tracking-[2px] text-gray-500 mb-1">Success Rate</p>
+                    <p className="text-2xl font-black text-white">{efficiency}%</p>
+                </div>
+            </div>
+
+            <SyncTrendChart data={trendsData.trends} />
+
+            <div className="grid grid-cols-2 gap-8 mt-10 pt-8 border-t border-white/[0.05]">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white/[0.03] flex items-center justify-center text-gray-400">
+                        <Activity size={14} />
+                    </div>
+                    <div>
+                        <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Processed</p>
+                        <p className="text-lg font-black text-white">{totalTxns}</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3 justify-end text-right">
+                    <div>
+                        <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">AI Handled</p>
+                        <p className="text-lg font-black text-indigo-400">{systemTxns}</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/5 flex items-center justify-center text-indigo-400">
+                        <Sparkles size={14} />
+                    </div>
+                </div>
+            </div>
+        </Card>
+    );
+};
 
 const More: React.FC = () => {
     const navigate = useNavigate();
@@ -87,7 +150,7 @@ const More: React.FC = () => {
                 </div>
             </header>
 
-            <div className="px-3 space-y-5 animate-enter">
+            <div className="px-3 space-y-8 animate-enter pb-10">
                 {/* Feature Grid - Compact */}
                 <div className="grid grid-cols-2 gap-2">
                     {FEATURE_CARDS.map((card) => (
@@ -147,6 +210,8 @@ const More: React.FC = () => {
                         </button>
                     </div>
                 </div>
+
+                <SystemIntelligence />
             </div>
         </div>
     );

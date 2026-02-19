@@ -211,6 +211,45 @@ class SyncService:
             logger.error(f"Gmail Sync Error: {e}")
             return []
 
+    async def get_sync_trends(self, user_id: uuid.UUID, days: int = 30):
+        """Get transaction origination trends (Manual vs Automated)."""
+        from sqlalchemy import func, cast, Date
+        from app.features.transactions.models import Transaction
+        
+        # Query transaction counts grouped by date and is_manual
+        stmt = (
+            select(
+                Transaction.transaction_date.label("date"),
+                Transaction.is_manual,
+                func.count(Transaction.id).label("count")
+            )
+            .where(Transaction.user_id == user_id)
+            .where(Transaction.transaction_date.isnot(None))
+            .group_by(Transaction.transaction_date, Transaction.is_manual)
+            .order_by(Transaction.transaction_date.desc())
+            .limit(days * 2)
+        )
+        
+        result = await self.db.execute(stmt)
+        rows = result.all()
+        
+        trends_map = {}
+        for row in rows:
+            if not row.date:
+                continue
+            date_str = row.date.isoformat()
+            if date_str not in trends_map:
+                trends_map[date_str] = {"date": date_str, "manual": 0, "system": 0}
+            
+            val = int(row.count or 0)
+            if row.is_manual:
+                trends_map[date_str]["manual"] += val
+            else:
+                # Automated (Sync)
+                trends_map[date_str]["system"] += val
+                
+        return sorted(trends_map.values(), key=lambda x: x["date"])
+
     async def execute_sync(self, user_id: uuid.UUID, source: str):
         log = await self._log_start(user_id, source)
         try:
