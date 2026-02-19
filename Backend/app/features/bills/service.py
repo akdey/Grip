@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from uuid import UUID
 from datetime import date, datetime, timedelta
 import zoneinfo
@@ -199,6 +200,8 @@ class BillService:
         }
         """
         from app.features.analytics.schemas import IdentifiedObligation
+        from app.features.categories.models import SubCategory
+        from app.utils.finance_utils import get_month_date_range, get_previous_month_date_range
         
         today = self._get_today()
         threshold_date = today + timedelta(days=days_ahead)
@@ -207,11 +210,46 @@ class BillService:
         unpaid_total = Decimal("0.00")
         projected_total = Decimal("0.00")
         
-        # Fetch Exclusions
+        # Define Statements
         excl_stmt = select(BillExclusion).where(BillExclusion.user_id == user_id)
-        excl_res = await db.execute(excl_stmt)
-        exclusions = excl_res.scalars().all()
+        bill_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_paid == False)
+        rec_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_recurring == True)
+        sub_stmt = select(SubCategory.name).where(SubCategory.is_surety == True)
         
+        prev_range = get_previous_month_date_range(today)
+        curr_range = get_month_date_range(today)
+        
+        past_stmt = (
+            select(Transaction)
+            .where(Transaction.user_id == user_id)
+            .where(Transaction.transaction_date >= prev_range["month_start"])
+            .where(Transaction.transaction_date <= prev_range["month_end"])
+        )
+        
+        curr_stmt = (
+            select(Transaction)
+            .where(Transaction.user_id == user_id)
+            .where(Transaction.transaction_date >= curr_range["month_start"])
+            .where(Transaction.transaction_date <= curr_range["month_end"])
+        )
+
+        # Execute all in parallel
+        excl_res, bill_res, rec_res, sub_res, past_res, curr_res = await asyncio.gather(
+            db.execute(excl_stmt),
+            db.execute(bill_stmt),
+            db.execute(rec_stmt),
+            db.execute(sub_stmt),
+            db.execute(past_stmt),
+            db.execute(curr_stmt)
+        )
+        
+        exclusions = excl_res.scalars().all()
+        unpaid_bills = bill_res.scalars().all()
+        recurring_bills = rec_res.scalars().all()
+        surety_subs = set(name.lower() for name in sub_res.scalars().all())
+        all_past_txns = list(past_res.scalars().all())
+        all_curr_txns = list(curr_res.scalars().all())
+
         skipped_source_ids = {e.source_transaction_id for e in exclusions if e.exclusion_type == 'SKIP' and e.source_transaction_id}
         manual_paid_ids = {e.source_transaction_id for e in exclusions if e.exclusion_type == 'MANUAL_PAID' and e.source_transaction_id}
         permanent_patterns = [
@@ -220,13 +258,9 @@ class BillService:
             for e in exclusions if e.exclusion_type == 'PERMANENT'
         ]
 
-        # 1. Fetch ALL unpaid bills (one-time or recurring)
-        bill_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_paid == False)
-        bill_res = await db.execute(bill_stmt)
-        unpaid_bills = bill_res.scalars().all()
-        
         covered_signatures: Set[Tuple[str, Decimal]] = set()
         
+        # 1. Process unpaid bills
         for bill in unpaid_bills:
             status = "OVERDUE" if bill.due_date < today else "PENDING"
             ledger_items.append(IdentifiedObligation(
@@ -245,15 +279,9 @@ class BillService:
                 covered_signatures.add((bill.sub_category.lower(), bill.amount))
 
         # 2. Project NEXT instances for Recurring Bills
-        rec_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_recurring == True)
-        rec_res = await db.execute(rec_stmt)
-        recurring_bills = rec_res.scalars().all()
-        
         for bill in recurring_bills:
             r_day = bill.recurrence_day or bill.due_date.day
             next_due = self._calculate_next_recurrence(r_day, today)
-            
-            # If the next instance is in the FUTURE (not the current unpaid one)
             if today <= next_due <= threshold_date:
                 if next_due > bill.due_date or bill.is_paid:
                     ledger_items.append(IdentifiedObligation(
@@ -270,44 +298,9 @@ class BillService:
                     projected_total += bill.amount
                     covered_signatures.add((bill.sub_category.lower(), bill.amount))
 
-        # 3. Simple Surety Projections (Last Month vs Current Month)
-        # 3a. Identify Surety Subcategories
-        sub_stmt = select(SubCategory.name).where(SubCategory.is_surety == True)
-        sub_res = await db.execute(sub_stmt)
-        surety_subs = set(name.lower() for name in sub_res.scalars().all())
-        
-        from app.utils.finance_utils import get_month_date_range, get_previous_month_date_range
-        
-        prev_range = get_previous_month_date_range(today)
-        curr_range = get_month_date_range(today)
-        
-        past_stmt = (
-            select(Transaction)
-            .where(Transaction.user_id == user_id)
-            .where(Transaction.transaction_date >= prev_range["month_start"])
-            .where(Transaction.transaction_date <= prev_range["month_end"])
-            .where(or_(
-                Transaction.is_surety == True,
-                func.lower(Transaction.sub_category).in_(list(surety_subs))
-            ))
-        )
-        
-        curr_stmt = (
-            select(Transaction)
-            .where(Transaction.user_id == user_id)
-            .where(Transaction.transaction_date >= curr_range["month_start"])
-            .where(Transaction.transaction_date <= curr_range["month_end"])
-            .where(or_(
-                Transaction.is_surety == True,
-                func.lower(Transaction.sub_category).in_(list(surety_subs))
-            ))
-        )
-        
-        past_res = await db.execute(past_stmt)
-        curr_res = await db.execute(curr_stmt)
-        
-        past_txns = list(past_res.scalars().all())
-        curr_txns = list(curr_res.scalars().all())
+        # 3. Process Surety
+        past_txns = [t for t in all_past_txns if t.is_surety or (t.sub_category and t.sub_category.lower() in surety_subs)]
+        curr_txns = [t for t in all_curr_txns if t.is_surety or (t.sub_category and t.sub_category.lower() in surety_subs)]
         
         matched_curr_ids = set()
         
