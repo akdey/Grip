@@ -20,12 +20,20 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
 }) => {
     if (isLoading) {
         return (
-            <div className="relative p-8 rounded-[3.5rem] bg-white/[0.01] border border-white/[0.05] overflow-hidden animate-pulse min-h-[400px]">
-                <div className="flex flex-col items-center">
-                    <div className="h-6 w-24 bg-white/[0.05] rounded-full mb-6" />
-                    <div className="h-16 w-32 bg-white/[0.05] rounded-lg mb-3" />
-                    <div className="h-3 w-40 bg-white/[0.05] rounded mb-8" />
-                    <div className="w-full max-w-[200px] h-1 bg-white/[0.05] rounded-full" />
+            <div className="relative p-8 rounded-[3.5rem] bg-white/[0.01] border border-white/[0.05] overflow-hidden animate-pulse min-h-[400px] flex flex-col items-center">
+                <div className="h-6 w-24 bg-white/[0.05] rounded-full mb-6" />
+                <div className="h-16 w-48 bg-white/[0.05] rounded-lg mb-3" />
+                <div className="h-3 w-40 bg-white/[0.05] rounded mb-8" />
+                <div className="w-full max-w-[200px] h-1 bg-white/[0.05] rounded-full mb-10" />
+                <div className="w-full grid grid-cols-2 gap-8 pt-8 border-t border-white/[0.05]">
+                    <div className="flex flex-col items-center gap-2">
+                        <div className="h-2 w-16 bg-white/[0.05] rounded" />
+                        <div className="h-6 w-24 bg-white/[0.05] rounded" />
+                    </div>
+                    <div className="flex flex-col items-center gap-2">
+                        <div className="h-2 w-16 bg-white/[0.05] rounded" />
+                        <div className="h-6 w-24 bg-white/[0.05] rounded" />
+                    </div>
                 </div>
             </div>
         );
@@ -87,7 +95,7 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
 
             <div className="relative z-10 flex flex-col items-center text-center">
                 <div className={`flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full border ${theme.pill} backdrop-blur-md`}>
-                    <Sparkles size={12} />
+                    <Sparkles size={12} aria-hidden="true" />
                     <h2 className="text-[10px] font-black uppercase tracking-[3px]">Safe Liquid</h2>
                 </div>
 
@@ -110,7 +118,7 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
                             className="h-full bg-gradient-to-r from-white to-white/60 shadow-[0_0_20px_rgba(255,255,255,0.3)] w-full"
                         />
                     </div>
-                    <div className="flex justify-between text-[7px] font-black uppercase tracking-[2px] text-gray-600">
+                    <div className="flex justify-between text-[7px] font-black uppercase tracking-[2px] text-gray-400">
                         <span>Risk</span>
                         <span>Capacity</span>
                     </div>
@@ -119,15 +127,15 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
                 <div className="w-full grid grid-cols-2 gap-8 mt-10 border-t border-white/[0.05] pt-8">
                     <div className="flex flex-col items-center">
                         <div className="flex items-center gap-1.5 mb-1.5 opacity-60">
-                            <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Gross Liquid</p>
-                            {!showSensitive && <Lock size={8} className="text-gray-500" />}
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gross Liquid</p>
+                            {!showSensitive && <Lock size={8} className="text-gray-400" aria-hidden="true" />}
                         </div>
                         <p className="text-xl font-black text-white/90">
                             {showSensitive ? formatCurrency(balance) : '******'}
                         </p>
                     </div>
                     <div className="flex flex-col items-center">
-                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 opacity-60">Buffer</p>
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 opacity-60">Buffer</p>
                         <p className="text-xl font-black text-white/70">{formatCurrency(Number(safeToSpend?.buffer_amount || 0))}</p>
                     </div>
                 </div>
