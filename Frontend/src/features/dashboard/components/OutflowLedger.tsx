@@ -16,11 +16,24 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
 }) => {
     if (isLoading) {
         return (
-            <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] animate-pulse">
-                <div className="h-3 w-32 bg-white/[0.05] rounded mb-6" />
-                <div className="space-y-4">
-                    <div className="h-8 w-full bg-white/[0.05] rounded" />
-                    <div className="h-8 w-full bg-white/[0.05] rounded" />
+            <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] flex flex-col gap-4 animate-pulse">
+                <div className="flex justify-between">
+                    <div className="h-3 w-32 bg-white/[0.05] rounded" />
+                    <div className="h-3 w-20 bg-white/[0.05] rounded" />
+                </div>
+                <div className="space-y-6 my-2">
+                    <div className="space-y-2">
+                        <div className="flex justify-between"><div className="h-2 w-16 bg-white/[0.05] rounded" /><div className="h-2 w-12 bg-white/[0.05] rounded" /></div>
+                        <div className="h-1.5 w-full bg-white/[0.05] rounded-full" />
+                    </div>
+                    <div className="space-y-2">
+                        <div className="flex justify-between"><div className="h-2 w-16 bg-white/[0.05] rounded" /><div className="h-2 w-12 bg-white/[0.05] rounded" /></div>
+                        <div className="h-1.5 w-full bg-white/[0.05] rounded-full" />
+                    </div>
+                </div>
+                <div className="pt-3 border-t border-white/[0.05] flex justify-between items-center">
+                    <div className="h-2 w-20 bg-white/[0.05] rounded" />
+                    <div className="h-4 w-24 bg-white/[0.05] rounded" />
                 </div>
             </div>
         );
@@ -32,8 +45,8 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
     return (
         <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] flex flex-col gap-4">
             <div className="flex items-center justify-between">
-                <h2 className="text-[10px] font-black text-gray-500 uppercase tracking-[3px]">Outflow Ledger</h2>
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[3px]">Outflow Ledger</h2>
+                <span className="text-[9px] font-bold text-gray-300 uppercase tracking-wider">
                     Accrual View
                 </span>
             </div>
@@ -53,7 +66,7 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                             className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full w-full"
                         />
                     </div>
-                    <p className="text-[8px] text-gray-600 mt-1 font-medium">Expenses incurred this period</p>
+                    <p className="text-[8px] text-gray-400 mt-1 font-medium">Expenses incurred this period</p>
                 </div>
 
                 {/* Prior Period Settlement */}
@@ -70,12 +83,12 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                             className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full w-full"
                         />
                     </div>
-                    <p className="text-[8px] text-gray-600 mt-1 font-medium">Credit card bills paid from prior period</p>
+                    <p className="text-[8px] text-gray-400 mt-1 font-medium">Credit card bills paid from prior period</p>
                 </div>
             </div>
 
             <div className="pt-3 border-t border-white/[0.05] flex justify-between items-center">
-                <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Total Outflow</span>
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Outflow</span>
                 <span className="text-sm font-black text-white">{formatCurrency(total)}</span>
             </div>
         </div>

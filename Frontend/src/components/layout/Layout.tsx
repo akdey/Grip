@@ -20,9 +20,12 @@ export const Layout: React.FC = () => {
 
     useEffect(() => {
         if (status?.connected && !hasSynced.current) {
-            console.log("Auto-syncing Gmail transactions...");
-            sync();
-            hasSynced.current = true;
+            const timer = setTimeout(() => {
+                console.log("Auto-syncing Gmail transactions...");
+                sync();
+                hasSynced.current = true;
+            }, 2000);
+            return () => clearTimeout(timer);
         }
     }, [status?.connected, sync]);
 

@@ -7,8 +7,6 @@ import {
     ArrowDownRight,
     Search,
     Lock,
-    Sparkles,
-    Activity,
     Eye,
     EyeOff,
     Check,
@@ -16,7 +14,7 @@ import {
     Receipt,
     X,
     Calendar,
-    ArrowRight
+    Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '../components/ui/Loader';
@@ -84,18 +82,18 @@ const Dashboard: React.FC = () => {
                     <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600 pb-1">
                         {import.meta.env.VITE_APP_NAME || 'Grip'}
                     </h1>
-                    <p className="text-[8px] text-gray-500 font-bold uppercase tracking-[3px] mt-1">{import.meta.env.VITE_APP_TAGLINE || 'Money that minds itself.'}</p>
+                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-[3px] mt-1">{import.meta.env.VITE_APP_TAGLINE || 'Money that minds itself.'}</p>
 
                     {/* Scope Selector */}
                     <div className="relative mt-6">
                         <button
                             onClick={() => setShowScopeMenu(!showScopeMenu)}
-                            className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors min-w-[100px]"
+                            className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors min-w-[100px]"
                             aria-label="Change dashboard scope"
                             aria-expanded={showScopeMenu}
                         >
                             <span>{scopes.find(s => s.id === scope)?.label}</span>
-                            <ChevronDown size={10} className={`transition-transform duration-300 ${showScopeMenu ? 'rotate-180' : ''}`} />
+                            <ChevronDown size={10} className={`transition-transform duration-300 ${showScopeMenu ? 'rotate-180' : ''}`} aria-hidden="true" />
                         </button>
 
                         <AnimatePresence>
