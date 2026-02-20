@@ -26,7 +26,7 @@ export const Navbar: React.FC = () => {
                     if (item.isAction) {
                         return (
                             <div key={item.path} className="relative -top-6 flex justify-center w-1/5">
-                                <NavLink to={item.path} className="block active:scale-90 transition-transform">
+                                <NavLink to={item.path} className="block active:scale-90 transition-transform" aria-label="Add new entry">
                                     <motion.div
                                         layoutId="fab-action"
                                         className="w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-[0_15px_40px_rgba(255,255,255,0.2)] border-4 border-[#050505]"

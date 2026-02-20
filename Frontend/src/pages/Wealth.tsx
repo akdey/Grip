@@ -178,20 +178,21 @@ const Wealth: React.FC = () => {
                     <button
                         onClick={() => setIsStatementImportOpen(true)}
                         className="p-2 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 transition-colors border border-purple-500/20"
-                        title="Import Statement (CAMS/KFin/MFCentral)"
+                        aria-label="Import Statement (CAMS/KFin/MFCentral)"
                     >
                         <Upload size={20} />
                     </button>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
                         className="p-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors border border-emerald-500/20"
-                        title="Add Asset Manually"
+                        aria-label="Add Asset Manually"
                     >
                         <Plus size={20} />
                     </button>
                     <button
                         onClick={fetchData}
                         className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                        aria-label="Refresh wealth data"
                     >
                         <RefreshCw size={20} className={holdingsLoading || forecastLoading ? "animate-spin" : ""} />
                     </button>

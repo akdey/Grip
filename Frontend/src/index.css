@@ -54,8 +54,14 @@ body {
   }
 
   .glass-blur {
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+  }
+
+  /* Optimize rendering of off-screen content */
+  .section-contain {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 200px;
   }
 }
 
@@ -63,8 +69,11 @@ body {
 
   /* Liquid Glass Card - Apple Style */
   .glass-card {
-    @apply relative overflow-hidden backdrop-blur-2xl bg-white/[0.03] border border-white/[0.08] shadow-2xl;
+    @apply relative overflow-hidden backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] shadow-2xl;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+    /* Performance optimization */
+    will-change: transform;
+    contain: layout;
   }
 
   .glass-card::before {

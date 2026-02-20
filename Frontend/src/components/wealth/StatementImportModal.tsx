@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, FileText, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
-import * as XLSX from 'xlsx';
+// Dynamic import for xlsx will be handled in handleFileUpload
 
 interface StatementImportModalProps {
     isOpen: boolean;
@@ -35,7 +35,7 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
 
         setError('');
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             try {
                 const data = event.target?.result;
                 let parsed: Transaction[] = [];
@@ -43,7 +43,8 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                 if (file.name.endsWith('.csv')) {
                     parsed = parseCSV(data as string);
                 } else {
-                    // Excel parsing
+                    // Excel parsing - Dynamic Import
+                    const XLSX = await import('xlsx');
                     const workbook = XLSX.read(data, { type: 'binary' });
                     const sheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[sheetName];
@@ -314,8 +315,8 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                                 setError('');
                                             }}
                                             className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${source === s
-                                                    ? 'bg-emerald-600 text-white shadow-lg'
-                                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                                ? 'bg-emerald-600 text-white shadow-lg'
+                                                : 'text-gray-400 hover:text-white hover:bg-white/5'
                                                 }`}
                                         >
                                             {s}

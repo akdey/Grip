@@ -40,6 +40,7 @@ export const Layout: React.FC = () => {
                         <button
                             onClick={() => setShowDesktopWarning(false)}
                             className="hover:text-white hover:bg-white/10 p-1 rounded-full transition-colors"
+                            aria-label="Close warning"
                         >
                             <X size={14} />
                         </button>
