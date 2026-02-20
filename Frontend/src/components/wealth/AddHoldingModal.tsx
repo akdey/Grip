@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Search } from 'lucide-react';
+import { ChevronDown, Save, Search } from 'lucide-react';
 import { api } from '../../lib/api';
 
 interface AddHoldingModalProps {
@@ -95,33 +95,49 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="fixed inset-0 z-50 flex justify-center pointer-events-none">
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    className="bg-[#0A0A0A] border border-white/10 rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden shadow-2xl"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={onClose}
+                    className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
+                />
+                <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
                 >
                     {/* Fixed Header */}
-                    <div className="p-4 border-b border-white/5 flex justify-between items-center bg-[#0F0F0F] flex-shrink-0">
-                        <h3 className="font-semibold text-lg">Add New Asset</h3>
-                        <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-colors">
-                            <X size={20} className="text-gray-400" />
-                        </button>
+                    <div className="p-6 sm:p-10 border-b border-white/10 flex justify-between items-center bg-gradient-to-b from-white/[0.05] to-transparent shrink-0">
+                        <div>
+                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic">Add New Asset</h3>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[4px] mt-1">Portfolio Expansion Engine</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={onClose}
+                                className="w-14 h-14 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group"
+                            >
+                                <ChevronDown size={28} className="group-hover:translate-y-0.5 transition-transform" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Scrollable Form Content */}
-                    <div className="overflow-y-auto flex-1">
-                        <div className="p-6 pb-18 space-y-4">
+                    <div className="overflow-y-auto flex-1 custom-scrollbar">
+                        <div className="p-6 sm:p-10 space-y-6">
                             <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Asset Name</label>
+                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Asset Name</label>
                                 <input
                                     type="text"
                                     required
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="e.g. Axis Bluechip Fund"
-                                    className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                                    className="w-full bg-white/[0.02] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-emerald-500/50 transition-all placeholder:text-gray-600"
                                 />
                             </div>
 
@@ -434,14 +450,14 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                     </div>
 
                     {/* Fixed Footer with Submit Button */}
-                    <div className="p-4 border-t border-white/5 bg-[#0F0F0F] flex-shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)]">
+                    <div className="p-8 sm:p-12 border-t border-white/5 bg-white/[0.01] flex-shrink-0">
                         <button
                             type="submit"
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                            className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/20 disabled:opacity-50"
                         >
-                            {loading ? <div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></div> : <><Save size={18} /> Create Asset</>}
+                            {loading ? <div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></div> : <><Save size={20} /> Deploy Asset to Portfolio</>}
                         </button>
                     </div>
                 </motion.div>
