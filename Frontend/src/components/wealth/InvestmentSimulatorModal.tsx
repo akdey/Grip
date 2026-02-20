@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Calendar, Calculator, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
+import { ChevronDown, Search, Calculator, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
 import { api } from '../../lib/api';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+// No recharts components are currently used in this file
 
 interface InvestmentSimulatorModalProps {
     isOpen: boolean;
@@ -12,6 +12,7 @@ interface InvestmentSimulatorModalProps {
 interface SimulationResult {
     scheme_code: string;
     invested_date: string;
+    end_date?: string;
     invested_amount: number;
     start_nav: number;
     current_nav: number;
@@ -19,6 +20,7 @@ interface SimulationResult {
     current_value: number;
     absolute_return: number;
     return_percentage: number;
+    monthly_breakdown?: any[];
 }
 
 export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> = ({ isOpen, onClose }) => {
@@ -77,29 +79,49 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
         setStep(1);
     };
 
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+            return () => { document.body.style.overflow = ''; };
+        }
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div className="fixed inset-0 z-50 flex justify-center pointer-events-none">
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="bg-[#0F0F0F] border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={onClose}
+                    className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
+                />
+                <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
                 >
                     {/* Header */}
-                    <div className="p-6 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-indigo-900/20 to-purple-900/20">
+                    <div className="p-6 sm:p-10 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-indigo-900/10 to-purple-900/10 shrink-0">
                         <div>
-                            <h2 className="text-xl font-black italic tracking-tighter flex items-center gap-2">
-                                <Calculator className="text-indigo-400" size={24} />
+                            <h2 className="text-2xl font-black italic tracking-tighter flex items-center gap-2">
+                                <Calculator className="text-indigo-400" size={28} />
                                 TIME MACHINE
                             </h2>
-                            <p className="text-[10px] text-indigo-300/60 uppercase tracking-[3px] font-bold">Mutual Fund Simulator</p>
+                            <p className="text-[10px] text-indigo-300/60 uppercase tracking-[4px] font-bold">Mutual Fund Intelligence Simulator</p>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                            <X size={20} className="text-gray-400" />
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={onClose}
+                                className="w-14 h-14 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group"
+                            >
+                                <ChevronDown size={28} className="group-hover:translate-y-0.5 transition-transform" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Content */}

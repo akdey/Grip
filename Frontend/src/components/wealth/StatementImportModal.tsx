@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, FileText, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { ChevronDown, Upload, FileText, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
 // Dynamic import for xlsx will be handled in handleFileUpload
 
@@ -282,30 +282,43 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="fixed inset-0 z-50 flex justify-center pointer-events-none">
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    className="bg-[#0A0A0A] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={handleClose}
+                    className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
+                />
+                <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[92vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
                 >
                     {/* Header */}
-                    <div className="p-4 border-b border-white/5 flex justify-between items-center bg-[#0F0F0F] flex-shrink-0">
+                    <div className="p-6 sm:p-10 border-b border-white/10 flex justify-between items-center bg-gradient-to-b from-white/[0.05] to-transparent shrink-0">
                         <div>
-                            <h3 className="font-semibold text-lg">Import Investment Statement</h3>
-                            <p className="text-xs text-gray-500 mt-0.5">Upload consolidated account statements (CAS)</p>
+                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic">Statement Intelligence</h3>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[4px] mt-1">Consolidated account statement processing</p>
                         </div>
-                        <button onClick={handleClose} className="p-1 hover:bg-white/10 rounded-full transition-colors">
-                            <X size={20} className="text-gray-400" />
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleClose}
+                                className="w-14 h-14 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group"
+                            >
+                                <ChevronDown size={28} className="group-hover:translate-y-0.5 transition-transform" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Content */}
-                    <div className="overflow-y-auto flex-1 p-6">
+                    <div className="overflow-y-auto flex-1 p-6 sm:p-10 custom-scrollbar">
                         {!importResult ? (
                             <>
                                 {/* Source Selector */}
-                                <div className="flex gap-2 mb-6 bg-white/5 p-1 rounded-xl w-fit">
+                                <div className="flex gap-2 mb-8 bg-white/5 p-1 rounded-2xl w-fit">
                                     {['CAMS', 'KFin', 'MFCentral'].map((s) => (
                                         <button
                                             key={s}
@@ -314,9 +327,9 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                                 setTransactions([]);
                                                 setError('');
                                             }}
-                                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${source === s
-                                                ? 'bg-emerald-600 text-white shadow-lg'
-                                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${source === s
+                                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
+                                                : 'text-gray-500 hover:text-white hover:bg-white/5'
                                                 }`}
                                         >
                                             {s}
@@ -325,12 +338,12 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                 </div>
 
                                 {/* File Upload */}
-                                <div className="mb-6">
+                                <div className="mb-8">
                                     <label className="block w-full">
-                                        <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-emerald-500/50 transition-colors cursor-pointer bg-white/[0.02] group">
-                                            <Upload size={48} className="mx-auto mb-4 text-gray-500 group-hover:text-emerald-500 transition-colors" />
-                                            <p className="text-sm font-medium mb-1">Upload {source} Statement</p>
-                                            <p className="text-xs text-gray-500">Supports CSV and Excel (.xlsx, .xls)</p>
+                                        <div className="border border-dashed border-white/20 rounded-3xl p-6 sm:p-10 text-center hover:border-emerald-500/50 hover:bg-emerald-500/[0.02] transition-all cursor-pointer bg-white/[0.01] group overflow-hidden">
+                                            <Upload size={40} className="mx-auto mb-4 text-gray-500 group-hover:text-emerald-500 group-hover:scale-110 transition-all" />
+                                            <p className="text-base font-black text-white tracking-tight mb-1">Select {source} Statement</p>
+                                            <p className="text-[10px] text-gray-500 font-medium uppercase tracking-widest">Supports CSV and Excel Formats</p>
                                             <input
                                                 type="file"
                                                 accept=".csv,.xlsx,.xls"
@@ -344,86 +357,100 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
 
                                 {/* Preview */}
                                 {transactions.length > 0 && (
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <h4 className="font-medium flex items-center gap-2">
-                                                <FileText size={18} className="text-emerald-500" />
-                                                Preview ({transactions.length} transactions)
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between px-2">
+                                            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[4px] flex items-center gap-3">
+                                                <FileText size={16} className="text-emerald-500" />
+                                                Data Ingestion Preview ({transactions.length} items)
                                             </h4>
                                         </div>
 
-                                        <div className="bg-[#050505] rounded-xl border border-white/5 max-h-64 overflow-y-auto custom-scrollbar">
-                                            <table className="w-full text-xs">
-                                                <thead className="sticky top-0 bg-[#0A0A0A] border-b border-white/5 z-10">
-                                                    <tr className="text-left text-gray-500">
-                                                        <th className="p-2">Date</th>
-                                                        <th className="p-2">Scheme</th>
-                                                        <th className="p-2">Type</th>
-                                                        <th className="p-2 text-right">Amount</th>
-                                                        <th className="p-2 text-right">Units</th>
+                                        <div className="bg-white/[0.02] rounded-3xl border border-white/5 max-h-[40vh] overflow-y-auto custom-scrollbar overflow-hidden">
+                                            <table className="w-full text-xs text-left">
+                                                <thead className="sticky top-0 bg-[#0A0A0A] border-b border-white/10 z-10">
+                                                    <tr className="text-gray-500">
+                                                        <th className="px-5 py-4 font-black uppercase tracking-widest text-[9px]">Event Date</th>
+                                                        <th className="px-5 py-4 font-black uppercase tracking-widest text-[9px]">Scheme Descriptor</th>
+                                                        <th className="px-5 py-4 font-black uppercase tracking-widest text-[9px]">Type</th>
+                                                        <th className="px-5 py-4 font-black uppercase tracking-widest text-[9px] text-right">Settlement</th>
+                                                        <th className="px-5 py-4 font-black uppercase tracking-widest text-[9px] text-right">Units</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody>
-                                                    {transactions.slice(0, 50).map((txn, idx) => (
-                                                        <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.02]">
-                                                            <td className="p-2 whitespace-nowrap">{txn.transaction_date}</td>
-                                                            <td className="p-2 truncate max-w-[200px]" title={txn.scheme_name}>{txn.scheme_name}</td>
-                                                            <td className="p-2">
-                                                                <span className={`px-2 py-0.5 rounded text-[10px] ${txn.transaction_type.toLowerCase().includes('purchase') || txn.transaction_type.toLowerCase().includes('sip')
-                                                                    ? 'bg-emerald-500/10 text-emerald-500'
-                                                                    : 'bg-red-500/10 text-red-500'
+                                                <tbody className="divide-y divide-white/[0.05]">
+                                                    {transactions.slice(0, 100).map((txn, idx) => (
+                                                        <tr key={idx} className="hover:bg-white/[0.04] transition-colors">
+                                                            <td className="px-5 py-4 whitespace-nowrap text-gray-400 font-mono">{txn.transaction_date}</td>
+                                                            <td className="px-5 py-4 font-bold text-white truncate max-w-[250px]" title={txn.scheme_name}>{txn.scheme_name}</td>
+                                                            <td className="px-5 py-4">
+                                                                <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest ${txn.transaction_type.toLowerCase().includes('purchase') || txn.transaction_type.toLowerCase().includes('sip')
+                                                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10'
+                                                                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/10'
                                                                     }`}>
                                                                     {txn.transaction_type}
                                                                 </span>
                                                             </td>
-                                                            <td className="p-2 text-right font-mono">₹{txn.amount.toLocaleString()}</td>
-                                                            <td className="p-2 text-right font-mono">{txn.units.toFixed(3)}</td>
+                                                            <td className="px-5 py-4 text-right font-black text-white">₹{txn.amount.toLocaleString()}</td>
+                                                            <td className="px-5 py-4 text-right font-mono text-gray-400">{txn.units.toFixed(3)}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
                                         </div>
 
-                                        {transactions.length > 50 && (
-                                            <p className="text-xs text-gray-500 text-center">
-                                                Showing first 50 of {transactions.length} transactions
+                                        {transactions.length > 100 && (
+                                            <p className="text-[10px] text-gray-600 text-center font-bold uppercase tracking-widest">
+                                                Truncated preview: {transactions.length - 100} more items hidden
                                             </p>
                                         )}
                                     </div>
                                 )}
 
                                 {error && (
-                                    <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-2">
-                                        <AlertCircle size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
-                                        <p className="text-xs text-red-400">{error}</p>
+                                    <div className="mt-6 p-5 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-4">
+                                        <AlertCircle size={20} className="text-rose-500 shrink-0" />
+                                        <p className="text-sm text-rose-300 font-medium">{error}</p>
                                     </div>
                                 )}
                             </>
                         ) : (
                             /* Import Result */
-                            <div className="space-y-4">
-                                <div className="text-center py-6">
-                                    <CheckCircle size={64} className="mx-auto mb-4 text-emerald-500" />
-                                    <h4 className="text-xl font-bold mb-2">Import Successful!</h4>
-                                    <p className="text-sm text-gray-500">Your statement has been processed</p>
+                            <div className="space-y-8 py-10">
+                                <div className="text-center">
+                                    <div className="w-24 h-24 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6 border border-emerald-500/10 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
+                                        <CheckCircle size={48} className="text-emerald-500" />
+                                    </div>
+                                    <h4 className="text-3xl font-black text-white tracking-tighter uppercase italic">Ingestion Complete</h4>
+                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-[4px] mt-2">Intelligence engine sync successful</p>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
-                                        <p className="text-xs text-gray-500 mb-1">Holdings Created</p>
-                                        <p className="text-2xl font-bold text-emerald-400">{importResult.holdings_created}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Assets Integrated</p>
+                                            <p className="text-3xl font-black text-emerald-400 tracking-tighter">{importResult.holdings_created || 0}</p>
+                                        </div>
+                                        <RefreshCw size={24} className="text-emerald-500/20" />
                                     </div>
-                                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                                        <p className="text-xs text-gray-500 mb-1">Holdings Updated</p>
-                                        <p className="text-2xl font-bold text-blue-400">{importResult.holdings_updated}</p>
+                                    <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">State Syncs</p>
+                                            <p className="text-3xl font-black text-blue-400 tracking-tighter">{importResult.holdings_updated || 0}</p>
+                                        </div>
+                                        <RefreshCw size={24} className="text-blue-500/20" />
                                     </div>
-                                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
-                                        <p className="text-xs text-gray-500 mb-1">Transactions Processed</p>
-                                        <p className="text-2xl font-bold text-purple-400">{importResult.transactions_processed}</p>
+                                    <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Records Processed</p>
+                                            <p className="text-3xl font-black text-purple-400 tracking-tighter">{importResult.transactions_processed || 0}</p>
+                                        </div>
+                                        <FileText size={24} className="text-purple-500/20" />
                                     </div>
-                                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
-                                        <p className="text-xs text-gray-500 mb-1">SIP Patterns Detected</p>
-                                        <p className="text-2xl font-bold text-yellow-400">{importResult.sip_patterns_detected}</p>
+                                    <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">SIP Signals</p>
+                                            <p className="text-3xl font-black text-amber-400 tracking-tighter">{importResult.sip_patterns_detected || 0}</p>
+                                        </div>
+                                        <RefreshCw size={24} className="text-amber-500/20" />
                                     </div>
                                 </div>
                             </div>
@@ -431,29 +458,29 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                     </div>
 
                     {/* Footer */}
-                    <div className="p-4 border-t border-white/5 bg-[#0F0F0F] flex-shrink-0 flex gap-3">
+                    <div className="p-6 sm:p-8 border-t border-white/5 bg-white/[0.01] flex-shrink-0 flex gap-4">
                         {!importResult ? (
                             <>
                                 <button
                                     onClick={handleClose}
-                                    className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium transition-colors"
+                                    className="flex-1 px-6 py-4 rounded-2xl bg-white/[0.05] border border-white/10 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all active:scale-[0.98]"
                                 >
-                                    Cancel
+                                    Abort
                                 </button>
                                 <button
                                     onClick={handleImport}
                                     disabled={loading || transactions.length === 0}
-                                    className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="flex-2 py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/20 disabled:opacity-50"
                                 >
                                     {loading ? (
                                         <>
                                             <div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></div>
-                                            Importing...
+                                            Processing...
                                         </>
                                     ) : (
                                         <>
-                                            <Upload size={18} />
-                                            Import
+                                            <Upload size={20} />
+                                            Initialize Migration
                                         </>
                                     )}
                                 </button>
@@ -461,9 +488,9 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                         ) : (
                             <button
                                 onClick={handleClose}
-                                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors"
+                                className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs transition-all active:scale-[0.98]"
                             >
-                                Done
+                                Re-enter Portfolio
                             </button>
                         )}
                     </div>
