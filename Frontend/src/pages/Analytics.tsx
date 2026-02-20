@@ -91,6 +91,7 @@ const Analytics: React.FC = () => {
                             ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
                             : 'bg-white/[0.03] border-white/[0.08] text-gray-400'
                             }`}
+                        aria-label={showSensitive ? "Hide sensitive data" : "Show sensitive data"}
                     >
                         {showSensitive ? <EyeOff size={22} /> : <Eye size={22} />}
                     </button>
@@ -105,6 +106,7 @@ const Analytics: React.FC = () => {
                         <button
                             onClick={() => setReferenceDate(subMonths(referenceDate, 1))}
                             className="w-12 h-12 rounded-full bg-white/[0.02] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all hover:bg-white/[0.05]"
+                            aria-label="Previous month"
                         >
                             <ChevronLeft size={20} />
                         </button>
@@ -116,6 +118,7 @@ const Analytics: React.FC = () => {
                         <button
                             onClick={() => setReferenceDate(addMonths(referenceDate, 1))}
                             className="w-12 h-12 rounded-full bg-white/[0.02] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all hover:bg-white/[0.05]"
+                            aria-label="Next month"
                         >
                             <ChevronRight size={20} />
                         </button>

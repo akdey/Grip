@@ -79,7 +79,7 @@ const RecentActivity: React.FC<RecentActivityProps & { isLoading?: boolean }> = 
                 </NavLink>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 min-h-[300px]">
                 {isLoading ? (
                     // Skeleton Loader
                     [...Array(3)].map((_, i) => (

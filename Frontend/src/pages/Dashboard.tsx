@@ -24,6 +24,13 @@ const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVe
 import { startOfMonth, endOfMonth, startOfYear, endOfYear, format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { formatCurrency } from '../lib/formatters';
+import { SummaryGrid } from '../features/dashboard/components/SummaryGrid';
+import { OutflowLedger } from '../features/dashboard/components/OutflowLedger';
+import { SafeToSpendHero } from '../features/dashboard/components/SafeToSpendHero';
+import { FrozenAllocation } from '../features/dashboard/components/FrozenAllocation';
+import { AIForecast } from '../features/dashboard/components/AIForecast';
+
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const [showSensitive, setShowSensitive] = useState(false);
@@ -33,37 +40,32 @@ const Dashboard: React.FC = () => {
     const [scope, setScope] = useState('month');
     const [showScopeMenu, setShowScopeMenu] = useState(false);
 
-    const togglePrivacy = () => {
+    const togglePrivacy = React.useCallback(() => {
         if (showSensitive) {
             setShowSensitive(false);
         } else {
             setShowAuthModal(true);
         }
-    };
+    }, [showSensitive]);
 
     const now = new Date();
-    const txnFilters: any = { limit: 5 };
-
-    if (scope === 'month') {
-        txnFilters.start_date = format(startOfMonth(now), 'yyyy-MM-dd');
-        txnFilters.end_date = format(endOfMonth(now), 'yyyy-MM-dd');
-    } else if (scope === 'year') {
-        txnFilters.start_date = format(startOfYear(now), 'yyyy-MM-dd');
-        txnFilters.end_date = format(endOfYear(now), 'yyyy-MM-dd');
-    }
+    const txnFilters = React.useMemo(() => {
+        const filters: any = { limit: 5 };
+        if (scope === 'month') {
+            filters.start_date = format(startOfMonth(now), 'yyyy-MM-dd');
+            filters.end_date = format(endOfMonth(now), 'yyyy-MM-dd');
+        } else if (scope === 'year') {
+            filters.start_date = format(startOfYear(now), 'yyyy-MM-dd');
+            filters.end_date = format(endOfYear(now), 'yyyy-MM-dd');
+        }
+        return filters;
+    }, [scope]);
 
     const { data: summary, isLoading: isSummaryLoading } = useMonthlySummary(undefined, undefined, scope);
     const { data: safeToSpend, isLoading: isSafeLoading } = useSafeToSpend();
     const { data: forecast, isLoading: isForecastLoading } = useForecast();
     const { data: transactions, isLoading: isTxnLoading } = useTransactions(txnFilters);
     const { data: variance, isLoading: isVarianceLoading } = useVariance();
-
-    const formatCurrency = (amount: number) =>
-        new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            maximumFractionDigits: 0
-        }).format(amount);
 
     // Progressive loading - removed blocking loader
     // Blocking loader removed for progressive loading
@@ -88,7 +90,9 @@ const Dashboard: React.FC = () => {
                     <div className="relative mt-6">
                         <button
                             onClick={() => setShowScopeMenu(!showScopeMenu)}
-                            className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
+                            className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors min-w-[100px]"
+                            aria-label="Change dashboard scope"
+                            aria-expanded={showScopeMenu}
                         >
                             <span>{scopes.find(s => s.id === scope)?.label}</span>
                             <ChevronDown size={10} className={`transition-transform duration-300 ${showScopeMenu ? 'rotate-180' : ''}`} />
@@ -127,368 +131,58 @@ const Dashboard: React.FC = () => {
                             ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
                             : 'bg-white/[0.03] border-white/[0.08] text-gray-400'
                             }`}
+                        aria-label={showSensitive ? "Hide sensitive data" : "Show sensitive data"}
                     >
                         {showSensitive ? <EyeOff size={22} /> : <Eye size={22} />}
                     </button>
                     <button
                         onClick={() => navigate('/transactions?view=custom')}
                         className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all shadow-2xl"
+                        aria-label="Search transactions"
                     >
                         <Search size={22} />
                     </button>
                 </div>
             </header>
 
-            <div className="space-y-5 animate-enter">
+            <div className="space-y-5 animate-enter section-contain">
                 {/* Summary Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex flex-col gap-4 relative overflow-hidden">
-                        {isSummaryLoading ? (
-                            <div className="animate-pulse flex flex-col gap-4 h-full">
-                                <div className="w-10 h-10 rounded-2xl bg-white/[0.05]" />
-                                <div className="space-y-2">
-                                    <div className="h-2 w-12 bg-white/[0.05] rounded" />
-                                    <div className="h-6 w-24 bg-white/[0.05] rounded" />
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                                    <ArrowUpRight size={20} />
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-1.5 mb-1">
-                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Inflow</p>
-                                        {!showSensitive && <Lock size={10} className="text-gray-600" />}
-                                    </div>
-                                    <p className="text-xl font-black text-white leading-none whitespace-nowrap">
-                                        {showSensitive ? formatCurrency(summary?.total_income || 0) : '******'}
-                                    </p>
-                                </div>
-                            </>
-                        )}
-                    </div>
+                <SummaryGrid
+                    totalIncome={summary?.total_income || 0}
+                    totalExpense={summary?.total_expense || 0}
+                    isLoading={isSummaryLoading}
+                    showSensitive={showSensitive}
+                    formatCurrency={formatCurrency}
+                />
 
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex flex-col gap-4 relative overflow-hidden">
-                        {isSummaryLoading ? (
-                            <div className="animate-pulse flex flex-col gap-4 h-full">
-                                <div className="w-10 h-10 rounded-2xl bg-white/[0.05]" />
-                                <div className="space-y-2">
-                                    <div className="h-2 w-12 bg-white/[0.05] rounded" />
-                                    <div className="h-6 w-24 bg-white/[0.05] rounded" />
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
-                                    <ArrowDownRight size={20} />
-                                </div>
-                                <div>
-                                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Outflow</p>
-                                    <p className="text-xl font-black text-white leading-none whitespace-nowrap">{formatCurrency(summary?.total_expense || 0)}</p>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
+                <OutflowLedger
+                    currentExpense={Number(summary?.current_period_expense || 0)}
+                    priorSettlement={Number(summary?.prior_period_settlement || 0)}
+                    isLoading={isSummaryLoading}
+                    formatCurrency={formatCurrency}
+                />
 
-                {/* Accrual Accounting - Outflow Composition */}
-                {isSummaryLoading ? (
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] animate-pulse">
-                        <div className="h-3 w-32 bg-white/[0.05] rounded mb-6" />
-                        <div className="space-y-4">
-                            <div className="h-8 w-full bg-white/[0.05] rounded" />
-                            <div className="h-8 w-full bg-white/[0.05] rounded" />
-                        </div>
-                    </div>
-                ) : summary && (() => {
-                    const currentExpense = Number(summary.current_period_expense || 0);
-                    const priorSettlement = Number(summary.prior_period_settlement || 0);
-                    const total = currentExpense + priorSettlement;
-                    const max = Math.max(total, 1);
+                <SafeToSpendHero
+                    safeToSpend={safeToSpend}
+                    isLoading={isSafeLoading}
+                    showSensitive={showSensitive}
+                    formatCurrency={formatCurrency}
+                    onNavigate={() => navigate('/analytics')}
+                />
 
-                    return (
-                        <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] flex flex-col gap-4">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[3px]">Outflow Ledger</h3>
-                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-                                    Accrual View
-                                </span>
-                            </div>
+                <FrozenAllocation
+                    safeToSpend={safeToSpend}
+                    isLoading={isSafeLoading}
+                    formatCurrency={formatCurrency}
+                    onShowObligations={() => setShowObligations(true)}
+                />
 
-                            <div className="space-y-3">
-                                {/* Current Period Expense */}
-                                <div>
-                                    <div className="flex justify-between mb-1">
-                                        <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Current Period</span>
-                                        <span className="text-[9px] font-black text-white">{formatCurrency(currentExpense)}</span>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-white/[0.03] rounded-full overflow-hidden">
-                                        <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${(currentExpense / max) * 100}%` }}
-                                            className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full"
-                                        />
-                                    </div>
-                                    <p className="text-[8px] text-gray-600 mt-1 font-medium">Expenses incurred this period</p>
-                                </div>
-
-                                {/* Prior Period Settlement */}
-                                <div>
-                                    <div className="flex justify-between mb-1">
-                                        <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest">Prior Settlement</span>
-                                        <span className="text-[9px] font-black text-gray-400">{formatCurrency(priorSettlement)}</span>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-white/[0.03] rounded-full overflow-hidden">
-                                        <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${(priorSettlement / max) * 100}%` }}
-                                            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
-                                        />
-                                    </div>
-                                    <p className="text-[8px] text-gray-600 mt-1 font-medium">Credit card bills paid from prior period</p>
-                                </div>
-                            </div>
-
-                            <div className="pt-3 border-t border-white/[0.05] flex justify-between items-center">
-                                <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Total Outflow</span>
-                                <span className="text-sm font-black text-white">{formatCurrency(total)}</span>
-                            </div>
-                        </div>
-                    );
-                })()}
-
-                {/* Safe to Spend - Liquid Glass Hero */}
-                {isSafeLoading ? (
-                    <div className="relative p-8 rounded-[3.5rem] bg-white/[0.01] border border-white/[0.05] overflow-hidden animate-pulse min-h-[400px]">
-                        <div className="flex flex-col items-center">
-                            <div className="h-6 w-24 bg-white/[0.05] rounded-full mb-6" />
-                            <div className="h-16 w-32 bg-white/[0.05] rounded-lg mb-3" />
-                            <div className="h-3 w-40 bg-white/[0.05] rounded mb-8" />
-                            <div className="w-full max-w-[200px] h-1 bg-white/[0.05] rounded-full" />
-                        </div>
-                    </div>
-                ) : (() => {
-                    const safe = Number(safeToSpend?.safe_to_spend || 0);
-                    const balance = Number(safeToSpend?.current_balance || 0);
-
-                    const status = safeToSpend?.status || 'success';
-
-                    const themes = {
-                        negative: {
-                            glow: 'bg-red-600/30',
-                            border: 'border-red-600/30',
-                            text: 'text-red-500',
-                            amountText: 'text-red-500',
-                            shadow: 'shadow-[0_40px_80px_-15px_rgba(220,38,38,0.25)]',
-                            pill: 'bg-red-600/20 text-red-400 border-red-600/30',
-                            bgIntensity: 'bg-red-600/10'
-                        },
-                        critical: {
-                            glow: 'bg-rose-500/20',
-                            border: 'border-rose-500/20',
-                            text: 'text-rose-400',
-                            amountText: 'text-rose-500',
-                            shadow: 'shadow-[0_40px_80px_-15px_rgba(225,29,72,0.15)]',
-                            pill: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-                            bgIntensity: 'bg-rose-500/5'
-                        },
-                        warning: {
-                            glow: 'bg-amber-500/20',
-                            border: 'border-amber-500/20',
-                            text: 'text-amber-400',
-                            amountText: 'text-white',
-                            shadow: 'shadow-[0_40px_80px_-15px_rgba(245,158,11,0.15)]',
-                            pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                            bgIntensity: 'bg-amber-500/5'
-                        },
-                        success: {
-                            glow: 'bg-indigo-500/20',
-                            border: 'border-white/[0.08]',
-                            text: 'text-indigo-400',
-                            amountText: 'text-white',
-                            shadow: 'shadow-[0_40px_80px_-15px_rgba(79,70,229,0.2)]',
-                            pill: 'bg-white/[0.05] text-indigo-300 border-white/[0.05]',
-                            bgIntensity: 'bg-white/[0.01]'
-                        }
-                    };
-
-                    const theme = themes[status];
-
-                    return (
-                        <div
-                            className={`relative p-8 rounded-[3.5rem] bg-white/[0.01] backdrop-blur-3xl border ${theme.border} overflow-hidden ${theme.shadow} cursor-pointer group transition-all duration-700 hover:scale-[1.01] active:scale-[0.99]`}
-                            onClick={() => navigate('/analytics')}
-                        >
-                            {/* Liquid Glass Background Effects */}
-                            <div className={`absolute -right-20 -top-20 w-80 h-80 ${theme.glow} rounded-full blur-[100px] opacity-50 group-hover:opacity-80 transition-all duration-700`} />
-                            <div className={`absolute -left-20 -bottom-20 w-64 h-64 ${theme.glow} rounded-full blur-[80px] opacity-30`} />
-
-                            {/* Inner Glass Sheen */}
-                            <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] to-transparent pointer-events-none" />
-
-                            <div className="relative z-10 flex flex-col items-center text-center">
-                                <div className={`flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full border ${theme.pill} backdrop-blur-md`}>
-                                    <Sparkles size={12} />
-                                    <span className="text-[10px] font-black uppercase tracking-[3px]">Safe Liquid</span>
-                                </div>
-
-                                <h3 className={`text-6xl font-black tracking-tighter mb-3 ${theme.amountText} flex items-center justify-center gap-1`}>
-                                    {safe < 0 && <span className={theme.text}>-</span>}
-                                    <span>{formatCurrency(Math.abs(safe))}</span>
-                                </h3>
-
-                                <p className={`text-[11px] font-medium max-w-[240px] leading-relaxed ${status === 'negative' ? theme.text : 'text-gray-400'}`}>
-                                    {safeToSpend?.recommendation}
-                                </p>
-
-                                {/* Progress Indicator - Glass Style */}
-                                <div className="w-full max-w-[200px] mt-8 space-y-3">
-                                    <div className="h-1 w-full bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.05]">
-                                        <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${Math.max(0, Math.min((safe / Math.max(balance, 1)) * 100, 100))}%` }}
-                                            transition={{ duration: 1.5, ease: [0.34, 1.56, 0.64, 1] }}
-                                            className={`h-full bg-gradient-to-r from-white to-white/60 shadow-[0_0_20px_rgba(255,255,255,0.3)]`}
-                                        />
-                                    </div>
-                                    <div className="flex justify-between text-[7px] font-black uppercase tracking-[2px] text-gray-600">
-                                        <span>Risk</span>
-                                        <span>Capacity</span>
-                                    </div>
-                                </div>
-
-                                <div className="w-full grid grid-cols-2 gap-8 mt-10 border-t border-white/[0.05] pt-8">
-                                    <div className="flex flex-col items-center">
-                                        <div className="flex items-center gap-1.5 mb-1.5 opacity-60">
-                                            <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Gross Liquid</p>
-                                            {!showSensitive && <Lock size={8} className="text-gray-500" />}
-                                        </div>
-                                        <p className="text-xl font-black text-white/90">
-                                            {showSensitive ? formatCurrency(balance) : '******'}
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5 opacity-60">Buffer</p>
-                                        <p className="text-xl font-black text-white/70">{formatCurrency(Number(safeToSpend?.buffer_amount || 0))}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })()}
-
-                {/* Intelligence Breakdown - Frozen Funds */}
-                {isSafeLoading ? (
-                    <div className="space-y-4 pt-2 animate-pulse">
-                        <div className="flex items-center justify-between px-2">
-                            <div className="h-3 w-32 bg-white/[0.05] rounded" />
-                            <div className="h-6 w-16 bg-white/[0.05] rounded-full" />
-                        </div>
-                        <div className="grid grid-cols-1 gap-3">
-                            <div className="h-24 bg-white/[0.05] rounded-[2rem]" />
-                            <div className="h-24 bg-white/[0.05] rounded-[2rem]" />
-                        </div>
-                    </div>
-                ) : (
-                    <div className="space-y-4 pt-2">
-                        <div className="flex items-center justify-between px-2">
-                            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Frozen Allocation</h3>
-                            <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/10">
-                                {formatCurrency(Number(safeToSpend?.frozen_funds?.total_frozen) || 0)}
-                            </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3">
-                            <div
-                                onClick={() => setShowObligations(true)}
-                                className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all cursor-pointer group active:scale-[0.98]"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
-                                        <Receipt size={18} />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black text-white/90 uppercase tracking-tight">Obligations</p>
-                                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mt-0.5">Surety / Bills</p>
-                                    </div>
-                                </div>
-                                <div className="text-right flex items-center gap-3">
-                                    <div>
-                                        <p className="font-black text-white text-sm tracking-tighter">
-                                            {formatCurrency((Number(safeToSpend?.frozen_funds?.unpaid_bills) || 0) + (Number(safeToSpend?.frozen_funds?.projected_surety) || 0))}
-                                        </p>
-                                        <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Unpaid: {formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills) || 0)}</p>
-                                    </div>
-                                    <ArrowRight size={14} className="text-gray-700 group-hover:text-rose-400 group-hover:translate-x-1 transition-all" />
-                                </div>
-                            </div>
-
-                            <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-inner">
-                                        <Lock size={18} />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black text-white/90 uppercase tracking-tight">Card Exposure</p>
-                                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mt-0.5">Pending CC Swipes</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-black text-white text-sm tracking-tighter">{formatCurrency(Number(safeToSpend?.frozen_funds?.unbilled_cc) || 0)}</p>
-                                    <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Settlement Limit</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Forecast Card - New AI Feature */}
-                {isForecastLoading ? (
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2.5rem] relative overflow-hidden animate-pulse h-[160px]">
-                        <div className="flex gap-4">
-                            <div className="w-6 h-6 rounded-full bg-white/[0.05]" />
-                            <div className="h-3 w-32 bg-white/[0.05] rounded" />
-                        </div>
-                        <div className="mt-4 space-y-3">
-                            <div className="h-8 w-40 bg-white/[0.05] rounded" />
-                            <div className="h-3 w-60 bg-white/[0.05] rounded" />
-                        </div>
-                    </div>
-                ) : (
-                    <div
-                        onClick={() => setShowForecastDetails(true)}
-                        className={`bg-gradient-to-r ${forecast?.confidence === 'low' ? 'from-amber-600/10 via-orange-600/10' : 'from-cyan-600/10 via-purple-600/10'} to-transparent border border-white/[0.05] p-6 rounded-[2.5rem] relative overflow-hidden group cursor-pointer active:scale-95 transition-all`}
-                    >
-                        <div className="absolute right-6 top-6 animate-pulse text-cyan-400/20">
-                            <Sparkles size={40} />
-                        </div>
-                        <div className="relative z-10 flex flex-col gap-4">
-                            <div className="flex items-center gap-2">
-                                <div className={`w-6 h-6 rounded-full ${forecast?.confidence === 'low' ? 'bg-amber-400/10 text-amber-400' : 'bg-cyan-400/10 text-cyan-400'} flex items-center justify-center`}>
-                                    <Activity size={14} />
-                                </div>
-                                <span className="text-[9px] font-black uppercase tracking-[3px] text-white/40">AI Forecast (30d)</span>
-                                {forecast?.confidence === 'low' && (
-                                    <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                                        ⚠ Low Data
-                                    </span>
-                                )}
-                            </div>
-                            <div>
-                                <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(forecast?.predicted_burden_30d || 0)}</p>
-                                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Predicted Burden • {forecast?.time_frame}</p>
-                                <p className={`text-[10px] font-medium leading-tight mt-3 max-w-[260px] ${forecast?.confidence === 'low' ? 'text-amber-200/60' : 'text-cyan-200/60'}`}>
-                                    {forecast?.description}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2 mt-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                <span className="text-[8px] font-bold text-cyan-400 uppercase tracking-widest">Tap for breakdown</span>
-                                <ArrowUpRight size={10} className="text-cyan-400" />
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <AIForecast
+                    forecast={forecast}
+                    isLoading={isForecastLoading}
+                    formatCurrency={formatCurrency}
+                    onShowDetails={() => setShowForecastDetails(true)}
+                />
 
                 {/* Forecast Details Modal */}
                 {showForecastDetails && (
@@ -502,6 +196,7 @@ const Dashboard: React.FC = () => {
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setShowForecastDetails(false); }}
                                     className="w-10 h-10 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 active:scale-95 transition-all"
+                                    aria-label="Close forecast details"
                                 >
                                     <ArrowDownRight size={20} className="rotate-45" />
                                 </button>
@@ -584,6 +279,7 @@ const Dashboard: React.FC = () => {
                                 <button
                                     onClick={() => setShowObligations(false)}
                                     className="w-10 h-10 rounded-full bg-white/[0.05] flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                                    aria-label="Close obligations ledger"
                                 >
                                     <X size={20} />
                                 </button>
