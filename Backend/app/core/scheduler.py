@@ -130,6 +130,54 @@ async def run_weekly_insights():
                     logger.error(f"Failed to send insight for user {user_id}: {e}")
 
     logger.info("Weekly Insights Completed.")
+    
+async def run_lifestyle_insights():
+    """
+    Perform periodic checks for inactivity and special events (like Fridays).
+    """
+    logger.info("Starting Lifestyle Insights Trigger...")
+    from app.features.auth.models import User
+    from app.features.transactions.models import Transaction
+    from app.features.analytics.service import AnalyticsService
+    from sqlalchemy import func
+    
+    today = date.today()
+    
+    async with AsyncSessionLocal() as db:
+        notification_service = NotificationService(db)
+        analytics_service = AnalyticsService()
+        
+        # 1. Fetch all users
+        result = await db.execute(select(User))
+        users = result.scalars().all()
+        
+        for user in users:
+            try:
+                # --- CHECK 1: INACTIVITY ---
+                # Check for the last transaction date
+                stmt = select(func.max(Transaction.transaction_date)).where(Transaction.user_id == user.id)
+                res = await db.execute(stmt)
+                last_txn_date = res.scalar()
+                
+                if last_txn_date:
+                    days_diff = (today - last_txn_date).days
+                    # If inactive for exactly 7 or 14 days, send a nudge
+                    if days_diff in [7, 14]:
+                        await notification_service.send_inactivity_nudge(user.id, user.full_name, days_diff)
+                        logger.info(f"Sent inactivity nudge to {user.id} ({days_diff} days)")
+
+                # --- CHECK 2: WEEKEND (FRIDAY) ---
+                if today.weekday() == 4: # 4 is Friday
+                    # Calculate safe-to-spend for this user
+                    sts_data = await analytics_service.calculate_safe_to_spend_amount(db, user.id)
+                    # Trigger the AI-driven weekend insight
+                    await notification_service.send_weekend_insight(user.id, user.full_name, float(sts_data.safe_to_spend))
+                    logger.info(f"Sent weekend insight to {user.id}")
+                    
+            except Exception as e:
+                logger.error(f"Error in lifestyle insight for user {user.id}: {e}")
+                
+    logger.info("Lifestyle Insights Completed.")
 
 async def run_gmail_sync():
     """

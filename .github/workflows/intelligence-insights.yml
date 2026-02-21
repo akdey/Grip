@@ -1,0 +1,59 @@
+name: Intelligence & Lifestyle Insights
+
+on:
+  schedule:
+    # Runs at 4:30 AM UTC (10:00 AM IST) - Every Sunday (for Weekly) and Friday (for Weekend)
+    - cron: '30 4 * * 0,5'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  run-insights:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd Backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run Insights
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          FROM_NAME: ${{ secrets.FROM_NAME }}
+          FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
+          ENVIRONMENT: production
+        run: |
+          cd Backend
+          python -c "
+          import asyncio
+          from app.core.scheduler import run_weekly_insights, run_lifestyle_insights
+          from datetime import datetime
+          
+          async def main():
+              # Always run lifestyle insights (handles inactivity and Friday weekend alerts)
+              print('Running Lifestyle Insights...')
+              await run_lifestyle_insights()
+              
+              # Run weekly summary on Sundays
+              if datetime.now().weekday() == 6:  # 6 is Sunday
+                  print('Today is Sunday. Running Weekly Insights Summary...')
+                  await run_weekly_insights()
+              
+              print('Insights completed successfully!')
+          
+          asyncio.run(main())
+          "
