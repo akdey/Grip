@@ -214,16 +214,24 @@ class BillService:
         excl_stmt = select(BillExclusion).where(BillExclusion.user_id == user_id)
         bill_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_paid == False)
         rec_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_recurring == True)
-        sub_stmt = select(SubCategory.name).where(SubCategory.is_surety == True)
+        
+        # Subquery for surety subcategories
+        surety_sub_query = select(SubCategory.name).where(SubCategory.is_surety == True)
         
         prev_range = get_previous_month_date_range(today)
         curr_range = get_month_date_range(today)
         
+        from sqlalchemy import or_
+
         past_stmt = (
             select(Transaction)
             .where(Transaction.user_id == user_id)
             .where(Transaction.transaction_date >= prev_range["month_start"])
             .where(Transaction.transaction_date <= prev_range["month_end"])
+            .where(or_(
+                Transaction.is_surety == True,
+                Transaction.sub_category.in_(surety_sub_query)
+            ))
         )
         
         curr_stmt = (
@@ -231,9 +239,16 @@ class BillService:
             .where(Transaction.user_id == user_id)
             .where(Transaction.transaction_date >= curr_range["month_start"])
             .where(Transaction.transaction_date <= curr_range["month_end"])
+            .where(or_(
+                Transaction.is_surety == True,
+                Transaction.sub_category.in_(surety_sub_query)
+            ))
         )
 
         # Execute all in parallel
+        # Note: sub_res is no longer needed since we used a subquery, 
+        # but we keep it if needed for the python check in step 3
+        sub_stmt = select(SubCategory.name).where(SubCategory.is_surety == True)
         excl_res, bill_res, rec_res, sub_res, past_res, curr_res = await asyncio.gather(
             db.execute(excl_stmt),
             db.execute(bill_stmt),
@@ -247,8 +262,8 @@ class BillService:
         unpaid_bills = bill_res.scalars().all()
         recurring_bills = rec_res.scalars().all()
         surety_subs = set(name.lower() for name in sub_res.scalars().all())
-        all_past_txns = list(past_res.scalars().all())
-        all_curr_txns = list(curr_res.scalars().all())
+        past_txns = list(past_res.scalars().all())
+        curr_txns = list(curr_res.scalars().all())
 
         skipped_source_ids = {e.source_transaction_id for e in exclusions if e.exclusion_type == 'SKIP' and e.source_transaction_id}
         manual_paid_ids = {e.source_transaction_id for e in exclusions if e.exclusion_type == 'MANUAL_PAID' and e.source_transaction_id}
@@ -299,8 +314,7 @@ class BillService:
                     covered_signatures.add((bill.sub_category.lower(), bill.amount))
 
         # 3. Process Surety
-        past_txns = [t for t in all_past_txns if t.is_surety or (t.sub_category and t.sub_category.lower() in surety_subs)]
-        curr_txns = [t for t in all_curr_txns if t.is_surety or (t.sub_category and t.sub_category.lower() in surety_subs)]
+        # Transactions are already filtered by the DB query above.
         
         matched_curr_ids = set()
         
