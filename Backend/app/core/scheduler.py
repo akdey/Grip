@@ -3,6 +3,7 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional
 
 from app.core.database import AsyncSessionLocal
 from app.core.config import get_settings
@@ -131,17 +132,17 @@ async def run_weekly_insights():
 
     logger.info("Weekly Insights Completed.")
     
-async def run_lifestyle_insights():
+async def run_lifestyle_insights(override_date: Optional[date] = None):
     """
     Perform periodic checks for inactivity and special events (like Fridays).
     """
-    logger.info("Starting Lifestyle Insights Trigger...")
+    logger.info(f"Starting Lifestyle Insights Trigger... (Override: {override_date})")
     from app.features.auth.models import User
     from app.features.transactions.models import Transaction
     from app.features.analytics.service import AnalyticsService
     from sqlalchemy import func
     
-    today = date.today()
+    today = override_date or date.today()
     
     async with AsyncSessionLocal() as db:
         notification_service = NotificationService(db)
@@ -170,8 +171,30 @@ async def run_lifestyle_insights():
                 if today.weekday() == 4: # 4 is Friday
                     # Calculate safe-to-spend for this user
                     sts_data = await analytics_service.calculate_safe_to_spend_amount(db, user.id)
-                    # Trigger the AI-driven weekend insight
-                    await notification_service.send_weekend_insight(user.id, user.full_name, float(sts_data.safe_to_spend))
+                    
+                    # Fetch top category for the last 7 days for more insight
+                    seven_days_ago = today - timedelta(days=7)
+                    cat_stmt = (
+                        select(Transaction.category, func.sum(func.abs(Transaction.amount)).label("total"))
+                        .where(Transaction.user_id == user.id)
+                        .where(Transaction.transaction_date >= seven_days_ago)
+                        .where(Transaction.category.notin_(["Income", "Transfer"]))
+                        .group_by(Transaction.category)
+                        .order_by(func.sum(func.abs(Transaction.amount)).desc())
+                        .limit(1)
+                    )
+                    cat_res = await db.execute(cat_stmt)
+                    top_cat_row = cat_res.first()
+                    top_category = top_cat_row.category if top_cat_row else None
+                    
+                    # Trigger the AI-driven weekend insight with more context
+                    await notification_service.send_weekend_insight(
+                        user_id=user.id, 
+                        full_name=user.full_name, 
+                        safe_to_spend=float(sts_data.safe_to_spend),
+                        current_balance=float(sts_data.current_balance),
+                        top_category=top_category
+                    )
                     logger.info(f"Sent weekend insight to {user.id}")
                     
             except Exception as e:
