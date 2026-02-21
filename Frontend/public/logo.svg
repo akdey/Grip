@@ -1,0 +1,32 @@
+<svg width="512" height="512" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
+    <defs>
+        <linearGradient id="grip-logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#10b981" />
+            <stop offset="50%" stop-color="#06b6d4" />
+            <stop offset="100%" stop-color="#3b82f6" />
+        </linearGradient>
+    </defs>
+    <path
+        d="M 78 68 A 35 35 0 1 1 62 22"
+        stroke="url(#grip-logo-gradient)"
+        stroke-width="12"
+        stroke-linecap="round"
+        fill="none"
+    />
+    <path
+        d="M 35 65 L 48 52 L 58 62 L 92 18"
+        stroke="url(#grip-logo-gradient)"
+        stroke-width="12"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none"
+    />
+    <path
+        d="M 76 18 L 92 18 L 92 34"
+        stroke="url(#grip-logo-gradient)"
+        stroke-width="12"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none"
+    />
+</svg>

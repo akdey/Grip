@@ -28,6 +28,8 @@ import { SafeToSpendHero } from '../features/dashboard/components/SafeToSpendHer
 import { FrozenAllocation } from '../features/dashboard/components/FrozenAllocation';
 import { AIForecast } from '../features/dashboard/components/AIForecast';
 
+import { Logo } from '../components/ui/Logo';
+
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const [showSensitive, setShowSensitive] = useState(false);
@@ -91,7 +93,9 @@ const Dashboard: React.FC = () => {
                     <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600 pb-1">
                         {import.meta.env.VITE_APP_NAME || 'Grip'}
                     </h1>
-                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-[3px] mt-1">{import.meta.env.VITE_APP_TAGLINE || 'Money that minds itself.'}</p>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">
+                        {import.meta.env.VITE_APP_TAGLINE || 'Money that minds itself.'}
+                    </p>
 
                     {/* Scope Selector */}
                     <div className="relative mt-6">
@@ -150,7 +154,7 @@ const Dashboard: React.FC = () => {
                         <Search size={22} />
                     </button>
                 </div>
-            </header>
+            </header >
 
             <div className="space-y-5 animate-enter section-contain">
                 {/* Summary Grid */}
@@ -401,7 +405,7 @@ const Dashboard: React.FC = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 };
 

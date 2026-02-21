@@ -6,6 +6,8 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { api } from '../lib/api';
 
+import { Logo } from '../components/ui/Logo';
+
 const Login: React.FC = () => {
     const navigate = useNavigate();
     const login = useAuthStore((state) => state.login);
@@ -77,64 +79,71 @@ const Login: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-            <div className="w-full max-w-md space-y-8 animate-enter">
-                <div className="text-center">
-                    <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-500 mb-2">
-                        {import.meta.env.VITE_APP_NAME || 'Grip'}
-                    </h1>
-                    <p className="text-gray-400 text-sm italic">{import.meta.env.VITE_APP_TAGLINE || 'Money that minds itself.'}</p>
+        <div className="h-screen w-full flex flex-col items-center justify-center p-4 bg-[#050505] text-white selection:bg-cyan-500/30 overflow-hidden">
+            <div className="w-full max-w-md space-y-8 animate-enter flex flex-col items-stretch">
+                <div className="text-center space-y-4">
+                    <div className="flex justify-center">
+                        <Logo size={64} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
+                            {import.meta.env.VITE_APP_NAME || 'Grip'}
+                        </h1>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px]">{import.meta.env.VITE_APP_TAGLINE || 'Money that minds itself.'}</p>
+                    </div>
                 </div>
 
-                <Card className="space-y-6">
-                    <div className="flex justify-center border-b border-white/5 pb-4 mb-4">
+                <Card className="bg-white/[0.03] border-white/10 rounded-[2rem] p-8 shadow-2xl">
+                    <div className="flex justify-center border-b border-white/5 pb-4 mb-6">
                         {mode !== 'OTP' && (
-                            <div className="flex space-x-4 text-sm">
+                            <div className="flex space-x-8 text-[9px] font-black uppercase tracking-widest">
                                 <button
                                     onClick={() => { setMode('LOGIN'); setError(''); }}
-                                    className={`pb-1 ${mode === 'LOGIN' ? 'text-indigo-400 font-medium' : 'text-gray-500 hover:text-gray-300'}`}
+                                    className={`pb-1 transition-all ${mode === 'LOGIN' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-600 hover:text-gray-400'}`}
                                 >
-                                    Sign In
+                                    Login
                                 </button>
                                 <button
                                     onClick={() => { setMode('REGISTER'); setError(''); }}
-                                    className={`pb-1 ${mode === 'REGISTER' ? 'text-indigo-400 font-medium' : 'text-gray-500 hover:text-gray-300'}`}
+                                    className={`pb-1 transition-all ${mode === 'REGISTER' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-600 hover:text-gray-400'}`}
                                 >
-                                    Sign Up
+                                    Enlist
                                 </button>
                             </div>
                         )}
                         {mode === 'OTP' && (
-                            <span className="text-indigo-400 font-medium text-sm">Verification</span>
+                            <span className="text-cyan-400 font-black text-[9px] uppercase tracking-widest">Command Verification</span>
                         )}
                     </div>
 
                     <form onSubmit={mode === 'LOGIN' ? handleLogin : mode === 'REGISTER' ? handleRegister : handleVerifyOtp} className="space-y-6">
 
                         {mode !== 'OTP' && (
-                            <>
+                            <div className="space-y-4">
                                 <Input
-                                    label="Email"
+                                    label="Access Identification"
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="you@example.com"
+                                    placeholder="operator@grip.hub"
                                     required
+                                    className="bg-white/[0.02] border-white/5 h-12"
                                 />
                                 <Input
-                                    label="Password"
+                                    label="Security Cipher"
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
                                     required
+                                    className="bg-white/[0.02] border-white/5 h-12"
                                 />
-                            </>
+                            </div>
                         )}
 
                         {mode === 'OTP' && (
                             <div className='space-y-4'>
-                                <p className='text-sm text-gray-400 text-center'>{message}</p>
+                                <p className='text-[9px] font-bold text-gray-400 text-center uppercase tracking-widest'>{message}</p>
                                 <Input
                                     label="Verification Code"
                                     type="text"
@@ -142,47 +151,64 @@ const Login: React.FC = () => {
                                     onChange={(e) => setOtp(e.target.value)}
                                     placeholder="123456"
                                     required
+                                    className="bg-white/[0.02] border-white/5 h-12"
                                 />
                             </div>
                         )}
 
                         {error && (
-                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
+                            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[9px] font-bold uppercase tracking-widest text-center">
                                 {error}
                             </div>
                         )}
 
-                        <Button type="submit" className="w-full" isLoading={isLoading}>
-                            {mode === 'LOGIN' ? 'Sign In' : mode === 'REGISTER' ? 'Next' : 'Verify & Login'}
+                        <Button type="submit" className="w-full h-12 rounded-xl bg-white text-black font-black uppercase tracking-[2px] text-[10px] hover:bg-gray-200" isLoading={isLoading}>
+                            {mode === 'LOGIN' ? 'Authorize' : mode === 'REGISTER' ? 'Register Unit' : 'Override & Sync'}
                         </Button>
 
                         {mode === 'OTP' && (
                             <div className="text-center">
-                                <button type="button" onClick={() => setMode('REGISTER')} className="text-xs text-gray-500 hover:text-indigo-400">
-                                    Back to Sign Up
+                                <button type="button" onClick={() => setMode('REGISTER')} className="text-[9px] font-black uppercase tracking-widest text-gray-600 hover:text-cyan-400 transition-colors">
+                                    Return to Registration
                                 </button>
                             </div>
                         )}
                     </form>
                 </Card>
 
-                <div className="flex justify-center gap-6 pt-4">
-                    <button
-                        onClick={() => navigate('/privacy')}
-                        className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-gray-400 transition-colors"
-                    >
-                        Privacy
-                    </button>
-                    <button
-                        onClick={() => navigate('/terms')}
-                        className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-gray-400 transition-colors"
-                    >
-                        Terms
-                    </button>
+                <div className="flex flex-col items-center gap-6">
+                    <div className="flex gap-8">
+                        <button
+                            onClick={() => navigate('/privacy')}
+                            className="text-[8px] font-black uppercase tracking-[3px] text-gray-600 hover:text-white transition-colors"
+                        >
+                            Privacy
+                        </button>
+                        <button
+                            onClick={() => navigate('/terms')}
+                            className="text-[8px] font-black uppercase tracking-[3px] text-gray-600 hover:text-white transition-colors"
+                        >
+                            Terms
+                        </button>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-1 opacity-60">
+                        <span className="text-[6px] text-gray-700 font-bold uppercase tracking-[3px]">Engineered by</span>
+                        <a
+                            href="https://portfolio.akdey.vercel.app"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[8px] font-black text-white hover:text-cyan-400 transition-all uppercase tracking-widest"
+                        >
+                            AMIT KUMAR DEY
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     );
 };
+
+
 
 export default Login;
