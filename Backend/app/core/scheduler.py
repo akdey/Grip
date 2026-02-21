@@ -25,6 +25,11 @@ async def run_daily_price_sync():
     Runs daily.
     """
     logger.info("Starting Daily Price Sync...")
+    from app.features.auth.models import User
+    from app.features.wealth.models import InvestmentHolding, InvestmentSnapshot
+    from app.features.credit_cards.models import CreditCard
+    from app.features.bills.models import Bill
+    
     async with AsyncSessionLocal() as db:
         service = WealthService(db)
         try:
@@ -41,6 +46,9 @@ async def run_surety_reminders():
     logger.info("Starting Surety Reminders Scan...")
     from app.features.bills.models import Bill
     from app.features.auth.models import User
+    from app.features.credit_cards.models import CreditCard
+    from app.features.transactions.models import Transaction
+    from app.features.wealth.models import InvestmentHolding
     
     today = date.today()
     reminder_window = today + timedelta(days=3)
@@ -86,6 +94,10 @@ async def run_weekly_insights():
     logger.info("Starting Weekly Insights Analysis...")
     from sqlalchemy import func
     from app.features.transactions.models import Transaction
+    from app.features.auth.models import User
+    from app.features.credit_cards.models import CreditCard
+    from app.features.bills.models import Bill
+    from app.features.wealth.models import InvestmentHolding
     
     async with AsyncSessionLocal() as db:
         notification_service = NotificationService(db)
