@@ -4,11 +4,17 @@ import { Shield, Zap, TrendingUp, Mail, Lock, Calendar, BarChart3, Fingerprint }
 import { motion } from 'framer-motion';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+    // If authenticated, skip home and land directly on dashboard
+    if (isAuthenticated) {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     return (
         <div className="min-h-screen bg-[#050505] text-white selection:bg-cyan-500/30 font-sans">
@@ -18,8 +24,10 @@ const Home: React.FC = () => {
                     <div className="flex items-center gap-3">
                         <Logo size={32} />
                         <div className="flex flex-col">
-                            <span className="text-xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">Grip</span>
-                            <span className="text-[8px] text-gray-500 font-bold uppercase tracking-[2px]">Intelligence</span>
+                            <span className="text-xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
+                                {import.meta.env.VITE_APP_NAME || 'GRIP'}
+                            </span>
+                            <span className="text-[8px] text-gray-500 font-bold uppercase tracking-[2px]">{import.meta.env.VITE_APP_TAGLINE || 'GRIP'}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-6">
@@ -127,10 +135,10 @@ const Home: React.FC = () => {
                         <div className="space-y-6">
                             <div className="flex items-center gap-3">
                                 <Logo size={40} />
-                                <span className="text-2xl font-black tracking-tighter uppercase italic">Grip<span className="text-gray-700">.</span></span>
+                                <span className="text-2xl font-black tracking-tighter uppercase italic">{import.meta.env.VITE_APP_NAME || 'GRIP'}<span className="text-gray-700">.</span></span>
                             </div>
                             <p className="text-gray-600 text-[10px] font-bold uppercase tracking-[4px] max-w-xs leading-loose">
-                                Engineering the future of zero-effort personal finance through autonomous intelligence.
+                                {import.meta.env.VITE_APP_TAGLINE}
                             </p>
                         </div>
 

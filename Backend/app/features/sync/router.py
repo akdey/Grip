@@ -38,7 +38,10 @@ def get_google_flow(redirect_uri: str = None):
                 "redirect_uris": [redirect_uri] if redirect_uri else []
             }
         },
-        scopes=["https://www.googleapis.com/auth/gmail.readonly"]
+        scopes=[
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/userinfo.profile"
+        ]
     )
     flow.redirect_uri = redirect_uri
     return flow
@@ -109,6 +112,17 @@ async def google_callback(
             "expiry": creds.expiry.isoformat() if creds.expiry else None
         }
         
+        # PROACTIVE: Fetch user profile name if not already set
+        try:
+            from googleapiclient.discovery import build
+            user_info_service = build('oauth2', 'v2', credentials=creds)
+            user_info = user_info_service.userinfo().get().execute()
+            if user_info and user_info.get("name"):
+                db_user.full_name = user_info.get("name")
+                logger.info(f"Extracted name '{db_user.full_name}' from Google profile for {db_user.email}")
+        except Exception as profile_ex:
+            logger.warning(f"Failed to fetch profile info for {current_user.email}: {profile_ex}")
+
         await db.commit()
         logger.info(f"Committed Gmail credentials for {current_user.email}")
         

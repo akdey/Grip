@@ -12,13 +12,12 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/store';
 import { Button } from '../ui/Button';
-import { Logo } from '../ui/Logo';
 
 export const Sidebar: React.FC = () => {
     const logout = useAuthStore((state) => state.logout);
 
     const NAV_ITEMS = [
-        { path: '/', label: 'Matrix', icon: Home },
+        { path: '/dashboard', label: 'Matrix', icon: Home },
         { path: '/transactions', label: 'History', icon: Receipt },
         { path: '/credit-cards', label: 'Vault', icon: Target },
         { path: '/bills', label: 'Scheduled', icon: CalendarClock },
@@ -31,10 +30,10 @@ export const Sidebar: React.FC = () => {
         <aside className="hidden md:flex flex-col w-72 h-screen fixed left-0 top-0 border-r border-white/5 bg-slate-900/30 backdrop-blur-xl">
             <div className="p-8 space-y-2">
                 <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
-                    {import.meta.env.VITE_APP_NAME || 'Grip'}
+                    {import.meta.env.VITE_APP_NAME || 'GRIP'}
                 </h1>
                 <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black opacity-60">
-                    {import.meta.env.VITE_APP_TAGLINE || 'Spend smart, stress less.'}
+                    {import.meta.env.VITE_APP_TAGLINE}
                 </p>
             </div>
 

@@ -1,8 +1,8 @@
-# Grip
+# GRIP
 
-> **Money that minds itself.**
+> **Autonomous Financial Intelligence.**
 
-An AI-powered personal finance platform that transforms your inbox into a complete financial intelligence system. Track spending, forecast expenses, grow investments—all while keeping your data private and secure.
+An AI-powered personal platform that transforms your inbox into a complete financial intelligence system. Track spending, forecast expenses, grow investments—all while keeping your data private and secure.
 
 **🎯 The Only Platform in India That Shows If Your SIP Date is Costing You Money.**
 
@@ -55,6 +55,7 @@ While others make you wait for "syncs" or manual entries, Grip is built to get y
 
 ### 🤖 AI Does the Heavy Lifting
 - **Automatic Transaction Extraction**: Connect Gmail once; AI extracts transaction details from bank alerts forever
+- **Autonomous Notification Engine**: Scheduled email alerts for Gmail disconnection, surety bill reminders, and spending insights
 - **Hybrid Forecasting**: Combines Meta Prophet (statistical) + Groq LLM (contextual) to predict month-end expenses
 - **Smart Learning**: Remembers your merchant preferences, auto-categorizes future transactions
 - **Natural Language Processing**: Understands messy bank emails and extracts clean, structured data
@@ -129,8 +130,14 @@ Grip processes your financial data through a sophisticated, privacy-preserving p
 │    "Expected ₹12,500 in remaining expenses (18 days left)"     │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
+│ 8. AUTONOMOUS NOTIFICATIONS                                     │
+│    • Gmail Connection Alerts: Instant email if OAuth expires       │
+│    • Surety Reminders: Morning-of alerts for big recurring bills  │
+│    • Weekly Insights: Smart alerts for Category spending spikes   │
+└────────────────────────┬────────────────────────────────────────┘
+                         ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ 8. ACTIONABLE INSIGHTS & DASHBOARD                              │
+│ 9. ACTIONABLE INSIGHTS & DASHBOARD                              │
 │    • Safe-to-Spend = Balance - (Bills + CC + Buffer)           │
 │    • Wealth Trajectory: Historical + 10Y AI forecast           │
 │    • Investment XIRR: Annualized returns per asset              │
@@ -1083,8 +1090,8 @@ For setup help or questions, refer to:
 
 <div align="center">
 
-**Grip** - Money that minds itself.
+**Grip** - Autonomous Financial Intelligence.
 
-*Made with ❤️ and AI*
+*Made with ❤️ , effort and AI*
 
 </div>

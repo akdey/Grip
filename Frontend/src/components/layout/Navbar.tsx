@@ -10,7 +10,7 @@ import {
 
 import { motion } from 'framer-motion';
 const NAV_ITEMS = [
-    { path: '/', label: 'Matrix', icon: Home },
+    { path: '/dashboard', label: 'Matrix', icon: Home },
     { path: '/analytics', label: 'Flow', icon: BarChart3 },
     { path: '/add', label: '', icon: Plus, isAction: true },
     { path: '/wealth', label: 'Wealth', icon: Briefcase },

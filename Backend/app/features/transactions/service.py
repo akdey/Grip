@@ -152,6 +152,8 @@ class TransactionService:
             txn.category = verification.category
             txn.sub_category = verification.sub_category
             txn.is_surety = await self._resolve_surety(verification.sub_category)
+            txn.tags = verification.tags
+            txn.remarks = verification.remarks
             
             raw_merchant_key = txn.merchant_name 
             txn.merchant_name = verification.merchant_name
