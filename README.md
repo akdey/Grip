@@ -878,21 +878,19 @@ APP_TAGLINE=Money that minds itself.
 - ✅ **Free unlimited** for public repos (2,000 min/month for private)
 - ✅ Saves $1-2/month on Railway (serverless vs always-on)
 - ✅ Reliable cron scheduling
-- ✅ Easy monitoring via Actions tab
-
-#### Setup Instructions
-
-1. **Add Database Secret** (One-time):
+- ✅ Easy monitoring via1. **Add Secrets** (One-time):
    - Go to GitHub repo → Settings → Secrets → Actions
-   - Click "New repository secret"
-   - Name: `DATABASE_URL`
-   - Value: Your Supabase connection string
-   - Click "Add secret"
+   - Click "New repository secret" and add:
+     - `DATABASE_URL`: Your Supabase connection string.
+     - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`: For email alerts.
+     - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: For Gmail OAuth.
+     - `GROQ_API_KEY`: For AI transaction extraction.
+     - `FRONTEND_ORIGIN`: Your deployment URL (e.g. `https://grip.vercel.app`).
 
-2. **Workflow is already configured** (`.github/workflows/daily-price-sync.yml`)
-   - Runs daily at 3:30 PM IST (10:00 AM UTC)
-   - Syncs all investment holdings prices
-   - Updates Supabase database
+2. **Workflows are already configured**:
+   - `daily-price-sync.yml`: Runs at 3:30 PM IST (Price updates).
+   - `gmail_sync.yml`: Runs every hour (Transactions).
+   - `daily-intelligence.yml`: Runs at 9:00 AM IST (Reminders & Insights).
 
 3. **Test the Workflow**:
    - Go to Actions tab
