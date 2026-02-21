@@ -91,10 +91,10 @@ const Dashboard: React.FC = () => {
             <header className="flex items-center justify-between mb-8 relative z-50">
                 <div className="flex flex-col">
                     <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600 pb-1">
-                        {import.meta.env.VITE_APP_NAME || 'Grip'}
+                        {import.meta.env.VITE_APP_NAME || 'GRIP'}
                     </h1>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">
-                        {import.meta.env.VITE_APP_TAGLINE || 'Money that minds itself.'}
+                        {import.meta.env.VITE_APP_TAGLINE}
                     </p>
 
                     {/* Scope Selector */}

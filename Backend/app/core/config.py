@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
-    FRONTEND_ORIGIN: str = "http://localhost:5173"  # Frontend URL for OAuth origin parameter
+    FRONTEND_ORIGIN: str = "https://grip-akdey.vercel.app"  # Frontend URL for OAuth origin parameter
     GOOGLE_REDIRECT_URI: str = "postmessage"
     
     # Firebase Settings
@@ -49,8 +49,8 @@ class Settings(BaseSettings):
     FROM_NAME: str = "Grip"
     
     # Branding
-    APP_NAME: str = "Grip"
-    APP_TAGLINE: str = "Spend smart, stress less."
+    APP_NAME: str = "GRIP"
+    APP_TAGLINE: str = "Autonomous Financial Intelligence"
     
     @property
     def ASYNC_DATABASE_URL(self) -> str:

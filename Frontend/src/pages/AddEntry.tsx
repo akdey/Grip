@@ -577,7 +577,9 @@ const AddEntry: React.FC = () => {
                                     category: category || 'Uncategorized',
                                     sub_category: subCategory || 'Uncategorized',
                                     merchant_name: merchantName,
-                                    approved: true
+                                    approved: true,
+                                    tags: tags,
+                                    remarks: remarks
                                 }
                             }, { onSuccess: () => navigate(-1) })}
                             disabled={verifyMutation.isPending || !amount || !category}

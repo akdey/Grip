@@ -23,6 +23,7 @@ from app.features.sync.models import SyncLog
 from app.features.auth.models import User
 from app.features.categories.service import CategoryService
 from app.features.wealth.service import WealthService
+from app.features.notifications.service import NotificationService
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -34,11 +35,13 @@ class SyncService:
                  db: AsyncSession = Depends(get_db), 
                  transaction_service: TransactionService = Depends(),
                  category_service: CategoryService = Depends(),
-                 wealth_service: WealthService = Depends()):
+                 wealth_service: WealthService = Depends(),
+                 notification_service: NotificationService = Depends()):
         self.db = db
         self.txn_service = transaction_service
         self.category_service = category_service
         self.wealth_service = wealth_service
+        self.notification_service = notification_service
         self.sanitizer = get_sanitizer_service()
 
     async def _get_last_sync_time(self, user_id: uuid.UUID) -> Optional[datetime]:
@@ -107,8 +110,8 @@ class SyncService:
         If no transaction found, return null.
         """
         
-        # Log the full prompt as requested
-        logger.info(f"LLM Prompt: {prompt}")
+        # Log the full prompt only in DEBUG mode
+        logger.debug(f"LLM Prompt: {prompt}")
 
         payload = {
             "model": settings.GROQ_MODEL,
@@ -170,13 +173,20 @@ class SyncService:
             )
 
             if creds.expired and creds.refresh_token:
-                creds.refresh(GoogleRequest())
-                user.gmail_credentials = {
-                    "token": creds.token,
-                    "refresh_token": creds.refresh_token,
-                    "expiry": creds.expiry.isoformat() if creds.expiry else None
-                }
-                await self.db.commit()
+                try:
+                    creds.refresh(GoogleRequest())
+                    user.gmail_credentials = {
+                        "token": creds.token,
+                        "refresh_token": creds.refresh_token,
+                        "expiry": creds.expiry.isoformat() if creds.expiry else None
+                    }
+                    await self.db.commit()
+                except Exception as refresh_ex:
+                    logger.error(f"Failed to refresh Gmail token for {user_id}: {refresh_ex}")
+                    # Mark credentials as invalid
+                    user.gmail_credentials = None
+                    await self.db.commit()
+                    raise Exception("GMAIL_DISCONNECTED")
 
             service = build('gmail', 'v1', credentials=creds)
             query = "spent OR debited OR transaction OR alert OR paid"
@@ -349,4 +359,12 @@ class SyncService:
             
         except Exception as e:
             logger.error(f"Sync execution failed: {e}")
-            await self._log_end(log, "FAILED", 0, str(e))
+            if str(e) == "GMAIL_DISCONNECTED":
+                # Fetch user for notification
+                result = await self.db.execute(select(User).where(User.id == user_id))
+                user = result.scalar_one_or_none()
+                if user and user.email:
+                    await self.notification_service.notify_gmail_disconnection(user_id, user.email, user.full_name or "Grip User")
+                await self._log_end(log, "FAILED", 0, "Gmail connection lost. Please reconnect.")
+            else:
+                await self._log_end(log, "FAILED", 0, str(e))

@@ -26,13 +26,14 @@ def setup_logging():
         handlers.append(file_handler)
     
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format=log_format,
         handlers=handlers
     )
     # Set levels for noisy libraries
-    logging.getLogger("uvicorn.access").setLevel(logging.INFO)
-    logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("python_multipart").setLevel(logging.WARNING)
 
 # Removed setup_logging() call from here - it's called in app/main.py
 logger = logging.getLogger("app")

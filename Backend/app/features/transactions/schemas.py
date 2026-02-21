@@ -36,6 +36,7 @@ class ManualTransactionCreate(BaseModel):
     transaction_date: datetime
     is_surety: bool = False
     remarks: Optional[str] = None
+    tags: Optional[List[str]] = []
 
 class TransactionUpdate(BaseModel):
     # Used for verification/updates
@@ -44,7 +45,7 @@ class TransactionUpdate(BaseModel):
     merchant_name: Optional[str] = None
     status: Optional[TransactionStatus] = None
     remarks: Optional[str] = None
-    tags: Optional[List[str]] = None
+    tags: Optional[List[str]] = []
 
 class TransactionResponse(TransactionBase):
     id: UUID
@@ -71,6 +72,8 @@ class VerificationRequest(BaseModel):
     sub_category: str
     merchant_name: str # Confirmed merchant name to save to mapping
     approved: bool # If False -> REJECTED
+    tags: Optional[List[str]] = []
+    remarks: Optional[str] = None
 
 class CategoriesResponse(BaseModel):
     categories: dict[str, list[str]]

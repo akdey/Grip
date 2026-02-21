@@ -471,6 +471,15 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
                             {format(dateObj, 'MMM d')}
                         </span>
                     </div>
+                    {txn.tags && txn.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                            {txn.tags.map((tag: string) => (
+                                <span key={tag} className="text-[7px] px-1.5 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.05] text-gray-500 font-black uppercase tracking-tighter">
+                                    #{tag}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 

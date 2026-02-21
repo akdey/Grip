@@ -37,7 +37,7 @@ const Login: React.FC = () => {
 
             const { access_token } = response.data;
             login({ id: 'temp-id', email, is_active: true }, access_token);
-            navigate('/');
+            navigate('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Login failed. Please check your credentials.');
         } finally {
@@ -70,7 +70,7 @@ const Login: React.FC = () => {
             const response = await api.post('/auth/verify-otp', { email, otp });
             const { access_token } = response.data;
             login({ id: 'temp-id', email, is_active: true }, access_token);
-            navigate('/');
+            navigate('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Verification failed.');
         } finally {
@@ -89,7 +89,7 @@ const Login: React.FC = () => {
                         <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
                             {import.meta.env.VITE_APP_NAME || 'Grip'}
                         </h1>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px]">{import.meta.env.VITE_APP_TAGLINE || 'Money that minds itself.'}</p>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px]">{import.meta.env.VITE_APP_TAGLINE}</p>
                     </div>
                 </div>
 
