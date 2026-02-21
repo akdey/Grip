@@ -4,7 +4,7 @@ import { Shield, Zap, TrendingUp, Mail, Lock, Calendar, BarChart3, Fingerprint }
 import { motion } from 'framer-motion';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
@@ -66,10 +66,10 @@ const Home: React.FC = () => {
                             <Button className="h-16 px-12 text-sm font-black uppercase tracking-[3px] rounded-2xl w-full sm:w-auto bg-white text-black hover:bg-gray-200" onClick={() => navigate('/login')}>
                                 Join the Hub
                             </Button>
-                            <button onClick={() => navigate('/privacy')} className="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors flex items-center gap-2 group">
+                            <Link to="/privacy" className="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors flex items-center gap-2 group">
                                 <Lock size={14} className="group-hover:text-emerald-400 transition-colors" />
                                 Privacy First Protocol
-                            </button>
+                            </Link>
                         </div>
                     </div>
 
@@ -138,8 +138,8 @@ const Home: React.FC = () => {
                             <div className="space-y-6">
                                 <h4 className="text-[10px] font-black text-white uppercase tracking-[5px]">Legal</h4>
                                 <ul className="space-y-4">
-                                    <li><button onClick={() => navigate('/privacy')} className="text-[10px] font-bold text-gray-500 hover:text-white uppercase tracking-widest transition-colors">Privacy</button></li>
-                                    <li><button onClick={() => navigate('/terms')} className="text-[10px] font-bold text-gray-500 hover:text-white uppercase tracking-widest transition-colors">Terms</button></li>
+                                    <li><Link to="/privacy" className="text-[10px] font-bold text-gray-500 hover:text-white uppercase tracking-widest transition-colors">Privacy</Link></li>
+                                    <li><Link to="/terms" className="text-[10px] font-bold text-gray-500 hover:text-white uppercase tracking-widest transition-colors">Terms</Link></li>
                                 </ul>
                             </div>
                             <div className="space-y-6">

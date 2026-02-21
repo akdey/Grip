@@ -20,5 +20,6 @@ class SyncLog(Base):
     
     # Store the historyId used for this sync to know where to start next time
     history_id_used: Mapped[str] = mapped_column(String, nullable=True) 
+    summary: Mapped[str] = mapped_column(Text, nullable=True) # JSON summary of processed records
 
     # Relationship to user if needed, or just ID

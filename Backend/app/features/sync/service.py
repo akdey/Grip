@@ -22,6 +22,7 @@ from app.features.transactions.models import TransactionStatus
 from app.features.sync.models import SyncLog
 from app.features.auth.models import User
 from app.features.categories.service import CategoryService
+from app.features.wealth.service import WealthService
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -32,10 +33,12 @@ class SyncService:
     def __init__(self, 
                  db: AsyncSession = Depends(get_db), 
                  transaction_service: TransactionService = Depends(),
-                 category_service: CategoryService = Depends()):
+                 category_service: CategoryService = Depends(),
+                 wealth_service: WealthService = Depends()):
         self.db = db
         self.txn_service = transaction_service
         self.category_service = category_service
+        self.wealth_service = wealth_service
         self.sanitizer = get_sanitizer_service()
 
     async def _get_last_sync_time(self, user_id: uuid.UUID) -> Optional[datetime]:
@@ -57,11 +60,13 @@ class SyncService:
         await self.db.refresh(log)
         return log
 
-    async def _log_end(self, log: SyncLog, status: str, count: int = 0, error: str = None):
+    async def _log_end(self, log: SyncLog, status: str, count: int = 0, error: str = None, summary: List[dict] = None):
         log.end_time = datetime.now()
         log.status = status
         log.records_processed = count
         log.error_message = error
+        if summary:
+            log.summary = json.dumps(summary)
         await self.db.commit()
 
     async def call_brain_api(self, text: str, user_id: uuid.UUID, categories_context: List[str] = None) -> dict:
@@ -269,6 +274,8 @@ class SyncService:
                      cat_list.append(c.name)
             
             processed_count = 0
+            sync_summary = []
+
             for msg in messages:
                 dedup_payload = f"{msg['id']}:{msg['internalDate']}"
                 content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
@@ -279,6 +286,10 @@ class SyncService:
                 clean_text = self.sanitizer.sanitize(msg['body'] or msg['snippet'])
                 extracted = await self.call_brain_api(clean_text, user_id, cat_list)
                 
+                # Skip if no valid amount was extracted
+                if abs(extracted["amount"]) == 0:
+                    continue
+
                 mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
                 cat, sub = extracted["category"], extracted["sub_category"]
                 
@@ -289,28 +300,13 @@ class SyncService:
                 # Determine amount sign based on explicit type or category
                 final_amount = abs(extracted["amount"])
                 
-                # Skip if no valid amount was extracted
-                if final_amount == 0:
-                    continue
-
                 if extracted.get("transaction_type") == "DEBIT" and cat != "Income":
                     final_amount = -final_amount
                 elif cat == "Income" or extracted.get("transaction_type") == "CREDIT":
                     final_amount = final_amount
                 else:
-                    # Default to negative (Expense) if unsure, unless it looks like income
                     final_amount = -final_amount
 
-                # Determine Surety
-                # We need to resolve it. Since SyncService has txn_service, let's assume we can use a helper or query directly.
-                # But _resolve_surety is private. Let's make it public or query DB here too.
-                # Simplest: use category_service to check? category_service deals with ID.
-                # Let's perform a lightweight check similar to TransactionService.
-                # Actually, TransactionService instance is available. Let's call a public method on it.
-                # I'll update TransactionService to make resolve_surety public first? 
-                # No, I can't edit previous file easily in same thought without tool.
-                # I will assume I can access the DB directly as I have self.db.
-                
                 # Fetch surety status
                 from app.features.categories.models import SubCategory
                 stmt = select(SubCategory.is_surety).where(SubCategory.name == sub).limit(1)
@@ -332,15 +328,24 @@ class SyncService:
                     "is_surety": is_surety_flag
                 })
                 
-                # Attempt to map to Wealth/Investment (DISCONNECTED)
-                # try:
-                #     await self.wealth_service.process_transaction_match(new_txn)
-                # except Exception as w_ex:
-                #     logger.error(f"Wealth mapping failed for txn {new_txn.id}: {w_ex}")
+                # Attempt to map to Wealth/Investment (INTEGRATED)
+                wealth_mapped = False
+                try:
+                    wealth_mapped = await self.wealth_service.process_transaction_match(new_txn)
+                except Exception as w_ex:
+                    logger.error(f"Wealth mapping failed for txn {new_txn.id}: {w_ex}")
+
+                sync_summary.append({
+                    "id": str(new_txn.id),
+                    "merchant": extracted["merchant_name"],
+                    "amount": final_amount,
+                    "category": cat,
+                    "wealth_mapped": wealth_mapped
+                })
 
                 processed_count += 1
             
-            await self._log_end(log, "SUCCESS", processed_count)
+            await self._log_end(log, "SUCCESS", processed_count, summary=sync_summary)
             
         except Exception as e:
             logger.error(f"Sync execution failed: {e}")
