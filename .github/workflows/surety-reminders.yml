@@ -1,13 +1,13 @@
-name: Daily Intelligence & Reminders
+name: Surety & Bill Reminders
 
 on:
   schedule:
-    # Runs at 3:30 AM UTC (9:00 AM IST) - Perfect for morning reminders
+    # Runs at 3:30 AM UTC (9:00 AM IST) - Every morning
     - cron: '30 3 * * *'
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual trigger
 
 jobs:
-  send-notifications:
+  send-surety-reminders:
     runs-on: ubuntu-latest
     
     steps:
@@ -25,10 +25,9 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Run Intelligence Jobs
+      - name: Run Surety Reminders
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          # SMTP settings for outgoing emails
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
@@ -41,19 +40,12 @@ jobs:
           cd Backend
           python -c "
           import asyncio
-          from app.core.scheduler import run_surety_reminders, run_weekly_insights
-          from datetime import datetime
+          from app.core.scheduler import run_surety_reminders
           
           async def main():
               print('Starting Surety Reminders job...')
               await run_surety_reminders()
-              
-              # Run weekly insights specifically on Sundays
-              if datetime.now().weekday() == 6:  # 6 is Sunday
-                  print('Today is Sunday. Running Weekly Insights...')
-                  await run_weekly_insights()
-              
-              print('Intelligence jobs completed successfully!')
+              print('Done!')
           
           asyncio.run(main())
           "
