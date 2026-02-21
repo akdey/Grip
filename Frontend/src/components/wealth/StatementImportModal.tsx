@@ -282,7 +282,7 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex justify-center pointer-events-none">
+            <div className="fixed inset-0 z-[2000] flex justify-center pointer-events-none">
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -295,7 +295,7 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
                     transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[92vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
                 >
                     {/* Header */}
                     <div className="p-6 sm:p-10 border-b border-white/10 flex justify-between items-center bg-gradient-to-b from-white/[0.05] to-transparent shrink-0">
@@ -314,11 +314,11 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                     </div>
 
                     {/* Content */}
-                    <div className="overflow-y-auto flex-1 p-6 sm:p-10 custom-scrollbar">
+                    <div className="overflow-y-auto flex-1 p-5 sm:p-10 custom-scrollbar">
                         {!importResult ? (
                             <>
                                 {/* Source Selector */}
-                                <div className="flex gap-2 mb-8 bg-white/5 p-1 rounded-2xl w-fit">
+                                <div className="flex gap-2 mb-8 bg-white/5 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto no-scrollbar whitespace-nowrap">
                                     {['CAMS', 'KFin', 'MFCentral'].map((s) => (
                                         <button
                                             key={s}
@@ -327,7 +327,7 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                                 setTransactions([]);
                                                 setError('');
                                             }}
-                                            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${source === s
+                                            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shrink-0 ${source === s
                                                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
                                                 : 'text-gray-500 hover:text-white hover:bg-white/5'
                                                 }`}
@@ -340,7 +340,7 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                 {/* File Upload */}
                                 <div className="mb-8">
                                     <label className="block w-full">
-                                        <div className="border border-dashed border-white/20 rounded-3xl p-6 sm:p-10 text-center hover:border-emerald-500/50 hover:bg-emerald-500/[0.02] transition-all cursor-pointer bg-white/[0.01] group overflow-hidden">
+                                        <div className="border border-dashed border-white/20 rounded-3xl p-5 sm:p-10 text-center hover:border-emerald-500/50 hover:bg-emerald-500/[0.02] transition-all cursor-pointer bg-white/[0.01] group overflow-hidden max-w-full">
                                             <Upload size={40} className="mx-auto mb-4 text-gray-500 group-hover:text-emerald-500 group-hover:scale-110 transition-all" />
                                             <p className="text-base font-black text-white tracking-tight mb-1">Select {source} Statement</p>
                                             <p className="text-[10px] text-gray-500 font-medium uppercase tracking-widest">Supports CSV and Excel Formats</p>
@@ -365,7 +365,7 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                             </h4>
                                         </div>
 
-                                        <div className="bg-white/[0.02] rounded-3xl border border-white/5 max-h-[40vh] overflow-y-auto custom-scrollbar overflow-hidden">
+                                        <div className="bg-white/[0.02] rounded-3xl border border-white/5 max-h-[40vh] overflow-auto custom-scrollbar">
                                             <table className="w-full text-xs text-left">
                                                 <thead className="sticky top-0 bg-[#0A0A0A] border-b border-white/10 z-10">
                                                     <tr className="text-gray-500">
@@ -458,7 +458,7 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                     </div>
 
                     {/* Footer */}
-                    <div className="p-6 sm:p-8 border-t border-white/5 bg-white/[0.01] flex-shrink-0 flex gap-4">
+                    <div className="p-6 sm:p-8 border-t border-white/5 bg-white/[0.01] flex-shrink-0 flex flex-col sm:flex-row gap-4">
                         {!importResult ? (
                             <>
                                 <button
@@ -470,7 +470,7 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                 <button
                                     onClick={handleImport}
                                     disabled={loading || transactions.length === 0}
-                                    className="flex-2 py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/20 disabled:opacity-50"
+                                    className="flex-[2] py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-2xl shadow-emerald-900/20 disabled:opacity-50"
                                 >
                                     {loading ? (
                                         <>

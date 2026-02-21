@@ -621,7 +621,7 @@ const AddEntry: React.FC = () => {
                 <Drawer
                     isOpen={isCategoryOpen}
                     onClose={() => { setCategoryOpen(false); setAddMode('NONE'); setView('CATEGORIES'); }}
-                    height="h-[92vh]"
+                    height="h-[90vh]"
                     noPadding
                     title={isAddMode !== 'NONE' ? `New ${isAddMode === 'CATEGORY' ? 'Entity' : 'Node'}` : (view === 'CATEGORIES' ? "Categories" : "Sub-Nodes")}
                 >

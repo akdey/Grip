@@ -191,115 +191,115 @@ const Dashboard: React.FC = () => {
                     onShowDetails={() => setShowForecastDetails(true)}
                 />
 
-                {/* Forecast Details Drawer */}
-                <AnimatePresence>
-                    {showForecastDetails && (
-                        <div className="fixed inset-0 z-[1000] flex justify-center pointer-events-none">
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setShowForecastDetails(false)}
-                                className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
-                            />
-                            <motion.div
-                                initial={{ y: '100%' }}
-                                animate={{ y: 0 }}
-                                exit={{ y: '100%' }}
-                                transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-                                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[92vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
-                            >
-                                <div className="p-6 sm:p-10 border-b border-white/[0.05] flex items-center justify-between bg-gradient-to-b from-white/[0.02] to-transparent shrink-0">
-                                    <div className="flex-1">
-                                        <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic">Forecast Intelligence</h3>
-                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[4px] mt-1">{forecast?.time_frame}</p>
-                                    </div>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); setShowForecastDetails(false); }}
-                                        className="w-14 h-14 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group"
-                                        aria-label="Close forecast details"
-                                    >
-                                        <ChevronDown size={28} className="group-hover:translate-y-0.5 transition-transform" />
-                                    </button>
-                                </div>
-
-                                <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-8 custom-scrollbar">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="bg-cyan-500/5 border border-cyan-500/10 p-6 rounded-3xl sm:col-span-2">
-                                            <div className="flex items-center gap-3 mb-3">
-                                                <Sparkles size={16} className="text-cyan-400" />
-                                                <span className="text-xs font-black text-cyan-400 uppercase tracking-widest">AI Context & Reasoning</span>
-                                            </div>
-                                            <p className="text-sm font-medium text-cyan-100/90 leading-relaxed italic">
-                                                "{forecast?.description || "Analysis provided by predictive models looking at historical burn rates and cyclical patterns."}"
-                                            </p>
-                                        </div>
-
-                                        <div className="bg-white/[0.05] border border-white/[0.1] p-6 rounded-3xl flex flex-col justify-between">
-                                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Total Exposure</p>
-                                            <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(forecast?.predicted_burden_30d || 0)}</p>
-                                        </div>
-
-                                        <div className="bg-white/[0.05] border border-white/[0.1] p-6 rounded-3xl flex flex-col justify-between">
-                                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Confidence Level</p>
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${forecast?.confidence === 'low' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'}`} />
-                                                <p className="text-sm font-black text-white uppercase tracking-tight">{forecast?.confidence || 'High'}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between px-2">
-                                            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Categorical Breakdown</h4>
-                                            <span className="text-[9px] text-gray-700 font-bold uppercase tracking-widest">Target Allocations</span>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 gap-3">
-                                            {forecast?.breakdown && Array.isArray(forecast.breakdown) && forecast.breakdown.length > 0 ? (
-                                                forecast.breakdown.map((item: any, idx: number) => (
-                                                    <div key={idx} className="flex items-start gap-5 p-5 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-all group">
-                                                        <div className="w-12 h-12 rounded-2xl bg-white/[0.05] flex items-center justify-center text-gray-500 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 transition-colors shrink-0">
-                                                            <span className="text-xs font-black">{idx + 1}</span>
-                                                        </div>
-                                                        <div className="flex-1 min-w-0 py-1">
-                                                            <div className="flex items-center justify-between mb-1.5">
-                                                                <span className="text-sm font-black text-white uppercase tracking-tight">{item.category}</span>
-                                                                <span className="text-base font-black text-cyan-400 tracking-tighter">{formatCurrency(item.predicted_amount)}</span>
-                                                            </div>
-                                                            <p className="text-[11px] text-gray-500 font-medium leading-relaxed max-w-[90%]">{item.reason}</p>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="p-12 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] text-center">
-                                                    <p className="text-xs text-gray-600 font-black uppercase tracking-widest">No detailed breakdown</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="p-8 bg-white/[0.01] border-t border-white/[0.05] shrink-0">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[3px]">Next Cycle Forecast</span>
-                                            <span className="text-xs text-gray-700 font-bold">Generated by Llama-3-Grip-v1</span>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="text-sm font-black text-white tracking-tighter">{formatCurrency(forecast?.predicted_burden_30d || 0)}</span>
-                                            <p className="text-[8px] text-cyan-500 font-black uppercase tracking-widest">Projected Limit</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>
-
                 {/* Activity Feed */}
                 <RecentActivity transactions={transactions} formatCurrency={formatCurrency} isLoading={isTxnLoading} />
             </div>
+
+            {/* Forecast Details Drawer */}
+            <AnimatePresence>
+                {showForecastDetails && (
+                    <div className="fixed inset-0 z-[2000] flex justify-center pointer-events-none">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowForecastDetails(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
+                        />
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
+                            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
+                        >
+                            <div className="p-6 sm:p-10 border-b border-white/[0.05] flex items-center justify-between bg-gradient-to-b from-white/[0.02] to-transparent shrink-0">
+                                <div className="flex-1">
+                                    <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic line-clamp-2">Forecast Intelligence</h3>
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[4px] mt-1">{forecast?.time_frame}</p>
+                                </div>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setShowForecastDetails(false); }}
+                                    className="w-14 h-14 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group"
+                                    aria-label="Close forecast details"
+                                >
+                                    <ChevronDown size={28} className="group-hover:translate-y-0.5 transition-transform" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-8 custom-scrollbar">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="bg-cyan-500/5 border border-cyan-500/10 p-6 rounded-3xl sm:col-span-2">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <Sparkles size={16} className="text-cyan-400" />
+                                            <span className="text-xs font-black text-cyan-400 uppercase tracking-widest">AI Context & Reasoning</span>
+                                        </div>
+                                        <p className="text-sm font-medium text-cyan-100/90 leading-relaxed italic">
+                                            "{forecast?.description || "Analysis provided by predictive models looking at historical burn rates and cyclical patterns."}"
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-white/[0.05] border border-white/[0.1] p-6 rounded-3xl flex flex-col justify-between">
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Total Exposure</p>
+                                        <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(forecast?.predicted_burden_30d || 0)}</p>
+                                    </div>
+
+                                    <div className="bg-white/[0.05] border border-white/[0.1] p-6 rounded-3xl flex flex-col justify-between">
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Confidence Level</p>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${forecast?.confidence === 'low' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'}`} />
+                                            <p className="text-sm font-black text-white uppercase tracking-tight">{forecast?.confidence || 'High'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between px-2">
+                                        <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Categorical Breakdown</h4>
+                                        <span className="text-[9px] text-gray-700 font-bold uppercase tracking-widest">Target Allocations</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {forecast?.breakdown && Array.isArray(forecast.breakdown) && forecast.breakdown.length > 0 ? (
+                                            forecast.breakdown.map((item: any, idx: number) => (
+                                                <div key={idx} className="flex items-start gap-5 p-5 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-all group">
+                                                    <div className="w-12 h-12 rounded-2xl bg-white/[0.05] flex items-center justify-center text-gray-500 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 transition-colors shrink-0">
+                                                        <span className="text-xs font-black">{idx + 1}</span>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0 py-1">
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <span className="text-sm font-black text-white uppercase tracking-tight">{item.category}</span>
+                                                            <span className="text-base font-black text-cyan-400 tracking-tighter">{formatCurrency(item.predicted_amount)}</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-gray-500 font-medium leading-relaxed max-w-[90%]">{item.reason}</p>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="p-12 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] text-center">
+                                                <p className="text-xs text-gray-600 font-black uppercase tracking-widest">No detailed breakdown</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 bg-white/[0.01] border-t border-white/[0.05] shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[3px]">Next Cycle Forecast</span>
+                                        <span className="text-xs text-gray-700 font-bold">Generated by Llama-3-Grip-v1</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-sm font-black text-white tracking-tighter">{formatCurrency(forecast?.predicted_burden_30d || 0)}</span>
+                                        <p className="text-[8px] text-cyan-500 font-black uppercase tracking-widest">Projected Limit</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             <React.Suspense fallback={null}>
                 <PasswordVerifyModal
@@ -315,7 +315,7 @@ const Dashboard: React.FC = () => {
             {/* Obligations Ledger Drawer */}
             <AnimatePresence>
                 {showObligations && (
-                    <div className="fixed inset-0 z-[1100] flex justify-center pointer-events-none">
+                    <div className="fixed inset-0 z-[2000] flex justify-center pointer-events-none">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -328,7 +328,7 @@ const Dashboard: React.FC = () => {
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-                            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[95vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
+                            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
                         >
                             <div className="p-6 sm:p-10 border-b border-white/10 flex items-center justify-between bg-gradient-to-b from-white/[0.05] to-transparent shrink-0">
                                 <div className="flex-1">
