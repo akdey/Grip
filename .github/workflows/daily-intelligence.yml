@@ -1,13 +1,13 @@
-name: Gmail Sync
+name: Daily Intelligence & Reminders
 
 on:
   schedule:
-    # Runs every hour
-    - cron: '0 * * * *'
+    # Runs at 3:30 AM UTC (9:00 AM IST) - Perfect for morning reminders
+    - cron: '30 3 * * *'
   workflow_dispatch:
 
 jobs:
-  sync-gmail:
+  send-notifications:
     runs-on: ubuntu-latest
     
     steps:
@@ -25,12 +25,10 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Run Gmail Sync
+      - name: Run Intelligence Jobs
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          # SMTP settings for outgoing emails
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
@@ -43,17 +41,19 @@ jobs:
           cd Backend
           python -c "
           import asyncio
-          from app.core.scheduler import run_gmail_sync
+          from app.core.scheduler import run_surety_reminders, run_weekly_insights
+          from datetime import datetime
           
           async def main():
-              print('Starting Gmail sync...')
-              # We need to ensure we run the sync for all users
-              try:
-                  await run_gmail_sync()
-                  print('Gmail sync completed successfully!')
-              except Exception as e:
-                  print(f'Error running Gmail sync: {e}')
-                  exit(1)
+              print('Starting Surety Reminders job...')
+              await run_surety_reminders()
+              
+              # Run weekly insights specifically on Sundays
+              if datetime.now().weekday() == 6:  # 6 is Sunday
+                  print('Today is Sunday. Running Weekly Insights...')
+                  await run_weekly_insights()
+              
+              print('Intelligence jobs completed successfully!')
           
           asyncio.run(main())
           "
