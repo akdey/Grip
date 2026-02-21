@@ -55,7 +55,7 @@ const Sync: React.FC = () => {
         <div className="text-white pb-24 space-y-6">
             {/* Header */}
             <header className="px-5 pt-10 pb-4">
-                <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-indigo-400 mb-2">
+                <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600 mb-2">
                     Gmail Sync
                 </h1>
                 {/* <p className="text-sm text-gray-400">

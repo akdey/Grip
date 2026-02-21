@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  /* Premium Dark Theme - "Deep Nebula" */
+  /* Premium Dark Theme - "Grip Deep" */
   --color-bg-primary: #050505;
   --color-bg-secondary: #0f1014;
 
-  /* Neon Accents */
-  --color-accent-primary: #00f2ea;
-  --color-accent-secondary: #ff0050;
+  /* Brand Accents - Emerald to Blue */
+  --color-accent-emerald: #10b981;
+  --color-accent-cyan: #06b6d4;
+  --color-accent-blue: #3b82f6;
 
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.08);
@@ -33,15 +34,14 @@ body::before {
   inset: 0;
   z-index: -1;
   background-image:
-    radial-gradient(circle at 10% 10%, rgba(0, 242, 234, 0.08), transparent 40%),
-    radial-gradient(circle at 90% 90%, rgba(255, 0, 80, 0.08), transparent 40%),
-    radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.05), transparent 60%);
-  /* Remove fixed background-attachment from pseudo-element as position: fixed already does the job correctly */
+    radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.08), transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(37, 99, 235, 0.08), transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.05), transparent 60%);
   pointer-events: none;
-  /* GPU Acceleration */
   transform: translateZ(0);
   will-change: transform;
 }
+
 
 @layer utilities {
   .pb-safe {
@@ -123,7 +123,7 @@ body::before {
   }
 
   .glass-button {
-    @apply relative overflow-hidden px-8 py-4.5 rounded-[1.5rem] bg-indigo-500 text-white font-black uppercase text-[11px] tracking-widest active:scale-95 transition-all shadow-xl border border-indigo-400/20 hover:bg-indigo-600;
+    @apply relative overflow-hidden px-8 py-4.5 rounded-[1.5rem] bg-cyan-600 text-white font-black uppercase text-[11px] tracking-widest active:scale-95 transition-all shadow-xl border border-cyan-400/20 hover:bg-cyan-700;
   }
 
   .glass-button.secondary {

@@ -11,6 +11,8 @@ const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVe
 
 const COLORS = ['#00f2ea', '#ff0050', '#6366f1', '#fbbf24', '#34d399', '#c084fc'];
 
+import { Logo } from '../components/ui/Logo';
+
 const Analytics: React.FC = () => {
     const navigate = useNavigate();
     const [referenceDate, setReferenceDate] = useState(new Date());
@@ -74,11 +76,8 @@ const Analytics: React.FC = () => {
     return (
         <div className="min-h-screen text-white p-6 pb-24 overflow-x-hidden relative">
             <header className="flex items-center justify-between mb-8 relative z-50">
-                <div>
-                    <p className="text-[10px] font-black uppercase tracking-[3px] text-gray-500 mb-0.5 opacity-60">
-                        {import.meta.env.VITE_APP_NAME || 'Grip'}
-                    </p>
-                    <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
+                <div className="flex flex-col">
+                    <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
                         Analytics
                     </h1>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">Financial Intelligence</p>

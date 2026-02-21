@@ -42,6 +42,8 @@ interface ForecastResponse {
     summary_text: string;
 }
 
+import { Logo } from '../components/ui/Logo';
+
 const Wealth: React.FC = () => {
     const [holdings, setHoldings] = useState<Holding[]>([]);
     const [forecastData, setForecastData] = useState<ForecastResponse | null>(null);
@@ -162,8 +164,8 @@ const Wealth: React.FC = () => {
         <div className="min-h-screen text-white p-6 pb-24 overflow-x-hidden">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <div>
-                    <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
+                <div className="flex flex-col">
+                    <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
                         Wealth
                     </h1>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">Your Financial Core</p>
