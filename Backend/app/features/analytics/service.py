@@ -149,55 +149,53 @@ class AnalyticsService:
             _, last_day = calendar.monthrange(today.year, today.month)
             days_till_month_end = last_day - today.day
             
-            # 1. Get Bill/Surety Ledger 
-            # We use days_till_month_end so we only freeze items for the CURRENT month's cycle
-            ledger_data = await self.bill_service.get_obligations_ledger(db, user_id, days_ahead=days_till_month_end)
+            # 1. Execute multiple independent checks in parallel
+            #   - Bill/Surety Ledger (heavy)
+            #   - Credit Card exposure (fast)
+            #   - Active Goals (fast)
+            
+            goal_stmt = (
+                select(Goal)
+                .where(Goal.user_id == user_id)
+                .where(Goal.is_active == True)
+            )
+
+            ledger_task = self.bill_service.get_obligations_ledger(db, user_id, days_ahead=days_till_month_end)
+            cc_task = self.cc_service.get_all_unbilled_for_user(db, user_id)
+            goal_task = db.execute(goal_stmt)
+
+            ledger_data, unbilled_cc, goal_res = await asyncio.gather(
+                ledger_task,
+                cc_task,
+                goal_task
+            )
+
+            # 2. Process Bill/Surety results
             unpaid_bills_total = ledger_data["unpaid_total"]
             projected_surety_bills = ledger_data["projected_total"]
             all_obligations = ledger_data["items"]
             
-            # 2. Credit Card Exposure
-            unbilled_cc = await self.cc_service.get_all_unbilled_for_user(db, user_id)
-            
-            # 3. SIP Commitments from Wealth Module (DISCONNECTED)
-            # sip_obligations = await wealth_service.get_sip_obligations(user_id)
-            # sip_total = sum(o.amount for o in sip_obligations)
-            # all_obligations.extend(sip_obligations)
+            # 3. Process SIP Commitments (Placeholder)
             sip_total = Decimal("0")
-            
-            # Total projected surety includes recurring bills, surety transactions, and SIPs (now 0)
             total_projected_surety = projected_surety_bills + sip_total
             
-            # 4. Monthly Goal contributions
+            # 4. Process Goals
             active_goals_total = Decimal("0")
-            try:
-                # Fetch detailed goals to add to ledger
-                goal_stmt = (
-                    select(Goal)
-                    .where(Goal.user_id == user_id)
-                    .where(Goal.is_active == True)
-                )
-                goal_res = await db.execute(goal_stmt)
-                goals = goal_res.scalars().all()
-                
-                for g in goals:
-                    amt = Decimal(str(g.monthly_contribution))
-                    active_goals_total += amt
-                    # Goals don't have a specific due date, but they are monthly. 
-                    # We project them for the end of the month or today+15.
-                    all_obligations.append(IdentifiedObligation(
-                        id=f"goal-{g.id}",
-                        title=f"Goal: {g.name}",
-                        amount=amt,
-                        due_date=date.today() + timedelta(days=15),
-                        type="GOAL",
-                        status="PROJECTED",
-                        category="Goal",
-                        sub_category=g.category
-                    ))
-            except Exception as e:
-                logger.warning(f"Failed to calculate detailed goals: {e}")
-                active_goals_total = Decimal("0")
+            goals = goal_res.scalars().all()
+            for g in goals:
+                amt = Decimal(str(g.monthly_contribution))
+                active_goals_total += amt
+                # Add goals to ledger items
+                all_obligations.append(IdentifiedObligation(
+                    id=f"goal-{g.id}",
+                    title=f"Goal: {g.name}",
+                    amount=amt,
+                    due_date=date.today() + timedelta(days=15),
+                    type="GOAL",
+                    status="PROJECTED",
+                    category="Goal",
+                    sub_category=g.category
+                ))
             
             total_frozen = calculate_frozen_funds(unpaid_bills_total, total_projected_surety, unbilled_cc) + active_goals_total
             
@@ -241,28 +239,18 @@ class AnalyticsService:
                 _, last_day = calendar.monthrange(today.year, today.month)
                 days_till_salary = last_day - today.day + 1
             
-            # Get current balance (liquid balance across bank/cash)
+            # 1. Prepare all independent queries/tasks
             balance_stmt = (
                 select(func.sum(Transaction.amount))
                 .where(Transaction.user_id == user_id)
                 .where(Transaction.account_type.in_([AccountType.CASH, AccountType.SAVINGS]))
             )
-            balance_result = await db.execute(balance_stmt)
-            frozen_breakdown = await self.calculate_burden(db, user_id)
             
-            current_balance = balance_result.scalar() or Decimal("0")
-            
-            # Check if user has any transactions at all (to distinguish new vs existing users)
             txn_count_stmt = (
                 select(func.count(Transaction.id))
                 .where(Transaction.user_id == user_id)
             )
-            txn_count_result = await db.execute(txn_count_stmt)
-            total_transactions = txn_count_result.scalar() or 0
-            is_new_user = total_transactions == 0
-            
-            # Calculate buffer using simple average of discretionary spending
-            # Get discretionary expenses from last 30 days
+
             today_date = self._get_today()
             thirty_days_ago = today_date - timedelta(days=30)
             
@@ -276,7 +264,24 @@ class AnalyticsService:
                 .where(Transaction.transaction_date >= thirty_days_ago)
                 .where(Transaction.transaction_date <= today_date)
             )
-            discretionary_result = await db.execute(discretionary_stmt)
+
+            # 2. Execute everything in parallel
+            balance_task = db.execute(balance_stmt)
+            burden_task = self.calculate_burden(db, user_id)
+            count_task = db.execute(txn_count_stmt)
+            discretionary_task = db.execute(discretionary_stmt)
+
+            balance_result, frozen_breakdown, txn_count_result, discretionary_result = await asyncio.gather(
+                balance_task,
+                burden_task,
+                count_task,
+                discretionary_task
+            )
+            
+            # 3. Process results
+            current_balance = balance_result.scalar() or Decimal("0")
+            total_transactions = txn_count_result.scalar() or 0
+            is_new_user = total_transactions == 0
             total_discretionary_30d = abs(discretionary_result.scalar() or Decimal("0"))
             
             # Calculate average daily discretionary expense

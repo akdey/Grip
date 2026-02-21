@@ -166,18 +166,24 @@ class CreditCardService:
         user_id: UUID
     ) -> Decimal:
         """Get total unbilled amount across all active credit cards for a user."""
-        cards = await self.get_user_cards(db, user_id, active_only=True)
+        # 1. Get all active card IDs for this user
+        card_stmt = select(CreditCard.id).where(CreditCard.user_id == user_id, CreditCard.is_active == True)
+        card_res = await db.execute(card_stmt)
+        card_ids = [row[0] for row in card_res.all()]
         
-        total_unbilled = Decimal("0.00")
+        if not card_ids:
+            return Decimal("0.00")
+            
+        # 2. Get sum of all unsettled transactions for these cards
+        # Note: We use is_settled=False as the source of truth for unbilled debt
+        stmt = (
+            select(func.sum(Transaction.amount))
+            .where(Transaction.credit_card_id.in_(card_ids))
+            .where(Transaction.is_settled == False)
+        )
         
-        for card in cards:
-            cycle_dates = get_billing_cycle_dates(card.statement_date)
-            unbilled = await self.get_unbilled_amount(
-                db,
-                card.id,
-                cycle_dates["cycle_start"],
-                cycle_dates["cycle_end"]
-            )
-            total_unbilled += unbilled
+        result = await db.execute(stmt)
+        amount = result.scalar() or Decimal("0.00")
         
-        return total_unbilled
+        # Expenses are negative, so negate to get positive debt amount
+        return -amount
