@@ -13,6 +13,7 @@ export interface SyncHistoryItem {
     records_processed: number;
     trigger_source: string;
     error_message: string | null;
+    summary: string | null;
 }
 
 export interface SyncHistory {

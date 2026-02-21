@@ -6,7 +6,11 @@ import {
     RefreshCw,
     Unplug,
     Clock,
-    AlertCircle
+    AlertCircle,
+    TrendingUp,
+    ChevronDown,
+    ChevronUp,
+    ArrowRight
 } from 'lucide-react';
 import { useGmailStatus, useConnectGmail, useDisconnectGmail, useManualSync, useSyncHistory } from '../features/sync/hooks';
 import { Card } from '../components/ui/Card';
@@ -15,6 +19,7 @@ import { Loader } from '../components/ui/Loader';
 import { formatDistanceToNow } from 'date-fns';
 const Sync: React.FC = () => {
     const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+    const [expandedSync, setExpandedSync] = useState<number | null>(null);
 
     const { data: status, isLoading: statusLoading } = useGmailStatus();
     const { data: history } = useSyncHistory();
@@ -88,21 +93,21 @@ const Sync: React.FC = () => {
                                     <CheckCircle size={20} className="text-green-400 mt-0.5 shrink-0" />
                                     <div>
                                         <p className="text-sm text-white font-medium">Automatic Transaction Detection</p>
-                                        <p className="text-xs text-gray-500">AI extracts amount, merchant, and category</p>
+                                        <p className="text-xs text-gray-500">AI extracts amount, merchant, and category from spent alerts</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <CheckCircle size={20} className="text-green-400 mt-0.5 shrink-0" />
                                     <div>
-                                        <p className="text-sm text-white font-medium">Secure & Private</p>
-                                        <p className="text-xs text-gray-500">Read-only access, we never send emails</p>
+                                        <p className="text-sm text-white font-medium">Wealth Map Integration</p>
+                                        <p className="text-xs text-gray-500">Auto-update SIPs and investments in your Wealth portfolio</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <CheckCircle size={20} className="text-green-400 mt-0.5 shrink-0" />
                                     <div>
-                                        <p className="text-sm text-white font-medium">Save Time</p>
-                                        <p className="text-xs text-gray-500">No manual entry needed</p>
+                                        <p className="text-sm text-white font-medium">Bin & Trash Intelligence</p>
+                                        <p className="text-xs text-gray-500">Nothing gets lost. We monitor deleted mail for missed alerts</p>
                                     </div>
                                 </div>
                             </div>
@@ -199,40 +204,78 @@ const Sync: React.FC = () => {
                                 </h3>
 
                                 <div className="space-y-3">
-                                    {history.syncs.map((sync) => (
-                                        <div
-                                            key={sync.id}
-                                            className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-2 h-2 rounded-full ${sync.status === 'SUCCESS' ? 'bg-green-400' :
-                                                    sync.status === 'FAILED' ? 'bg-red-400' :
-                                                        'bg-yellow-400'
-                                                    }`} />
+                                    {history.syncs.map((sync) => {
+                                        const summary = sync.summary ? JSON.parse(sync.summary) : [];
+                                        const isExpanded = expandedSync === sync.id;
 
-                                                <div>
-                                                    <p className="text-sm font-medium text-white">
-                                                        {sync.status === 'SUCCESS' && `${sync.records_processed} transactions synced`}
-                                                        {sync.status === 'FAILED' && 'Sync failed'}
-                                                        {sync.status === 'IN_PROGRESS' && 'Syncing...'}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500 mt-0.5">
-                                                        {formatDistanceToNow(new Date(sync.start_time), { addSuffix: true })} • {sync.trigger_source}
-                                                    </p>
-                                                    {sync.error_message && (
-                                                        <p className="text-xs text-red-400 mt-1">{sync.error_message}</p>
-                                                    )}
+                                        return (
+                                            <div key={sync.id} className="space-y-2">
+                                                <div
+                                                    onClick={() => sync.records_processed > 0 && setExpandedSync(isExpanded ? null : sync.id)}
+                                                    className={`flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors cursor-pointer ${isExpanded ? 'bg-white/[0.04] border-white/10' : ''}`}
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`w-2 h-2 rounded-full ${sync.status === 'SUCCESS' ? 'bg-green-400' :
+                                                            sync.status === 'FAILED' ? 'bg-red-400' :
+                                                                'bg-yellow-400'
+                                                            }`} />
+
+                                                        <div>
+                                                            <p className="text-sm font-medium text-white">
+                                                                {sync.status === 'SUCCESS' && `${sync.records_processed} transactions synced`}
+                                                                {sync.status === 'FAILED' && 'Sync failed'}
+                                                                {sync.status === 'IN_PROGRESS' && 'Syncing...'}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                                {formatDistanceToNow(new Date(sync.start_time), { addSuffix: true })} • {sync.trigger_source}
+                                                            </p>
+                                                            {sync.error_message && (
+                                                                <p className="text-xs text-red-400 mt-1">{sync.error_message}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3">
+                                                        {sync.status === 'SUCCESS' && sync.records_processed > 0 && (
+                                                            <div className="text-gray-500">
+                                                                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                                            </div>
+                                                        )}
+                                                        {sync.status === 'SUCCESS' && <CheckCircle size={18} className="text-green-400" />}
+                                                        {sync.status === 'FAILED' && <XCircle size={18} className="text-red-400" />}
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            {sync.status === 'SUCCESS' && (
-                                                <CheckCircle size={18} className="text-green-400" />
-                                            )}
-                                            {sync.status === 'FAILED' && (
-                                                <XCircle size={18} className="text-red-400" />
-                                            )}
-                                        </div>
-                                    ))}
+                                                {isExpanded && summary.length > 0 && (
+                                                    <div className="ml-6 pl-4 border-l border-white/5 space-y-2 animate-in slide-in-from-top-2">
+                                                        <h4 className="text-[10px] font-black uppercase tracking-[2px] text-gray-600 mb-2">Intelligence Feed</h4>
+                                                        {summary.map((item: any, idx: number) => (
+                                                            <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.01] border border-white/[0.03]">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={`w-1.5 h-1.5 rounded-full ${item.amount < 0 ? 'bg-red-500/50' : 'bg-green-500/50'}`} />
+                                                                    <div>
+                                                                        <p className="text-xs font-bold text-gray-300">{item.merchant}</p>
+                                                                        <p className="text-[10px] text-gray-500">{item.category}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-4">
+                                                                    {item.wealth_mapped && (
+                                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20">
+                                                                            <TrendingUp size={10} className="text-cyan-400" />
+                                                                            <span className="text-[8px] font-black uppercase text-cyan-400 tracking-wider">Wealth Sync</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <p className={`text-xs font-black ${item.amount < 0 ? 'text-white' : 'text-green-400'}`}>
+                                                                        {item.amount < 0 ? '-' : '+'}₹{Math.abs(item.amount).toLocaleString()}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </Card>
                         )}
