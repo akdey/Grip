@@ -95,7 +95,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex justify-center pointer-events-none">
+            <div className="fixed inset-0 z-[1100] flex justify-center pointer-events-none">
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -108,7 +108,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
                     transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto z-[2000]"
                 >
                     {/* Fixed Header */}
                     <div className="p-6 sm:p-10 border-b border-white/10 flex justify-between items-center bg-gradient-to-b from-white/[0.05] to-transparent shrink-0">
