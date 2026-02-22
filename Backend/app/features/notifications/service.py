@@ -165,10 +165,65 @@ class NotificationService:
         </div>
         """
         html = self._get_html_wrapper(
-            title="Spending Roast",
+            title="Spending Alert",
             content=content,
             cta_text="Review Transactions",
             cta_url=f"{settings.FRONTEND_ORIGIN}/analytics"
+        )
+        send_email(user.email, subject, html)
+
+    async def send_weekly_summary(self, user_id: uuid.UUID, full_name: str, categories_data: List[dict]):
+        """Send a consolidated weekly spending roast for multiple categories."""
+        result = await self.db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user or not user.email: return
+
+        name = self._derive_name(user.email, full_name)
+        subject = f"Weekly Recap: Your wallet has some explaining to do"
+        
+        # Prepare context for LLM
+        context_items = [f"{item['category']}: ₹{item['amount']:,.0f}" for item in categories_data]
+        context_str = "\n".join(context_items)
+        
+        roast_message = f"You had some significant spending this week in {', '.join([item['category'] for item in categories_data])}. Keep an eye on your budget!"
+        
+        if self.llm.is_enabled:
+            prompt = f"""
+            Persona: Sassy, witty, premium personal CFO.
+            Task: Write a funny, slightly brutal consolidated 'Roast' for {name} based on their weekly spending across multiple categories.
+            Context:
+            {context_str}
+            
+            - Max 40 words. No quotes, no markdown.
+            - Be cheeky about the combination of things they are spending on.
+            """
+            resp = await self.llm.generate_response(prompt, temperature=0.8, timeout=60.0)
+            if resp:
+                roast_message = resp.strip().replace('"', '')
+
+        # Build category breakdown HTML
+        breakdown_html = ""
+        for item in categories_data:
+            breakdown_html += f"""
+            <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 14px; color: #64748b;">{item['category']}:</span>
+                <span style="font-size: 18px; font-weight: 700; color: #ef4444;">₹{item['amount']:,.0f}</span>
+            </div>
+            """
+
+        content = f"""
+        <p>Hello {name},</p>
+        <div style="background: #fff; border: 1px solid #fee2e2; padding: 25px; border-radius: 16px; margin: 25px 0;">
+            <p style="margin: 0; font-size: 18px; color: #111; font-style: italic; line-height: 1.6;">"{roast_message}"</p>
+        </div>
+        <h3 style="color: #1e293b; font-size: 16px; margin-bottom: 15px;">Weekly Spend Highlights</h3>
+        {breakdown_html}
+        """
+        html = self._get_html_wrapper(
+            title="Weekly Spending Alert",
+            content=content,
+            cta_text="Review Dashboard",
+            cta_url=f"{settings.FRONTEND_ORIGIN}/dashboard"
         )
         send_email(user.email, subject, html)
 
