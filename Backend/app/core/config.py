@@ -26,6 +26,7 @@ class Settings(BaseSettings):
         "/api/v1/auth/register", 
         "/api/v1/auth/verify-otp",
         "/api/v1/auth/token",
+        "/api/v1/auth/google-login",
         "/api/v1/sync/webhook"
     ]
     
