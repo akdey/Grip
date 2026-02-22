@@ -248,3 +248,95 @@ class NotificationService:
             footer_note="This figure accounts for your current balance minus all upcoming obligations and safety buffers."
         )
         send_email(user.email, subject, html)
+
+    async def send_monthly_report(self, user_id: uuid.UUID, full_name: str, summary: any, variance: any):
+        """Send a massive monthly intelligence report with AI recommendations and data breakdown."""
+        result = await self.db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user or not user.email: return
+
+        name = self._derive_name(user.email, full_name)
+        subject = f"Monthly Intelligence: Your {summary.month} Review"
+        
+        # 1. Prepare visual breakdown (Top 5 categories)
+        sorted_cats = sorted(variance.category_breakdown.items(), key=lambda x: x[1].current, reverse=True)[:5]
+        breakdown_html = ""
+        for cat, data in sorted_cats:
+            percentage = (float(data.current) / float(summary.total_expense) * 100) if summary.total_expense > 0 else 0
+            breakdown_html += f"""
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px;">
+                    <span style="color: #475569; font-weight: 600;">{cat}</span>
+                    <span style="color: #111; font-weight: 800;">₹{data.current:,.0f}</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+                    <div style="width: {min(100, percentage)}%; height: 100%; background: #4F46E5; box-shadow: 0 0 10px rgba(79, 70, 229, 0.4);"></div>
+                </div>
+            </div>
+            """
+
+        # 2. Get AI Strategic Nudge
+        ai_strategy = "Great work tracking your finances this month. Keep it up for a stronger next month!"
+        if settings.GROQ_API_KEY:
+            try:
+                top_cats_str = ", ".join([f"{c}: ₹{d.current:,.0f}" for c, d in sorted_cats])
+                prompt = f"""
+                Persona: Sassy but brilliant luxury wealth manager.
+                User: {name}
+                Month: {summary.month}
+                Total Income: ₹{summary.total_income:,.0f}, Expenses: ₹{summary.total_expense:,.0f}
+                Top Spends: {top_cats_str}
+                
+                Task: Write a 2-3 sentence 'Optimization Strategy'. 
+                - Be blunt but funny. 
+                - If expenses > income, send a 'brutal' reality check. 
+                - If income > expenses, celebrate the win but suggest an 'aggressive' investment move.
+                - Max 40 words. No markdown.
+                """
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                headers = {"Authorization": f"Bearer {settings.GROQ_API_KEY}", "Content-Type": "application/json"}
+                payload = {"model": settings.GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.8}
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(url, headers=headers, json=payload, timeout=10.0)
+                    if resp.status_code == 200:
+                        ai_strategy = resp.json()['choices'][0]['message']['content'].strip()
+            except: pass
+
+        content = f"""
+        <p>Hello {name}, your financial dossier for <strong>{summary.month}</strong> is ready.</p>
+        
+        <!-- Summary Cards -->
+        <div style="display: flex; gap: 15px; margin: 30px 0;">
+            <div style="flex: 1; background: #f8fafc; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0; text-align: center;">
+                <span style="display: block; font-size: 11px; text-transform: uppercase; color: #64748b; letter-spacing: 0.1em; margin-bottom: 8px; font-weight: 700;">Income</span>
+                <span style="font-size: 24px; font-weight: 900; color: #10b981;">₹{summary.total_income:,.0f}</span>
+            </div>
+            <div style="flex: 1; background: #f8fafc; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0; text-align: center;">
+                <span style="display: block; font-size: 11px; text-transform: uppercase; color: #64748b; letter-spacing: 0.1em; margin-bottom: 8px; font-weight: 700;">Expenses</span>
+                <span style="font-size: 24px; font-weight: 900; color: #ef4444;">₹{summary.total_expense:,.0f}</span>
+            </div>
+        </div>
+
+        <!-- Strategy Box -->
+        <div style="background: #000; color: white; padding: 35px; border-radius: 24px; margin: 30px 0; border: 1px solid rgba(79, 70, 229, 0.4); box-shadow: 0 20px 50px -10px rgba(0,0,0,0.3);">
+            <div style="width: 8px; height: 8px; background: #4F46E5; border-radius: 50%; box-shadow: 0 0 10px #4F46E5; margin-bottom: 15px;"></div>
+            <p style="margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em; color: #94a3b8; font-weight: 700; border-bottom: 1px solid #333; padding-bottom: 12px; margin-bottom: 20px;">AI Wealth Strategy</p>
+            <p style="margin: 0; font-size: 17px; font-style: italic; color: #fff; line-height: 1.6;">"{ai_strategy}"</p>
+        </div>
+
+        <!-- Visual Breakdown -->
+        <div style="margin-top: 40px;">
+            <h3 style="color: #111; font-size: 20px; font-weight: 800; margin-bottom: 20px; letter-spacing: -0.02em;">Category Intelligence</h3>
+            <div style="background: white; border: 1px solid #f1f5f9; padding: 30px; border-radius: 24px;">
+                {breakdown_html}
+            </div>
+        </div>
+        """
+        html = self._get_html_wrapper(
+            title=f"{summary.month} Dossier",
+            content=content,
+            cta_text="Check Full Analytics",
+            cta_url=f"{settings.FRONTEND_ORIGIN}/analytics",
+            footer_note="Based on consolidated data from your synchronized bank accounts and manual entries."
+        )
+        send_email(user.email, subject, html)

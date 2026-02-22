@@ -118,7 +118,6 @@ async def run_weekly_insights():
         
         for user_id, full_name, category, total in data:
             # If spending in a category is > 5000 in a week, send a "watchout" alert
-            # This is a placeholder for more complex logic later
             if abs(total) > 5000:
                 try:
                     await notification_service.send_spending_insight(
@@ -127,10 +126,57 @@ async def run_weekly_insights():
                         category, 
                         25.0 # Mock percentage for now
                     )
+                    logger.info(f"Sent weekly spending insight to user {user_id} for {category}")
                 except Exception as e:
                     logger.error(f"Failed to send insight for user {user_id}: {e}")
+            else:
+                logger.info(f"Skip weekly insight for user {user_id}: {category} spend ({abs(total)}) below threshold (5000)")
 
     logger.info("Weekly Insights Completed.")
+
+async def run_monthly_report(target_date: Optional[date] = None):
+    """
+    Generate and send a comprehensive monthly report for the previous month.
+    Generally runs on the 1st of the month.
+    """
+    logger.info("Starting Monthly Report Generation...")
+    from app.features.auth.models import User
+    from app.features.analytics.service import AnalyticsService
+    
+    # If today is March 1st, we want February's data
+    ref_date = target_date or date.today()
+    if ref_date.day == 1:
+        prev_month_date = ref_date - timedelta(days=1)
+        month_idx = prev_month_date.month
+        year_idx = prev_month_date.year
+    else:
+        month_idx = ref_date.month
+        year_idx = ref_date.year
+
+    async with AsyncSessionLocal() as db:
+        notification_service = NotificationService(db)
+        analytics_service = AnalyticsService()
+        
+        result = await db.execute(select(User))
+        users = result.scalars().all()
+        
+        for user in users:
+            try:
+                # Get full monthly summary & variance
+                summary = await analytics_service.get_monthly_summary(db, user.id, month=month_idx, year=year_idx)
+                variance = await analytics_service.get_variance_analysis(db, user.id, month=month_idx, year=year_idx)
+                
+                await notification_service.send_monthly_report(
+                    user_id=user.id,
+                    full_name=user.full_name,
+                    summary=summary,
+                    variance=variance
+                )
+                logger.info(f"Sent monthly report to {user.id} for {month_idx}/{year_idx}")
+            except Exception as e:
+                logger.error(f"Failed monthly report for {user.id}: {e}")
+
+    logger.info("Monthly Report Job Completed.")
     
 async def run_lifestyle_insights(override_date: Optional[date] = None):
     """

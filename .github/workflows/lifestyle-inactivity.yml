@@ -1,0 +1,68 @@
+name: Lifestyle & Inactivity Insights
+
+on:
+  schedule:
+    # Runs at 4:30 AM UTC (10:00 AM IST) daily
+    - cron: '30 4 * * *'
+  workflow_dispatch: # Allows manual trigger anytime (Forces Friday Weekend Logic if manual)
+
+jobs:
+  run-lifestyle:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd Backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run Lifestyle Engine
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          FROM_NAME: ${{ secrets.FROM_NAME }}
+          FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
+          ENVIRONMENT: production
+        run: |
+          cd Backend
+          python -c "
+          import asyncio
+          from app.core.scheduler import run_lifestyle_insights
+          from datetime import date, timedelta
+          import os
+          
+          async def main():
+              is_manual = os.getenv('GITHUB_EVENT_NAME') == 'workflow_dispatch'
+              override = None
+              
+              if is_manual:
+                  # Manual trigger usually means testing. Force assume today is a Friday
+                  # so we can see the AI Weekend Insight in action.
+                  print('Manual trigger detected. Simulating Friday for Weekend Insights...')
+                  today = date.today()
+                  # Logic to find the current date but mock it as a Friday for the scheduler
+                  # Actually, run_lifestyle_insights now takes override_date. 
+                  # We will pass a date that is a Friday.
+                  days_to_friday = (4 - today.weekday()) % 7
+                  override = today + timedelta(days=days_to_friday)
+              
+              await run_lifestyle_insights(override_date=override)
+              print('Lifestyle insights finished.')
+          
+          asyncio.run(main())
+          "
