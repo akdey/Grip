@@ -73,6 +73,91 @@ async def register_user(
     background_tasks.add_task(send_otp_email, user_in.email, otp)
     return {"message": "OTP sent to email", "email": user_in.email}
 
+@router.post("/google/one-tap", response_model=schemas.Token)
+async def google_one_tap(
+    payload: dict,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    background_tasks: BackgroundTasks
+):
+    """
+    Combined Login + Gmail Sync authorization.
+    Exchanges an Authorization Code for tokens, registers the user, 
+    and saves Gmail credentials in one go.
+    """
+    from app.features.sync.router import get_google_flow
+    
+    code = payload.get("code")
+    redirect_uri = payload.get("redirect_uri", "postmessage")
+    
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing authorization code")
+
+    try:
+        # 1. Exchange Code for Tokens
+        flow = get_google_flow(redirect_uri)
+        flow.fetch_token(code=code)
+        creds = flow.credentials
+        
+        # 2. Extract Identity from ID Token
+        # We need to manually verify the ID token if fetch_token doesn't expose it ready-to-use
+        # or use creds.id_token
+        id_info = id_token.verify_oauth2_token(
+            creds.id_token, 
+            google_requests.Request(), 
+            settings.GOOGLE_CLIENT_ID
+        )
+        
+        email = id_info['email']
+        full_name = id_info.get('name')
+
+        # 3. Handle User Record
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        
+        is_new_user = False
+        if not user:
+            user = User(
+                email=email,
+                full_name=full_name,
+                is_active=True,
+                hashed_password="EXTERNAL_AUTH_GOOGLE"
+            )
+            db.add(user)
+            is_new_user = True
+        
+        # 4. Save Gmail Credentials
+        # We store the dict format of credentials
+        user.gmail_credentials = {
+            "token": creds.token,
+            "refresh_token": creds.refresh_token,
+            "token_uri": creds.token_uri,
+            "client_id": creds.client_id,
+            "client_secret": creds.client_secret,
+            "scopes": creds.scopes
+        }
+        user.is_active = True # Ensure they are active if they reconnect
+
+        await db.commit()
+        await db.refresh(user)
+
+        # 5. Welcome Email for New Users
+        if is_new_user:
+            from app.features.notifications.service import NotificationService
+            llm = get_llm_service()
+            notif_service = NotificationService(db, llm)
+            background_tasks.add_task(notif_service.send_welcome_email, email, full_name)
+
+        # 6. Generate Grip Token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email}, expires_delta=access_token_expires
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
+
+    except Exception as e:
+        logger.error(f"Google One-Tap Error: {e}")
+        raise HTTPException(status_code=400, detail=f"Authentication failed: {str(e)}")
+
 @router.post("/google-login", response_model=schemas.Token)
 async def google_login(
     login_data: GoogleLoginRequest,
