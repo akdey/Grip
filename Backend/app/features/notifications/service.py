@@ -150,7 +150,7 @@ class NotificationService:
             - Max 30 words. No quotes, no markdown.
             - Be cheeky. Example: 'Your coffee budget is starting to look like a down payment on a house, {name}. Maybe it's time to learn how a kettle works?'
             """
-            resp = await self.llm.generate_response(prompt, temperature=0.8, timeout=8.0)
+            resp = await self.llm.generate_response(prompt, temperature=0.8, timeout=60.0)
             if resp:
                 roast_message = resp.strip()
 
@@ -220,7 +220,7 @@ class NotificationService:
             - No quotes, no markdown.
             Example: "Ghosting your finances doesn't make the bills go away, {name}. Reconnect before your budget has an identity crisis."
             """
-            resp = await self.llm.generate_response(prompt, temperature=0.7, timeout=5.0)
+            resp = await self.llm.generate_response(prompt, temperature=0.7, timeout=60.0)
             if resp:
                 nudge_message = resp.strip().replace('"', '')
 
@@ -261,7 +261,7 @@ class NotificationService:
             Return JSON only, NO markdown:
             {{ "headline": "Witty headline", "message": "The suggestion", "cta": "Cheeky CTA", "subject": "Bait-y subject line" }}
             """
-            data = await self.llm.generate_json(prompt, temperature=0.8, timeout=8.0)
+            data = await self.llm.generate_json(prompt, temperature=0.8, timeout=60.0)
             if data:
                 ai_headline = data.get("headline", ai_headline)
                 ai_message = data.get("message", ai_message)

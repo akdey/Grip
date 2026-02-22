@@ -169,7 +169,7 @@ class ForecastingService:
             """
 
             system_prompt = "You are a financial intelligence engine. Always output valid JSON."
-            data = await self.llm.generate_json(prompt, system_prompt=system_prompt, temperature=0.1, timeout=20.0)
+            data = await self.llm.generate_json(prompt, system_prompt=system_prompt, temperature=0.1, timeout=60.0)
                 
             if data:
                 return ForecastResponse(
@@ -203,7 +203,7 @@ class ForecastingService:
             }}
             """
             
-            data = await self.llm.generate_json(prompt, temperature=0.1, timeout=10.0)
+            data = await self.llm.generate_json(prompt, temperature=0.1, timeout=60.0)
             if data:
                 return data
         except Exception as e:
@@ -291,7 +291,7 @@ class ForecastingService:
                 }}
                 """
                 
-                data = await self.llm.generate_json(prompt, temperature=0.1, timeout=10.0)
+                data = await self.llm.generate_json(prompt, temperature=0.1, timeout=60.0)
                     
                 if data:
                     predicted = max(0, data.get("predicted_total", 0))

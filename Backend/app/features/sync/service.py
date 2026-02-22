@@ -112,7 +112,7 @@ class SyncService:
         If no transaction found, return null.
         """
         
-        data = await self.llm.generate_json(prompt, temperature=0.1, timeout=20.0)
+        data = await self.llm.generate_json(prompt, temperature=0.1, timeout=60.0)
         
         if data:
             return {
