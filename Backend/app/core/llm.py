@@ -29,7 +29,7 @@ class LLMService:
         system_prompt: Optional[str] = "You are a helpful financial assistant.",
         temperature: float = 0.5,
         response_format: Optional[str] = None,
-        timeout: float = 10.0
+        timeout: float = 90.0
     ) -> Optional[str]:
         """Generic method to generate a response from the LLM, prioritizing custom Intelligence Space."""
         
@@ -117,7 +117,7 @@ class LLMService:
         prompt: str, 
         system_prompt: Optional[str] = "You are a financial intelligence engine. Always output valid JSON.",
         temperature: float = 0.2,
-        timeout: float = 15.0
+        timeout: float = 60.0
     ) -> Optional[Dict[str, Any]]:
         """Method specifically for JSON-structured responses."""
         content = await self.generate_response(
