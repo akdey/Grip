@@ -288,6 +288,7 @@ async def run_gmail_sync():
         # Ensure relationships are loaded
         from app.features.credit_cards.models import CreditCard
         from app.features.bills.models import Bill
+        from app.features.notifications.service import NotificationService
         
         # Instantiate services
         llm_service = get_llm_service()
