@@ -203,7 +203,6 @@ class NotificationService:
 
     async def send_inactivity_nudge(self, user_id: uuid.UUID, full_name: str, days_inactive: int):
         """Notify user if no transactions have been synced for a while."""
-        result = await self.db.execute(select(select(User).where(User.id == user_id))) # Nested select fixed in implementation
         result = await self.db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if not user or not user.email: return

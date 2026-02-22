@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GRIP_HF_LLM_URL: str = "https://a-k-dey-grip-llm-service.hf.space/generate"
+    X_GRIP_HF_LLM_TOKEN: str = "" # Set this in .env
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     FRONTEND_ORIGIN: str = "https://grip-akdey.vercel.app"  # Frontend URL for OAuth origin parameter

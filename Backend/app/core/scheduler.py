@@ -45,6 +45,7 @@ async def run_surety_reminders():
     Check for payments due today or in the next 3 days and send notifications.
     """
     logger.info("Starting Surety Reminders Scan...")
+    from app.features.auth.models import User
     from app.features.bills.models import Bill
     from app.features.notifications.service import NotificationService
     
@@ -92,6 +93,7 @@ async def run_weekly_insights():
     """
     logger.info("Starting Weekly Insights Analysis...")
     from sqlalchemy import func
+    from app.features.auth.models import User
     from app.features.transactions.models import Transaction
     from app.features.notifications.service import NotificationService
     
