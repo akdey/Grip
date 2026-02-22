@@ -1,13 +1,13 @@
-name: Surety Bill Reminders
+name: Weekly Spending Recap
 
 on:
   schedule:
-    # Runs at 3:30 AM UTC (9:00 AM IST) daily
-    - cron: '30 3 * * *'
+    # Runs at 4:30 AM UTC (10:00 AM IST) every Sunday
+    - cron: '30 4 * * 0'
   workflow_dispatch: # Allows manual trigger anytime
 
 jobs:
-  run-reminders:
+  run-weekly-insights:
     runs-on: ubuntu-latest
     
     steps:
@@ -25,7 +25,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Run Reminders
+      - name: Run Weekly Insights
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
@@ -35,17 +35,19 @@ jobs:
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           FROM_NAME: ${{ secrets.FROM_NAME }}
           FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
           ENVIRONMENT: production
         run: |
           cd Backend
           python -c "
           import asyncio
-          from app.core.scheduler import run_surety_reminders
+          from app.core.scheduler import run_weekly_insights
           
           async def main():
-              print('Starting Surety Bill Reminders Scan...')
-              await run_surety_reminders()
-              print('Reminders scan finished.')
+              print('Generating Weekly Financial Recap...')
+              await run_weekly_insights()
+              print('Weekly recap finished.')
           
           asyncio.run(main())
           "
