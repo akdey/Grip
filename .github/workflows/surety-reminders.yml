@@ -35,6 +35,8 @@ jobs:
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           FROM_NAME: ${{ secrets.FROM_NAME }}
           FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
+          GRIP_HF_LLM_URL: ${{ secrets.GRIP_HF_LLM_URL }}
+          X_GRIP_HF_LLM_TOKEN: ${{ secrets.X_GRIP_HF_LLM_TOKEN }}
           ENVIRONMENT: production
         run: |
           cd Backend
