@@ -47,6 +47,7 @@ async def run_surety_reminders():
     logger.info("Starting Surety Reminders Scan...")
     from app.features.auth.models import User
     from app.features.bills.models import Bill
+    from app.features.credit_cards.models import CreditCard
     from app.features.notifications.service import NotificationService
     
     today = date.today()
@@ -95,6 +96,8 @@ async def run_weekly_insights():
     from sqlalchemy import func
     from app.features.auth.models import User
     from app.features.transactions.models import Transaction
+    from app.features.bills.models import Bill
+    from app.features.credit_cards.models import CreditCard
     from app.features.notifications.service import NotificationService
     
     async with AsyncSessionLocal() as db:
@@ -140,6 +143,8 @@ async def run_monthly_report(target_date: Optional[date] = None):
     """
     logger.info("Starting Monthly Report Generation...")
     from app.features.auth.models import User
+    from app.features.bills.models import Bill
+    from app.features.credit_cards.models import CreditCard
     from app.features.analytics.service import AnalyticsService
     
     # If today is March 1st, we want February's data
@@ -185,6 +190,8 @@ async def run_lifestyle_insights(override_date: Optional[date] = None):
     logger.info(f"Starting Lifestyle Insights Trigger... (Override: {override_date})")
     from app.features.auth.models import User
     from app.features.transactions.models import Transaction
+    from app.features.bills.models import Bill
+    from app.features.credit_cards.models import CreditCard
     from app.features.analytics.service import AnalyticsService
     from sqlalchemy import func
     

@@ -37,6 +37,8 @@ jobs:
           FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
+          GRIP_HF_LLM_URL: ${{ secrets.GRIP_HF_LLM_URL }}
+          X_GRIP_HF_LLM_TOKEN: ${{ secrets.X_GRIP_HF_LLM_TOKEN }}
           ENVIRONMENT: production
         run: |
           cd Backend
