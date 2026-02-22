@@ -1,8 +1,6 @@
 import logging
 from decimal import Decimal
-from typing import List
-import json
-import httpx
+from typing import List, Optional
 
 from app.core.config import get_settings
 
@@ -20,12 +18,12 @@ settings = get_settings()
 
 from datetime import date, timedelta
 from app.features.forecasting.schemas import ForecastResponse
-
+from app.core.llm import get_llm_service, LLMService
 import calendar
 
 class ForecastingService:
-    def __init__(self):
-        pass
+    def __init__(self, llm: LLMService = Depends(get_llm_service)):
+        self.llm = llm
         
 
     async def calculate_safe_to_spend(self, history_data: List[dict], category_history: List[dict], monthly_breakdown: List[dict] = []) -> ForecastResponse:
@@ -46,14 +44,14 @@ class ForecastingService:
         
         # LOGIC:
         # If USE_AI_FORECASTING is True AND Prophet is available -> Use Prophet for Number + LLM for Breakdown
-        # If USE_AI_FORECASTING is False (or Prophet missing) -> Use Groq (LLM) for EVERYTHING
+        # If USE_AI_FORECASTING is False (or Prophet missing) -> Use LLM for EVERYTHING
         
         use_prophet = settings.USE_AI_FORECASTING and PROPHET_AVAILABLE
         
         if use_prophet:
             return await self._calculate_prophet(history_data, category_history, time_frame_str, days_to_predict)
         
-        # Fallback to LLM (Groq)
+        # Fallback to LLM
         return await self._calculate_llm(history_data, category_history, monthly_breakdown, time_frame_str, days_to_predict)
 
     async def _calculate_prophet(self, history_data: List[dict], category_history: List[dict], time_frame: str, days: int) -> ForecastResponse:
@@ -87,7 +85,7 @@ class ForecastingService:
             amount = Decimal(str(max(0, predicted_expenses)))
             
             # 2. Get Breakdown & Reason from LLM (using the Prophet Number as context)
-            if settings.GROQ_API_KEY:
+            if self.llm.is_enabled:
                 llm_response = await self._get_llm_breakdown(category_history, float(amount), days)
                 return ForecastResponse(
                     amount=amount,
@@ -110,7 +108,7 @@ class ForecastingService:
             return default_response
 
     async def _calculate_llm(self, history_data: List[dict], category_history: List[dict], monthly_breakdown: List[dict], time_frame: str, days: int) -> ForecastResponse:
-        """Use Groq LLM to predict remaining month expenses."""
+        """Use LLM to predict remaining month expenses."""
         default_response = ForecastResponse(
             amount=Decimal("0.00"), 
             reason="Insufficient data/AI service unavailable.", 
@@ -118,7 +116,7 @@ class ForecastingService:
             confidence="low"
         )
 
-        if not settings.GROQ_API_KEY:
+        if not self.llm.is_enabled:
             return default_response
             
         if not history_data or len(history_data) < 5:
@@ -162,28 +160,10 @@ class ForecastingService:
             }}
             """
 
-            url = "https://api.groq.com/openai/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": settings.GROQ_MODEL,
-                "messages": [
-                    {"role": "system", "content": "You are a financial intelligence engine. Always output valid JSON."},
-                    {"role": "user", "content": prompt}
-                ],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.1
-            }
-
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, json=payload, timeout=20.0)
+            system_prompt = "You are a financial intelligence engine. Always output valid JSON."
+            data = await self.llm.generate_json(prompt, system_prompt=system_prompt, temperature=0.1, timeout=20.0)
                 
-            if response.status_code == 200:
-                result = response.json()['choices'][0]['message']['content']
-                data = json.loads(result)
-                
+            if data:
                 return ForecastResponse(
                     amount=Decimal(str(max(0, data.get("predicted_total", 0)))),
                     reason=data.get("reason", "Based on deep analysis of spending cycles."),
@@ -191,8 +171,6 @@ class ForecastingService:
                     confidence="medium",
                     breakdown=data.get("breakdown", [])
                 )
-            else:
-                logger.error(f"Groq API Error ({response.status_code}): {response.text}")
                 
         except Exception as e:
             logger.error(f"LLM forecasting error: {e}")
@@ -217,24 +195,9 @@ class ForecastingService:
             }}
             """
             
-            url = "https://api.groq.com/openai/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": settings.GROQ_MODEL,
-                "messages": [{"role": "user", "content": prompt}],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.1
-            }
-
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, json=payload, timeout=10.0)
-                
-            if response.status_code == 200:
-                result = response.json()['choices'][0]['message']['content']
-                return json.loads(result)
+            data = await self.llm.generate_json(prompt, temperature=0.1, timeout=10.0)
+            if data:
+                return data
         except Exception as e:
             logger.error(f"LLM breakdown error: {e}")
             
@@ -294,7 +257,7 @@ class ForecastingService:
                     "method": "prophet"
                 }
             
-            elif settings.GROQ_API_KEY:
+            elif self.llm.is_enabled:
                 # Use LLM for prediction
                 history_summary = [
                     {"date": d['ds'], "amount": float(d['y'])} 
@@ -320,25 +283,9 @@ class ForecastingService:
                 }}
                 """
                 
-                url = "https://api.groq.com/openai/v1/chat/completions"
-                headers = {
-                    "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-                    "Content-Type": "application/json"
-                }
-                payload = {
-                    "model": settings.GROQ_MODEL,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "response_format": {"type": "json_object"},
-                    "temperature": 0.1
-                }
-                
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(url, headers=headers, json=payload, timeout=10.0)
+                data = await self.llm.generate_json(prompt, temperature=0.1, timeout=10.0)
                     
-                if response.status_code == 200:
-                    result = response.json()['choices'][0]['message']['content']
-                    data = json.loads(result)
-                    
+                if data:
                     predicted = max(0, data.get("predicted_total", 0))
                     low = max(0, data.get("confidence_low", predicted * 0.8))
                     high = max(0, data.get("confidence_high", predicted * 1.2))

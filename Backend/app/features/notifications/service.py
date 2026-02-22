@@ -1,6 +1,4 @@
 import uuid
-import json
-import httpx
 import logging
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -11,6 +9,7 @@ from fastapi import Depends
 from app.core.database import get_db
 from app.core.email import send_email
 from app.core.config import get_settings
+from app.core.llm import get_llm_service, LLMService
 from app.features.auth.models import User
 from app.features.bills.models import Bill
 from app.features.transactions.models import Transaction, TransactionStatus
@@ -19,8 +18,9 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 class NotificationService:
-    def __init__(self, db: AsyncSession = Depends(get_db)):
+    def __init__(self, db: AsyncSession = Depends(get_db), llm: LLMService = Depends(get_llm_service)):
         self.db = db
+        self.llm = llm
 
     def _derive_name(self, email: str, full_name: Optional[str] = None) -> str:
         if full_name:
@@ -136,23 +136,17 @@ class NotificationService:
         
         roast_message = f"We noticed that your spending in {category} is {percentage_increase:.1f}% higher than your usual average this month."
         
-        if settings.GROQ_API_KEY:
-            try:
-                prompt = f"""
-                Persona: Sassy, witty, premium personal CFO.
-                Task: Write a funny, slightly brutal 'Roast' for {name} regarding their {category} spending.
-                Context: They spent ₹{amount:,.0f} this week, which is {percentage_increase:.1f}% higher than normal.
-                - Max 30 words. No quotes, no markdown.
-                - Be cheeky. Example: 'Your coffee budget is starting to look like a down payment on a house, {name}. Maybe it's time to learn how a kettle works?'
-                """
-                url = "https://api.groq.com/openai/v1/chat/completions"
-                headers = {"Authorization": f"Bearer {settings.GROQ_API_KEY}", "Content-Type": "application/json"}
-                payload = {"model": settings.GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.8}
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(url, headers=headers, json=payload, timeout=8.0)
-                    if resp.status_code == 200:
-                        roast_message = resp.json()['choices'][0]['message']['content'].strip()
-            except: pass
+        if self.llm.is_enabled:
+            prompt = f"""
+            Persona: Sassy, witty, premium personal CFO.
+            Task: Write a funny, slightly brutal 'Roast' for {name} regarding their {category} spending.
+            Context: They spent ₹{amount:,.0f} this week, which is {percentage_increase:.1f}% higher than normal.
+            - Max 30 words. No quotes, no markdown.
+            - Be cheeky. Example: 'Your coffee budget is starting to look like a down payment on a house, {name}. Maybe it's time to learn how a kettle works?'
+            """
+            resp = await self.llm.generate_response(prompt, temperature=0.8, timeout=8.0)
+            if resp:
+                roast_message = resp.strip()
 
         content = f"""
         <p>Hello {name},</p>
@@ -212,24 +206,18 @@ class NotificationService:
         subject = f"We missed you, {name}!"
         nudge_message = f"It has been {days_inactive} days since your last transaction was synced. Financial intelligence works best with fresh data!"
         
-        if settings.GROQ_API_KEY:
-            try:
-                prompt = f"""
-                Persona: Sassy, witty, premium personal CFO. 
-                Task: Write a funny, slightly flirty/teasing nudge for {name} who hasn't synced their bank in {days_inactive} days.
-                - Tease them about their 'ghosting' skills or 'selective memory' regarding spending.
-                - Max 30 words. 
-                - No quotes, no markdown.
-                Example: "Ghosting your finances doesn't make the bills go away, {name}. Reconnect before your budget has an identity crisis."
-                """
-                url = "https://api.api.groq.com/openai/v1/chat/completions" if "api.api" in settings.GROQ_API_KEY else "https://api.groq.com/openai/v1/chat/completions"
-                headers = {"Authorization": f"Bearer {settings.GROQ_API_KEY}", "Content-Type": "application/json"}
-                payload = {"model": settings.GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.7}
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(url, headers=headers, json=payload, timeout=5.0)
-                    if resp.status_code == 200:
-                        nudge_message = resp.json()['choices'][0]['message']['content'].strip().replace('"', '')
-            except: pass
+        if self.llm.is_enabled:
+            prompt = f"""
+            Persona: Sassy, witty, premium personal CFO. 
+            Task: Write a funny, slightly flirty/teasing nudge for {name} who hasn't synced their bank in {days_inactive} days.
+            - Tease them about their 'ghosting' skills or 'selective memory' regarding spending.
+            - Max 30 words. 
+            - No quotes, no markdown.
+            Example: "Ghosting your finances doesn't make the bills go away, {name}. Reconnect before your budget has an identity crisis."
+            """
+            resp = await self.llm.generate_response(prompt, temperature=0.7, timeout=5.0)
+            if resp:
+                nudge_message = resp.strip().replace('"', '')
 
         content = f"<p>Hello {name},</p><p>{nudge_message}</p>"
         html = self._get_html_wrapper(
@@ -252,40 +240,28 @@ class NotificationService:
         ai_cta = "Check Budget"
         subject = f"Weekend Insight: ₹{safe_to_spend:,.0f}"
 
-        if settings.GROQ_API_KEY:
-            try:
-                context_str = f"Top Spend this week: {top_category}" if top_category else ""
-                prompt = f"""
-                Persona: Witty, premium, world-class lifestyle concierge.
-                Context: User {name} has ₹{safe_to_spend:,.0f} safe to spend. {context_str}.
-                
-                Task: Write a highly personal, cheeky weekend recommendation. 
-                - If {top_category} is 'Food': Tease their palate. 
-                - If Budget > 3k: Suggest a 'treat yourself' moment.
-                - If Budget < 3k and > 1k: Suggest something in the middle.
-                - If Budget < 1k: Suggest something 'poor but gold' like a park sunset with stolen office coffee.
-                - Mood: Sophisticated but funny. Use wordplay. 
-                
-                Return JSON only, NO markdown:
-                {{ "headline": "Witty headline", "message": "The suggestion", "cta": "Cheeky CTA", "subject": "Bait-y subject line" }}
-                """
-                url = "https://api.groq.com/openai/v1/chat/completions"
-                headers = {"Authorization": f"Bearer {settings.GROQ_API_KEY}", "Content-Type": "application/json"}
-                payload = {
-                    "model": settings.GROQ_MODEL,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "response_format": {"type": "json_object"},
-                    "temperature": 0.8
-                }
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(url, headers=headers, json=payload, timeout=8.0)
-                    if resp.status_code == 200:
-                        data = json.loads(resp.json()['choices'][0]['message']['content'])
-                        ai_headline = data.get("headline", ai_headline)
-                        ai_message = data.get("message", ai_message)
-                        ai_cta = data.get("cta", ai_cta)
-                        subject = data.get("subject", subject)
-            except: pass
+        if self.llm.is_enabled:
+            context_str = f"Top Spend this week: {top_category}" if top_category else ""
+            prompt = f"""
+            Persona: Witty, premium, world-class lifestyle concierge.
+            Context: User {name} has ₹{safe_to_spend:,.0f} safe to spend. {context_str}.
+            
+            Task: Write a highly personal, cheeky weekend recommendation. 
+            - If {top_category} is 'Food': Tease their palate. 
+            - If Budget > 3k: Suggest a 'treat yourself' moment.
+            - If Budget < 3k and > 1k: Suggest something in the middle.
+            - If Budget < 1k: Suggest something 'poor but gold' like a park sunset with stolen office coffee.
+            - Mood: Sophisticated but funny. Use wordplay. 
+            
+            Return JSON only, NO markdown:
+            {{ "headline": "Witty headline", "message": "The suggestion", "cta": "Cheeky CTA", "subject": "Bait-y subject line" }}
+            """
+            data = await self.llm.generate_json(prompt, temperature=0.8, timeout=8.0)
+            if data:
+                ai_headline = data.get("headline", ai_headline)
+                ai_message = data.get("message", ai_message)
+                ai_cta = data.get("cta", ai_cta)
+                subject = data.get("subject", subject)
 
         content = f"""
         <p>Hello {name},</p>
@@ -333,30 +309,24 @@ class NotificationService:
 
         # 2. Get AI Strategic Nudge
         ai_strategy = "Great work tracking your finances this month. Keep it up for a stronger next month!"
-        if settings.GROQ_API_KEY:
-            try:
-                top_cats_str = ", ".join([f"{c}: ₹{d.current:,.0f}" for c, d in sorted_cats])
-                prompt = f"""
-                Persona: Sassy but brilliant luxury wealth manager.
-                User: {name}
-                Month: {summary.month}
-                Total Income: ₹{summary.total_income:,.0f}, Expenses: ₹{summary.total_expense:,.0f}
-                Top Spends: {top_cats_str}
-                
-                Task: Write a 2-3 sentence 'Optimization Strategy'. 
-                - Be blunt but funny. 
-                - If expenses > income, send a 'brutal' reality check. 
-                - If income > expenses, celebrate the win but suggest an 'aggressive' investment move.
-                - Max 40 words. No markdown.
-                """
-                url = "https://api.groq.com/openai/v1/chat/completions"
-                headers = {"Authorization": f"Bearer {settings.GROQ_API_KEY}", "Content-Type": "application/json"}
-                payload = {"model": settings.GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.8}
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(url, headers=headers, json=payload, timeout=10.0)
-                    if resp.status_code == 200:
-                        ai_strategy = resp.json()['choices'][0]['message']['content'].strip()
-            except: pass
+        if self.llm.is_enabled:
+            top_cats_str = ", ".join([f"{c}: ₹{d.current:,.0f}" for c, d in sorted_cats])
+            prompt = f"""
+            Persona: Sassy but brilliant luxury wealth manager.
+            User: {name}
+            Month: {summary.month}
+            Total Income: ₹{summary.total_income:,.0f}, Expenses: ₹{summary.total_expense:,.0f}
+            Top Spends: {top_cats_str}
+            
+            Task: Write a 2-3 sentence 'Optimization Strategy'. 
+            - Be blunt but funny. 
+            - If expenses > income, send a 'brutal' reality check. 
+            - If income > expenses, celebrate the win but suggest an 'aggressive' investment move.
+            - Max 40 words. No markdown.
+            """
+            resp = await self.llm.generate_response(prompt, temperature=0.8, timeout=10.0)
+            if resp:
+                ai_strategy = resp.strip()
 
         content = f"""
         <p>Hello {name}, your financial dossier for <strong>{summary.month}</strong> is ready.</p>
