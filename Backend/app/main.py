@@ -125,27 +125,3 @@ async def terms_of_service():
     if os.path.exists(static_path):
         return FileResponse(static_path)
     return HTMLResponse("<h1>Terms of Service</h1><p>Grip Intelligence Terms of Service are being updated.</p>")
-
-
-import socket
-
-def check_port(host, port, timeout=5):
-    try:
-        # Create a TCP socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(timeout)
-        # connect_ex returns 0 if the connection is successful
-        result = sock.connect_ex((host, port))
-        sock.close()
-        
-        if result == 0:
-            return f"✅ Port {port} is OPEN on {host}"
-        else:
-            return f"❌ Port {port} is CLOSED or BLOCKED (Error code: {result})"
-    except Exception as e:
-        return f"⚠️ Error checking port {port}: {e}"
-
-# Test Gmail SMTP ports
-print(check_port("smtp.gmail.com", 587))
-print(check_port("smtp.gmail.com", 465))
-print(check_port("smtp.gmail.com", 25))
