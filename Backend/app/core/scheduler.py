@@ -11,7 +11,7 @@ from app.features.wealth.service import WealthService
 from app.features.sync.service import SyncService
 from app.features.transactions.service import TransactionService
 from app.features.categories.service import CategoryService
-from app.features.notifications.service import NotificationService
+from app.core.llm import get_llm_service
 from sqlalchemy import select, and_
 from datetime import datetime, date, timedelta
 
@@ -46,16 +46,14 @@ async def run_surety_reminders():
     """
     logger.info("Starting Surety Reminders Scan...")
     from app.features.bills.models import Bill
-    from app.features.auth.models import User
-    from app.features.credit_cards.models import CreditCard
-    from app.features.transactions.models import Transaction
-    from app.features.wealth.models import InvestmentHolding
+    from app.features.notifications.service import NotificationService
     
     today = date.today()
     reminder_window = today + timedelta(days=3)
     
     async with AsyncSessionLocal() as db:
-        notification_service = NotificationService(db)
+        llm_service = get_llm_service()
+        notification_service = NotificationService(db, llm_service)
         
         # Check explicit bills, join with User for personalization
         stmt = (
@@ -95,13 +93,11 @@ async def run_weekly_insights():
     logger.info("Starting Weekly Insights Analysis...")
     from sqlalchemy import func
     from app.features.transactions.models import Transaction
-    from app.features.auth.models import User
-    from app.features.credit_cards.models import CreditCard
-    from app.features.bills.models import Bill
-    from app.features.wealth.models import InvestmentHolding
+    from app.features.notifications.service import NotificationService
     
     async with AsyncSessionLocal() as db:
-        notification_service = NotificationService(db)
+        llm_service = get_llm_service()
+        notification_service = NotificationService(db, llm_service)
         
         # Simple Logic: Find categories where spend > 0 in last 7 days
         seven_days_ago = datetime.now() - timedelta(days=7)
@@ -155,6 +151,7 @@ async def run_monthly_report(target_date: Optional[date] = None):
         year_idx = ref_date.year
 
     async with AsyncSessionLocal() as db:
+        from app.features.notifications.service import NotificationService
         notification_service = NotificationService(db)
         analytics_service = AnalyticsService()
         
@@ -192,6 +189,7 @@ async def run_lifestyle_insights(override_date: Optional[date] = None):
     today = override_date or date.today()
     
     async with AsyncSessionLocal() as db:
+        from app.features.notifications.service import NotificationService
         notification_service = NotificationService(db)
         analytics_service = AnalyticsService()
         
@@ -270,11 +268,12 @@ async def run_gmail_sync():
         from app.features.bills.models import Bill
         
         # Instantiate services
+        llm_service = get_llm_service()
         cat_service = CategoryService(db)
         wealth_service = WealthService(db)
         txn_service = TransactionService(db)
-        notif_service = NotificationService(db)
-        sync_service = SyncService(db, txn_service, cat_service, wealth_service, notif_service)
+        notif_service = NotificationService(db, llm_service)
+        sync_service = SyncService(db, txn_service, cat_service, wealth_service, notif_service, llm_service)
         
         # Fetch users with gmail credentials
         stmt = select(User).where(User.gmail_credentials.isnot(None))

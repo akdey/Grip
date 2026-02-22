@@ -23,7 +23,13 @@ import calendar
 
 class ForecastingService:
     def __init__(self, llm: LLMService = Depends(get_llm_service)):
-        self.llm = llm
+        # Handle manual instantiation for LLM
+        from app.core.llm import LLMService as ActualLLMService
+        if isinstance(llm, ActualLLMService):
+            self.llm = llm
+        else:
+            from app.core.llm import get_llm_service
+            self.llm = get_llm_service()
         
 
     async def calculate_safe_to_spend(self, history_data: List[dict], category_history: List[dict], monthly_breakdown: List[dict] = []) -> ForecastResponse:

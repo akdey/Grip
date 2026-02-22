@@ -20,7 +20,13 @@ logger = logging.getLogger(__name__)
 class NotificationService:
     def __init__(self, db: AsyncSession = Depends(get_db), llm: LLMService = Depends(get_llm_service)):
         self.db = db
-        self.llm = llm
+        # If instantiated manually (e.g. in scheduler), llm will be the Depends object
+        from app.core.llm import LLMService as ActualLLMService
+        if isinstance(llm, ActualLLMService):
+            self.llm = llm
+        else:
+            from app.core.llm import get_llm_service
+            self.llm = get_llm_service()
 
     def _derive_name(self, email: str, full_name: Optional[str] = None) -> str:
         if full_name:

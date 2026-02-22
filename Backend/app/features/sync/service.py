@@ -42,7 +42,13 @@ class SyncService:
         self.category_service = category_service
         self.wealth_service = wealth_service
         self.notification_service = notification_service
-        self.llm = llm
+        # Handle manual instantiation for LLM
+        from app.core.llm import LLMService as ActualLLMService
+        if isinstance(llm, ActualLLMService):
+            self.llm = llm
+        else:
+            from app.core.llm import get_llm_service
+            self.llm = get_llm_service()
         self.sanitizer = get_sanitizer_service()
 
     async def _get_last_sync_time(self, user_id: uuid.UUID) -> Optional[datetime]:
