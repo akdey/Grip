@@ -1,8 +1,6 @@
 import hashlib
 import uuid
-import httpx
 import logging
-import json
 import base64
 from datetime import datetime
 from typing import Optional, List
@@ -24,6 +22,7 @@ from app.features.auth.models import User
 from app.features.categories.service import CategoryService
 from app.features.wealth.service import WealthService
 from app.features.notifications.service import NotificationService
+from app.core.llm import get_llm_service, LLMService
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -36,12 +35,14 @@ class SyncService:
                  transaction_service: TransactionService = Depends(),
                  category_service: CategoryService = Depends(),
                  wealth_service: WealthService = Depends(),
-                 notification_service: NotificationService = Depends()):
+                 notification_service: NotificationService = Depends(),
+                 llm: LLMService = Depends(get_llm_service)):
         self.db = db
         self.txn_service = transaction_service
         self.category_service = category_service
         self.wealth_service = wealth_service
         self.notification_service = notification_service
+        self.llm = llm
         self.sanitizer = get_sanitizer_service()
 
     async def _get_last_sync_time(self, user_id: uuid.UUID) -> Optional[datetime]:
@@ -73,17 +74,11 @@ class SyncService:
         await self.db.commit()
 
     async def call_brain_api(self, text: str, user_id: uuid.UUID, categories_context: List[str] = None) -> dict:
-        """Extract transaction details using Groq LLM."""
-        if not settings.GROQ_API_KEY:
-            logger.warning("GROQ_API_KEY not set. Using fallback.")
+        """Extract transaction details using LLM."""
+        if not self.llm.is_enabled:
+            logger.warning("LLM service not enabled. Using fallback.")
             return self._fallback_txn()
 
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        
         # Prepare context
         cat_str = ""
         if categories_context:
@@ -110,35 +105,18 @@ class SyncService:
         If no transaction found, return null.
         """
         
-        # Log the full prompt only in DEBUG mode
-        logger.debug(f"LLM Prompt: {prompt}")
-
-        payload = {
-            "model": settings.GROQ_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "response_format": {"type": "json_object"},
-            "temperature": 0.1
-        }
-
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, json=payload, timeout=20.0)
-                
-            if response.status_code == 200:
-                extracted = response.json()['choices'][0]['message']['content']
-                data = json.loads(extracted)
-                
-                return {
-                    "amount": float(data.get("amount", 0)),
-                    "currency": data.get("currency", "INR"),
-                    "merchant_name": data.get("merchant_name", "UNKNOWN"),
-                    "category": data.get("category", "Uncategorized"),
-                    "sub_category": data.get("sub_category", "Uncategorized"),
-                    "account_type": data.get("account_type", "SAVINGS"),
-                    "transaction_type": data.get("transaction_type", "DEBIT")
-                }
-        except Exception as e:
-            logger.error(f"Groq API Error: {e}")
+        data = await self.llm.generate_json(prompt, temperature=0.1, timeout=20.0)
+        
+        if data:
+            return {
+                "amount": float(data.get("amount", 0)),
+                "currency": data.get("currency", "INR"),
+                "merchant_name": data.get("merchant_name", "UNKNOWN"),
+                "category": data.get("category", "Uncategorized"),
+                "sub_category": data.get("sub_category", "Uncategorized"),
+                "account_type": data.get("account_type", "SAVINGS"),
+                "transaction_type": data.get("transaction_type", "DEBIT")
+            }
             
         return self._fallback_txn()
 
