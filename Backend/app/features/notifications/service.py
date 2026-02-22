@@ -163,7 +163,7 @@ class NotificationService:
                 Persona: Sassy, witty, premium personal CFO. 
                 Task: Write a funny, slightly flirty/teasing nudge for {name} who hasn't synced their bank in {days_inactive} days.
                 - Tease them about their 'ghosting' skills or 'selective memory' regarding spending.
-                - Max 20 words. 
+                - Max 30 words. 
                 - No quotes, no markdown.
                 Example: "Ghosting your finances doesn't make the bills go away, {name}. Reconnect before your budget has an identity crisis."
                 """
@@ -206,7 +206,8 @@ class NotificationService:
                 
                 Task: Write a highly personal, cheeky weekend recommendation. 
                 - If {top_category} is 'Food': Tease their palate. 
-                - If Budget > 2k: Suggest a 'treat yourself' moment.
+                - If Budget > 3k: Suggest a 'treat yourself' moment.
+                - If Budget < 3k and > 1k: Suggest something in the middle.
                 - If Budget < 1k: Suggest something 'poor but gold' like a park sunset with stolen office coffee.
                 - Mood: Sophisticated but funny. Use wordplay. 
                 
