@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     
     EXCEPTION_ROUTES: list[str] = [
         "/",
+        "/privacy",
+        "/terms",
         "/docs", 
         "/redoc", 
         "/openapi.json", 
