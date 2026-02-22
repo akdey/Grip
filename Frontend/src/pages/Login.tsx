@@ -32,7 +32,7 @@ const Login: React.FC = () => {
         if (window.google) {
             const client = window.google.accounts.oauth2.initCodeClient({
                 client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '79555107768-4qevfrm1r070pk51thefg0qmo1nnb647.apps.googleusercontent.com',
-                scope: 'openid profile email https://www.googleapis.com/auth/gmail.readonly',
+                scope: 'openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/gmail.readonly',
                 ux_mode: 'popup',
                 callback: async (response: any) => {
                     if (response.code) {
