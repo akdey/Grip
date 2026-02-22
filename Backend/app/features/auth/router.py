@@ -1,19 +1,31 @@
-from datetime import timedelta
-from typing import Annotated
+from datetime import timedelta, datetime, timezone
+from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from pydantic import BaseModel
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+
 from app.core.database import get_db
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.features.auth.models import User
 from app.features.auth import schemas
 from app.core.config import get_settings
+from app.core.llm import get_llm_service
+from app.features.notifications.service import NotificationService
 
 import logging
+import random
+import string
+
 router = APIRouter()
 settings = get_settings()
 logger = logging.getLogger(__name__)
+
+class GoogleLoginRequest(BaseModel):
+    token: str
 
 @router.post("/register", response_model=dict)
 async def register_user(
@@ -25,9 +37,6 @@ async def register_user(
     result = await db.execute(select(User).where(User.email == user_in.email))
     existing_user = result.scalar_one_or_none()
     
-    import random
-    import string
-    from datetime import datetime, timezone
     from app.core.email import send_otp_email
 
     otp = ''.join(random.choices(string.digits, k=6))
@@ -41,15 +50,13 @@ async def register_user(
             )
         else:
             # Resend OTP
-            existing_user.hashed_password = get_password_hash(user_in.password) # Update password just in case
+            existing_user.hashed_password = get_password_hash(user_in.password)
             existing_user.verification_code = otp
             existing_user.verification_code_expires_at = otp_expiry
             db.add(existing_user)
             await db.commit()
             
-            # Send Email (Background task to avoid blocking)
             background_tasks.add_task(send_otp_email, user_in.email, otp)
-            
             return {"message": "OTP sent to email", "email": user_in.email}
     
     user = User(
@@ -64,42 +71,83 @@ async def register_user(
     await db.refresh(user)
     
     background_tasks.add_task(send_otp_email, user_in.email, otp)
-    
     return {"message": "OTP sent to email", "email": user_in.email}
+
+@router.post("/google-login", response_model=schemas.Token)
+async def google_login(
+    login_data: GoogleLoginRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    background_tasks: BackgroundTasks
+):
+    """Verifies Google ID Token and logs the user in (or registers them)."""
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            login_data.token, 
+            google_requests.Request(), 
+            settings.GOOGLE_CLIENT_ID
+        )
+
+        email = idinfo['email']
+        full_name = idinfo.get('name')
+
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+
+        is_new_user = False
+        if not user:
+            user = User(
+                email=email,
+                full_name=full_name,
+                is_active=True,
+                hashed_password="EXTERNAL_AUTH_GOOGLE"
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+            is_new_user = True
+        elif not user.is_active:
+            user.is_active = True
+            await db.commit()
+            is_new_user = True
+
+        if is_new_user:
+            llm = get_llm_service()
+            notif_service = NotificationService(db, llm)
+            background_tasks.add_task(notif_service.send_welcome_email, email, full_name)
+
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email}, expires_delta=access_token_expires
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        logger.error(f"Google Login error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid Google token")
 
 @router.post("/verify-otp", response_model=schemas.Token)
 async def verify_otp(
-    verification_data: schemas.VerifyOTP,
-    db: Annotated[AsyncSession, Depends(get_db)]
+    verify_in: schemas.VerifyOTP,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    background_tasks: BackgroundTasks
 ):
-    from datetime import datetime, timezone
-    
-    result = await db.execute(select(User).where(User.email == verification_data.email))
+    result = await db.execute(select(User).where(User.email == verify_in.email))
     user = result.scalar_one_or_none()
+
+    if not user or user.verification_code != verify_in.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    if user.verification_code_expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="OTP expired")
+
+    user.is_active = True
+    user.verification_code = None
+    user.verification_code_expires_at = None
+    await db.commit()
     
-    if not user:
-        raise HTTPException(status_code=400, detail="User not found")
-        
-    if user.is_active:
-        # Already verified, just login logic if needed, or error
-        # Let's just create token
-        pass
-    else:
-        # Check OTP
-        if not user.verification_code or user.verification_code != verification_data.otp:
-             raise HTTPException(status_code=400, detail="Invalid OTP")
-             
-        if user.verification_code_expires_at and datetime.now(timezone.utc) > user.verification_code_expires_at:
-             raise HTTPException(status_code=400, detail="OTP expired")
-             
-        # Activate
-        user.is_active = True
-        user.verification_code = None
-        user.verification_code_expires_at = None
-        db.add(user)
-        await db.commit()
-        
-    # Create Token
+    llm = get_llm_service()
+    notif_service = NotificationService(db, llm)
+    background_tasks.add_task(notif_service.send_welcome_email, user.email, user.full_name)
+
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
@@ -109,31 +157,23 @@ async def verify_otp(
 @router.post("/token", response_model=schemas.Token)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: Annotated[AsyncSession, Depends(get_db)]
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     result = await db.execute(select(User).where(User.email == form_data.username))
     user = result.scalar_one_or_none()
-    
     if not user or not verify_password(form_data.password, user.hashed_password):
-        logger.warning(f"Login failed for user: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-        
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="User not verified. Please verify your email.")
-
-    logger.info(f"User logged in successfully: {user.email}")
+        raise HTTPException(status_code=400, detail="User not verified")
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
-    )
+    access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
 
 from app.features.auth.deps import get_current_user
-
 @router.post("/verify")
 async def verify_user_password(
     data: schemas.PasswordVerification,

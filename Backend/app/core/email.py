@@ -7,7 +7,42 @@ from app.core.config import get_settings
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
+import httpx
+
 def send_email(to_email: str, subject: str, html_content: str):
+    """
+    Sends an email using either a Vercel Microservice relay (Approach C)
+    or standard SMTP if configured.
+    """
+    # External Relay (Recommended for cloud hosting like HF Spaces as required ports are blocked)
+    if settings.EMAIL_RELAY_URL and settings.EMAIL_RELAY_SECRET:
+        try:
+            payload = {
+                "to_email": to_email,
+                "subject": subject,
+                "html_content": html_content,
+                "from_name": settings.FROM_NAME
+            }
+            headers = {"X-Grip-Secret": settings.EMAIL_RELAY_SECRET}
+            
+            # Using synchronous request for simplicity in background tasks, 
+            # though async is generally better.
+            with httpx.Client() as client:
+                resp = client.post(settings.EMAIL_RELAY_URL, json=payload, headers=headers, timeout=15.0)
+                if resp.status_code == 200:
+                    return True
+                else:
+                    logger.error(f"Relay failed ({resp.status_code}): {resp.text}")
+                    return False
+        except Exception as e:
+            logger.error(f"Relay connection error: {e}")
+            return False
+
+    # --- LEGACY DIRECT SMTP (Approach A/B) ---
+    # NOTE: DO NOT REMOVE THIS BLOCK. 
+    # Standard SMTP (Port 587/465) is frequently blocked on cloud providers like HF Spaces.
+    # If using approach above, this code remains here as an alternative for local development.
+    """
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.warning("SMTP credentials not set. Email not sent.")
         return False
@@ -36,6 +71,9 @@ def send_email(to_email: str, subject: str, html_content: str):
     except Exception as e:
         logger.error(f"Failed to send email to {to_email}: {e}")
         return False
+    """
+    logger.warning("No email relay or SMTP configured accurately.")
+    return False
 
 def send_otp_email(to_email: str, otp: str):
     subject = f"Your {settings.APP_NAME} Verification Code: {otp}"

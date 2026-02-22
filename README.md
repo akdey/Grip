@@ -1052,6 +1052,27 @@ Private and proprietary. All rights reserved.
 
 ---
 
+## 🛠️ Environment & Security Configuration
+
+Grip is designed with a "Privacy-First" and "Cloud-Resilient" architecture. Depending on where you deploy (Local vs. Cloud), you may need to adjust certain security measures:
+
+### 📧 Email Connection Modes
+Most cloud providers (Hugging Face, Railway) block **Ports 25, 587, and 465** to prevent spam. 
+- **Grip Email Relay (Microservice)**: By default, we use a dedicated relay service (located in `/EmailService`) intended for deployment on Vercel (Port 443) to bypass SMTP blocks. Configure `EMAIL_RELAY_URL` in your `.env`.
+- **Standard SMTP**: If running locally or on a VPS where ports are open, uncomment the `LEGACY DIRECT SMTP` block in `app/core/email.py` and set your Gmail App Password.
+
+### 🤖 LLM Intelligence & Fallbacks
+We utilize a dual-track AI system for maximum reliability:
+- **Grip Intelligence (Primary)**: A high-performance, private engine hosted on Hugging Face Spaces.
+- **Groq Llama-3 (Roboust Fallback)**: If the primary engine is sleeping or unreachable, Grip automatically falls back to Groq.
+- **Note**: Ensure `GROQ_API_KEY` is set in your environment variables. If you wish to use only Groq, uncomment the relevant lines in `app/core/llm.py`.
+
+### 🔐 Security Measures
+- **Sanitization First**: All PII (PAN, Account numbers) is masked via local regex logic *before* being processed by any AI engine.
+- **Scoped Ingress**: Gmail OAuth is restricted to `gmail.readonly` and specifically queries for transaction-only keywords.
+
+---
+
 ## 🙏 Acknowledgments
 
 Built with incredible open-source tools:
