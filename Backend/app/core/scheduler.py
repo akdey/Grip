@@ -117,20 +117,21 @@ async def run_weekly_insights():
         data = result.all()
         
         for user_id, full_name, category, total in data:
-            # If spending in a category is > 5000 in a week, send a "watchout" alert
+            # If spending in a category is > 5000 in a week, send a "Roast" alert
             if abs(total) > 5000:
                 try:
                     await notification_service.send_spending_insight(
                         user_id, 
                         full_name,
                         category, 
-                        25.0 # Mock percentage for now
+                        float(abs(total)),
+                        25.0 # Mock percentage
                     )
-                    logger.info(f"Sent weekly spending insight to user {user_id} for {category}")
+                    logger.info(f"Sent weekly roast to user {user_id} for {category}")
                 except Exception as e:
-                    logger.error(f"Failed to send insight for user {user_id}: {e}")
+                    logger.error(f"Failed to send roast for user {user_id}: {e}")
             else:
-                logger.info(f"Skip weekly insight for user {user_id}: {category} spend ({abs(total)}) below threshold (5000)")
+                logger.info(f"Skip weekly roast for user {user_id}: {category} spend ({abs(total)}) below threshold (5000)")
 
     logger.info("Weekly Insights Completed.")
 
@@ -213,7 +214,15 @@ async def run_lifestyle_insights(override_date: Optional[date] = None):
                         await notification_service.send_inactivity_nudge(user.id, user.full_name, days_diff)
                         logger.info(f"Sent inactivity nudge to {user.id} ({days_diff} days)")
 
-                # --- CHECK 2: WEEKEND (FRIDAY) ---
+                # --- CHECK 2: BUFFER EMERGENCY BRAKE ---
+                # Check if safe-to-spend is below the required buffer
+                sts_data = await analytics_service.calculate_safe_to_spend_amount(db, user.id)
+                # If safe-to-spend is zero or negative, it means the buffer is exhausted
+                if sts_data.safe_to_spend <= 0:
+                    await notification_service.send_buffer_alert(user.id, user.full_name, float(sts_data.safe_to_spend))
+                    logger.info(f"Sent buffer emergency brake to {user.id}")
+
+                # --- CHECK 3: WEEKEND (FRIDAY) ---
                 if today.weekday() == 4: # 4 is Friday
                     # Calculate safe-to-spend for this user
                     sts_data = await analytics_service.calculate_safe_to_spend_amount(db, user.id)

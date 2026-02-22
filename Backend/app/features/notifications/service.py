@@ -125,24 +125,79 @@ class NotificationService:
         )
         send_email(user.email, subject, html)
 
-    async def send_spending_insight(self, user_id: uuid.UUID, full_name: str, category: str, percentage_increase: float):
-        """Notify user about abnormal spending patterns."""
+    async def send_spending_insight(self, user_id: uuid.UUID, full_name: str, category: str, amount: float, percentage_increase: float):
+        """Notify user about abnormal spending patterns with a cheeky 'Roast'."""
         result = await self.db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if not user or not user.email: return
 
         name = self._derive_name(user.email, full_name)
-        subject = f"Spending Alert: {category} is trending up"
+        subject = f"Category Alert: Your {category} spend is getting loud"
+        
+        roast_message = f"We noticed that your spending in {category} is {percentage_increase:.1f}% higher than your usual average this month."
+        
+        if settings.GROQ_API_KEY:
+            try:
+                prompt = f"""
+                Persona: Sassy, witty, premium personal CFO.
+                Task: Write a funny, slightly brutal 'Roast' for {name} regarding their {category} spending.
+                Context: They spent ₹{amount:,.0f} this week, which is {percentage_increase:.1f}% higher than normal.
+                - Max 30 words. No quotes, no markdown.
+                - Be cheeky. Example: 'Your coffee budget is starting to look like a down payment on a house, {name}. Maybe it's time to learn how a kettle works?'
+                """
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                headers = {"Authorization": f"Bearer {settings.GROQ_API_KEY}", "Content-Type": "application/json"}
+                payload = {"model": settings.GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.8}
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(url, headers=headers, json=payload, timeout=8.0)
+                    if resp.status_code == 200:
+                        roast_message = resp.json()['choices'][0]['message']['content'].strip()
+            except: pass
+
         content = f"""
         <p>Hello {name},</p>
-        <p>We noticed that your spending in <strong>{category}</strong> is {percentage_increase:.1f}% higher than your usual average this month.</p>
-        <p>Would you like to review these transactions to see where you can optimize?</p>
+        <div style="background: #fff; border: 1px solid #fee2e2; padding: 25px; border-radius: 16px; margin: 25px 0;">
+            <p style="margin: 0; font-size: 18px; color: #111; font-style: italic; line-height: 1.6;">"{roast_message}"</p>
+        </div>
+        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 14px; color: #64748b;">This Week's {category}:</span>
+            <span style="font-size: 20px; font-weight: 800; color: #ef4444;">₹{amount:,.0f}</span>
+        </div>
         """
         html = self._get_html_wrapper(
-            title="Spending Insight",
+            title="Spending Roast",
             content=content,
-            cta_text="Review Analytics",
+            cta_text="Review Transactions",
             cta_url=f"{settings.FRONTEND_ORIGIN}/analytics"
+        )
+        send_email(user.email, subject, html)
+
+    async def send_buffer_alert(self, user_id: uuid.UUID, full_name: str, safe_to_spend: float):
+        """Emergency alert when Safe-to-Spend drops into the danger zone."""
+        result = await self.db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user or not user.email: return
+
+        name = self._derive_name(user.email, full_name)
+        subject = "🚨 Red Alert: Buffer Exhausted"
+        
+        content = f"""
+        <p>Hello {name}, your financial dashboard is flashing red.</p>
+        <p style="font-size: 17px; color: #111; font-weight: 600;">Your Safe-to-Spend has dropped below your safety buffer.</p>
+        
+        <div style="background: #000; color: #fff; padding: 40px; border-radius: 24px; margin: 30px 0; text-align: center; border: 2px solid #ef4444; box-shadow: 0 0 30px rgba(239, 68, 68, 0.4);">
+             <div style="width: 10px; height: 10px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 15px #ef4444; margin: 0 auto 15px auto; animation: pulse 2s infinite;"></div>
+            <span style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: #94a3b8; margin-bottom: 8px;">DANGER ZONE BALANCE</span>
+            <span style="font-size: 42px; font-weight: 900; color: #ef4444; letter-spacing: -0.05em;">₹{safe_to_spend:,.2f}</span>
+        </div>
+        
+        <p style="color: #475569; font-size: 16px;">This means any further spending until your next income might cannibalize funds reserved for your upcoming bills. It's time for an elective spending freeze.</p>
+        """
+        html = self._get_html_wrapper(
+            title="Financial Flare",
+            content=content,
+            cta_text="Check Damage",
+            cta_url=f"{settings.FRONTEND_ORIGIN}/dashboard"
         )
         send_email(user.email, subject, html)
 
