@@ -98,6 +98,30 @@ app.include_router(goals_router, prefix=f"{settings.API_V1_STR}/goals", tags=["g
 app.include_router(wealth_router, prefix=f"{settings.API_V1_STR}/wealth", tags=["wealth"])
 app.include_router(export_router, prefix=f"{settings.API_V1_STR}/export", tags=["export"])
 
-@app.get("/")
+from fastapi.responses import HTMLResponse, FileResponse
+import os
+
+@app.get("/", tags=["status"])
 async def root():
-    return {"message": f"Welcome to {settings.PROJECT_NAME} - The financial diet that sticks."}
+    return {
+        "app": settings.PROJECT_NAME,
+        "engine": "Grip Intelligence Engine 1.0",
+        "status": "Operational",
+        "privacy_policy": "/privacy",
+        "terms_of_service": "/terms",
+        "author": "Amit Kumar Dey"
+    }
+
+@app.get("/privacy", response_class=HTMLResponse, tags=["legal"])
+async def privacy_policy():
+    static_path = os.path.join(os.path.dirname(__file__), "..", "static", "privacy.html")
+    if os.path.exists(static_path):
+        return FileResponse(static_path)
+    return HTMLResponse("<h1>Privacy Policy</h1><p>Grip Intelligence Privacy Policy is being updated.</p>")
+
+@app.get("/terms", response_class=HTMLResponse, tags=["legal"])
+async def terms_of_service():
+    static_path = os.path.join(os.path.dirname(__file__), "..", "static", "terms.html")
+    if os.path.exists(static_path):
+        return FileResponse(static_path)
+    return HTMLResponse("<h1>Terms of Service</h1><p>Grip Intelligence Terms of Service are being updated.</p>")

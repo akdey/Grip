@@ -111,8 +111,8 @@ const Home: React.FC = () => {
                             },
                             {
                                 icon: <Zap size={24} className="text-rose-500" />,
-                                title: "Llama-3 Integration",
-                                description: "Core intelligence powered by fine-tuned LLMs for razor-sharp categorization and spend reasoning."
+                                title: "Grip Intelligence",
+                                description: "Core financial reasoning powered by our private Intelligence Engine. Razor-sharp categorization with absolute data sovereignty."
                             }
                         ].map((f, i) => (
                             <Card key={i} className="p-8 border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.04] transition-all group rounded-[2.5rem] relative overflow-hidden">

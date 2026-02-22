@@ -31,8 +31,23 @@ const Terms: React.FC = () => {
 
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
+                        <div className="w-1 text-cyan-400 h-6 bg-cyan-400" />
+                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">02. Synchronization Consent</h2>
+                    </div>
+                    <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
+                        <p>
+                            By connecting external email or financial accounts via Google OAuth, you grant {import.meta.env.VITE_APP_NAME || 'Grip'} a limited scope to read and process transaction notifications. This data is processed privately by our internal Intelligence Engine.
+                        </p>
+                        <p>
+                            You may revoke this access at any time through your account settings or directly via your Google Account security dashboard.
+                        </p>
+                    </div>
+                </section>
+
+                <section className="space-y-6">
+                    <div className="flex items-center gap-3">
                         <div className="w-1 text-rose-500 h-6 bg-rose-500" />
-                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">02. Liability Limitation</h2>
+                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">03. Liability Limitation</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
                         <p>
@@ -47,7 +62,7 @@ const Terms: React.FC = () => {
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
                         <div className="w-1 text-amber-500 h-6 bg-amber-500" />
-                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">03. Account Integrity</h2>
+                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">04. Account Integrity</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
                         <p>

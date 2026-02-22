@@ -27,7 +27,25 @@ const Privacy: React.FC = () => {
                             {import.meta.env.VITE_APP_NAME || 'Grip'} operates on a foundation of absolute transparency and data sovereignty. We exclusively collect telemetry and financial data necessary to generate our proprietary intelligence models.
                         </p>
                         <p>
-                            Personal Identifiable Information (PII) is isolated and never exposed to external marketing or advertising networks. Our monetization strategy is service-based, not data-based.
+                            Personal Identifiable Information (PII) is isolated and never exposed to external marketing or advertising networks. This is a non-commercial, personal tool; we do not sell, rent, or trade your personal data for any purpose.
+                        </p>
+                    </div>
+                </section>
+
+                <section className="space-y-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-1 text-orange-500 h-6 bg-orange-500" />
+                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">02. Google User Data</h2>
+                    </div>
+                    <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
+                        <p>
+                            When you connect your Gmail account, {import.meta.env.VITE_APP_NAME || 'Grip'} uses a "Restricted Scope" to access your emails. We strictly search for and process only bank-related notifications and financial statements.
+                        </p>
+                        <p>
+                            <strong>Important:</strong> We do not read your personal correspondence. Our use of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" className="text-orange-400 underline">Google API Services User Data Policy</a>, including the Limited Use requirements.
+                        </p>
+                        <p>
+                            Data extracted from these emails is used solely to populate your dashboard and is never shared with third-party marketing tools or advertisers.
                         </p>
                     </div>
                 </section>
