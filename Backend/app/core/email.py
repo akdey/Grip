@@ -21,10 +21,16 @@ def send_email(to_email: str, subject: str, html_content: str):
         part = MIMEText(html_content, "html")
         message.attach(part)
 
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-            server.starttls()
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            server.sendmail(settings.FROM_EMAIL, to_email, message.as_string())
+        # Use SMTP_SSL for port 465, otherwise standard SMTP + starttls
+        if settings.SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                server.sendmail(settings.FROM_EMAIL, to_email, message.as_string())
+        else:
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+                server.starttls()
+                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                server.sendmail(settings.FROM_EMAIL, to_email, message.as_string())
         
         return True
     except Exception as e:
