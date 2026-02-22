@@ -27,34 +27,47 @@ const Login: React.FC = () => {
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
 
-    // Initialize Google Login
+    // Initialize Google Login + Sync Fast Track
     useEffect(() => {
         if (window.google) {
-            window.google.accounts.id.initialize({
+            const client = window.google.accounts.oauth2.initCodeClient({
                 client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '79555107768-4qevfrm1r070pk51thefg0qmo1nnb647.apps.googleusercontent.com',
-                callback: handleGoogleCallback,
+                scope: 'openid profile email https://www.googleapis.com/auth/gmail.readonly',
+                ux_mode: 'popup',
+                callback: async (response: any) => {
+                    if (response.code) {
+                        handleOneTapSync(response.code);
+                    }
+                },
             });
 
-            window.google.accounts.id.renderButton(
-                document.getElementById("googleSyncBtn"),
-                { theme: "outline", size: "large", width: '100%', shape: 'pill', text: 'continue_with' }
-            );
+            // Re-use current button div or create a custom one
+            const btn = document.getElementById("googleSyncBtn");
+            if (btn) {
+                btn.onclick = () => client.requestCode();
+                btn.innerHTML = `
+                    <button type="button" class="w-full flex items-center justify-center gap-3 bg-white text-black h-12 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-gray-100 transition-all">
+                        <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" class="w-5 h-5" alt="G" />
+                        Authorize All-in-One
+                    </button>
+                `;
+            }
         }
     }, [mode]);
 
-    const handleGoogleCallback = async (googleResponse: any) => {
+    const handleOneTapSync = async (code: string) => {
         setIsLoading(true);
         setError('');
         try {
-            const response = await api.post('/auth/google-login', {
-                token: googleResponse.credential
+            const response = await api.post('/auth/google/one-tap', {
+                code,
+                redirect_uri: 'postmessage'
             });
             const { access_token } = response.data;
-            // Note: We don't have the full user object yet, but the store logic handles it
             login({ id: 'temp-id', email: 'verified@google', is_active: true }, access_token);
             navigate('/dashboard');
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Google Authentication failed.');
+            setError(err.response?.data?.detail || 'One-Tap Sync failed. Please try standard login.');
         } finally {
             setIsLoading(false);
         }
