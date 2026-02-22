@@ -104,38 +104,50 @@ async def run_weekly_insights():
         llm_service = get_llm_service()
         notification_service = NotificationService(db, llm_service)
         
-        # Simple Logic: Find categories where spend > 0 in last 7 days
+        # 1. Find categories where spend > 1000 in last 7 days
+        # Exclude 'Investment'
         seven_days_ago = datetime.now() - timedelta(days=7)
         
         stmt = (
-            select(User.id, User.full_name, Transaction.category, func.sum(Transaction.amount).label("total"))
+            select(User.id, User.full_name, Transaction.category, func.sum(func.abs(Transaction.amount)).label("total"))
             .join(Transaction, User.id == Transaction.user_id)
             .where(Transaction.transaction_date >= seven_days_ago.date())
+            .where(Transaction.category != 'Investment')
             .group_by(User.id, User.full_name, Transaction.category)
+            .having(func.sum(func.abs(Transaction.amount)) > 1000)
         )
         
         result = await db.execute(stmt)
         data = result.all()
-        logger.info(f"Weekly Insights: Found {len(data)} user/category pairs with spending.")
+        logger.info(f"Weekly Insights: Found {len(data)} user/category pairs over ₹1,000 threshold.")
         
+        # 2. Group by user for consolidated emails
+        user_insights = {}
         for user_id, full_name, category, total in data:
-            # LOWERED THRESHOLD FOR TESTING: If spending in a category is > 10 in a week, send a "Roast" alert
-            if abs(total) > 10:
-                try:
-                    await notification_service.send_spending_insight(
-                        user_id, 
-                        full_name,
-                        category, 
-                        float(abs(total)),
-                        25.0 # Mock percentage
-                    )
-                    logger.info(f"Sent weekly roast to user {user_id} for {category}")
-                except Exception as e:
-                    logger.error(f"Failed to send roast for user {user_id}: {e}")
-            else:
-                logger.info(f"Skip weekly roast for user {user_id}: {category} spend ({abs(total)}) below threshold (5000)")
+            if user_id not in user_insights:
+                user_insights[user_id] = {
+                    "full_name": full_name,
+                    "items": []
+                }
+            user_insights[user_id]["items"].append({
+                "category": category,
+                "amount": float(total)
+            })
+            
+        # 3. Send consolidated emails
+        for user_id, info in user_insights.items():
+            try:
+                await notification_service.send_weekly_summary(
+                    user_id, 
+                    info["full_name"], 
+                    info["items"]
+                )
+                logger.info(f"Sent consolidated weekly recap to user {user_id} ({len(info['items'])} categories)")
+            except Exception as e:
+                logger.error(f"Failed to send weekly recap for user {user_id}: {e}")
 
     logger.info("Weekly Insights Completed.")
+
 
 async def run_monthly_report(target_date: Optional[date] = None):
     """
