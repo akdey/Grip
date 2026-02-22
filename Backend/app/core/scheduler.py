@@ -116,10 +116,11 @@ async def run_weekly_insights():
         
         result = await db.execute(stmt)
         data = result.all()
+        logger.info(f"Weekly Insights: Found {len(data)} user/category pairs with spending.")
         
         for user_id, full_name, category, total in data:
-            # If spending in a category is > 5000 in a week, send a "Roast" alert
-            if abs(total) > 5000:
+            # LOWERED THRESHOLD FOR TESTING: If spending in a category is > 10 in a week, send a "Roast" alert
+            if abs(total) > 10:
                 try:
                     await notification_service.send_spending_insight(
                         user_id, 
