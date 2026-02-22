@@ -46,11 +46,15 @@ class Settings(BaseSettings):
     
     # Email Settings
     SMTP_HOST: str = "smtp.gmail.com"
-    SMTP_PORT: int = 465 #alternate port 587 or 465
+    SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     FROM_EMAIL: str = "noreply@grip.com"
     FROM_NAME: str = "Grip"
+
+    # External Email Relay (for bypassing cloud SMTP blocks)
+    EMAIL_RELAY_URL: Optional[str] = None  # e.g., "https://grip-email.vercel.app/send"
+    EMAIL_RELAY_SECRET: Optional[str] = None
     
     # Branding
     APP_NAME: str = "GRIP"

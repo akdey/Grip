@@ -105,6 +105,41 @@ class NotificationService:
         )
         send_email(email, subject, html)
 
+    async def send_welcome_email(self, email: str, full_name: Optional[str] = None):
+        """Send a witty, high-premium welcome email to new users."""
+        name = self._derive_name(email, full_name)
+        subject = f"Initiating Grip Protocol: Welcome, {name}"
+        
+        welcome_message = f"Welcome to {settings.APP_NAME}. You've just taken the first step toward absolute financial sovereignty. Your inbox is now your intelligence hub."
+        
+        if self.llm.is_enabled:
+            prompt = f"""
+            Persona: Witty, high-end, slightly futuristic financial AI. 
+            Task: Write a funny, premium welcome message for {name}. 
+            - Mention that they are now 'Initiated' into personal financial intelligence.
+            - Be cheeky about their previous 'manual' life and how Grip will mind their money for them.
+            - Max 40 words. No quotes, no markdown.
+            Example: 'Initiation complete, {name}. Your bank balance has been waiting for an adult to take over. Grip is now active. We'll mind the pennies while you focus on the vision.'
+            """
+            resp = await self.llm.generate_response(prompt, temperature=0.8, timeout=30.0)
+            if resp:
+                welcome_message = resp.strip().replace('"', '')
+
+        content = f"""
+        <p>Hello {name},</p>
+        <div style="background: #fff; border: 1px solid #e2e8f0; padding: 25px; border-radius: 16px; margin: 25px 0;">
+            <p style="margin: 0; font-size: 18px; color: #111; font-style: italic; line-height: 1.6;">"{welcome_message}"</p>
+        </div>
+        <p>Grip is now scanning for your financial 'Sureties' and building your high-precision Wealth map. Connect Gmail to unlock full autonomous mode.</p>
+        """
+        html = self._get_html_wrapper(
+            title="Welcome to the Hub",
+            content=content,
+            cta_text="Enter Dashboard",
+            cta_url=f"{settings.FRONTEND_ORIGIN}/dashboard"
+        )
+        send_email(email, subject, html)
+
     async def send_surety_reminder(self, user_id: uuid.UUID, full_name: str, bill_title: str, amount: float, due_date: datetime):
         """Send a reminder before a fixed obligation (surety) is due."""
         result = await self.db.execute(select(User).where(User.id == user_id))

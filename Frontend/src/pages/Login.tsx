@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../lib/store';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { api } from '../lib/api';
-
 import { Logo } from '../components/ui/Logo';
+
+// Declare google for typescript
+declare global {
+    interface Window {
+        google: any;
+    }
+}
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -20,6 +26,39 @@ const Login: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
+
+    // Initialize Google Login
+    useEffect(() => {
+        if (window.google) {
+            window.google.accounts.id.initialize({
+                client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '79555107768-4qevfrm1r070pk51thefg0qmo1nnb647.apps.googleusercontent.com',
+                callback: handleGoogleCallback,
+            });
+
+            window.google.accounts.id.renderButton(
+                document.getElementById("googleSyncBtn"),
+                { theme: "outline", size: "large", width: '100%', shape: 'pill', text: 'continue_with' }
+            );
+        }
+    }, [mode]);
+
+    const handleGoogleCallback = async (googleResponse: any) => {
+        setIsLoading(true);
+        setError('');
+        try {
+            const response = await api.post('/auth/google-login', {
+                token: googleResponse.credential
+            });
+            const { access_token } = response.data;
+            // Note: We don't have the full user object yet, but the store logic handles it
+            login({ id: 'temp-id', email: 'verified@google', is_active: true }, access_token);
+            navigate('/dashboard');
+        } catch (err: any) {
+            setError(err.response?.data?.detail || 'Google Authentication failed.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -166,6 +205,17 @@ const Login: React.FC = () => {
                             {mode === 'LOGIN' ? 'Authorize' : mode === 'REGISTER' ? 'Register Unit' : 'Override & Sync'}
                         </Button>
 
+                        {mode !== 'OTP' && (
+                            <div className="space-y-4">
+                                <div className="relative flex items-center justify-center">
+                                    <div className="border-t border-white/5 w-full"></div>
+                                    <span className="bg-[#050505] px-4 text-[7px] font-black uppercase tracking-[3px] text-gray-700 absolute">OR</span>
+                                </div>
+
+                                <div id="googleSyncBtn" className="w-full flex justify-center !rounded-xl overflow-hidden opacity-80 hover:opacity-100 transition-opacity"></div>
+                            </div>
+                        )}
+
                         {mode === 'OTP' && (
                             <div className="text-center">
                                 <button type="button" onClick={() => setMode('REGISTER')} className="text-[9px] font-black uppercase tracking-widest text-gray-600 hover:text-cyan-400 transition-colors">
@@ -208,7 +258,5 @@ const Login: React.FC = () => {
         </div>
     );
 };
-
-
 
 export default Login;
