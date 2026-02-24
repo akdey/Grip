@@ -53,10 +53,14 @@ class SyncService:
         self.sanitizer = get_sanitizer_service()
 
     async def _get_last_sync_time(self, user_id: uuid.UUID) -> Optional[datetime]:
+        # Only use timestamp from syncs that actually processed records.
+        # This prevents empty syncs (e.g. after reconnect) from pushing
+        # the 'after:' window forward and missing all historical emails.
         stmt = (
             select(SyncLog)
             .where(SyncLog.user_id == user_id)
             .where(SyncLog.status == "SUCCESS")
+            .where(SyncLog.records_processed > 0)
             .order_by(desc(SyncLog.start_time))
             .limit(1)
         )
