@@ -51,7 +51,7 @@ class LLMService:
         logger.warning("No LLM service (Grip Intelligence) is configured and available.")
         return None
 
-    async def _call_intelligence_engine(self, prompt: str, timeout: float) -> Optional[str]:
+    async def _call_intelligence_engine(self, prompt: str, timeout: float, max_retries: int = 1) -> Optional[str]:
         """Call your custom Grip Intelligence engine on HF Spaces."""
         headers = {
             "X-Grip-HF-LLM-Auth-Token": self.intelligence_token,
@@ -59,18 +59,32 @@ class LLMService:
         }
         payload = {"prompt": prompt}
         
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(self.intelligence_url, headers=headers, json=payload, timeout=timeout)
-                if resp.status_code == 200:
-                    content = resp.json().get('response')
-                    return content if content else None
-                else:
-                    logger.error(f"Intelligence Engine Error ({resp.status_code}): {resp.text}")
-                    return None
-        except Exception as e:
-            logger.error(f"Intelligence Engine Connection Error: {e}")
-            return None
+        import asyncio
+        for attempt in range(max_retries + 1):
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(self.intelligence_url, headers=headers, json=payload, timeout=timeout)
+                    if resp.status_code == 200:
+                        content = resp.json().get('response')
+                        return content if content else None
+                    elif resp.status_code >= 500 and attempt < max_retries:
+                        logger.warning(f"Intelligence Engine returned {resp.status_code}, retrying in 5s (attempt {attempt + 1}/{max_retries + 1})")
+                        await asyncio.sleep(5)
+                        continue
+                    else:
+                        logger.error(f"Intelligence Engine Error ({resp.status_code}): {resp.text[:200]}")
+                        return None
+            except httpx.TimeoutException:
+                if attempt < max_retries:
+                    logger.warning(f"Intelligence Engine timed out after {timeout}s, retrying (attempt {attempt + 1}/{max_retries + 1})")
+                    await asyncio.sleep(3)
+                    continue
+                logger.error(f"Intelligence Engine timed out after {timeout}s (all retries exhausted)")
+                return None
+            except Exception as e:
+                logger.error(f"Intelligence Engine Connection Error: {type(e).__name__}: {e}")
+                return None
+        return None
 
     # async def _call_groq(
     #     self, 
@@ -117,7 +131,7 @@ class LLMService:
         prompt: str, 
         system_prompt: Optional[str] = "You are a financial intelligence engine. Always output valid JSON.",
         temperature: float = 0.2,
-        timeout: float = 60.0
+        timeout: float = 180.0
     ) -> Optional[Dict[str, Any]]:
         """Method specifically for JSON-structured responses."""
         content = await self.generate_response(
