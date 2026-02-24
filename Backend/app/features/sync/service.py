@@ -205,8 +205,8 @@ class SyncService:
                 logger.warning(f"[Sync:{user_id}] No refresh_token available. If access token is stale, sync will fail.")
 
             service = build('gmail', 'v1', credentials=creds)
-            # Narrowed query to reduce noise and rate limits
-            query = "debited OR credit OR alert"
+            # Specific keywords to catch transactions without pulling in too much noise
+            query = "debit OR debited OR credit OR alert OR spent"
             if start_time:
                 query += f" after:{int(start_time.timestamp())}"
             
