@@ -83,7 +83,7 @@ const Terms: React.FC = () => {
                             AMIT KUMAR DEY
                         </a>
                     </div>
-                    <p className="text-[9px] font-black text-gray-700 uppercase tracking-widest">Version 1.0.0 • © 2026 {import.meta.env.VITE_APP_NAME || 'Grip'} Intelligence</p>
+                    <p className="text-[9px] font-black text-gray-700 uppercase tracking-widest">Version 1.0.1 • © 2026 {import.meta.env.VITE_APP_NAME || 'Grip'} Intelligence</p>
                 </footer>
             </div>
         </div>

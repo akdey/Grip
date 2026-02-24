@@ -226,7 +226,7 @@ class AnalyticsService:
         db: AsyncSession,
         user_id: UUID
     ) -> SafeToSpendResponse:
-        """Calculate safe-to-spend amount with frozen funds and AI-predicted buffer till salary."""
+        """Calculate safe-to-spend amount with frozen funds and mathematical buffer till salary."""
         try:
             # Calculate days till salary (1st of next month)
             today = self._get_today()
