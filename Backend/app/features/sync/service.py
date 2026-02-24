@@ -144,20 +144,37 @@ class SyncService:
         user = result.scalar_one_or_none()
         
         if not user or not user.gmail_credentials:
+            logger.warning(f"[Sync:{user_id}] No user or no gmail_credentials found. Aborting fetch.")
             return []
 
         try:
             creds_data = user.gmail_credentials
+            
+            # Parse stored expiry so Credentials knows when the token expires
+            expiry = None
+            expiry_raw = creds_data.get('expiry')
+            if expiry_raw:
+                try:
+                    expiry = datetime.fromisoformat(expiry_raw)
+                except (ValueError, TypeError):
+                    logger.warning(f"[Sync:{user_id}] Could not parse stored token expiry, will rely on 401 auto-refresh.")
+
+            has_refresh = bool(creds_data.get('refresh_token'))
+            logger.info(f"[Sync:{user_id}] Building credentials. has_refresh_token={has_refresh}, has_expiry={expiry is not None}")
+
             creds = Credentials(
                 token=creds_data.get('token'),
                 refresh_token=creds_data.get('refresh_token'),
                 token_uri="https://oauth2.googleapis.com/token",
                 client_id=settings.GOOGLE_CLIENT_ID,
                 client_secret=settings.GOOGLE_CLIENT_SECRET,
-                scopes=["https://www.googleapis.com/auth/gmail.readonly"]
+                scopes=["https://www.googleapis.com/auth/gmail.readonly"],
+                expiry=expiry
             )
 
+            # Proactive refresh if token is expired or about to expire
             if creds.expired and creds.refresh_token:
+                logger.info(f"[Sync:{user_id}] Token expired, attempting proactive refresh.")
                 try:
                     creds.refresh(GoogleRequest())
                     user.gmail_credentials = {
@@ -166,22 +183,39 @@ class SyncService:
                         "expiry": creds.expiry.isoformat() if creds.expiry else None
                     }
                     await self.db.commit()
+                    logger.info(f"[Sync:{user_id}] Token refreshed and saved successfully.")
                 except Exception as refresh_ex:
-                    logger.error(f"Failed to refresh Gmail token for {user_id}: {refresh_ex}")
-                    # Mark credentials as invalid
+                    logger.error(f"[Sync:{user_id}] Token refresh FAILED: {type(refresh_ex).__name__}: {refresh_ex}")
                     user.gmail_credentials = None
                     await self.db.commit()
                     raise Exception("GMAIL_DISCONNECTED")
+            elif not creds.refresh_token:
+                logger.warning(f"[Sync:{user_id}] No refresh_token available. If access token is stale, sync will fail.")
 
             service = build('gmail', 'v1', credentials=creds)
             query = "spent OR debited OR transaction OR alert OR paid"
             if start_time:
                 query += f" after:{int(start_time.timestamp())}"
             
+            logger.info(f"[Sync:{user_id}] Gmail query: after={start_time.isoformat() if start_time else 'None'}")
+            
             results = service.users().messages().list(userId='me', q=query, maxResults=50, includeSpamTrash=True).execute()
             messages = results.get('messages', [])
             
+            logger.info(f"[Sync:{user_id}] Gmail returned {len(messages)} message(s) matching query.")
+
+            # After API call, persist any auto-refreshed token back to DB
+            if creds.token != creds_data.get('token'):
+                logger.info(f"[Sync:{user_id}] Token was auto-refreshed during API call. Saving new token.")
+                user.gmail_credentials = {
+                    "token": creds.token,
+                    "refresh_token": creds.refresh_token,
+                    "expiry": creds.expiry.isoformat() if creds.expiry else None
+                }
+                await self.db.commit()
+
             detailed_messages = []
+            body_extract_failures = 0
             for msg_meta in messages:
                 msg = service.users().messages().get(userId='me', id=msg_meta['id']).execute()
                 
@@ -198,6 +232,9 @@ class SyncService:
                     if data:
                         body = base64.urlsafe_b64decode(data).decode()
 
+                if not body:
+                    body_extract_failures += 1
+
                 detailed_messages.append({
                     "id": msg['id'],
                     "internalDate": msg['internalDate'],
@@ -205,11 +242,18 @@ class SyncService:
                     "body": body
                 })
             
+            if body_extract_failures > 0:
+                logger.warning(f"[Sync:{user_id}] Could not extract body from {body_extract_failures}/{len(messages)} message(s). Will fall back to snippet.")
+            
             return detailed_messages
 
         except Exception as e:
-            logger.error(f"Gmail Sync Error: {e}")
-            return []
+            error_type = type(e).__name__
+            logger.error(f"[Sync:{user_id}] Gmail fetch FAILED: {error_type}: {e}")
+            # Propagate credential failures so they're visible in sync history
+            if "GMAIL_DISCONNECTED" in str(e) or "invalid_grant" in str(e).lower() or "revoked" in str(e).lower():
+                raise Exception("GMAIL_DISCONNECTED")
+            raise
 
     async def get_sync_trends(self, user_id: uuid.UUID, days: int = 30):
         """Get transaction origination trends (Manual vs Automated)."""
@@ -254,7 +298,14 @@ class SyncService:
         log = await self._log_start(user_id, source)
         try:
             start_time = await self._get_last_sync_time(user_id)
+            logger.info(f"[Sync:{user_id}] Starting sync. source={source}, last_sync={start_time.isoformat() if start_time else 'FIRST_SYNC'}")
+            
             messages = await self.fetch_gmail_changes(user_id, start_time)
+            
+            if not messages:
+                logger.info(f"[Sync:{user_id}] No messages returned from Gmail. Completing with 0 records.")
+                await self._log_end(log, "SUCCESS", 0)
+                return
             
             # Fetch categories once for context
             db_categories = await self.category_service.get_categories(user_id)
@@ -269,6 +320,8 @@ class SyncService:
                      cat_list.append(c.name)
             
             processed_count = 0
+            dedup_skipped = 0
+            zero_amount_skipped = 0
             sync_summary = []
 
             for msg in messages:
@@ -276,6 +329,7 @@ class SyncService:
                 content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
                 
                 if await self.txn_service.get_transaction_by_hash(content_hash):
+                    dedup_skipped += 1
                     continue
                 
                 clean_text = self.sanitizer.sanitize(msg['body'] or msg['snippet'])
@@ -283,6 +337,7 @@ class SyncService:
                 
                 # Skip if no valid amount was extracted
                 if abs(extracted["amount"]) == 0:
+                    zero_amount_skipped += 1
                     continue
 
                 mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
@@ -328,7 +383,7 @@ class SyncService:
                 try:
                     wealth_mapped = await self.wealth_service.process_transaction_match(new_txn)
                 except Exception as w_ex:
-                    logger.error(f"Wealth mapping failed for txn {new_txn.id}: {w_ex}")
+                    logger.error(f"[Sync:{user_id}] Wealth mapping failed for txn {new_txn.id}: {type(w_ex).__name__}")
 
                 sync_summary.append({
                     "id": str(new_txn.id),
@@ -340,10 +395,16 @@ class SyncService:
 
                 processed_count += 1
             
+            logger.info(
+                f"[Sync:{user_id}] Sync complete. "
+                f"fetched={len(messages)}, dedup_skipped={dedup_skipped}, "
+                f"zero_amount_skipped={zero_amount_skipped}, processed={processed_count}"
+            )
             await self._log_end(log, "SUCCESS", processed_count, summary=sync_summary)
             
         except Exception as e:
-            logger.error(f"Sync execution failed: {e}")
+            error_type = type(e).__name__
+            logger.error(f"[Sync:{user_id}] Sync execution FAILED: {error_type}: {e}")
             if str(e) == "GMAIL_DISCONNECTED":
                 # Fetch user for notification
                 result = await self.db.execute(select(User).where(User.id == user_id))
@@ -352,4 +413,4 @@ class SyncService:
                     await self.notification_service.notify_gmail_disconnection(user_id, user.email, user.full_name or "Grip User")
                 await self._log_end(log, "FAILED", 0, "Gmail connection lost. Please reconnect.")
             else:
-                await self._log_end(log, "FAILED", 0, str(e))
+                await self._log_end(log, "FAILED", 0, f"{error_type}: {e}")
