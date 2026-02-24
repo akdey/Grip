@@ -355,6 +355,8 @@ class SyncService:
                 clean_text = self.sanitizer.sanitize(msg['body'] or msg['snippet'])[:3000]
                 extracted = await self.call_brain_api(clean_text, user_id, cat_list)
                 
+                logger.info(f"[Sync:{user_id}] Sub: '{msg['subject']}' | Extraction: {extracted}")
+                
                 # Skip if no valid amount was extracted (LLM timeout/failure or non-transaction email)
                 if abs(extracted["amount"]) == 0:
                     merchant = extracted.get("merchant_name", "UNKNOWN")
