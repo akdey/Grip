@@ -119,14 +119,18 @@ class SyncService:
         data = await self.llm.generate_json(prompt, temperature=0.1)
         
         if data:
+            # Defensive check for None/null values from LLM
+            amt_raw = data.get("amount")
+            amt = float(amt_raw) if amt_raw is not None else 0.0
+            
             return {
-                "amount": float(data.get("amount", 0)),
-                "currency": data.get("currency", "INR"),
-                "merchant_name": data.get("merchant_name", "UNKNOWN"),
-                "category": data.get("category", "Uncategorized"),
-                "sub_category": data.get("sub_category", "Uncategorized"),
-                "account_type": data.get("account_type", "SAVINGS"),
-                "transaction_type": data.get("transaction_type", "DEBIT")
+                "amount": amt,
+                "currency": data.get("currency", "INR") or "INR",
+                "merchant_name": data.get("merchant_name", "UNKNOWN") or "UNKNOWN",
+                "category": data.get("category", "Uncategorized") or "Uncategorized",
+                "sub_category": data.get("sub_category", "Uncategorized") or "Uncategorized",
+                "account_type": data.get("account_type", "SAVINGS") or "SAVINGS",
+                "transaction_type": data.get("transaction_type", "DEBIT") or "DEBIT"
             }
             
         return self._fallback_txn()
