@@ -150,7 +150,7 @@ class LLMService:
         prompt: str, 
         system_prompt: Optional[str] = "You are a financial intelligence engine. Always output valid JSON.",
         temperature: float = 0.2,
-        timeout: float = 180.0
+        timeout: float = 30.0
     ) -> Optional[Dict[str, Any]]:
         """Method specifically for JSON-structured responses."""
         content = await self.generate_response(
