@@ -66,7 +66,11 @@ class SyncService:
         )
         result = await self.db.execute(stmt)
         log = result.scalar_one_or_none()
-        return log.start_time if log else None
+        if not log:
+            return None
+            
+        # Subtract 1 hour to have a small overlap and prevent boundary misses
+        return log.start_time - timedelta(hours=1)
 
     async def _log_start(self, user_id: uuid.UUID, source: str) -> SyncLog:
         log = SyncLog(user_id=user_id, trigger_source=source, status="IN_PROGRESS")
@@ -243,10 +247,15 @@ class SyncService:
                 if not body:
                     body_extract_failures += 1
 
+                # Extract Subject header
+                headers = msg.get('payload', {}).get('headers', [])
+                subject = next((h['value'] for h in headers if h['name'] == 'Subject'), "No Subject")
+
                 detailed_messages.append({
                     "id": msg['id'],
                     "internalDate": msg['internalDate'],
                     "snippet": msg['snippet'],
+                    "subject": subject,
                     "body": body
                 })
             
@@ -350,10 +359,10 @@ class SyncService:
                     merchant = extracted.get("merchant_name", "UNKNOWN")
                     if merchant == "UNCATEGORIZED" or merchant == "UNKNOWN":
                         llm_failed += 1
-                        logger.warning(f"[Sync:{user_id}] LLM failed to extract anything from message {msg['id']}. Snippet: {msg['snippet'][:50]}...")
+                        logger.warning(f"[Sync:{user_id}] LLM failed for '{msg['subject']}' ({msg['id']}). Snippet: {msg['snippet'][:50]}...")
                     else:
                         zero_amount_skipped += 1
-                        logger.info(f"[Sync:{user_id}] No amount found for merchant '{merchant}' in message {msg['id']}. Likely a non-transaction email.")
+                        logger.info(f"[Sync:{user_id}] ₹0 found for '{merchant}' in '{msg['subject']}'. Skipping.")
                     continue
 
                 mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
