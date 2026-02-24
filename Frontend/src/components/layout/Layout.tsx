@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
-import { useGmailStatus, useManualSync } from '../../features/sync/hooks';
 import { Smartphone, X } from 'lucide-react';
 
 export const Layout: React.FC = () => {
@@ -12,22 +11,6 @@ export const Layout: React.FC = () => {
         location.pathname.startsWith('/transactions/') ||
         location.pathname === '/settings/categories' ||
         location.pathname === '/tags';
-
-    // Auto-Sync Logic
-    const { data: status } = useGmailStatus();
-    const { mutate: sync } = useManualSync();
-    const hasSynced = useRef(false);
-
-    useEffect(() => {
-        if (status?.connected && !hasSynced.current) {
-            const timer = setTimeout(() => {
-                console.log("Auto-syncing Gmail transactions...");
-                sync();
-                hasSynced.current = true;
-            }, 2000);
-            return () => clearTimeout(timer);
-        }
-    }, [status?.connected, sync]);
 
     return (
         <div className="min-h-screen text-white selection:bg-cyan-500/30">
