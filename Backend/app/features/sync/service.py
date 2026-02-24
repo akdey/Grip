@@ -341,15 +341,19 @@ class SyncService:
                     dedup_skipped += 1
                     continue
                 
-                clean_text = self.sanitizer.sanitize(msg['body'] or msg['snippet'])
+                # Truncate text to avoid token limits and focus on the core email content
+                clean_text = self.sanitizer.sanitize(msg['body'] or msg['snippet'])[:3000]
                 extracted = await self.call_brain_api(clean_text, user_id, cat_list)
                 
                 # Skip if no valid amount was extracted (LLM timeout/failure or non-transaction email)
                 if abs(extracted["amount"]) == 0:
-                    if extracted["merchant_name"] == "UNCATEGORIZED":
+                    merchant = extracted.get("merchant_name", "UNKNOWN")
+                    if merchant == "UNCATEGORIZED" or merchant == "UNKNOWN":
                         llm_failed += 1
+                        logger.warning(f"[Sync:{user_id}] LLM failed to extract anything from message {msg['id']}. Snippet: {msg['snippet'][:50]}...")
                     else:
                         zero_amount_skipped += 1
+                        logger.info(f"[Sync:{user_id}] No amount found for merchant '{merchant}' in message {msg['id']}. Likely a non-transaction email.")
                     continue
 
                 mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
