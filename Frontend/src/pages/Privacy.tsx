@@ -42,21 +42,20 @@ const Privacy: React.FC = () => {
                             When you connect your Gmail account, {import.meta.env.VITE_APP_NAME || 'Grip'} requests access to your emails via OAuth 2.0 Restricted Scopes.
                         </p>
                         <p>
-                            <strong>How We Use Google Data:</strong> We strictly search for and process only bank-related notifications, credit card alerts, and financial statements. This data is used solely to:
+                            <strong>How We Use Google Data:</strong> We strictly search for and process only bank-related notifications, credit card alerts, and financial statements. This data is used solely to populate your dashboard and automate your financial management.
+                        </p>
+                        <p>
+                            <strong>AI Role & Restrictions:</strong> We use Large Language Models (LLMs) strictly for structural extraction of transaction data.
                         </p>
                         <ul className="list-disc pl-5 space-y-2">
-                            <li>Automatically populate your financial dashboard with transaction details.</li>
-                            <li>Detect and categorize your spending across various bank accounts and cards.</li>
-                            <li>Extract investment confirmations to update your portfolio snapshots.</li>
+                            <li><strong>No Training:</strong> We do not use Google user data to train, retrain, or improve AI/ML models.</li>
+                            <li><strong>No Decisions:</strong> AI does not handle your financial calculations or money management logic.</li>
                         </ul>
-                        <p>
-                            <strong>AI Role (Data Extraction Only):</strong> We use Large Language Models (LLMs) strictly for the structural extraction of transaction data from raw, messy email text. <u>AI does not handle your financial calculations or money management logic.</u>
-                        </p>
                         <p>
                             <strong>Restricted Scope Compliance:</strong> Our use and transfer of information received from Google APIs to any other app will adhere to <a href="https://developers.google.com/terms/api-services-user-data-policy" className="text-orange-400 underline">Google API Services User Data Policy</a>, including the Limited Use requirements.
                         </p>
                         <p>
-                            <strong>Data Sharing:</strong> We <u>do not</u> share, sell, or trade your Google user data with third-party marketing tools, advertisers, or any external entities. Data extracted is scoped strictly to your individual account.
+                            <strong>Data Sharing:</strong> We <u>do not</u> share, sell, or trade your Google user data with third-party marketing tools, advertisers, or any external entities.
                         </p>
                     </div>
                 </section>
@@ -82,17 +81,23 @@ const Privacy: React.FC = () => {
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
                         <div className="w-1 text-emerald-500 h-6 bg-emerald-500" />
-                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">04. Financial Intelligence Engine</h2>
+                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">04. Privacy Shield & Sanitization</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
                         <p>
-                            Our logic-based intelligence engine performs rigorous financial calculations to provide variance analysis and "Safe to Spend" metrics.
+                            We implement **Privacy-by-Design** via a local sanitization layer that operates <u>before</u> any data is processed by our extraction engines.
                         </p>
                         <p>
-                            <strong>Safe-to-Spend Calculation:</strong> This is a deterministic mathematical calculation based on your current liquid balance minus unpaid bills, projected recurring commitments, and unbilled credit card exposure. It includes a safety buffer based on your actual 30-day discretionary spending averages.
+                            <strong>Local PII Masking:</strong> Our system automatically detects and masks highly sensitive fields including:
                         </p>
+                        <ul className="list-disc pl-5 space-y-2">
+                            <li>Full Credit/Debit Card numbers (Masked to &lt;CARD&gt;)</li>
+                            <li>Personal Phone numbers and Emails</li>
+                            <li>Bank Account numbers and UPI IDs</li>
+                            <li>National IDs (PAN, Aadhaar)</li>
+                        </ul>
                         <p>
-                            <strong>Privacy Sanitization:</strong> All processing is containerized and scoped strictly to your account UUID. We use local regex-based sanitization tools to mask highly sensitive PII (like full account numbers or UPI IDs) <u>before</u> any extraction or analysis occurs.
+                            This ensures that even during internal processing, your most sensitive identifiers are never exposed or stored in raw format outside of the original encrypted source.
                         </p>
                     </div>
                 </section>
