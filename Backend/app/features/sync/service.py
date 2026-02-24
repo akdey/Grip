@@ -116,7 +116,7 @@ class SyncService:
         If no transaction found, return null.
         """
         
-        data = await self.llm.generate_json(prompt, temperature=0.1, timeout=60.0)
+        data = await self.llm.generate_json(prompt, temperature=0.1)
         
         if data:
             return {
@@ -325,6 +325,7 @@ class SyncService:
             
             processed_count = 0
             dedup_skipped = 0
+            llm_failed = 0
             zero_amount_skipped = 0
             sync_summary = []
 
@@ -339,9 +340,12 @@ class SyncService:
                 clean_text = self.sanitizer.sanitize(msg['body'] or msg['snippet'])
                 extracted = await self.call_brain_api(clean_text, user_id, cat_list)
                 
-                # Skip if no valid amount was extracted
+                # Skip if no valid amount was extracted (LLM timeout/failure or non-transaction email)
                 if abs(extracted["amount"]) == 0:
-                    zero_amount_skipped += 1
+                    if extracted["merchant_name"] == "UNCATEGORIZED":
+                        llm_failed += 1
+                    else:
+                        zero_amount_skipped += 1
                     continue
 
                 mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
@@ -402,7 +406,8 @@ class SyncService:
             logger.info(
                 f"[Sync:{user_id}] Sync complete. "
                 f"fetched={len(messages)}, dedup_skipped={dedup_skipped}, "
-                f"zero_amount_skipped={zero_amount_skipped}, processed={processed_count}"
+                f"llm_failed={llm_failed}, zero_amount_skipped={zero_amount_skipped}, "
+                f"processed={processed_count}"
             )
             await self._log_end(log, "SUCCESS", processed_count, summary=sync_summary)
             
