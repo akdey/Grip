@@ -34,8 +34,8 @@ class Settings(BaseSettings):
     USE_AI_FORECASTING: bool = True
     ENABLE_SCHEDULER: bool = True  # Set to False when using external cron (e.g., GitHub Actions)
     
-    # GROQ_API_KEY: str = ""
-    # GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
     GRIP_HF_LLM_URL: str = "https://a-k-dey-grip-llm-service.hf.space/generate"
     X_GRIP_HF_LLM_TOKEN: str = "" # Set this in .env
     GOOGLE_CLIENT_ID: str = ""
