@@ -205,13 +205,14 @@ class SyncService:
                 logger.warning(f"[Sync:{user_id}] No refresh_token available. If access token is stale, sync will fail.")
 
             service = build('gmail', 'v1', credentials=creds)
-            query = "spent OR debited OR transaction OR alert OR paid"
+            # Broadened query to catch more Indian bank formats
+            query = "spent OR debited OR transaction OR alert OR paid OR payment OR successful OR order OR purchase OR withdrawn OR confirmed OR received"
             if start_time:
                 query += f" after:{int(start_time.timestamp())}"
             
             logger.info(f"[Sync:{user_id}] Gmail query: after={start_time.isoformat() if start_time else 'None'}")
             
-            results = service.users().messages().list(userId='me', q=query, maxResults=50, includeSpamTrash=True).execute()
+            results = service.users().messages().list(userId='me', q=query, maxResults=100, includeSpamTrash=True).execute()
             messages = results.get('messages', [])
             
             logger.info(f"[Sync:{user_id}] Gmail returned {len(messages)} message(s) matching query.")
