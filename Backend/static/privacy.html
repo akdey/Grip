@@ -82,9 +82,13 @@
         <li>Extract investment confirmations to update your portfolio snapshots.</li>
     </ul>
 
-    <p><strong>AI Role (Data Extraction Only):</strong> We use Large Language Models (LLMs) strictly for the structural
-        extraction of transaction data from raw email text. <u>AI does not handle your financial calculations or money
-            management logic.</u></p>
+    <p><strong>AI Role & Restrictions:</strong></p>
+    <ul>
+        <li><strong>No Training:</strong> We do not use Google user data to train, retrain, or improve AI/ML models.
+        </li>
+        <li><strong>No Decisions:</strong> AI does not handle your financial calculations or money management logic.
+        </li>
+    </ul>
 
     <p><strong>Restricted Scope Compliance:</strong> Our use and transfer of information received from Google APIs to
         any other app will adhere to the <a
@@ -98,10 +102,18 @@
         projected recurring commitments.
         It includes a safety buffer based on your actual 30-day discretionary spending averages.</p>
 
-    <h2>04. Privacy Sanitization & Governance</h2>
-    <p>All processing is containerized and scoped strictly to your unique account ID. We use local regex-based
-        sanitization tools to mask
-        highly sensitive PII (like full account numbers or UPI IDs) <u>before</u> any extraction or analysis occurs.</p>
+    <h2>04. Privacy Shield & Sanitization</h2>
+    <p>We implement <strong>Privacy-by-Design</strong> via a local sanitization layer that operates <u>before</u> any
+        data is processed by our extraction engines. Our system automatically detects and masks highly sensitive fields
+        including:</p>
+    <ul>
+        <li>Full Credit/Debit Card numbers (Masked to &lt;CARD&gt;)</li>
+        <li>Personal Phone numbers and Emails</li>
+        <li>Bank Account numbers and UPI IDs</li>
+        <li>National IDs (PAN, Aadhaar)</li>
+    </ul>
+    <p>This ensures that even during internal processing, your most sensitive identifiers are never exposed or stored in
+        raw format outside of the original encrypted source.</p>
 
     <h2>05. Security</h2>
     <p>We use TLS encryption for data in transit and industry-standard AES-256 encryption at rest for sensitive
