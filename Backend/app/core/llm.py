@@ -71,7 +71,7 @@ class LLMService:
         logger.warning("No LLM service (Intelligence or Groq) is configured and available.")
         return None
 
-    async def _call_intelligence_engine(self, prompt: str, timeout: float, max_retries: int = 1) -> Optional[str]:
+    async def _call_intelligence_engine(self, prompt: str, timeout: float, max_retries: int = 0) -> Optional[str]:
         """Call your custom Grip Intelligence engine on HF Spaces."""
         headers = {
             "X-Grip-HF-LLM-Auth-Token": self.intelligence_token,
