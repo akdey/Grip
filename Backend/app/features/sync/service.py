@@ -383,10 +383,14 @@ class SyncService:
                 res = await self.db.execute(stmt)
                 is_surety_flag = res.scalar() or False
 
+                # Convert internalDate (ms) to date object for the transaction record
+                tx_date = datetime.fromtimestamp(int(msg['internalDate']) / 1000).date()
+
                 new_txn = await self.txn_service.create_transaction({
                     "id": uuid.uuid4(),
                     "user_id": user_id,
                     "raw_content_hash": content_hash,
+                    "transaction_date": tx_date,
                     "amount": final_amount,
                     "currency": extracted["currency"],
                     "merchant_name": extracted["merchant_name"],
