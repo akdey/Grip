@@ -20,6 +20,7 @@ from app.features.sanitizer.service import get_sanitizer_service
 from app.features.transactions.models import TransactionStatus
 from app.features.sync.models import SyncLog
 from app.features.auth.models import User
+from app.features.categories.models import SubCategory
 from app.features.categories.service import CategoryService
 from app.features.wealth.service import WealthService
 from app.features.notifications.service import NotificationService
@@ -43,13 +44,7 @@ class SyncService:
         self.category_service = category_service
         self.wealth_service = wealth_service
         self.notification_service = notification_service
-        # Handle manual instantiation for LLM
-        from app.core.llm import LLMService as ActualLLMService
-        if isinstance(llm, ActualLLMService):
-            self.llm = llm
-        else:
-            from app.core.llm import get_llm_service
-            self.llm = get_llm_service()
+        self.llm = llm
         self.sanitizer = get_sanitizer_service()
 
     async def _get_last_sync_time(self, user_id: uuid.UUID) -> Optional[datetime]:
@@ -355,8 +350,6 @@ class SyncService:
                 clean_text = self.sanitizer.sanitize(msg['body'] or msg['snippet'])[:3000]
                 extracted = await self.call_brain_api(clean_text, user_id, cat_list)
                 
-                logger.info(f"[Sync:{user_id}] Sub: '{msg['subject']}' | Extraction: {extracted}")
-                
                 # Skip if no valid amount was extracted (LLM timeout/failure or non-transaction email)
                 if abs(extracted["amount"]) == 0:
                     merchant = extracted.get("merchant_name", "UNKNOWN")
@@ -386,7 +379,6 @@ class SyncService:
                     final_amount = -final_amount
 
                 # Fetch surety status
-                from app.features.categories.models import SubCategory
                 stmt = select(SubCategory.is_surety).where(SubCategory.name == sub).limit(1)
                 res = await self.db.execute(stmt)
                 is_surety_flag = res.scalar() or False
