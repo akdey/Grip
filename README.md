@@ -53,15 +53,18 @@ While others make you wait for "syncs" or manual entries, Grip is built to get y
 - **Precision XIRR**: Calculated using the Newton-Raphson method for accurate annualized returns based on daily cashflows.
 - **Timing Leakage Reports**: Detailed breakdown of how much "extra" money you could have made by simply shifting your SIP date.
 
-### 🤖 AI Does the Heavy Lifting
-- **Automatic Transaction Extraction**: Connect Gmail once; AI extracts transaction details from bank alerts forever
+### 🤖 Hybrid Intelligence — Fast, Private, Reliable
+- **Rule Engine (Primary)**: A deterministic, zero-latency, zero-cost pattern-matching engine handles >90% of Indian bank email formats. Works offline. No API calls needed.
+- **Groq AI (Fallback)**: Only called when the rule engine is uncertain. Sanitized snippets only — no raw PII ever sent externally.
+- **Automatic Transaction Extraction**: Connect Gmail once; transactions are extracted from bank alerts automatically
 - **Autonomous Notification Engine**: Scheduled email alerts for Gmail disconnection, surety bill reminders, and spending insights
 - **Hybrid Forecasting**: Combines Meta Prophet (statistical) + Groq LLM (contextual) to predict month-end expenses
 - **Smart Learning**: Remembers your merchant preferences, auto-categorizes future transactions
-- **Natural Language Processing**: Understands messy bank emails and extracts clean, structured data
+- **Multi-Layer Spam Filter**: Sender whitelist + subject gates + body signals distinguish real transactions from marketing emails
 
 ### 🔒 Privacy Built-In, Not Bolted-On
-- **Local Sanitization First**: PAN, Aadhaar, Credit Card numbers masked *before* any AI sees them
+- **Local Rule Engine First**: The primary extraction runs 100% on-server — no data leaves for the common case
+- **Sanitization Before AI**: PAN, Aadhaar, Credit Card numbers masked *before* any external AI sees them
 - **No Data Selling**: Your financial data stays yours. Period.
 - **Self-Hostable**: Open architecture—you control the deployment and data
 - **Read-Only Gmail**: OAuth 2.0 with minimal scopes; we can't send or modify your emails
