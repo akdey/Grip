@@ -25,6 +25,7 @@ from app.features.categories.service import CategoryService
 from app.features.wealth.service import WealthService
 from app.features.notifications.service import NotificationService
 from app.core.llm import get_llm_service, LLMService
+from app.features.sync.extractor import get_rule_extractor, RuleBasedExtractor
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ class SyncService:
         self.notification_service = notification_service
         self.llm = llm
         self.sanitizer = get_sanitizer_service()
+        self.rule_extractor: RuleBasedExtractor = get_rule_extractor()
 
     async def _get_last_sync_time(self, user_id: uuid.UUID) -> Optional[datetime]:
         # Only use timestamp from syncs that actually processed records.
@@ -83,45 +85,97 @@ class SyncService:
             log.summary = json.dumps(summary)
         await self.db.commit()
 
-    async def call_brain_api(self, text: str, user_id: uuid.UUID, categories_context: List[str] = None) -> dict:
-        """Extract transaction details using LLM."""
-        if not self.llm.is_enabled:
-            logger.warning("LLM service not enabled. Using fallback.")
-            return self._fallback_txn()
+    async def call_brain_api(
+        self,
+        text: str,
+        user_id: uuid.UUID,
+        categories_context: List[str] = None,
+        subject: str = "",
+        sender: str = ""
+    ) -> dict:
+        """
+        Extract transaction details.
+        Strategy: Rule Engine first → Groq fallback only when needed.
+        """
+        # --- STAGE 1: Rule-Based Extraction (fast, free, offline) ---
+        rule_result = self.rule_extractor.extract(subject=subject, body=text, sender=sender)
 
-        # Prepare context
-        cat_str = ""
+        if rule_result is not None:
+            needs_llm = rule_result.pop("_needs_llm_fallback", False)
+            source = rule_result.pop("_source", "RULE_ENGINE")
+
+            # Rule engine got a confident result → use it directly
+            if not needs_llm:
+                logger.info(f"[Brain:{user_id}] Source=RULE_ENGINE. Merchant='{rule_result['merchant_name']}' Amount={rule_result['amount']}")
+                return rule_result
+
+            # Rule engine found the amount but merchant/category is uncertain → try Groq for enrichment
+            if self.llm.is_enabled:
+                logger.info(f"[Brain:{user_id}] Source=RULE+GROQ_ENRICH. Rule found ₹{rule_result['amount']}, asking Groq for merchant/category.")
+                enriched = await self._groq_enrich(text, rule_result, categories_context)
+                if enriched:
+                    return enriched
+
+            # Groq not available or failed → return rule result as-is
+            logger.info(f"[Brain:{user_id}] Source={source}_NO_GROQ. Merchant='{rule_result['merchant_name']}' Amount={rule_result['amount']}")
+            return rule_result
+
+        # --- STAGE 2: Rule engine filtered this email out ---
+        # Could be marketing OR a genuinely unusual transaction format.
+        # Give Groq ONE chance to parse it.
+        if self.llm.is_enabled:
+            logger.info(f"[Brain:{user_id}] Rule engine filtered email. Trying Groq as last resort.")
+            return await self._groq_full_extract(text, categories_context, user_id)
+
+        logger.warning(f"[Brain:{user_id}] Rule engine filtered email & Groq not configured. Skipping.")
+        return self._fallback_txn()
+
+    async def _groq_enrich(self, text: str, rule_result: dict, categories_context: List[str] = None) -> Optional[dict]:
+        """Ask Groq only for merchant name and category, using the rule-extracted amount."""
+        cat_str = "Valid Categories: Food, Transport, Shopping, Housing, Bills & Utilities, Investment, Income, Entertainment, Medical, Personal Care"
         if categories_context:
-            cat_str = "Valid Categories & Sub-Categories (Use these EXACTLY):\n" + "\n".join([f"- {c}" for c in categories_context])
-        else:
-            cat_str = "Valid Categories: Food, Transport, Shopping, Housing, Bills & Utilities, Investment, Income, Entertainment, Medical, Personal Care"
+            cat_str = "Categories:\n" + "\n".join([f"- {c}" for c in categories_context[:20]])
 
         prompt = f"""
-        Extract transaction details from the following text:
-        Text: "{text}"
-        
+        From this bank notification, extract ONLY the merchant name and spending category.
+        The transaction amount is already known: INR {rule_result['amount']}.
+
+        Text: "{text[:1000]}"
+
         {cat_str}
-        
-        Return ONLY a JSON object with these keys:
-        - amount: float
-        - currency: string (3-letter code, default INR)
-        - merchant_name: string (clean, title case)
-        - category: string (Must be one of the Valid Categories keys)
-        - sub_category: string (Must be one of the sub-categories listed for the chosen category)
-        - account_type: string (SAVINGS, CREDIT_CARD, or CASH)
-        - transaction_type: string (DEBIT or CREDIT)
-        
-        If unsure about category, use "Uncategorized".
-        If no transaction found, return null.
+
+        Return ONLY JSON: {{"merchant_name": string, "category": string, "sub_category": string}}
         """
-        
-        data = await self.llm.generate_json(prompt, temperature=0.1)
-        
+        data = await self.llm.generate_json(prompt, temperature=0.1, timeout=20.0)
         if data:
-            # Defensive check for None/null values from LLM
+            rule_result["merchant_name"] = data.get("merchant_name") or rule_result["merchant_name"]
+            rule_result["category"] = data.get("category") or rule_result["category"]
+            rule_result["sub_category"] = data.get("sub_category") or rule_result["sub_category"]
+        return rule_result
+
+    async def _groq_full_extract(self, text: str, categories_context: List[str] = None, user_id: uuid.UUID = None) -> dict:
+        """Full Groq extraction — called only as last resort for unusual email formats."""
+        cat_str = "Valid Categories: Food, Transport, Shopping, Housing, Bills & Utilities, Investment, Income, Entertainment, Medical, Personal Care"
+        if categories_context:
+            cat_str = "Categories:\n" + "\n".join([f"- {c}" for c in categories_context[:20]])
+
+        prompt = f"""
+        Extract transaction details from this bank notification:
+        Text: "{text[:1500]}"
+
+        {cat_str}
+
+        Return ONLY a JSON object:
+        {{"amount": float, "currency": "INR", "merchant_name": string, "category": string,
+          "sub_category": string, "account_type": "SAVINGS|CREDIT_CARD|CASH", "transaction_type": "DEBIT|CREDIT"}}
+
+        If this is NOT a transaction email, return null.
+        """
+        data = await self.llm.generate_json(prompt, temperature=0.1, timeout=25.0)
+        if data:
             amt_raw = data.get("amount")
             amt = float(amt_raw) if amt_raw is not None else 0.0
-            
+            logger.info(f"[Brain:{user_id}] Source=GROQ_FULL. Amount={amt} Merchant={data.get('merchant_name')}")
             return {
                 "amount": amt,
                 "currency": data.get("currency", "INR") or "INR",
@@ -129,9 +183,9 @@ class SyncService:
                 "category": data.get("category", "Uncategorized") or "Uncategorized",
                 "sub_category": data.get("sub_category", "Uncategorized") or "Uncategorized",
                 "account_type": data.get("account_type", "SAVINGS") or "SAVINGS",
-                "transaction_type": data.get("transaction_type", "DEBIT") or "DEBIT"
+                "transaction_type": data.get("transaction_type", "DEBIT") or "DEBIT",
+                "extracted_date": None,
             }
-            
         return self._fallback_txn()
 
     def _fallback_txn(self) -> dict:
@@ -243,15 +297,17 @@ class SyncService:
                 if not body:
                     body_extract_failures += 1
 
-                # Extract Subject header
+                # Extract Subject and From headers
                 headers = msg.get('payload', {}).get('headers', [])
                 subject = next((h['value'] for h in headers if h['name'] == 'Subject'), "No Subject")
+                sender = next((h['value'] for h in headers if h['name'] == 'From'), "")
 
                 detailed_messages.append({
                     "id": msg['id'],
                     "internalDate": msg['internalDate'],
                     "snippet": msg['snippet'],
                     "subject": subject,
+                    "sender": sender,
                     "body": body
                 })
             
@@ -346,9 +402,16 @@ class SyncService:
                     dedup_skipped += 1
                     continue
                 
-                # Truncate text to avoid token limits and focus on the core email content
-                clean_text = self.sanitizer.sanitize(msg['body'] or msg['snippet'])[:3000]
-                extracted = await self.call_brain_api(clean_text, user_id, cat_list)
+                # Sanitize and send to extraction pipeline
+                raw_body = msg['body'] or msg['snippet']
+                clean_text = self.sanitizer.sanitize(raw_body)
+                extracted = await self.call_brain_api(
+                    text=clean_text,
+                    user_id=user_id,
+                    categories_context=cat_list,
+                    subject=msg.get('subject', ''),
+                    sender=msg.get('sender', '')
+                )
                 
                 # Skip if no valid amount was extracted (LLM timeout/failure or non-transaction email)
                 if abs(extracted["amount"]) == 0:
@@ -383,8 +446,16 @@ class SyncService:
                 res = await self.db.execute(stmt)
                 is_surety_flag = res.scalar() or False
 
-                # Convert internalDate (ms) to date object for the transaction record
-                tx_date = datetime.fromtimestamp(int(msg['internalDate']) / 1000).date()
+                # Use date extracted from email body; fall back to Gmail delivery date
+                tx_date = None
+                if extracted.get("extracted_date"):
+                    try:
+                        from dateutil import parser as dateparser
+                        tx_date = dateparser.parse(extracted["extracted_date"]).date()
+                    except Exception:
+                        pass
+                if not tx_date:
+                    tx_date = datetime.fromtimestamp(int(msg['internalDate']) / 1000).date()
 
                 new_txn = await self.txn_service.create_transaction({
                     "id": uuid.uuid4(),

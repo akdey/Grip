@@ -37,12 +37,20 @@
             margin: 20px 0;
             font-size: 14px;
         }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 
 <body>
     <h1>Terms of Service</h1>
-    <p>Last Updated: February 25, 2026 (v1.0.1)</p>
+    <p>Last Updated: February 27, 2026 (v1.2.0)</p>
 
     <div class="alert">
         <strong>Important:</strong> Grip is an analytics tool, not a financial advisor. Use this data for informational
@@ -51,21 +59,30 @@
 
     <h2>01. Service Description</h2>
     <p>Grip Intelligence provides a personal financial dashboard that aggregates bank transaction data via automated
-        email syncing.</p>
+        email syncing. The system uses a hybrid extraction pipeline: a local rule-based engine for primary extraction,
+        with Groq AI as a fallback for ambiguous emails. All data is sanitized before any external processing.</p>
 
-    <h2>02. Data Access & Consent</h2>
+    <h2>02. Data Access &amp; Consent</h2>
     <p>By using the Gmail sync feature, you grant Grip a limited license to read transaction-related emails. You can
-        revoke this consent at any time via your Google Account security settings.</p>
+        revoke this consent at any time via your Google Account security settings. Grip will only access emails that
+        match financial alert patterns (debit/credit alerts, bank notifications). Marketing and promotional emails
+        are filtered out automatically.</p>
 
-    <h2>03. Prohibited Use</h2>
+    <h2>03. External AI Services</h2>
+    <p>Grip may send anonymized, PII-sanitized email snippets to Groq's API as a fallback when the local extraction
+        engine is unable to parse a transaction. By using Grip, you consent to this limited, sanitized data transfer.
+        No raw personal identifiers (card numbers, PAN, Aadhaar, UPI IDs) are ever sent to external services.</p>
+
+    <h2>04. Prohibited Use</h2>
     <p>You may not use Grip for any illegal financial activities or attempt to reverse-engineer our proprietary
         Intelligence Engine.</p>
 
-    <h2>04. Liability</h2>
+    <h2>05. Liability</h2>
     <p>Grip is provided "as-is." We are not responsible for financial decisions made based on the projections or "Safe
-        to Spend" metrics provided by the tool.</p>
+        to Spend" metrics provided by the tool. Transaction extraction accuracy depends on the format of your bank's
+        notification emails and may not be 100% accurate in all cases.</p>
 
-    <h2>05. Contact</h2>
+    <h2>06. Contact</h2>
     <p>For questions regarding these terms, contact amitkr.dey1998@gmail.com</p>
 </body>
 

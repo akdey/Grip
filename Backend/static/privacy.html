@@ -37,6 +37,14 @@
             margin: 20px 0;
         }
 
+        .stage-box {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #0284c7;
+            margin: 20px 0;
+        }
+
         ul {
             padding-left: 20px;
         }
@@ -58,22 +66,21 @@
 
 <body>
     <h1>Privacy Policy</h1>
-    <p>Last Updated: February 25, 2026 (v1.0.1)</p>
+    <p>Last Updated: February 27, 2026 (v1.2.0)</p>
 
     <div class="trusted-box">
-        <strong>Trust & Transparency:</strong> Grip Intelligence operates on a foundation of absolute transparency.
+        <strong>Trust &amp; Transparency:</strong> Grip Intelligence operates on a foundation of absolute transparency.
         We do not sell, rent, or trade your personal data. This is a non-commercial, personal tool;
         we do not use your personal information to train public AI models.
     </div>
 
-    <h2>01. Data Collection & Usage</h2>
+    <h2>01. Data Collection &amp; Usage</h2>
     <p>We collect information necessary to provide financial analytics, including your email address for account
         identification and transaction data extracted from bank-related notifications.</p>
 
     <h2>02. Google User Data (Restricted Scope)</h2>
     <p>Grip accesses your Gmail account using OAuth 2.0 Restricted Scopes (gmail.readonly). We strictly search for and
-        process
-        only bank transaction notifications, credit card alerts, and financial statements.</p>
+        process only bank transaction notifications, credit card alerts, and financial statements.</p>
 
     <p><strong>How We Use This Data:</strong></p>
     <ul>
@@ -82,7 +89,7 @@
         <li>Extract investment confirmations to update your portfolio snapshots.</li>
     </ul>
 
-    <p><strong>AI Role & Restrictions:</strong></p>
+    <p><strong>AI Role &amp; Restrictions:</strong></p>
     <ul>
         <li><strong>No Training:</strong> We do not use Google user data to train, retrain, or improve AI/ML models.
         </li>
@@ -95,32 +102,48 @@
             href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data
             Policy</a>, including the Limited Use requirements.</p>
 
-    <h2>03. Financial Intelligence Engine</h2>
-    <p>Our logic-based intelligence engine performs rigorous financial calculations to provide variance analysis and
-        "Safe to Spend" metrics.
-        Safe-to-Spend is a deterministic mathematical calculation based on your current balance minus unpaid bills and
-        projected recurring commitments.
-        It includes a safety buffer based on your actual 30-day discretionary spending averages.</p>
+    <h2>03. Transaction Extraction Engine</h2>
+    <p>Grip uses a <strong>two-stage, privacy-first extraction pipeline</strong> to process bank notification emails:
+    </p>
 
-    <h2>04. Privacy Shield & Sanitization</h2>
+    <div class="stage-box">
+        <strong>Stage 1 &mdash; Local Rule Engine (Primary):</strong> Transaction details (amount, merchant, date) are
+        extracted using a deterministic, in-process pattern-matching engine that runs entirely on our servers.
+        No email content leaves our infrastructure during this stage. This handles &gt;90% of all transactions
+        with zero external API calls, zero latency, and zero cost.
+    </div>
+
+    <div class="stage-box">
+        <strong>Stage 2 &mdash; Groq AI (Fallback Only):</strong> For emails the rule engine cannot confidently parse,
+        a <em>sanitized and anonymized</em> snippet is sent to Groq's external API.
+        <strong>All PAN, Aadhaar, card numbers, UPI IDs, and phone numbers are masked before any data leaves our
+            servers.</strong> Groq is used strictly as a last resort, not the default processing path.
+    </div>
+
+    <h2>04. Financial Intelligence Engine</h2>
+    <p>Our logic-based intelligence engine performs rigorous financial calculations to provide variance analysis and
+        "Safe to Spend" metrics. Safe-to-Spend is a deterministic mathematical calculation based on your current
+        balance minus unpaid bills and projected recurring commitments. It includes a safety buffer based on your
+        actual 30-day discretionary spending averages.</p>
+
+    <h2>05. Privacy Shield &amp; Sanitization</h2>
     <p>We implement <strong>Privacy-by-Design</strong> via a local sanitization layer that operates <u>before</u> any
-        data is processed by our extraction engines. Our system automatically detects and masks highly sensitive fields
-        including:</p>
+        data is processed by our extraction engines or sent to any external service. Our system automatically detects
+        and masks highly sensitive fields including:</p>
     <ul>
         <li>Full Credit/Debit Card numbers (Masked to &lt;CARD&gt;)</li>
         <li>Personal Phone numbers and Emails</li>
         <li>Bank Account numbers and UPI IDs</li>
         <li>National IDs (PAN, Aadhaar)</li>
     </ul>
-    <p>This ensures that even during internal processing, your most sensitive identifiers are never exposed or stored in
-        raw format outside of the original encrypted source.</p>
+    <p>This ensures that even during fallback external processing, your most sensitive identifiers are never exposed
+        in raw format.</p>
 
-    <h2>05. Security</h2>
+    <h2>06. Security</h2>
     <p>We use TLS encryption for data in transit and industry-standard AES-256 encryption at rest for sensitive
-        financial markers.
-        Passwords utilize salted cryptographic hashing.</p>
+        financial markers. Passwords utilize salted cryptographic hashing.</p>
 
-    <h2>06. Contact</h2>
+    <h2>07. Contact</h2>
     <p>For privacy inquiries, contact us at amitkr.dey1998@gmail.com</p>
 </body>
 
