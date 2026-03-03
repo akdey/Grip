@@ -3,11 +3,91 @@ import re
 import httpx
 import json
 import asyncio
+import os
 from typing import Optional, Dict, Any, List
 from app.core.config import get_settings
 
+# Attempt to import llama-cpp-python. 
+# It might fail if not installed or on unsupported hardware.
+try:
+    from llama_cpp import Llama
+    from huggingface_hub import hf_hub_download
+    HAS_LLAMA_CPP = True
+except ImportError:
+    HAS_LLAMA_CPP = False
+
 settings = get_settings()
 logger = logging.getLogger(__name__)
+
+class LocalLLMEngine:
+    """Handles local execution of GGUF models using llama-cpp-python."""
+    
+    def __init__(self):
+        self._model = None
+        self.repo_id = settings.LOCAL_MODEL_REPO
+        self.filename = settings.LOCAL_MODEL_FILE
+        self.models_dir = settings.LOCAL_MODEL_DIR
+        
+    def _ensure_model(self) -> Optional[Llama]:
+        """Lazy load and potentially download the model."""
+        if self._model:
+            return self._model
+            
+        if not HAS_LLAMA_CPP:
+            logger.error("llama-cpp-python not installed. Cannot use local LLM.")
+            return None
+            
+        try:
+            # Create models directory if it doesn't exist
+            os.makedirs(self.models_dir, exist_ok=True)
+            
+            # Download model if not exists
+            model_path = os.path.join(self.models_dir, self.filename)
+            if not os.path.exists(model_path):
+                logger.info(f"Downloading model {self.filename} from {self.repo_id}...")
+                model_path = hf_hub_download(
+                    repo_id=self.repo_id,
+                    filename=self.filename,
+                    local_dir=self.models_dir
+                )
+            
+            # Initialize Llama-cpp
+            # Using a smaller context window (2048) and low n_threads for resource-constrained envs
+            self._model = Llama(
+                model_path=model_path,
+                n_ctx=2048,
+                n_threads=os.cpu_count() or 2,
+                n_gpu_layers=0, # Force CPU for HF Free Tier compat
+                verbose=False
+            )
+            logger.info("Local LLM engine initialized successfully.")
+            return self._model
+        except Exception as e:
+            logger.error(f"Failed to initialize local LLM engine: {e}")
+            return None
+
+    def generate(self, prompt: str, system_prompt: str, temperature: float) -> Optional[str]:
+        """Generate response using the local model."""
+        model = self._ensure_model()
+        if not model:
+            return None
+            
+        try:
+            # Format prompt for Phi-3 (Instruct template)
+            # <|system|> system_prompt <|end|> <|user|> prompt <|end|> <|assistant|>
+            formatted_prompt = f"<|system|>\n{system_prompt}<|end|>\n<|user|>\n{prompt}<|end|>\n<|assistant|>\n"
+            
+            output = model(
+                formatted_prompt,
+                max_tokens=512,
+                temperature=temperature,
+                stop=["<|end|>", "</s>"],
+                echo=False
+            )
+            return output['choices'][0]['text'].strip()
+        except Exception as e:
+            logger.error(f"Error during local LLM inference: {e}")
+            return None
 
 class LLMService:
     """Centralized service for Large Language Model interactions."""
@@ -16,8 +96,7 @@ class LLMService:
         self.groq_api_key = settings.GROQ_API_KEY
         self.groq_model = settings.GROQ_MODEL
         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
-        self.intelligence_url = settings.GRIP_HF_LLM_URL
-        self.intelligence_token = settings.X_GRIP_HF_LLM_TOKEN
+        self.local_engine = LocalLLMEngine()
         
         # PII patterns for sanitizing content before sending to external APIs
         self._pii_patterns = [
@@ -32,14 +111,13 @@ class LLMService:
 
     @property
     def is_enabled(self) -> bool:
-        """Check if the LLM service is configured and ready to use."""
-        return bool(self.intelligence_url) or bool(self.groq_api_key)
+        """Check if any LLM service is available."""
+        return HAS_LLAMA_CPP or bool(self.groq_api_key)
 
     def _sanitize_for_external(self, text: str) -> str:
         """Extra PII scrub before sending to any external/third-party LLM API."""
         if not text:
             return text
-        # Strip names from greetings
         text = re.sub(r'(?i)(Dear|Hello|Hi)\s+[A-Za-z\s]+,', r'\1 Customer,', text)
         for pattern, label in self._pii_patterns:
             text = pattern.sub(label, text)
@@ -51,58 +129,35 @@ class LLMService:
         system_prompt: Optional[str] = "You are a helpful financial assistant.",
         temperature: float = 0.5,
         response_format: Optional[str] = None,
-        timeout: float = 90.0
+        timeout: float = 120.0 # Increased timeout for local inference
     ) -> Optional[str]:
-        """Generic method to generate a response from the LLM, prioritizing custom Intelligence Space."""
+        """Generic method to generate a response, prioritizing local execution."""
         
-        # 1. Try Grip Intelligence Space (Primary — self-hosted, no PII concern)
-        if self.intelligence_url:
-            hf_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-            hf_res = await self._call_intelligence_engine(hf_prompt, timeout)
-            if hf_res:
-                return hf_res
-            logger.warning("Intelligence engine failed or returned empty. Falling back to Groq...")
+        # 1. Try Local Engine (Primary — high privacy, no costs)
+        if HAS_LLAMA_CPP:
+            # We run in a threadpool to avoid blocking the event loop
+            try:
+                loop = asyncio.get_event_loop()
+                res = await loop.run_in_executor(
+                    None, 
+                    self.local_engine.generate, 
+                    prompt, 
+                    system_prompt, 
+                    temperature
+                )
+                if res:
+                    return res
+                logger.warning("Local engine failed to produce a response.")
+            except Exception as e:
+                logger.warning(f"Local engine execution error: {e}")
 
         # 2. Try Groq (Fallback — external API, sanitize content)
         if self.groq_api_key:
+            logger.info("Attempting Groq fallback...")
             sanitized_prompt = self._sanitize_for_external(prompt)
             return await self._call_groq(sanitized_prompt, system_prompt, temperature, response_format, timeout)
             
-        logger.warning("No LLM service (Intelligence or Groq) is configured and available.")
-        return None
-
-    async def _call_intelligence_engine(self, prompt: str, timeout: float, max_retries: int = 0) -> Optional[str]:
-        """Call your custom Grip Intelligence engine on HF Spaces."""
-        headers = {
-            "X-Grip-HF-LLM-Auth-Token": self.intelligence_token,
-            "Content-Type": "application/json"
-        }
-        payload = {"prompt": prompt}
-        
-        for attempt in range(max_retries + 1):
-            try:
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(self.intelligence_url, headers=headers, json=payload, timeout=timeout)
-                    if resp.status_code == 200:
-                        content = resp.json().get('response')
-                        return content if content else None
-                    elif resp.status_code >= 500 and attempt < max_retries:
-                        logger.warning(f"Intelligence Engine returned {resp.status_code}, retrying in 5s (attempt {attempt + 1}/{max_retries + 1})")
-                        await asyncio.sleep(5)
-                        continue
-                    else:
-                        logger.error(f"Intelligence Engine Error ({resp.status_code}): {resp.text[:200]}")
-                        return None
-            except httpx.TimeoutException:
-                if attempt < max_retries:
-                    logger.warning(f"Intelligence Engine timed out after {timeout}s, retrying (attempt {attempt + 1}/{max_retries + 1})")
-                    await asyncio.sleep(3)
-                    continue
-                logger.error(f"Intelligence Engine timed out after {timeout}s (all retries exhausted)")
-                return None
-            except Exception as e:
-                logger.error(f"Intelligence Engine Connection Error: {type(e).__name__}: {e}")
-                return None
+        logger.warning("No LLM service (Local or Groq) is available.")
         return None
 
     async def _call_groq(
@@ -148,11 +203,11 @@ class LLMService:
     async def generate_json(
         self, 
         prompt: str, 
-        system_prompt: Optional[str] = "You are a financial intelligence engine. Always output valid JSON.",
+        system_prompt: Optional[str] = "You are a financial intelligence engine. Always output valid JSON objects.",
         temperature: float = 0.2,
-        timeout: float = 30.0
+        timeout: float = 60.0
     ) -> Optional[Dict[str, Any]]:
-        """Method specifically for JSON-structured responses."""
+        """Method specifically for JSON responses with robust parsing."""
         content = await self.generate_response(
             prompt=prompt,
             system_prompt=system_prompt,
@@ -165,16 +220,20 @@ class LLMService:
             return None
             
         try:
-            # Handle potential markdown code blocks in the response
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
-                
+            json_match = re.search(r'(\{.*\})', content, re.DOTALL)
+            if json_match:
+                content = json_match.group(1)
+            
+            content = content.strip().replace('```json', '').replace('```', '').strip()
             return json.loads(content)
         except (json.JSONDecodeError, IndexError) as e:
-            logger.error(f"LLM JSON Decode Error: {e}. Content: {content[:100]}...")
-            return None
+            logger.error(f"LLM JSON Decode Error: {e}. Content: {content[:200]}...")
+            try:
+                # Last resort cleanup
+                cleaned = re.sub(r',\s*([\]\}])', r'\1', content)
+                return json.loads(cleaned)
+            except Exception:
+                return None
 
 # Singleton-like instance
 _llm_service = None

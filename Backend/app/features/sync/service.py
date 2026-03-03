@@ -25,7 +25,6 @@ from app.features.categories.service import CategoryService
 from app.features.wealth.service import WealthService
 from app.features.notifications.service import NotificationService
 from app.core.llm import get_llm_service, LLMService
-from app.features.sync.extractor import get_rule_extractor, RuleBasedExtractor
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -47,7 +46,6 @@ class SyncService:
         self.notification_service = notification_service
         self.llm = llm
         self.sanitizer = get_sanitizer_service()
-        self.rule_extractor: RuleBasedExtractor = get_rule_extractor()
 
     async def _get_last_sync_time(self, user_id: uuid.UUID) -> Optional[datetime]:
         # Only use timestamp from syncs that actually processed records.
@@ -94,98 +92,73 @@ class SyncService:
         sender: str = ""
     ) -> dict:
         """
-        Extract transaction details.
-        Strategy: Rule Engine first → Groq fallback only when needed.
+        Unified LLM-based Transaction Identification & Extraction.
+        Accuracy over Latency.
         """
-        # --- STAGE 1: Rule-Based Extraction (fast, free, offline) ---
-        rule_result = self.rule_extractor.extract(subject=subject, body=text, sender=sender)
-
-        if rule_result is not None:
-            needs_llm = rule_result.pop("_needs_llm_fallback", False)
-            source = rule_result.pop("_source", "RULE_ENGINE")
-
-            # Rule engine got a confident result → use it directly
-            if not needs_llm:
-                logger.info(f"[Brain:{user_id}] Source=RULE_ENGINE. Merchant='{rule_result['merchant_name']}' Amount={rule_result['amount']}")
-                return rule_result
-
-            # Rule engine found the amount but merchant/category is uncertain → try Groq for enrichment
-            if self.llm.is_enabled:
-                logger.info(f"[Brain:{user_id}] Source=RULE+GROQ_ENRICH. Rule found ₹{rule_result['amount']}, asking Groq for merchant/category.")
-                enriched = await self._groq_enrich(text, rule_result, categories_context)
-                if enriched:
-                    return enriched
-
-            # Groq not available or failed → return rule result as-is
-            logger.info(f"[Brain:{user_id}] Source={source}_NO_GROQ. Merchant='{rule_result['merchant_name']}' Amount={rule_result['amount']}")
-            return rule_result
-
-        # --- STAGE 2: Rule engine filtered this email out ---
-        # Could be marketing OR a genuinely unusual transaction format.
-        # Give Groq ONE chance to parse it.
-        if self.llm.is_enabled:
-            logger.info(f"[Brain:{user_id}] Rule engine filtered email. Trying Groq as last resort.")
-            return await self._groq_full_extract(text, categories_context, user_id)
-
-        logger.warning(f"[Brain:{user_id}] Rule engine filtered email & Groq not configured. Skipping.")
-        return self._fallback_txn()
-
-    async def _groq_enrich(self, text: str, rule_result: dict, categories_context: List[str] = None) -> Optional[dict]:
-        """Ask Groq only for merchant name and category, using the rule-extracted amount."""
-        cat_str = "Valid Categories: Food, Transport, Shopping, Housing, Bills & Utilities, Investment, Income, Entertainment, Medical, Personal Care"
+        cat_str = "Categories: Food, Transport, Shopping, Housing, Bills & Utilities, Investment, Income, Entertainment, Medical, Personal Care"
         if categories_context:
-            cat_str = "Categories:\n" + "\n".join([f"- {c}" for c in categories_context[:20]])
+            cat_str = "Available Categories and Sub-categories:\n" + "\n".join([f"- {c}" for c in categories_context[:25]])
 
         prompt = f"""
-        From this bank notification, extract ONLY the merchant name and spending category.
-        The transaction amount is already known: INR {rule_result['amount']}.
+        You are a high-precision financial intelligence engine. 
+        Extract transaction details from the following bank notification email.
 
-        Text: "{text[:1000]}"
+        EMAIL SUBJECT: {subject}
+        EMAIL SENDER: {sender}
+        EMAIL BODY:
+        \"\"\"{text[:2000]}\"\"\"
 
         {cat_str}
 
-        Return ONLY JSON: {{"merchant_name": string, "category": string, "sub_category": string}}
+        EXTRACT THE FOLLOWING FIELDS:
+        1. is_transaction: (boolean) Set to true ONLY if this email is a specific notification for a completed DEBIT, CREDIT, or SPEND. Set to false for marketing, OTPs, balance inquiries, or statements.
+        2. amount: (float) The numerical value of the transaction.
+        3. currency: (string) Default to "INR".
+        4. merchant_name: (string) The name of the merchant or recipient.
+        5. category: (string) Choose the best fit from the categories listed above.
+        6. sub_category: (string) Choose a specific sub-category if provided in context, else use a descriptive name.
+        7. account_type: (string) MUST BE one of [SAVINGS, CREDIT_CARD, CASH].
+        8. transaction_type: (string) MUST BE one of [DEBIT, CREDIT].
+        9. extracted_date: (string) Date of transaction in ISO format (YYYY-MM-DD) if found, else null.
+
+        Note: Accuracy is critical. If 'is_transaction' is false, other fields can be null or 0.
+
+        RETURN ONLY VALID RAW JSON:
+        {{
+          "is_transaction": bool,
+          "amount": float,
+          "currency": "INR",
+          "merchant_name": string,
+          "category": string,
+          "sub_category": string,
+          "account_type": "SAVINGS" | "CREDIT_CARD",
+          "transaction_type": "DEBIT" | "CREDIT",
+          "extracted_date": "YYYY-MM-DD" | null
+        }}
         """
-        data = await self.llm.generate_json(prompt, temperature=0.1, timeout=20.0)
-        if data:
-            rule_result["merchant_name"] = data.get("merchant_name") or rule_result["merchant_name"]
-            rule_result["category"] = data.get("category") or rule_result["category"]
-            rule_result["sub_category"] = data.get("sub_category") or rule_result["sub_category"]
-        return rule_result
 
-    async def _groq_full_extract(self, text: str, categories_context: List[str] = None, user_id: uuid.UUID = None) -> dict:
-        """Full Groq extraction — called only as last resort for unusual email formats."""
-        cat_str = "Valid Categories: Food, Transport, Shopping, Housing, Bills & Utilities, Investment, Income, Entertainment, Medical, Personal Care"
-        if categories_context:
-            cat_str = "Categories:\n" + "\n".join([f"- {c}" for c in categories_context[:20]])
+        # Stage 1: Try Local LLM
+        data = await self.llm.generate_json(prompt, temperature=0.1)
+        
+        # Stage 2: Fallback to Groq if Local fails or returns non-transaction
+        if not data and self.llm.groq_api_key:
+            logger.warning(f"[Brain:{user_id}] Local LLM failed. Falling back to Groq.")
+            data = await self.llm.generate_json(prompt, temperature=0.1)
 
-        prompt = f"""
-        Extract transaction details from this bank notification:
-        Text: "{text[:1500]}"
-
-        {cat_str}
-
-        Return ONLY a JSON object:
-        {{"amount": float, "currency": "INR", "merchant_name": string, "category": string,
-          "sub_category": string, "account_type": "SAVINGS|CREDIT_CARD|CASH", "transaction_type": "DEBIT|CREDIT"}}
-
-        If this is NOT a transaction email, return null.
-        """
-        data = await self.llm.generate_json(prompt, temperature=0.1, timeout=25.0)
-        if data:
-            amt_raw = data.get("amount")
-            amt = float(amt_raw) if amt_raw is not None else 0.0
-            logger.info(f"[Brain:{user_id}] Source=GROQ_FULL. Amount={amt} Merchant={data.get('merchant_name')}")
+        if data and data.get("is_transaction"):
+            logger.info(f"[Brain:{user_id}] Extracted: ₹{data.get('amount')} | Merchant: {data.get('merchant_name')}")
+            # Ensure required fields exist even if LLM missed them
             return {
-                "amount": amt,
-                "currency": data.get("currency", "INR") or "INR",
-                "merchant_name": data.get("merchant_name", "UNKNOWN") or "UNKNOWN",
-                "category": data.get("category", "Uncategorized") or "Uncategorized",
-                "sub_category": data.get("sub_category", "Uncategorized") or "Uncategorized",
-                "account_type": data.get("account_type", "SAVINGS") or "SAVINGS",
-                "transaction_type": data.get("transaction_type", "DEBIT") or "DEBIT",
-                "extracted_date": None,
+                "amount": float(data.get("amount") or 0.0),
+                "currency": data.get("currency") or "INR",
+                "merchant_name": (data.get("merchant_name") or "UNKNOWN").title(),
+                "category": data.get("category") or "Uncategorized",
+                "sub_category": data.get("sub_category") or "Uncategorized",
+                "account_type": data.get("account_type") or "SAVINGS",
+                "transaction_type": data.get("transaction_type") or "DEBIT",
+                "extracted_date": data.get("extracted_date")
             }
+
         return self._fallback_txn()
 
     def _fallback_txn(self) -> dict:
