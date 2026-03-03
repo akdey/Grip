@@ -47,8 +47,16 @@ class LocalLLMEngine:
                 # Check for model existence. Use absolute path for reliability in Docker containers.
                 model_path = os.path.abspath(os.path.join(self.models_dir, self.filename))
                 logger.info(f"LocalLLMEngine: Checking for model at {model_path}")
+                
+                if os.path.exists(model_path):
+                    file_size = os.path.getsize(model_path)
+                    logger.info(f"LocalLLMEngine: Model file found. Size: {file_size / (1024*1024):.2f} MB")
+                    if file_size < 100 * 1024 * 1024: # Less than 100MB is likely a pointer/corrupted for a 1.7B model
+                        logger.warning(f"LocalLLMEngine: Model file seems too small ({file_size} bytes). It might be an LFS pointer. Re-downloading...")
+                        os.remove(model_path)
+                
                 if not os.path.exists(model_path):
-                    logger.warning(f"LocalLLMEngine: Model not found at expected path. Attempting download from {self.repo_id}...")
+                    logger.warning(f"LocalLLMEngine: Model not found at expected path or removed. Attempting download from {self.repo_id}...")
                     downloaded_path = hf_hub_download(
                         repo_id=self.repo_id,
                         filename=self.filename,
@@ -56,6 +64,7 @@ class LocalLLMEngine:
                         local_dir_use_symlinks=False
                     )
                     model_path = os.path.abspath(downloaded_path)
+                    logger.info(f"LocalLLMEngine: Download complete. Size: {os.path.getsize(model_path) / (1024*1024):.2f} MB")
                 
                 # Initialize Llama-cpp with strictly limited resources
                 # n_ctx: 1024 - Sufficient for transaction extraction, saves ~500MB RAM

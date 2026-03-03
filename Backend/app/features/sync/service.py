@@ -138,15 +138,12 @@ class SyncService:
         """
 
         # Stage 1: Try Local LLM
-        logger.info(f"[Brain:{user_id}] Attempting extraction with Local LLM (SmolLM2)...")
         data = await self.llm.generate_json(prompt, temperature=0.1)
         
         # Stage 2: Fallback to Groq if Local fails or returns non-transaction
         if not data and self.llm.groq_api_key:
-            logger.warning(f"[Brain:{user_id}] Local LLM failed to return data. Falling back to Groq ({self.llm.groq_model})...")
-            data = await self.llm.generate_json(prompt, temperature=0.1, engine="groq")
-        elif not data:
-            logger.error(f"[Brain:{user_id}] Local LLM failed and no Groq fallback available.")
+            logger.warning(f"[Brain:{user_id}] Local LLM failed. Falling back to Groq.")
+            data = await self.llm.generate_json(prompt, temperature=0.1)
 
         if data and data.get("is_transaction"):
             logger.info(f"[Brain:{user_id}] Extracted: ₹{data.get('amount')} | Merchant: {data.get('merchant_name')}")
