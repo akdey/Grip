@@ -8,14 +8,9 @@ import threading
 from typing import Optional, Dict, Any, List
 from app.core.config import get_settings
 
-# Attempt to import llama-cpp-python. 
-# It might fail if not installed or on unsupported hardware.
-try:
-    from llama_cpp import Llama
-    from huggingface_hub import hf_hub_download
-    HAS_LLAMA_CPP = True
-except ImportError:
-    HAS_LLAMA_CPP = False
+# We will lazy-import llama_cpp and huggingface_hub inside the methods to prevent 
+# module-level loading hangs during uvicorn worker startup.
+HAS_LLAMA_CPP = True # We assume true if the requirement is in the image, will check at runtime
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -30,14 +25,17 @@ class LocalLLMEngine:
         self.filename = settings.LOCAL_MODEL_FILE
         self.models_dir = settings.LOCAL_MODEL_DIR
         
-    def _ensure_model(self) -> Optional[Llama]:
+    def _ensure_model(self):
         """Lazy load and potentially download the model. Thread-safe."""
         with self._lock:
             if self._model:
                 return self._model
                 
-            if not HAS_LLAMA_CPP:
-                logger.error("llama-cpp-python not installed. Cannot use local LLM.")
+            try:
+                from llama_cpp import Llama
+                from huggingface_hub import hf_hub_download
+            except ImportError:
+                logger.error("llama-cpp-python or huggingface-hub not installed. Cannot use local LLM.")
                 return None
                 
             try:

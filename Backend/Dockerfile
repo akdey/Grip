@@ -42,6 +42,6 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 7860
 
-# Command to run the application using uvicorn with 2 workers
-# SmolLM2 is light enough to scale to 2 workers safely on a CPU Space with 16GB RAM.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "2"]
+# Command to run the application using uvicorn with a single worker
+# Reverting to 1 worker for debugging startup hangs on HF Spaces.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]
