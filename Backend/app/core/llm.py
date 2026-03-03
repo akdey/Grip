@@ -8,6 +8,8 @@ import threading
 from typing import Optional, Dict, Any, List
 from app.core.config import get_settings
 
+print(">>> LLM MODULE IMPORTED", flush=True)
+
 # We will lazy-import llama_cpp and huggingface_hub inside the methods to prevent 
 # module-level loading hangs during uvicorn worker startup.
 HAS_LLAMA_CPP = True # We assume true if the requirement is in the image, will check at runtime
@@ -161,16 +163,20 @@ class LLMService:
                     temperature
                 )
                 if res:
+                    logger.info(">>> LLM_ENGINE: Local (SmolLM2) success.")
                     return res
-                logger.warning("Local engine failed to produce a response.")
+                logger.warning(">>> LLM_ENGINE: Local engine failed or returned empty.")
             except Exception as e:
-                logger.warning(f"Local engine execution error: {e}")
+                logger.warning(f">>> LLM_ENGINE: Local engine error: {e}")
 
         # 2. Try Groq (Fallback — external API, sanitize content)
         if self.groq_api_key:
-            logger.info("Attempting Groq fallback...")
+            logger.info(f">>> LLM_ENGINE: Falling back to Groq ({self.groq_model})...")
             sanitized_prompt = self._sanitize_for_external(prompt)
-            return await self._call_groq(sanitized_prompt, system_prompt, temperature, response_format, timeout)
+            result = await self._call_groq(sanitized_prompt, system_prompt, temperature, response_format, timeout)
+            if result:
+                logger.info(">>> LLM_ENGINE: Groq success.")
+            return result
             
         logger.warning("No LLM service (Local or Groq) is available.")
         return None
