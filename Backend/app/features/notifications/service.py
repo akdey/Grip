@@ -114,12 +114,11 @@ class NotificationService:
         
         if self.llm.is_enabled:
             prompt = f"""
-            Persona: Witty, high-end, slightly futuristic financial AI. 
-            Task: Write a funny, premium welcome message for {name}. 
-            - Mention that they are now 'Initiated' into personal financial intelligence.
-            - Be cheeky about their previous 'manual' life and how Grip will mind their money for them.
-            - Max 40 words. No quotes, no markdown.
-            Example: 'Initiation complete, {name}. Your bank balance has been waiting for an adult to take over. Grip is now active. We'll mind the pennies while you focus on the vision.'
+            Task: Write a witty, premium welcome message for {name}. 
+            Context: They just joined Grip, an autonomous financial intelligence hub.
+            - Persona: Futuristic, cheeky financial AI.
+            - Max 30 words. No quotes.
+            Example: 'Initiation complete, {name}. I'm now minding your balance while you focus on the vision. Welcome to the hub.'
             """
             resp = await self.llm.generate_response(prompt, temperature=0.8, timeout=30.0)
             if resp:
