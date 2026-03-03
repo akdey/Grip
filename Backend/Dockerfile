@@ -26,8 +26,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install llama-cpp-python using pre-built CPU-only wheels
-RUN pip install llama-cpp-python==0.2.76 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
+# Install llama-cpp-python using pre-built CPU-only wheels (v0.3.1 for modern GGUF support)
+RUN pip install llama-cpp-python==0.3.1 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
 
 # Pre-download the model into the image for instant startup
 # Using SmolLM2-1.7B (Instruct-GGUF) - much lighter (~1GB) and faster
