@@ -4,6 +4,7 @@ import httpx
 import json
 import asyncio
 import os
+import threading
 from typing import Optional, Dict, Any, List
 from app.core.config import get_settings
 
@@ -24,47 +25,49 @@ class LocalLLMEngine:
     
     def __init__(self):
         self._model = None
+        self._lock = threading.Lock()
         self.repo_id = settings.LOCAL_MODEL_REPO
         self.filename = settings.LOCAL_MODEL_FILE
         self.models_dir = settings.LOCAL_MODEL_DIR
         
     def _ensure_model(self) -> Optional[Llama]:
-        """Lazy load and potentially download the model."""
-        if self._model:
-            return self._model
-            
-        if not HAS_LLAMA_CPP:
-            logger.error("llama-cpp-python not installed. Cannot use local LLM.")
-            return None
-            
-        try:
-            # Create models directory if it doesn't exist
-            os.makedirs(self.models_dir, exist_ok=True)
-            
-            # Download model if not exists
-            model_path = os.path.join(self.models_dir, self.filename)
-            if not os.path.exists(model_path):
-                logger.info(f"Downloading model {self.filename} from {self.repo_id}...")
-                model_path = hf_hub_download(
-                    repo_id=self.repo_id,
-                    filename=self.filename,
-                    local_dir=self.models_dir
+        """Lazy load and potentially download the model. Thread-safe."""
+        with self._lock:
+            if self._model:
+                return self._model
+                
+            if not HAS_LLAMA_CPP:
+                logger.error("llama-cpp-python not installed. Cannot use local LLM.")
+                return None
+                
+            try:
+                # Create models directory if it doesn't exist
+                os.makedirs(self.models_dir, exist_ok=True)
+                
+                # Download model if not exists (redundant since we pre-download in Docker, but keep for robustness)
+                model_path = os.path.join(self.models_dir, self.filename)
+                if not os.path.exists(model_path):
+                    logger.info(f"Downloading model {self.filename} from {self.repo_id}...")
+                    model_path = hf_hub_download(
+                        repo_id=self.repo_id,
+                        filename=self.filename,
+                        local_dir=self.models_dir
+                    )
+                
+                # Initialize Llama-cpp
+                # Using a smaller context window (2048) and low n_threads for resource-constrained envs
+                self._model = Llama(
+                    model_path=model_path,
+                    n_ctx=2048,
+                    n_threads=os.cpu_count() or 2,
+                    n_gpu_layers=0, # Force CPU for HF Free Tier compat
+                    verbose=False
                 )
-            
-            # Initialize Llama-cpp
-            # Using a smaller context window (2048) and low n_threads for resource-constrained envs
-            self._model = Llama(
-                model_path=model_path,
-                n_ctx=2048,
-                n_threads=os.cpu_count() or 2,
-                n_gpu_layers=0, # Force CPU for HF Free Tier compat
-                verbose=False
-            )
-            logger.info("Local LLM engine initialized successfully.")
-            return self._model
-        except Exception as e:
-            logger.error(f"Failed to initialize local LLM engine: {e}")
-            return None
+                logger.info("Local LLM engine initialized successfully.")
+                return self._model
+            except Exception as e:
+                logger.error(f"Failed to initialize local LLM engine: {e}")
+                return None
 
     def generate(self, prompt: str, system_prompt: str, temperature: float) -> Optional[str]:
         """Generate response using the local model."""
