@@ -13,6 +13,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    musl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables for better stability with Stan (Prophet) and Llama-cpp
@@ -27,8 +28,8 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install llama-cpp-python using pre-built CPU-only wheels.
-# Upgraded to 0.2.90 for better GGUF compatibility with newer models like SmolLM2.
-RUN pip install llama-cpp-python==0.2.90 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
+# Using 0.2.89 as it has better glibc/manylinux compatibility on the CPU index.
+RUN pip install llama-cpp-python==0.2.89 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
 
 # Pre-download the model into the image for instant startup
 # Using SmolLM2-1.7B (Instruct-GGUF) - much lighter (~1GB) and faster
