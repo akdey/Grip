@@ -34,7 +34,7 @@ RUN pip install llama-cpp-python==0.2.89 --extra-index-url https://abetlen.githu
 # Pre-download the model into the image for instant startup
 # Using SmolLM2-1.7B (Instruct-GGUF) - much lighter (~1GB) and faster
 RUN mkdir -p models && \
-    python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id='HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF', filename='smollm2-1.7b-instruct-q4_k_m.gguf', local_dir='models', local_dir_use_symlinks=False)"
+    python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id='HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF', filename='smollm2-1.7b-instruct-q4_k_m.gguf', local_dir='models')"
 
 # Copy the rest of the application code
 COPY . .

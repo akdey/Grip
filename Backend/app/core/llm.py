@@ -60,8 +60,7 @@ class LocalLLMEngine:
                     downloaded_path = hf_hub_download(
                         repo_id=self.repo_id,
                         filename=self.filename,
-                        local_dir=self.models_dir,
-                        local_dir_use_symlinks=False
+                        local_dir=self.models_dir
                     )
                     model_path = os.path.abspath(downloaded_path)
                     logger.info(f"LocalLLMEngine: Download complete. Size: {os.path.getsize(model_path) / (1024*1024):.2f} MB")
