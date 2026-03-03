@@ -3,10 +3,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 import logging
+from app.core.logging_config import setup_logging
+
+# Initialize logging before any feature-specific imports
+setup_logging()
 
 from app.core.config import get_settings
 from app.core.database import engine, Base
-from app.core.logging_config import setup_logging
 from app.core.middleware import AuthenticationMiddleware
 
 from app.features.auth.router import router as auth_router
@@ -23,7 +26,6 @@ from app.features.export.router import router as export_router
 from app.features.wealth.router import router as wealth_router
 from app.features.sync.models import SyncLog 
 
-setup_logging()
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
