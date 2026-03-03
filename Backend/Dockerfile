@@ -17,9 +17,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
-# Install llama-cpp-python using pre-built CPU-only wheels to avoid long build times on HF Space
-RUN pip install llama-cpp-python --no-cache-dir --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+# Install llama-cpp-python using pre-built CPU-only wheels. 
+# Using --only-binary to ensure we don't accidentally start a 20-minute source build.
+RUN pip install llama-cpp-python==0.2.76 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
 
 # Copy the rest of the application code
 COPY . .
