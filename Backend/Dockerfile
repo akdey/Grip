@@ -26,8 +26,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install llama-cpp-python using pre-built CPU-only wheels (v0.3.1 for modern GGUF support)
-RUN pip install llama-cpp-python==0.3.1 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
+# Install llama-cpp-python using pre-built CPU-only wheels.
+# Upgraded to 0.2.90 for better GGUF compatibility with newer models like SmolLM2.
+RUN pip install llama-cpp-python==0.2.90 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
 
 # Pre-download the model into the image for instant startup
 # Using SmolLM2-1.7B (Instruct-GGUF) - much lighter (~1GB) and faster
@@ -40,6 +41,6 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 7860
 
-# Command to run the application using uvicorn with multiple workers
-# SmolLM2 is light enough to scale to 4 workers safely on a CPU Space with 16GB RAM.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "4"]
+# Command to run the application using uvicorn with 2 workers
+# SmolLM2 is light enough to scale to 2 workers safely on a CPU Space with 16GB RAM.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "2"]
