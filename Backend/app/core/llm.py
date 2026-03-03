@@ -44,26 +44,29 @@ class LocalLLMEngine:
                 # Create models directory if it doesn't exist
                 os.makedirs(self.models_dir, exist_ok=True)
                 
-                # Download model if not exists (redundant since we pre-download in Docker, but keep for robustness)
-                model_path = os.path.join(self.models_dir, self.filename)
+                # Check for model existence. Use absolute path for reliability in Docker containers.
+                model_path = os.path.abspath(os.path.join(self.models_dir, self.filename))
                 if not os.path.exists(model_path):
                     logger.info(f"Downloading model {self.filename} from {self.repo_id}...")
-                    model_path = hf_hub_download(
+                    downloaded_path = hf_hub_download(
                         repo_id=self.repo_id,
                         filename=self.filename,
-                        local_dir=self.models_dir
+                        local_dir=self.models_dir,
+                        local_dir_use_symlinks=False
                     )
+                    model_path = os.path.abspath(downloaded_path)
                 
-                # Initialize Llama-cpp
-                # Using a smaller context window (2048) and low n_threads for resource-constrained envs
+                # Initialize Llama-cpp with strictly limited resources
+                # n_ctx: 1024 - Sufficient for transaction extraction, saves ~500MB RAM
+                # n_threads: 1 - Prevents CPU contention with Prophet/Stan workers
                 self._model = Llama(
                     model_path=model_path,
-                    n_ctx=2048,
-                    n_threads=os.cpu_count() or 2,
-                    n_gpu_layers=0, # Force CPU for HF Free Tier compat
+                    n_ctx=1024,
+                    n_threads=1,
+                    n_gpu_layers=0, # Force CPU
                     verbose=False
                 )
-                logger.info("Local LLM engine initialized successfully.")
+                logger.info(f"Local LLM engine initialized successfully (ctx: 1024, threads: 1).")
                 return self._model
             except Exception as e:
                 logger.error(f"Failed to initialize local LLM engine: {e}")
