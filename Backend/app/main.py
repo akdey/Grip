@@ -3,10 +3,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 import logging
+# THE MOST EARLY LOG POSSIBLE
+print(">>> GRIP BACKEND STARTING UP...", flush=True)
+
 from app.core.logging_config import setup_logging
 
 # Initialize logging before any feature-specific imports
 setup_logging()
+print(">>> LOGGING SYSTEM READY", flush=True)
 
 from app.core.config import get_settings
 from app.core.database import engine, Base
