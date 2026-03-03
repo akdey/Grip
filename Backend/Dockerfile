@@ -30,8 +30,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install llama-cpp-python==0.2.76 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
 
 # Pre-download the model into the image for instant startup
+# Using SmolLM2-1.7B (Instruct-GGUF) - much lighter (~1GB) and faster
 RUN mkdir -p models && \
-    python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id='microsoft/Phi-3-mini-4k-instruct-gguf', filename='Phi-3-mini-4k-instruct-q4.gguf', local_dir='models', local_dir_use_symlinks=False)"
+    python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id='HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF', filename='smollm2-1.7b-instruct-q4_k_m.gguf', local_dir='models', local_dir_use_symlinks=False)"
 
 # Copy the rest of the application code
 COPY . .
@@ -39,6 +40,6 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 7860
 
-# Command to run the application using uvicorn with a single worker
-# Using a single worker prevents memory/native resource contention between fork processes on HF Spaces.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]
+# Command to run the application using uvicorn with multiple workers
+# SmolLM2 is light enough to scale to 4 workers safely on a CPU Space with 16GB RAM.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "4"]

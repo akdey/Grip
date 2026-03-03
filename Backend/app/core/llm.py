@@ -46,8 +46,9 @@ class LocalLLMEngine:
                 
                 # Check for model existence. Use absolute path for reliability in Docker containers.
                 model_path = os.path.abspath(os.path.join(self.models_dir, self.filename))
+                logger.info(f"LocalLLMEngine: Checking for model at {model_path}")
                 if not os.path.exists(model_path):
-                    logger.info(f"Downloading model {self.filename} from {self.repo_id}...")
+                    logger.warning(f"LocalLLMEngine: Model not found at expected path. Attempting download from {self.repo_id}...")
                     downloaded_path = hf_hub_download(
                         repo_id=self.repo_id,
                         filename=self.filename,
@@ -79,18 +80,20 @@ class LocalLLMEngine:
             return None
             
         try:
-            # Format prompt for Phi-3 (Instruct template)
-            # <|system|> system_prompt <|end|> <|user|> prompt <|end|> <|assistant|>
-            formatted_prompt = f"<|system|>\n{system_prompt}<|end|>\n<|user|>\n{prompt}<|end|>\n<|assistant|>\n"
+            # Format prompt for SmolLM2 (ChatML-style template)
+            formatted_prompt = f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
             
+            logger.debug(f"LocalLLMEngine: Starting inference with SmolLM2...")
             output = model(
                 formatted_prompt,
-                max_tokens=512,
+                max_tokens=600, # Increased slightly for longer mail drafts
                 temperature=temperature,
-                stop=["<|end|>", "</s>"],
+                stop=["<|im_end|>", "<|endoftext|>"],
                 echo=False
             )
-            return output['choices'][0]['text'].strip()
+            text = output['choices'][0]['text'].strip()
+            logger.info(f"LocalLLMEngine: Inference complete. Generated {len(text)} characters.")
+            return text
         except Exception as e:
             logger.error(f"Error during local LLM inference: {e}")
             return None
