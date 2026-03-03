@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV OMP_NUM_THREADS 1
 ENV MKL_NUM_THREADS 1
 ENV OPENBLAS_NUM_THREADS 1
-ENV LLAMA_NO_AVX 1
+ENV KMP_DUPLICATE_LIB_OK TRUE
 
 # Install Python dependencies
 COPY requirements.txt .
@@ -29,8 +29,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install llama-cpp-python using pre-built CPU-only wheels
 RUN pip install llama-cpp-python==0.2.76 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
 
-# Pre-download the model into the image for instant startup. 
-# Explicitly disable symlinks to ensure the file is at the exact path app/models/Phi-3...
+# Pre-download the model into the image for instant startup
 RUN mkdir -p models && \
     python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id='microsoft/Phi-3-mini-4k-instruct-gguf', filename='Phi-3-mini-4k-instruct-q4.gguf', local_dir='models', local_dir_use_symlinks=False)"
 
@@ -40,5 +39,6 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 7860
 
-# Command to run the application using uvicorn directly
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+# Command to run the application using uvicorn with a single worker
+# Using a single worker prevents memory/native resource contention between fork processes on HF Spaces.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]
