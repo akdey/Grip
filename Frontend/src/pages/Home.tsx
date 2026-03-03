@@ -17,9 +17,9 @@ const Home: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white selection:bg-cyan-500/30 font-sans">
+        <div className="min-h-screen text-white selection:bg-cyan-500/30 font-sans">
             {/* Header / Nav */}
-            <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#050505]/80 backdrop-blur-3xl">
+            <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-transparent backdrop-blur-3xl">
                 <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Logo size={32} />
@@ -129,7 +129,7 @@ const Home: React.FC = () => {
             </main>
 
             {/* Footer */}
-            <footer className="border-t border-white/5 py-24 mt-40 bg-gradient-to-b from-transparent to-black/40">
+            <footer className="border-t border-white/5 py-24 mt-40">
                 <div className="max-w-7xl mx-auto px-6">
                     <div className="flex flex-col md:flex-row justify-between items-start gap-16 mb-20">
                         <div className="space-y-6">

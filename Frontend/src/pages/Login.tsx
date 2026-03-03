@@ -131,7 +131,7 @@ const Login: React.FC = () => {
     }
 
     return (
-        <div className="h-screen w-full flex flex-col items-center justify-center p-4 bg-[#050505] text-white selection:bg-cyan-500/30 overflow-hidden">
+        <div className="h-screen w-full flex flex-col items-center justify-center p-4 text-white selection:bg-cyan-500/30 overflow-hidden">
             <div className="w-full max-w-md space-y-8 animate-enter flex flex-col items-stretch">
                 <div className="text-center space-y-4">
                     <div className="flex justify-center">
@@ -222,7 +222,7 @@ const Login: React.FC = () => {
                             <div className="space-y-4">
                                 <div className="relative flex items-center justify-center">
                                     <div className="border-t border-white/5 w-full"></div>
-                                    <span className="bg-[#050505] px-4 text-[7px] font-black uppercase tracking-[3px] text-gray-700 absolute">OR</span>
+                                    <span className="bg-transparent backdrop-blur-md px-4 text-[7px] font-black uppercase tracking-[3px] text-gray-700 absolute">OR</span>
                                 </div>
 
                                 <div id="googleSyncBtn" className="w-full flex justify-center !rounded-xl overflow-hidden opacity-80 hover:opacity-100 transition-opacity"></div>
