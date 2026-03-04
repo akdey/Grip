@@ -43,7 +43,7 @@ export const AIForecast: React.FC<AIForecastProps> = memo(({
                     <div className={`w-6 h-6 rounded-full ${forecast?.confidence === 'low' ? 'bg-amber-400/10 text-amber-400' : 'bg-cyan-400/10 text-cyan-400'} flex items-center justify-center`}>
                         <Activity size={14} />
                     </div>
-                    <h2 className="text-[9px] font-black uppercase tracking-[3px] text-white/40">AI Forecast (30d)</h2>
+                    <h2 className="text-[9px] font-black uppercase tracking-[3px] text-white/40">Next Month Forecast</h2>
                     {forecast?.confidence === 'low' && (
                         <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
                             ⚠ Low Data
