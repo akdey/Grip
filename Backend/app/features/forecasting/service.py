@@ -56,13 +56,13 @@ class ForecastingService:
         use_prophet = settings.USE_AI_FORECASTING and PROPHET_AVAILABLE
         
         if use_prophet:
-            return await self._calculate_prophet_categorywise(category_daily_history, next_month_start, next_month_end, time_frame_str)
+            return await self._calculate_prophet_categorywise(category_daily_history, monthly_breakdown, next_month_start, next_month_end, time_frame_str)
         
         # Fallback to LLM for basic total if Prophet is missing (though user wants Prophet)
         return await self._calculate_llm(category_daily_history, monthly_breakdown, time_frame_str, days_in_next_month)
 
-    async def _calculate_prophet_categorywise(self, category_daily_history: List[dict], start_date: date, end_date: date, time_frame: str) -> ForecastResponse:
-        """Forecast for each category individually using Prophet."""
+    async def _calculate_prophet_categorywise(self, category_daily_history: List[dict], monthly_breakdown: List[dict], start_date: date, end_date: date, time_frame: str) -> ForecastResponse:
+        """Forecast for each category individually using Prophet or Fixed Expense logic."""
         
         if not category_daily_history:
              return ForecastResponse(amount=Decimal("0.00"), reason="No historical data found.", time_frame=time_frame, confidence="low")
@@ -74,8 +74,18 @@ class ForecastingService:
                 
             categories = df_all['category'].unique()
             
+            # Map monthly breakdown for easier recurring check
+            # monthly_breakdown: [ { "month": "2023-10", "categories": {...} }, ... ]
+            cat_monthly_totals = {} 
+            for month_data in monthly_breakdown:
+                for cat, amount in month_data.get("categories", {}).items():
+                    if cat not in cat_monthly_totals:
+                        cat_monthly_totals[cat] = []
+                    cat_monthly_totals[cat].append(amount)
+
             breakdown = []
             total_amount = Decimal("0.00")
+            total_history_days = 120 # From router days=120
             
             # Determine days to predict (from max historical date until end of next month)
             max_history_date = pd.to_datetime(df_all['ds']).max()
@@ -88,15 +98,21 @@ class ForecastingService:
                 cat_df = df_all[df_all['category'] == cat][['ds', 'y']].copy()
                 cat_df['ds'] = pd.to_datetime(cat_df['ds'])
                 
-                # Check for enough unique dates and variation
-                if len(cat_df) < 10 or cat_df['y'].sum() == 0:
-                    # Fallback: simple average
-                    avg_daily = cat_df['y'].mean() if not cat_df.empty else 0
-                    cat_total = Decimal(str(round(avg_daily * 30, 2)))
-                    reason = "Insufficient history for AI; used historical average."
-                else:
+                # 1. FIXED/RECURRING DETECTION
+                monthly_values = cat_monthly_totals.get(cat, [])
+                # If it appears in at least 2 of last 4 months, and has few points (typically 1-2) per month
+                is_recurring = len(monthly_values) >= 2 and (len(cat_df) / len(monthly_values)) <= 3
+                
+                if is_recurring:
+                    import statistics
+                    # Use median to avoid being skewed by outliers
+                    predicted_monthly = statistics.median(monthly_values)
+                    cat_total = Decimal(str(max(0, round(predicted_monthly, 2))))
+                    reason = "Identified as recurring monthly expense (e.g. Rent, Bill, SIP)."
+                
+                # 2. PROPHET FOR FREQUENT DISCRETIONARY
+                elif len(cat_df) >= 15:
                     try:
-                        # Create model with more robust settings for sparse data
                         m = Prophet(
                             daily_seasonality=False,
                             weekly_seasonality=True,
@@ -107,7 +123,6 @@ class ForecastingService:
                         future = m.make_future_dataframe(periods=days_to_predict)
                         forecast = m.predict(future)
                         
-                        # Filter for only the next month range
                         start_dt = pd.to_datetime(start_date)
                         end_dt = pd.to_datetime(end_date)
                         mask = (forecast['ds'] >= start_dt) & (forecast['ds'] <= end_dt)
@@ -117,11 +132,18 @@ class ForecastingService:
                         reason = "Statistically forecasted using category historical trends."
                     except Exception as e:
                         logger.error(f"Error forecasting category {cat}: {e}")
-                        avg_daily = cat_df['y'].mean() if not cat_df.empty else 0
-                        cat_total = Decimal(str(round(avg_daily * 30, 2)))
-                        reason = "Forecasting model error; used average fallback."
+                        avg_daily = cat_df['y'].sum() / total_history_days
+                        cat_total = Decimal(str(max(0, round(avg_daily * 30, 2))))
+                        reason = "Forecasting model error; used daily average fallback."
                 
-                if cat_total > 0:
+                # 3. FALLBACK: CORRECTED AVERAGE
+                else:
+                    # Divisor MUST be the total time span to avoid over-projecting infrequent but non-recurring items
+                    avg_daily = cat_df['y'].sum() / total_history_days
+                    cat_total = Decimal(str(max(0, round(avg_daily * 30, 2))))
+                    reason = "Forecasted based on 120-day historical average."
+                
+                if cat_total > 30: # Filter out noise
                     breakdown.append(CategoryForecast(
                         category=cat,
                         predicted_amount=cat_total,
@@ -129,15 +151,23 @@ class ForecastingService:
                     ))
                     total_amount += cat_total
             
-            # Sort breakdown by amount
             breakdown.sort(key=lambda x: x.predicted_amount, reverse=True)
             
             return ForecastResponse(
                 amount=total_amount,
-                reason=f"Aggregate category-wise forecast for {len(breakdown)} categories.",
+                reason=f"Aggregate forecast using 120 days of history, identifying recurring expenses and discretionary trends.",
                 time_frame=time_frame,
-                confidence="high" if len(breakdown) > 3 else "medium",
+                confidence="high",
                 breakdown=breakdown
+            )
+
+        except Exception as e:
+            logger.error(f"Prophet category forecasting error: {e}")
+            return ForecastResponse(
+                amount=Decimal("0.00"),
+                reason="System error during forecasting.",
+                time_frame=time_frame,
+                confidence="low"
             )
 
         except Exception as e:
