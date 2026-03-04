@@ -44,4 +44,4 @@ EXPOSE 7860
 
 # Command to run the application using uvicorn with a single worker
 # Reverting to 1 worker for debugging startup hangs on HF Spaces.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "2"]
