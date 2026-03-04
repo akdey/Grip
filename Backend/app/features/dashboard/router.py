@@ -8,7 +8,7 @@ from app.features.auth.deps import get_current_user
 from app.features.auth.models import User
 from app.features.transactions.models import Transaction
 
-from app.features.dashboard.service import get_daily_expenses, get_category_expenses_history, get_monthly_category_breakdown
+from app.features.dashboard.service import get_daily_expenses, get_category_expenses_history, get_monthly_category_breakdown, get_category_daily_expenses
 from app.features.forecasting.service import ForecastingService
 
 router = APIRouter()
@@ -97,17 +97,15 @@ async def get_financial_forecast(
     service: Annotated[ForecastingService, Depends()]
 ):
     # Execute data gathering in parallel
-    history_task = get_daily_expenses(db, current_user.id, days=120)
-    category_history_task = get_category_expenses_history(db, current_user.id, days=120)
+    category_daily_task = get_category_daily_expenses(db, current_user.id, days=120)
     monthly_breakdown_task = get_monthly_category_breakdown(db, current_user.id, months=4)
     
-    history, category_history, monthly_breakdown = await asyncio.gather(
-        history_task,
-        category_history_task,
+    category_daily, monthly_breakdown = await asyncio.gather(
+        category_daily_task,
         monthly_breakdown_task
     )
     
-    forecast = await service.calculate_safe_to_spend(history, category_history, monthly_breakdown)
+    forecast = await service.calculate_safe_to_spend(category_daily, monthly_breakdown)
     
     return {
         "predicted_burden_30d": forecast.amount,

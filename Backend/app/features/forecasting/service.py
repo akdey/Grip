@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 from datetime import date, timedelta
-from app.features.forecasting.schemas import ForecastResponse
+from app.features.forecasting.schemas import ForecastResponse, CategoryForecast
 from app.core.llm import get_llm_service, LLMService
 import calendar
 
@@ -34,88 +34,122 @@ class ForecastingService:
             self.llm = get_llm_service()
         
 
-    async def calculate_safe_to_spend(self, history_data: List[dict], category_history: List[dict], monthly_breakdown: List[dict] = []) -> ForecastResponse:
-        """Forecast upcoming expenses for the remainder of the current month."""
+    async def calculate_safe_to_spend(self, category_daily_history: List[dict], monthly_breakdown: List[dict] = []) -> ForecastResponse:
+        """Forecast upcoming expenses for the next full month."""
         today = date.today()
-        # Get last day of current month
-        _, last_day = calendar.monthrange(today.year, today.month)
-        end_date = date(today.year, today.month, last_day)
-        
-        # Calculate days remaining (inclusive of today)
-        days_to_predict = (end_date - today).days + 1
-        
-        # Format time frame string
-        if days_to_predict == 1:
-             time_frame_str = f"Today ({today.strftime('%b %d')})"
+        # Get first day of NEXT month
+        if today.month == 12:
+            next_month_start = date(today.year + 1, 1, 1)
         else:
-             time_frame_str = f"Rest of {today.strftime('%B')} ({days_to_predict} days)"
+            next_month_start = date(today.year, today.month + 1, 1)
+            
+        # Get last day of NEXT month
+        _, last_day = calendar.monthrange(next_month_start.year, next_month_start.month)
+        next_month_end = date(next_month_start.year, next_month_start.month, last_day)
+        
+        days_in_next_month = (next_month_end - next_month_start).days + 1
+        time_frame_str = f"Next Month ({next_month_start.strftime('%B %Y')})"
         
         # LOGIC:
-        # If USE_AI_FORECASTING is True AND Prophet is available -> Use Prophet for Number + LLM for Breakdown
-        # If USE_AI_FORECASTING is False (or Prophet missing) -> Use LLM for EVERYTHING
+        # User requested category-wise Prophet forecast.
         
         use_prophet = settings.USE_AI_FORECASTING and PROPHET_AVAILABLE
         
         if use_prophet:
-            return await self._calculate_prophet(history_data, category_history, time_frame_str, days_to_predict)
+            return await self._calculate_prophet_categorywise(category_daily_history, next_month_start, next_month_end, time_frame_str)
         
-        # Fallback to LLM
-        return await self._calculate_llm(history_data, category_history, monthly_breakdown, time_frame_str, days_to_predict)
+        # Fallback to LLM for basic total if Prophet is missing (though user wants Prophet)
+        return await self._calculate_llm(category_daily_history, monthly_breakdown, time_frame_str, days_in_next_month)
 
-    async def _calculate_prophet(self, history_data: List[dict], category_history: List[dict], time_frame: str, days: int) -> ForecastResponse:
-        default_response = ForecastResponse(
-            amount=Decimal("0.00"), 
-            reason="Insufficient history. Need at least 10 days of data.", 
-            time_frame=time_frame,
-            confidence="low",
-            breakdown=[]
-        )
+    async def _calculate_prophet_categorywise(self, category_daily_history: List[dict], start_date: date, end_date: date, time_frame: str) -> ForecastResponse:
+        """Forecast for each category individually using Prophet."""
         
-        if not history_data or len(history_data) < 10: # Lower threshold since we might be late in month
-             return default_response
+        if not category_daily_history:
+             return ForecastResponse(amount=Decimal("0.00"), reason="No historical data found.", time_frame=time_frame, confidence="low")
 
         try:
-            # 1. Calculate Total Amount using Prophet
-            df = pd.DataFrame(history_data)
-            df['ds'] = pd.to_datetime(df['ds'])
+            df_all = pd.DataFrame(category_daily_history)
+            if df_all.empty:
+                return ForecastResponse(amount=Decimal("0.00"), reason="No historical data found.", time_frame=time_frame, confidence="low")
+                
+            categories = df_all['category'].unique()
             
-            m = Prophet()
-            m.fit(df)
+            breakdown = []
+            total_amount = Decimal("0.00")
             
-            # Predict for N days
-            future = m.make_future_dataframe(periods=days)
-            forecast = m.predict(future)
+            # Determine days to predict (from max historical date until end of next month)
+            max_history_date = pd.to_datetime(df_all['ds']).max()
+            days_to_predict = (end_date - max_history_date.date()).days
             
-            last_date = df['ds'].max()
-            future_mask = forecast['ds'] > last_date
-            predicted_expenses = forecast[future_mask]['yhat'].sum()
+            if days_to_predict <= 0:
+                 return ForecastResponse(amount=Decimal("0.00"), reason="Data already covers the forecast period.", time_frame=time_frame)
+
+            for cat in categories:
+                cat_df = df_all[df_all['category'] == cat][['ds', 'y']].copy()
+                cat_df['ds'] = pd.to_datetime(cat_df['ds'])
+                
+                # Check for enough unique dates and variation
+                if len(cat_df) < 10 or cat_df['y'].sum() == 0:
+                    # Fallback: simple average
+                    avg_daily = cat_df['y'].mean() if not cat_df.empty else 0
+                    cat_total = Decimal(str(round(avg_daily * 30, 2)))
+                    reason = "Insufficient history for AI; used historical average."
+                else:
+                    try:
+                        # Create model with more robust settings for sparse data
+                        m = Prophet(
+                            daily_seasonality=False,
+                            weekly_seasonality=True,
+                            yearly_seasonality=False
+                        )
+                        m.fit(cat_df)
+                        
+                        future = m.make_future_dataframe(periods=days_to_predict)
+                        forecast = m.predict(future)
+                        
+                        # Filter for only the next month range
+                        start_dt = pd.to_datetime(start_date)
+                        end_dt = pd.to_datetime(end_date)
+                        mask = (forecast['ds'] >= start_dt) & (forecast['ds'] <= end_dt)
+                        predicted = forecast[mask]['yhat'].sum()
+                        
+                        cat_total = Decimal(str(max(0, round(predicted, 2))))
+                        reason = "Statistically forecasted using category historical trends."
+                    except Exception as e:
+                        logger.error(f"Error forecasting category {cat}: {e}")
+                        avg_daily = cat_df['y'].mean() if not cat_df.empty else 0
+                        cat_total = Decimal(str(round(avg_daily * 30, 2)))
+                        reason = "Forecasting model error; used average fallback."
+                
+                if cat_total > 0:
+                    breakdown.append(CategoryForecast(
+                        category=cat,
+                        predicted_amount=cat_total,
+                        reason=reason
+                    ))
+                    total_amount += cat_total
             
-            amount = Decimal(str(max(0, predicted_expenses)))
-            
-            # 2. Get Breakdown & Reason from LLM (using the Prophet Number as context)
-            if self.llm.is_enabled:
-                llm_response = await self._get_llm_breakdown(category_history, float(amount), days)
-                return ForecastResponse(
-                    amount=amount,
-                    reason=llm_response.get("reason", "Statistical forecast based on historical trends."),
-                    time_frame=time_frame,
-                    confidence="high",
-                    breakdown=llm_response.get("breakdown", [])
-                )
+            # Sort breakdown by amount
+            breakdown.sort(key=lambda x: x.predicted_amount, reverse=True)
             
             return ForecastResponse(
-                amount=amount,
-                reason=f"Calculated using additive regression model for the remaining {days} days.",
+                amount=total_amount,
+                reason=f"Aggregate category-wise forecast for {len(breakdown)} categories.",
                 time_frame=time_frame,
-                confidence="high",
-                breakdown=[]
+                confidence="high" if len(breakdown) > 3 else "medium",
+                breakdown=breakdown
             )
 
         except Exception as e:
-            logger.error(f"Prophet forecasting error: {e}")
-            return default_response
+            logger.error(f"Prophet category forecasting error: {e}")
+            return ForecastResponse(
+                amount=Decimal("0.00"),
+                reason="System error during forecasting.",
+                time_frame=time_frame,
+                confidence="low"
+            )
 
-    async def _calculate_llm(self, history_data: List[dict], category_history: List[dict], monthly_breakdown: List[dict], time_frame: str, days: int) -> ForecastResponse:
+    async def _calculate_llm(self, category_daily_history: List[dict], monthly_breakdown: List[dict], time_frame: str, days: int) -> ForecastResponse:
         """Use LLM to predict remaining month expenses."""
         default_response = ForecastResponse(
             amount=Decimal("0.00"), 
@@ -127,41 +161,39 @@ class ForecastingService:
         if not self.llm.is_enabled:
             return default_response
             
-        if not history_data or len(history_data) < 5:
+        if not category_daily_history or len(category_daily_history) < 5:
             return ForecastResponse(
                 amount=Decimal("0.00"),
-                reason="Need at least 5 days of transaction history to generate an AI forecast.",
+                reason="Need more historical data to generate an AI forecast.",
                 time_frame=time_frame,
                 confidence="low"
             )
 
         try:
-            # Prepare context
-            history_summary = [
-                {"date": d['ds'], "amount": float(d['y'])} 
-                for d in history_data[-90:] # Increase to last 90 days for better context
-            ]
+            # Prepare context for LLM from category daily history
+            df = pd.DataFrame(category_daily_history)
+            category_totals = df.groupby('category')['y'].sum().to_dict()
+            recent_daily = df.groupby('ds')['y'].sum().tail(90).to_dict()
             
             prompt = f"""
-            Analyze the following financial data to predict expenses for the REMAINING {days} DAYS of the current month.
+            Analyze the following financial data to predict expenses for the NEXT {days} DAYS (full month).
             
-            1. Daily History (Last 90 days): {json.dumps(history_summary)}
-            2. Category Totals (Last 90 days): {json.dumps(category_history)}
+            1. Daily History Summary: {json.dumps(recent_daily)}
+            2. Category Totals (Last 120 days): {json.dumps(category_totals)}
             3. Monthly Category Trends (Key for recurring bills like Rent): {json.dumps(monthly_breakdown)}
             
             Task:
-            - Analyze the 'Monthly Category Trends' to identify MISSING recurring payments for the current month (e.g., Rent, Insurance).
+            - Analyze the 'Monthly Category Trends' to identify recurring payments (e.g., Rent, Insurance).
             - Note: Categories starting with '_' like '_Rent' are explicit recurring bills.
-            - If a recurring bill (like Rent) was paid in previous months but NOT yet in the current month, YOU MUST INCLUDE IT in the forecast.
             - Predict discretionary spending based on 'Daily History'.
             
-            Return the TOTAL predicted expenses for the REMAINING {days} days.
+            Return the TOTAL predicted expenses for the full {days} day month.
             
             You must return a valid JSON object.
             Required JSON structure:
             {{
                 "predicted_total": float,
-                "reason": "short explanation highlighting if rent/bills were added",
+                "reason": "short explanation",
                 "breakdown": [
                     {{ "category": "string", "predicted_amount": float, "reason": "string" }}
                 ]
@@ -174,7 +206,7 @@ class ForecastingService:
             if data:
                 return ForecastResponse(
                     amount=Decimal(str(max(0, data.get("predicted_total", 0)))),
-                    reason=data.get("reason", "Based on deep analysis of spending cycles."),
+                    reason=data.get("reason", "Based on analysis of spending cycles."),
                     time_frame=time_frame,
                     confidence="medium",
                     breakdown=data.get("breakdown", [])

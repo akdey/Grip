@@ -148,3 +148,29 @@ async def get_monthly_category_breakdown(db: AsyncSession, user_id: str, months:
         
     return formatted
 
+
+async def get_category_daily_expenses(db: AsyncSession, user_id: str, days: int = 120):
+    """Return daily aggregated expenses by category for forecasting."""
+    start_date = (datetime.now() - timedelta(days=days)).date()
+    
+    stmt = (
+        select(
+            Transaction.category,
+            Transaction.transaction_date.label("day"),
+            func.sum(Transaction.amount).label("total")
+        )
+        .where(Transaction.user_id == user_id)
+        .where(Transaction.category != "Income")
+        .where(Transaction.transaction_date >= start_date)
+        .group_by(Transaction.category, "day")
+        .order_by(Transaction.category, "day")
+    )
+    
+    result = await db.execute(stmt)
+    rows = result.all()
+    
+    return [
+        {"category": row.category, "ds": row.day.isoformat(), "y": abs(float(row.total or 0))}
+        for row in rows
+        if row.day is not None
+    ]
