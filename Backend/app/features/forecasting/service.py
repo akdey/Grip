@@ -75,17 +75,23 @@ class ForecastingService:
             categories = df_all['category'].unique()
             
             # Map monthly breakdown for easier recurring check
-            # monthly_breakdown: [ { "month": "2023-10", "categories": {...} }, ... ]
+            # Filter out pseudo-categories starting with '_' to avoid mis-detecting trends
             cat_monthly_totals = {} 
             for month_data in monthly_breakdown:
                 for cat, amount in month_data.get("categories", {}).items():
+                    if cat.startswith("_"): continue
                     if cat not in cat_monthly_totals:
                         cat_monthly_totals[cat] = []
                     cat_monthly_totals[cat].append(amount)
 
             breakdown = []
             total_amount = Decimal("0.00")
-            total_history_days = 120 # From router days=120
+            
+            # Determine actual history days in the provided data
+            min_history_date = pd.to_datetime(df_all['ds']).min()
+            today = date.today()
+            total_history_days = (today - min_history_date.date()).days + 1
+            if total_history_days < 30: total_history_days = 120 # Fallback safety
             
             # Determine days to predict (from max historical date until end of next month)
             max_history_date = pd.to_datetime(df_all['ds']).max()
@@ -95,28 +101,38 @@ class ForecastingService:
                  return ForecastResponse(amount=Decimal("0.00"), reason="Data already covers the forecast period.", time_frame=time_frame)
 
             for cat in categories:
-                cat_df = df_all[df_all['category'] == cat][['ds', 'y']].copy()
-                cat_df['ds'] = pd.to_datetime(cat_df['ds'])
+                cat_df_raw = df_all[df_all['category'] == cat][['ds', 'y']].copy()
+                cat_df_raw['ds'] = pd.to_datetime(cat_df_raw['ds'])
                 
-                # 1. FIXED/RECURRING DETECTION
+                # 1. FIXED/RECURRING DETECTION (Most accurate for Rent, SIPs, etc.)
                 monthly_values = cat_monthly_totals.get(cat, [])
-                # If it appears in at least 2 of last 4 months, and has few points (typically 1-2) per month
-                is_recurring = len(monthly_values) >= 2 and (len(cat_df) / len(monthly_values)) <= 3
+                num_months = len(monthly_values)
+                num_txns = len(cat_df_raw)
+                
+                # If it appears monthly but rarely (1-2 txns per month), it's a fixed expense
+                is_recurring = num_months >= 1 and (num_txns / max(1, num_months)) <= 4
                 
                 if is_recurring:
                     import statistics
-                    # Use median to avoid being skewed by outliers
-                    predicted_monthly = statistics.median(monthly_values)
+                    # Use max or median for fixed costs
+                    predicted_monthly = statistics.median(monthly_values) if monthly_values else 0
                     cat_total = Decimal(str(max(0, round(predicted_monthly, 2))))
-                    reason = "Identified as recurring monthly expense (e.g. Rent, Bill, SIP)."
+                    reason = "Projected based on monthly recurring patterns (Rent/SIP/RD/Bills)."
                 
-                # 2. PROPHET FOR FREQUENT DISCRETIONARY
-                elif len(cat_df) >= 15:
+                # 2. PROPHET FOR FREQUENT DISCRETIONARY (Food, Shopping, etc.)
+                elif num_txns >= 15:
                     try:
+                        # CRITICAL: Fill in missing days with 0 so Prophet doesn't think 
+                        # a sparse expense is a daily expense.
+                        all_dates = pd.date_range(start=min_history_date, end=max_history_date, freq='D')
+                        cat_df = cat_df_raw.set_index('ds').reindex(all_dates, fill_value=0).reset_index()
+                        cat_df.columns = ['ds', 'y']
+
                         m = Prophet(
                             daily_seasonality=False,
                             weekly_seasonality=True,
-                            yearly_seasonality=False
+                            yearly_seasonality=False,
+                            changepoint_prior_scale=0.01 # Be conservative
                         )
                         m.fit(cat_df)
                         
@@ -128,22 +144,25 @@ class ForecastingService:
                         mask = (forecast['ds'] >= start_dt) & (forecast['ds'] <= end_dt)
                         predicted = forecast[mask]['yhat'].sum()
                         
+                        # Safety Cap: Forecast should not realistically exceed 2x the historical monthly average
+                        hist_monthly_avg = (cat_df_raw['y'].sum() / total_history_days) * 30
+                        predicted = min(predicted, hist_monthly_avg * 2)
+                        
                         cat_total = Decimal(str(max(0, round(predicted, 2))))
-                        reason = "Statistically forecasted using category historical trends."
+                        reason = f"Trend-based forecast using {num_txns} data points."
                     except Exception as e:
                         logger.error(f"Error forecasting category {cat}: {e}")
-                        avg_daily = cat_df['y'].sum() / total_history_days
+                        avg_daily = cat_df_raw['y'].sum() / total_history_days
                         cat_total = Decimal(str(max(0, round(avg_daily * 30, 2))))
-                        reason = "Forecasting model error; used daily average fallback."
+                        reason = "Forecasting model error; used historical monthly average."
                 
-                # 3. FALLBACK: CORRECTED AVERAGE
+                # 3. FALLBACK: SIMPLE MOVING AVERAGE
                 else:
-                    # Divisor MUST be the total time span to avoid over-projecting infrequent but non-recurring items
-                    avg_daily = cat_df['y'].sum() / total_history_days
+                    avg_daily = cat_df_raw['y'].sum() / total_history_days
                     cat_total = Decimal(str(max(0, round(avg_daily * 30, 2))))
-                    reason = "Forecasted based on 120-day historical average."
+                    reason = "Forecasted using 4-month daily spend average."
                 
-                if cat_total > 30: # Filter out noise
+                if cat_total > 50: # Filter out noise
                     breakdown.append(CategoryForecast(
                         category=cat,
                         predicted_amount=cat_total,
@@ -155,7 +174,7 @@ class ForecastingService:
             
             return ForecastResponse(
                 amount=total_amount,
-                reason=f"Aggregate forecast using 120 days of history, identifying recurring expenses and discretionary trends.",
+                reason=f"Multi-model forecast for {len(breakdown)} categories, optimized for monthly recurring expenses and discretionary trends.",
                 time_frame=time_frame,
                 confidence="high",
                 breakdown=breakdown
