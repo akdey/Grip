@@ -1,0 +1,54 @@
+name: Daily Database Backup
+
+on:
+  schedule:
+    # Runs at 00:00 UTC (5:30 AM IST)
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Dump Database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # Extract host, port, dbname, user from DATABASE_URL if needed, 
+          # but pg_dump can often take the full URL directly.
+          # Supabase URLs usually look like postgresql://postgres:[password]@db.[project-id].supabase.co:5432/postgres
+          pg_dump "$DATABASE_URL" > dump.sql
+          gzip dump.sql
+
+      - name: Push to Backup Repository
+        env:
+          BACKUP_PAT: ${{ secrets.BACKUP_PAT }}
+          # Update this to your backup repository URL
+          BACKUP_REPO: "https://x-access-token:${{ secrets.BACKUP_PAT }}@github.com/akdey/Grip-Backups.git"
+        run: |
+          git config --global user.email "backup-bot@grip.com"
+          git config --global user.name "Backup Bot"
+          
+          git clone "$BACKUP_REPO" backup-repo
+          cd backup-repo
+          
+          # Maintain 'latest.sql.gz' for quick access
+          cp ../dump.sql.gz latest.sql.gz
+          
+          # Maintain dated file (e.g., backup-2024-03-04.sql.gz)
+          DATED_FILE="backup-$(date +'%Y-%m-%d').sql.gz"
+          cp ../dump.sql.gz "$DATED_FILE"
+          
+          # Optional: Keep only last 7 days of dated files in the repo to keep it slim.
+          # Since it's Git, you can always go back to any date in history anyway.
+          ls -tp backup-*.sql.gz | grep -v '/$' | tail -n +8 | xargs -I {} rm -- {} || true
+          
+          git add .
+          git commit -m "Daily backup $(date +'%Y-%m-%d')"
+          git push origin main
