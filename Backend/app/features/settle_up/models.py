@@ -10,7 +10,7 @@ from app.features.auth.models import User
 from app.features.transactions.models import Transaction
 
 class LedgerEntry(Base):
-    __tablename__ = "ledger_entries"
+    __tablename__ = "settle_up_entries"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
