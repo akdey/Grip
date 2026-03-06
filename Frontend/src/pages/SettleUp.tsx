@@ -130,7 +130,7 @@ const SettleUp: React.FC = () => {
             />
 
             {/* Add Entry Drawer */}
-            <Drawer isOpen={showAddForm} onClose={() => setShowAddForm(false)} title="Add Record">
+            <Drawer isOpen={showAddForm} onClose={() => setShowAddForm(false)} title="Add Record" height="h-[90vh]">
                 <div className="space-y-6 px-2 pb-10">
                     {/* Info Note */}
                     <div className="flex items-start gap-3 p-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/10">
@@ -229,7 +229,7 @@ const PeerHistoryDrawer = ({
     const { data: history, isLoading } = usePeerHistory(peerName || '');
 
     return (
-        <Drawer isOpen={isOpen} onClose={onClose} title={peerName || ''}>
+        <Drawer isOpen={isOpen} onClose={onClose} title={peerName || ''} height="h-[90vh]">
             <div className="space-y-4 px-2 pb-10">
                 <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[3px] ml-1">Transaction History</p>
 
