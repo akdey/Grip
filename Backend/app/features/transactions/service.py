@@ -10,9 +10,15 @@ from app.features.transactions import schemas
 from app.features.transactions import schemas
 from app.features.categories.models import SubCategory
 from app.features.transactions.models import TransactionStatus
+from app.features.settle_up.models import LedgerEntry
 from app.core.database import get_db
 import logging
 logger = logging.getLogger(__name__)
+
+# Categories that trigger auto-shadowing to the Settle Up ledger
+# Sub-categories that trigger auto-shadowing to the Settle Up ledger
+# These must match the exact sub_category names stored in the DB
+SETTLE_UP_SUBCATEGORIES = {"p2p loan out", "p2p receive"}
 
 class TransactionService:
     def __init__(self, db: AsyncSession = Depends(get_db)):
@@ -179,6 +185,11 @@ class TransactionService:
 
         await self.db.commit()
         await self.db.refresh(txn)
+
+        # Shadow to Settle Up ledger if this is a loan-related category
+        if verification.approved:
+            await self._maybe_shadow_to_ledger(txn)
+
         return txn
 
     async def get_merchant_mapping(self, raw_merchant: str) -> Optional[MerchantMapping]:
@@ -221,7 +232,12 @@ class TransactionService:
             "is_surety": txn_data.get("is_surety", False) or await self._resolve_surety(txn_data.get("sub_category"))
         })
         
-        return await self.create_transaction(txn_data)
+        txn = await self.create_transaction(txn_data)
+
+        # Shadow to Settle Up ledger if this is a loan-related category
+        await self._maybe_shadow_to_ledger(txn)
+
+        return txn
 
     async def get_transaction(self, transaction_id: UUID, user_id: UUID) -> Transaction:
         stmt = select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user_id)
@@ -298,3 +314,28 @@ class TransactionService:
             
         await self.db.delete(txn)
         await self.db.commit()
+
+    async def _maybe_shadow_to_ledger(self, txn: Transaction):
+        """If the transaction sub_category matches a Settle Up keyword, shadow it to the Peer Ledger."""
+        sub_cat_lower = (txn.sub_category or "").lower().strip()
+        if sub_cat_lower not in SETTLE_UP_SUBCATEGORIES:
+            return
+
+        # Check if a ledger entry already exists for this transaction
+        existing = await self.db.execute(
+            select(LedgerEntry).where(LedgerEntry.transaction_id == txn.id)
+        )
+        if existing.scalar_one_or_none():
+            return
+
+        entry = LedgerEntry(
+            user_id=txn.user_id,
+            peer_name=txn.merchant_name or "Unknown",
+            amount=txn.amount,
+            transaction_id=txn.id,
+            remarks=txn.remarks,
+            date=txn.transaction_date or txn.created_at.date() if txn.created_at else None
+        )
+        self.db.add(entry)
+        await self.db.commit()
+        logger.info(f"[SettleUp] Shadowed txn {txn.id} -> Peer: {entry.peer_name}, Amount: {entry.amount}")
