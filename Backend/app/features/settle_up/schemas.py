@@ -4,16 +4,16 @@ from typing import Optional
 from datetime import date, datetime
 from decimal import Decimal
 
-class LedgerEntryBase(BaseModel):
+class SettleUpEntryBase(BaseModel):
     peer_name: str
     amount: Decimal
     remarks: Optional[str] = None
     date: Optional[date] = None
 
-class LedgerEntryCreate(LedgerEntryBase):
+class SettleUpEntryCreate(SettleUpEntryBase):
     transaction_id: Optional[UUID] = None
 
-class LedgerEntryResponse(LedgerEntryBase):
+class SettleUpEntryResponse(SettleUpEntryBase):
     id: UUID
     user_id: UUID
     date: date  # Override Optional from base — DB always has a date

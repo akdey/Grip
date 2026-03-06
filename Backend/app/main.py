@@ -30,7 +30,7 @@ from app.features.export.router import router as export_router
 from app.features.wealth.router import router as wealth_router
 from app.features.settle_up.router import router as settle_up_router
 from app.features.sync.models import SyncLog 
-from app.features.settle_up.models import LedgerEntry  # Ensure table creation
+from app.features.settle_up.models import SettleUpEntry  # Ensure table creation
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

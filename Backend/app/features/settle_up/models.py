@@ -9,7 +9,7 @@ from app.core.database import Base
 from app.features.auth.models import User
 from app.features.transactions.models import Transaction
 
-class LedgerEntry(Base):
+class SettleUpEntry(Base):
     __tablename__ = "settle_up_entries"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
