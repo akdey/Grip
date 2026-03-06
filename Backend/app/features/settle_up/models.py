@@ -23,7 +23,7 @@ class LedgerEntry(Base):
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     
     # Loose coupling to the main transaction, if it originated from a bank sync/manual entry
-    transaction_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("transactions.id"), nullable=True)
+    transaction_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("transactions.id", ondelete="CASCADE"), nullable=True)
     
     remarks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     date: Mapped[date] = mapped_column(Date, default=date.today)
