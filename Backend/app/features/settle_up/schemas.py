@@ -16,6 +16,7 @@ class LedgerEntryCreate(LedgerEntryBase):
 class LedgerEntryResponse(LedgerEntryBase):
     id: UUID
     user_id: UUID
+    date: date  # Override Optional from base — DB always has a date
     transaction_id: Optional[UUID] = None
     created_at: datetime
     
