@@ -164,7 +164,8 @@ class SyncService:
                     "sub_category": data.get("sub_category") or "Uncategorized",
                     "account_type": data.get("account_type") or "SAVINGS",
                     "transaction_type": data.get("transaction_type") or "DEBIT",
-                    "extracted_date": data.get("extracted_date")
+                    "extracted_date": data.get("extracted_date"),
+                    "extractor": "🤖 L"
                 }
 
         # Stage 3: Regex Fallback Network 
@@ -205,7 +206,8 @@ class SyncService:
             "category": "Uncategorized",
             "sub_category": "Uncategorized",
             "account_type": "SAVINGS",
-            "transaction_type": txn_type
+            "transaction_type": txn_type,
+            "extractor": "🔍 R"
         }
 
     def _fallback_txn(self) -> dict:
@@ -479,7 +481,9 @@ class SyncService:
 
                 # Append sanitized subject to remarks for better manual review
                 clean_subject = self.sanitizer.sanitize(msg.get('subject', ''))
-                improved_remarks = f"Synced via {source} | Subject: {clean_subject}"
+                ext_icon = extracted.get("extractor", "")
+                prefix = f"{ext_icon} | " if ext_icon else ""
+                improved_remarks = f"{prefix}Synced via {source} | Subject: {clean_subject}"
 
                 new_txn = await self.txn_service.create_transaction({
                     "id": uuid.uuid4(),
