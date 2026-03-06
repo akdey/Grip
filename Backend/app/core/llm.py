@@ -117,7 +117,7 @@ class LLMService:
         
         # PII patterns for sanitizing content before sending to external APIs
         self._pii_patterns = [
-            (re.compile(r'[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}'), '<UPI>'),
+            # (re.compile(r'[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}'), '<UPI>'),  # Allow LLM to read UPI based merchants
             (re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'), '<EMAIL>'),
             (re.compile(r'(?:\+?91|0)?[6-9]\d{9}'), '<PHONE>'),
             (re.compile(r'(?:\d[ -]*?){12,19}'), '<CARD>'),
