@@ -14,7 +14,7 @@ async def get_peer_balances(
 ):
     return await service.get_peer_balances(user_id=current_user.id)
 
-@router.get("/{peer_name}/history", response_model=List[schemas.LedgerEntryResponse])
+@router.get("/{peer_name}/history", response_model=List[schemas.SettleUpEntryResponse])
 async def get_peer_history(
     peer_name: str,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -23,9 +23,9 @@ async def get_peer_history(
 ):
     return await service.get_peer_history(user_id=current_user.id, peer_name=peer_name, limit=limit)
 
-@router.post("/", response_model=schemas.LedgerEntryResponse)
+@router.post("/", response_model=schemas.SettleUpEntryResponse)
 async def create_ledger_entry(
-    data: schemas.LedgerEntryCreate,
+    data: schemas.SettleUpEntryCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[SettleUpService, Depends()]
 ):

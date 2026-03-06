@@ -10,7 +10,7 @@ from app.features.transactions import schemas
 from app.features.transactions import schemas
 from app.features.categories.models import SubCategory
 from app.features.transactions.models import TransactionStatus
-from app.features.settle_up.models import LedgerEntry
+from app.features.settle_up.models import SettleUpEntry
 from app.core.database import get_db
 import logging
 logger = logging.getLogger(__name__)
@@ -323,12 +323,12 @@ class TransactionService:
 
         # Check if a ledger entry already exists for this transaction
         existing = await self.db.execute(
-            select(LedgerEntry).where(LedgerEntry.transaction_id == txn.id)
+            select(SettleUpEntry).where(SettleUpEntry.transaction_id == txn.id)
         )
         if existing.scalar_one_or_none():
             return
 
-        entry = LedgerEntry(
+        entry = SettleUpEntry(
             user_id=txn.user_id,
             peer_name=txn.merchant_name or "Unknown",
             amount=txn.amount,
