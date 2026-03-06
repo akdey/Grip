@@ -15,10 +15,10 @@ import {
     Mail,
     Download,
     Target,
-    RefreshCw,
     Brain,
     Cpu,
-    Activity
+    Activity,
+    ArrowUpRight
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
@@ -30,13 +30,13 @@ const FEATURE_CARDS = [
     { id: 'sync', label: 'Gmail Sync', icon: Mail, path: '/sync', color: 'text-green-400', bgColor: 'bg-green-500/10' },
     { id: 'pending', label: 'Action Center', icon: Sparkles, path: '/transactions?view=pending', color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
     { id: 'transactions', label: 'History', icon: Receipt, path: '/transactions', color: 'text-blue-400', bgColor: 'bg-blue-500/10' },
-    { id: 'scheduled', label: 'Scheduled', icon: CalendarClock, path: '/bills', color: 'text-teal-400', bgColor: 'bg-teal-500/10' },
+    { id: 'sureties', label: 'Sureties', icon: CalendarClock, path: '/sureties', color: 'text-teal-400', bgColor: 'bg-teal-500/10' },
     { id: 'goals', label: 'Goals', icon: Wallet, path: '/goals', color: 'text-rose-400', bgColor: 'bg-rose-500/10' },
     { id: 'categories', label: 'Categories', icon: LayoutGrid, action: 'OPEN_CATEGORIES', color: 'text-cyan-400', bgColor: 'bg-cyan-500/10' },
     { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-indigo-400', bgColor: 'bg-indigo-500/10' },
     { id: 'backup', label: 'Backup Data', icon: Download, action: 'BACKUP_DATA', color: 'text-amber-400', bgColor: 'bg-amber-500/10' },
     { id: 'vault', label: 'Vault', icon: Target, path: '/credit-cards', color: 'text-purple-400', bgColor: 'bg-purple-500/10' },
-    { id: 'sureties', label: 'Sureties', icon: RefreshCw, path: '/sureties', color: 'text-rose-400', bgColor: 'bg-rose-500/10' }, // Changed color to rose to differentiate
+    { id: 'settle-up', label: 'Settle Up', icon: ArrowUpRight, path: '/settle-up', color: 'text-orange-400', bgColor: 'bg-orange-500/10' },
 ];
 
 const SystemIntelligence: React.FC = () => {
