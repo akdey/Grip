@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { ScrollToTop } from './components/layout/ScrollToTop';
 import { Layout } from './components/layout/Layout';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 
@@ -30,6 +31,7 @@ import { Loader } from './components/ui/Loader';
 function App() {
   return (
     <React.Suspense fallback={<Loader fullPage text="Initializing" />}>
+      <ScrollToTop />
       <AnimatePresence mode="wait">
         <Routes>
           {/* Public Routes */}
