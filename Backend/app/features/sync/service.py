@@ -114,7 +114,7 @@ class SyncService:
         1. is_transaction: (boolean) Set to true ONLY if this email is a specific notification for a completed DEBIT, CREDIT, or SPEND. Set to false for marketing, OTPs, balance inquiries, or statements.
         2. amount: (float) The numerical value of the transaction.
         3. currency: (string) Default to "INR".
-        4. merchant_name: (string) The name of the merchant or recipient.
+        4. merchant_name: (string) The exact brand or merchant name. If the merchant is formatted as a UPI ID (e.g. 'swiggy@icici'), extract the raw brand name (e.g. 'Swiggy').
         5. category: (string) Choose the best fit from the categories listed above.
         6. sub_category: (string) Choose a specific sub-category if provided in context, else use a descriptive name.
         7. account_type: (string) MUST BE one of [SAVINGS, CREDIT_CARD, CASH].
@@ -140,26 +140,73 @@ class SyncService:
         # Stage 1: Try Local LLM
         data = await self.llm.generate_json(prompt, temperature=0.1)
         
+        # Retry with higher temperature if basic local extraction failed 
+        if not data or not data.get("is_transaction") or abs(data.get("amount", 0.0)) == 0:
+            logger.warning(f"[Brain:{user_id}] Initial LLM extraction failed or returned 0 amount. Retrying with higher temp.")
+            retry_prompt = prompt + "\n\nCRITICAL: You MUST output valid JSON. Extract the transaction amount. Do not output 0 if a payment occurred."
+            data = await self.llm.generate_json(retry_prompt, temperature=0.4)
+
         # Stage 2: Fallback to Groq if Local fails or returns non-transaction
-        if not data and self.llm.groq_api_key:
-            logger.warning(f"[Brain:{user_id}] Local LLM failed. Falling back to Groq.")
-            data = await self.llm.generate_json(prompt, temperature=0.1)
+        # if not data and self.llm.groq_api_key:
+        #     logger.warning(f"[Brain:{user_id}] Local LLM failed. Falling back to Groq.")
+        #     data = await self.llm.generate_json(prompt, temperature=0.1)
 
         if data and data.get("is_transaction"):
-            logger.info(f"[Brain:{user_id}] Extracted: ₹{data.get('amount')} | Merchant: {data.get('merchant_name')}")
-            # Ensure required fields exist even if LLM missed them
-            return {
-                "amount": float(data.get("amount") or 0.0),
-                "currency": data.get("currency") or "INR",
-                "merchant_name": (data.get("merchant_name") or "UNKNOWN").title(),
-                "category": data.get("category") or "Uncategorized",
-                "sub_category": data.get("sub_category") or "Uncategorized",
-                "account_type": data.get("account_type") or "SAVINGS",
-                "transaction_type": data.get("transaction_type") or "DEBIT",
-                "extracted_date": data.get("extracted_date")
-            }
+            merchant = data.get("merchant_name") or data.get("merchant") or "UNKNOWN"
+            if abs(data.get("amount", 0.0)) > 0:
+                logger.info(f"[Brain:{user_id}] Extracted: ₹{data.get('amount')} | Merchant: {merchant}")
+                # Ensure required fields exist even if LLM missed them
+                return {
+                    "amount": float(data.get("amount") or 0.0),
+                    "currency": data.get("currency") or "INR",
+                    "merchant_name": merchant.title(),
+                    "category": data.get("category") or "Uncategorized",
+                    "sub_category": data.get("sub_category") or "Uncategorized",
+                    "account_type": data.get("account_type") or "SAVINGS",
+                    "transaction_type": data.get("transaction_type") or "DEBIT",
+                    "extracted_date": data.get("extracted_date")
+                }
 
-        return self._fallback_txn()
+        # Stage 3: Regex Fallback Network 
+        # If LLM completely failed, at least try to salvage the amount and merchant UPI
+        return self._regex_fallback_txn(text, user_id)
+
+    def _regex_fallback_txn(self, text: str, user_id: uuid.UUID) -> dict:
+        import re
+        amount = 0.0
+        merchant = "UNKNOWN"
+        txn_type = "DEBIT" # Most notifications are debits
+        
+        # 1. Search for amount
+        amount_match = re.search(r'(?:Rs\.?|INR|₹)\s*([\d,]+\.?\d*)', text, re.IGNORECASE)
+        if amount_match:
+            try:
+                base_val = amount_match.group(1).replace(',', '')
+                amount = float(base_val)
+            except ValueError:
+                pass
+
+        if amount > 0:
+             # Basic keyword checking for credit
+             if re.search(r'\b(?:credited|received|deposit)\b', text, re.IGNORECASE):
+                 txn_type = "CREDIT"
+             
+             # 2. Search for UPI ID for the merchant
+             upi_match = re.search(r'\b([a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,})\b', text)
+             if upi_match:
+                 merchant = upi_match.group(1).title()
+                 
+             logger.info(f"[Brain:{user_id}] Regex Fallback Extracted: ₹{amount} | Merchant: {merchant} | Type: {txn_type}")
+
+        return {
+            "amount": amount,
+            "currency": "INR",
+            "merchant_name": merchant if amount > 0 else "UNCATEGORIZED",
+            "category": "Uncategorized",
+            "sub_category": "Uncategorized",
+            "account_type": "SAVINGS",
+            "transaction_type": txn_type
+        }
 
     def _fallback_txn(self) -> dict:
         return {
@@ -430,6 +477,10 @@ class SyncService:
                 if not tx_date:
                     tx_date = datetime.fromtimestamp(int(msg['internalDate']) / 1000).date()
 
+                # Append sanitized subject to remarks for better manual review
+                clean_subject = self.sanitizer.sanitize(msg.get('subject', ''))
+                improved_remarks = f"Synced via {source} | Subject: {clean_subject}"
+
                 new_txn = await self.txn_service.create_transaction({
                     "id": uuid.uuid4(),
                     "user_id": user_id,
@@ -442,7 +493,7 @@ class SyncService:
                     "sub_category": sub,
                     "status": TransactionStatus.PENDING,
                     "account_type": extracted["account_type"],
-                    "remarks": f"Synced via {source}",
+                    "remarks": improved_remarks,
                     "is_surety": is_surety_flag
                 })
                 

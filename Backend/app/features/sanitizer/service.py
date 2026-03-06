@@ -6,7 +6,7 @@ class SanitizerService:
         # Regex Patterns
         self.patterns = {
             # Order matters: Specific patterns first
-            'UPI': re.compile(r'[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}'),  # Matches amit@okhdfcbank
+            # 'UPI': re.compile(r'[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}'),  # Commented out so LLM can extract merchant name
             'EMAIL': re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'),
             'PHONE': re.compile(r'(?:\+?91|0)?[6-9]\d{9}'), # India specific mobile regex
             'CARD': re.compile(r'(?:\d[ -]*?){12,19}'), # 12-19 digits for cards

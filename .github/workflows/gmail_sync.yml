@@ -32,6 +32,7 @@ jobs:
           cd Backend
           pip install --upgrade pip
           pip install -r requirements.txt
+          pip install llama-cpp-python==0.2.89 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
       
       - name: Run Gmail Sync
         env:
