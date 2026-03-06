@@ -20,10 +20,19 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          # Extract host, port, dbname, user from DATABASE_URL if needed, 
-          # but pg_dump can often take the full URL directly.
-          # Supabase URLs usually look like postgresql://postgres:[password]@db.[project-id].supabase.co:5432/postgres
-          pg_dump "$DATABASE_URL" > dump.sql
+          # Clean DATABASE_URL for pg_dump (remove Prisma/Supabase specific params)
+          CLEAN_URL=$(node -e "
+            try {
+              const u = new URL(process.env.DATABASE_URL);
+              u.searchParams.delete('pgbouncer');
+              u.searchParams.delete('connection_limit');
+              u.searchParams.delete('pool_timeout');
+              console.log(u.toString());
+            } catch (e) {
+              console.log(process.env.DATABASE_URL);
+            }
+          ")
+          pg_dump "$CLEAN_URL" > dump.sql
           gzip dump.sql
 
       - name: Push to Backup Repository
