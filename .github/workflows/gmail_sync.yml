@@ -29,10 +29,11 @@ jobs:
       
       - name: Install dependencies
         run: |
+          sudo apt-get update && sudo apt-get install -y build-essential cmake g++
           cd Backend
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install llama-cpp-python==0.2.89 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
+          CMAKE_ARGS="-DGGML_AVX2=ON" pip install llama-cpp-python
       
       - name: Run Gmail Sync
         env:
