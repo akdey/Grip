@@ -122,13 +122,12 @@ const SettleUp: React.FC = () => {
             </div>
 
             {/* Peer History Drawer */}
-            {selectedPeer && (
-                <PeerHistoryDrawer
-                    peerName={selectedPeer}
-                    onClose={() => setSelectedPeer(null)}
-                    formatCurrency={formatCurrency}
-                />
-            )}
+            <PeerHistoryDrawer
+                peerName={selectedPeer}
+                isOpen={!!selectedPeer}
+                onClose={() => setSelectedPeer(null)}
+                formatCurrency={formatCurrency}
+            />
 
             {/* Add Entry Drawer */}
             <Drawer isOpen={showAddForm} onClose={() => setShowAddForm(false)} title="Add Record">
@@ -218,17 +217,19 @@ const SettleUp: React.FC = () => {
 // Sub-component: Peer History Drawer
 const PeerHistoryDrawer = ({
     peerName,
+    isOpen,
     onClose,
     formatCurrency
 }: {
-    peerName: string;
+    peerName: string | null;
+    isOpen: boolean;
     onClose: () => void;
     formatCurrency: (n: number) => string;
 }) => {
-    const { data: history, isLoading } = usePeerHistory(peerName);
+    const { data: history, isLoading } = usePeerHistory(peerName || '');
 
     return (
-        <Drawer isOpen={true} onClose={onClose} title={peerName}>
+        <Drawer isOpen={isOpen} onClose={onClose} title={peerName || ''}>
             <div className="space-y-4 px-2 pb-10">
                 <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[3px] ml-1">Transaction History</p>
 
