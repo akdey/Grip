@@ -2,6 +2,7 @@ from uuid import UUID
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload, with_loader_criteria
 from fastapi import HTTPException, Depends
 from app.features.categories.models import Category, SubCategory
 from app.features.categories import schemas
@@ -16,6 +17,12 @@ class CategoryService:
         stmt = (
             select(Category)
             .where((Category.user_id == None) | (Category.user_id == user_id))
+            .options(
+                with_loader_criteria(
+                    SubCategory,
+                    (SubCategory.user_id == None) | (SubCategory.user_id == user_id)
+                )
+            )
         )
         result = await self.db.execute(stmt)
         return result.scalars().all()

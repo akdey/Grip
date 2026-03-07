@@ -1,39 +1,49 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSureties, useCreateExclusion } from '../features/bills/hooks';
 import { Loader } from '../components/ui/Loader';
-import { ArrowLeft, Ban, CalendarX, ExternalLink, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Ban, CalendarX, ExternalLink, RefreshCw, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const Sureties: React.FC = () => {
     const navigate = useNavigate();
     const { data: sureties, isLoading } = useSureties();
     const createExclusion = useCreateExclusion();
+    const [actionLoading, setActionLoading] = useState<{ id: string, action: 'PAID' | 'SKIP' | 'STOP' } | null>(null);
 
-    const handleSkip = (sourceId: string) => {
+    const handleSkip = (suretyId: string, sourceId: string) => {
         if (!confirm('Skip this surety for this month?')) return;
+        setActionLoading({ id: suretyId, action: 'SKIP' });
         createExclusion.mutate({
             source_transaction_id: sourceId,
             exclusion_type: 'SKIP'
+        }, {
+            onSettled: () => setActionLoading(null)
         });
     };
 
-    const handleMarkPaid = (sourceId: string) => {
+    const handleMarkPaid = (suretyId: string, sourceId: string) => {
         if (!confirm('Mark this surety as paid manually? This will stop it from showing as overdue.')) return;
+        setActionLoading({ id: suretyId, action: 'PAID' });
         createExclusion.mutate({
             source_transaction_id: sourceId,
             exclusion_type: 'MANUAL_PAID' as any
+        }, {
+            onSettled: () => setActionLoading(null)
         });
     };
 
-    const handleTerminate = (merchant: string, subCategory: string) => {
+    const handleTerminate = (suretyId: string, merchant: string, subCategory: string) => {
         // Clean merchant name if it has suffix
         const cleanMerchant = merchant.replace(' (Auto-detected)', '').trim();
         if (!confirm(`Permanently stop identifying obligations for ${cleanMerchant} (${subCategory})?`)) return;
+        setActionLoading({ id: suretyId, action: 'STOP' });
         createExclusion.mutate({
             merchant_pattern: cleanMerchant,
             subcategory_pattern: subCategory,
             exclusion_type: 'PERMANENT'
+        }, {
+            onSettled: () => setActionLoading(null)
         });
     };
 
@@ -100,28 +110,40 @@ const Sureties: React.FC = () => {
 
                         <div className="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-white/[0.05]">
                             <button
-                                onClick={() => surety.source_id && handleMarkPaid(surety.source_id)}
-                                disabled={['SKIPPED', 'PAID', 'COVERED', 'TERMINATED'].includes(surety.status)}
+                                onClick={() => surety.source_id && handleMarkPaid(surety.id, surety.source_id)}
+                                disabled={['SKIPPED', 'PAID', 'COVERED', 'TERMINATED'].includes(surety.status) || createExclusion.isPending}
                                 className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.03] text-green-400/80 text-xs font-bold hover:bg-green-500/10 hover:text-green-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-transparent hover:border-green-500/20"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                                Paid
+                                {actionLoading?.id === surety.id && actionLoading?.action === 'PAID' ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                )}
+                                {actionLoading?.id === surety.id && actionLoading?.action === 'PAID' ? 'Processing...' : 'Paid'}
                             </button>
                             <button
-                                onClick={() => surety.source_id && handleSkip(surety.source_id)}
-                                disabled={['SKIPPED', 'PAID', 'COVERED', 'TERMINATED'].includes(surety.status)}
+                                onClick={() => surety.source_id && handleSkip(surety.id, surety.source_id)}
+                                disabled={['SKIPPED', 'PAID', 'COVERED', 'TERMINATED'].includes(surety.status) || createExclusion.isPending}
                                 className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.03] text-orange-400/80 text-xs font-bold hover:bg-orange-500/10 hover:text-orange-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-transparent hover:border-orange-500/20"
                             >
-                                <CalendarX size={14} />
-                                Skip
+                                {actionLoading?.id === surety.id && actionLoading?.action === 'SKIP' ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                    <CalendarX size={14} />
+                                )}
+                                {actionLoading?.id === surety.id && actionLoading?.action === 'SKIP' ? 'Skipping...' : 'Skip'}
                             </button>
                             <button
-                                onClick={() => handleTerminate(surety.title, surety.sub_category)}
-                                disabled={['TERMINATED', 'COVERED'].includes(surety.status)}
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.03] text-red-400/80 text-xs font-bold hover:bg-red-500/10 hover:text-red-400 disabled:opacity-30 transition-all border border-transparent hover:border-red-500/20"
+                                onClick={() => handleTerminate(surety.id, surety.title, surety.sub_category)}
+                                disabled={['TERMINATED', 'COVERED'].includes(surety.status) || createExclusion.isPending}
+                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.03] text-red-400/80 text-xs font-bold hover:bg-red-500/10 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-transparent hover:border-red-500/20"
                             >
-                                <Ban size={14} />
-                                Stop
+                                {actionLoading?.id === surety.id && actionLoading?.action === 'STOP' ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                    <Ban size={14} />
+                                )}
+                                {actionLoading?.id === surety.id && actionLoading?.action === 'STOP' ? 'Stopping...' : 'Stop'}
                             </button>
                         </div>
                     </div>

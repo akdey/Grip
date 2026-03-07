@@ -9,8 +9,7 @@ import {
     AlertCircle,
     TrendingUp,
     ChevronDown,
-    ChevronUp,
-    ArrowRight
+    ChevronUp
 } from 'lucide-react';
 import { useGmailStatus, useConnectGmail, useDisconnectGmail, useManualSync, useSyncHistory } from '../features/sync/hooks';
 import { Card } from '../components/ui/Card';
@@ -211,7 +210,7 @@ const Sync: React.FC = () => {
                                         return (
                                             <div key={sync.id} className="space-y-2">
                                                 <div
-                                                    onClick={() => sync.records_processed > 0 && setExpandedSync(isExpanded ? null : sync.id)}
+                                                    onClick={() => summary.length > 0 && setExpandedSync(isExpanded ? null : sync.id)}
                                                     className={`flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors cursor-pointer ${isExpanded ? 'bg-white/[0.04] border-white/10' : ''}`}
                                                 >
                                                     <div className="flex items-center gap-4">
@@ -236,7 +235,7 @@ const Sync: React.FC = () => {
                                                     </div>
 
                                                     <div className="flex items-center gap-3">
-                                                        {sync.status === 'SUCCESS' && sync.records_processed > 0 && (
+                                                        {sync.status === 'SUCCESS' && summary.length > 0 && (
                                                             <div className="text-gray-500">
                                                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                                             </div>

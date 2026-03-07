@@ -106,14 +106,16 @@ export const useManualSync = () => {
             await api.post('/sync/manual');
         },
         onSuccess: () => {
-            // Invalidate status after a delay to allow sync to complete
+            // Trigger history refetch immediately so status shows IN_PROGRESS and polling starts
+            queryClient.invalidateQueries({ queryKey: ['sync-history'] });
+
+            // Still invalidate other data after a delay to ensure fresh final state
             setTimeout(() => {
                 queryClient.invalidateQueries({ queryKey: ['gmail-status'] });
-                queryClient.invalidateQueries({ queryKey: ['sync-history'] });
                 queryClient.invalidateQueries({ queryKey: ['transactions'] });
                 queryClient.invalidateQueries({ queryKey: ['monthly-summary'] });
                 queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
-            }, 3000);
+            }, 5000);
         },
     });
 };
@@ -125,6 +127,11 @@ export const useSyncHistory = () => {
             const { data } = await api.get<SyncHistory>('/sync/history');
             return data;
         },
+        refetchInterval: (query: any) => {
+            // Support both React Query v4 and v5 signatures
+            const data = query?.state?.data || query;
+            return data?.syncs?.some((s: any) => s.status === 'IN_PROGRESS') ? 3000 : false;
+        }
     });
 };
 
