@@ -72,3 +72,34 @@ class CategoryService:
             raise HTTPException(status_code=404, detail="SubCategory not found or you don't have permission")
         await self.db.delete(sub_category)
         await self.db.commit()
+
+    async def update_category(self, user_id: UUID, category_id: UUID, data: schemas.CategoryUpdate) -> Category:
+        stmt = select(Category).where(Category.id == category_id, Category.user_id == user_id)
+        result = await self.db.execute(stmt)
+        category = result.scalar_one_or_none()
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found or you don't have permission")
+        
+        update_data = data.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(category, key, value)
+            
+        await self.db.commit()
+        await self.db.refresh(category)
+        return category
+
+    async def update_sub_category(self, user_id: UUID, sub_category_id: UUID, data: schemas.SubCategoryUpdate) -> SubCategory:
+        stmt = select(SubCategory).where(SubCategory.id == sub_category_id, SubCategory.user_id == user_id)
+        result = await self.db.execute(stmt)
+        sub_category = result.scalar_one_or_none()
+        if not sub_category:
+            raise HTTPException(status_code=404, detail="SubCategory not found or you don't have permission")
+        
+        update_data = data.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(sub_category, key, value)
+            
+        await self.db.commit()
+        await self.db.refresh(sub_category)
+        return sub_category
+

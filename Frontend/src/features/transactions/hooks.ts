@@ -126,3 +126,20 @@ export const useDeleteTransaction = () => {
         },
     });
 };
+
+export interface TagSummary {
+    tag: string;
+    count: number;
+    amount: number;
+    last_used: string | null;
+}
+
+export const useTagsSummary = () => {
+    return useQuery({
+        queryKey: ['tags', 'summary'],
+        queryFn: async () => {
+            const { data } = await api.get<TagSummary[]>('/transactions/tags');
+            return data;
+        },
+    });
+};

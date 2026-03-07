@@ -24,6 +24,14 @@ async def get_categories(
     # Actually, let's just return the new format here too for consistency.
     return categories
 
+@router.get("/tags", response_model=List[schemas.TagSummary])
+async def get_tags_summary(
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[TransactionService, Depends()]
+):
+    return await service.get_tags_summary(user_id=current_user.id)
+
+
 @router.get("/pending", response_model=List[schemas.TransactionResponse])
 async def get_pending_transactions(
     current_user: Annotated[User, Depends(get_current_user)],

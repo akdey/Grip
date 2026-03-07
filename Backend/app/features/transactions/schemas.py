@@ -77,3 +77,10 @@ class VerificationRequest(BaseModel):
 
 class CategoriesResponse(BaseModel):
     categories: dict[str, list[str]]
+
+class TagSummary(BaseModel):
+    tag: str
+    count: int
+    amount: Decimal
+    last_used: Optional[date] = None
+

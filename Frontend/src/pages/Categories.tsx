@@ -6,6 +6,7 @@ import {
     ArrowLeft,
     Plus,
     Trash2,
+    Pencil,
     ChevronRight,
     Search,
     ChevronLeft,
@@ -13,7 +14,7 @@ import {
     Save
 } from 'lucide-react';
 import { api } from '../lib/api';
-import { useCategories, type TransactionType } from '../features/transactions/categoryHooks';
+import { useCategories, useUpdateCategory, useUpdateSubCategory, type TransactionType } from '../features/transactions/categoryHooks';
 import type { Category, SubCategory } from '../features/transactions/categoryHooks';
 import { CategoryIcon } from '../components/ui/CategoryIcon';
 import { Loader } from '../components/ui/Loader';
@@ -30,20 +31,24 @@ const Categories: React.FC = () => {
     const [viewingCategoryId, setViewingCategoryId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Creation Mode State
-    const [isAddMode, setAddMode] = useState<'NONE' | 'CATEGORY' | 'SUB_CATEGORY'>('NONE');
-    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+    // Creation & Edit Mode State
+    const [editorMode, setEditorMode] = useState<'NONE' | 'CREATE_CAT' | 'CREATE_SUB' | 'EDIT_CAT' | 'EDIT_SUB'>('NONE');
+    const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [newName, setNewName] = useState('');
     const [newIcon, setNewIcon] = useState('Store');
     const [newColor, setNewColor] = useState('#6366f1');
     const [newType, setNewType] = useState<TransactionType>('EXPENSE');
     const [newIsSurety, setNewIsSurety] = useState(false);
 
+    const updateCategoryMutation = useUpdateCategory();
+    const updateSubCategoryMutation = useUpdateSubCategory();
+
     const createCategoryMutation = useMutation({
         mutationFn: async (data: any) => await api.post('/categories', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
-            setAddMode('NONE');
+            setEditorMode('NONE');
             resetForm();
         }
     });
@@ -52,7 +57,7 @@ const Categories: React.FC = () => {
         mutationFn: async (data: any) => await api.post('/categories/sub-categories', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
-            setAddMode('NONE');
+            setEditorMode('NONE');
             resetForm();
         }
     });
@@ -83,17 +88,19 @@ const Categories: React.FC = () => {
             <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-[#050505]/60 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => isAddMode !== 'NONE' ? setAddMode('NONE') : viewingCategoryId ? setViewingCategoryId(null) : navigate(-1)}
+                        onClick={() => editorMode !== 'NONE' ? setEditorMode('NONE') : viewingCategoryId ? setViewingCategoryId(null) : navigate(-1)}
                         className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all"
                     >
                         <ArrowLeft size={20} />
                     </button>
                     <div>
                         <h1 className="text-xl font-bold tracking-tight">
-                            {isAddMode !== 'NONE' ? `Create ${isAddMode === 'CATEGORY' ? 'Entity' : 'Node'}` : viewingCategoryId ? "Sub-Nodes" : "Intelligence Hub"}
+                            {editorMode !== 'NONE' ?
+                                (editorMode.includes('EDIT') ? 'Edit Mode' : `Create ${editorMode === 'CREATE_CAT' ? 'Entity' : 'Node'}`)
+                                : viewingCategoryId ? "Sub-Nodes" : "Intelligence Hub"}
                         </h1>
                         <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">
-                            {isAddMode !== 'NONE' ? 'Node Deployment' : 'Category Management'}
+                            {editorMode !== 'NONE' ? 'Node Deployment' : 'Category Management'}
                         </p>
                     </div>
                 </div>
@@ -101,7 +108,7 @@ const Categories: React.FC = () => {
 
             <main className="flex-1 p-5 max-w-2xl mx-auto w-full">
                 <AnimatePresence mode="wait">
-                    {isAddMode === 'NONE' ? (
+                    {editorMode === 'NONE' ? (
                         <motion.div
                             key="explorer"
                             initial={{ opacity: 0, x: 20 }}
@@ -156,12 +163,29 @@ const Categories: React.FC = () => {
                                                                 <span className="text-sm text-gray-300 font-bold uppercase tracking-tight">{sub.name}</span>
                                                             </div>
                                                             {sub.user_id && (
-                                                                <button
-                                                                    onClick={() => deleteSubCategoryMutation.mutate(sub.id)}
-                                                                    className="p-2 text-gray-800 hover:text-red-500 transition-all opacity-0 group-hover/sub:opacity-100 active:scale-90"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
+                                                                <div className="flex items-center gap-1 opacity-0 group-hover/sub:opacity-100 transition-all">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setNewName(sub.name);
+                                                                            setNewIcon(sub.icon || 'Store');
+                                                                            setNewColor(sub.color || cat?.color || '#6366f1');
+                                                                            setNewType(sub.type);
+                                                                            setNewIsSurety(sub.is_surety || false);
+                                                                            setEditingId(sub.id);
+                                                                            setEditorMode('EDIT_SUB');
+                                                                            setSelectedParentId(cat?.id || null);
+                                                                        }}
+                                                                        className="p-2 text-gray-400 hover:text-white transition-all active:scale-90"
+                                                                    >
+                                                                        <Pencil size={16} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => deleteSubCategoryMutation.mutate(sub.id)}
+                                                                        className="p-2 text-gray-800 hover:text-red-500 transition-all active:scale-90"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     ))}
@@ -198,27 +222,43 @@ const Categories: React.FC = () => {
                                                         <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1 opacity-70">{cat.sub_categories.length} Sub-nodes</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            setSelectedCategoryId(cat.id);
-                                                            setAddMode('SUB_CATEGORY');
+                                                            setSelectedParentId(cat.id);
+                                                            setEditorMode('CREATE_SUB');
                                                             setNewColor(cat.color || '#6366f1');
                                                         }}
-                                                        className="p-3 text-cyan-500 bg-cyan-500/5 rounded-xl border border-cyan-500/10 active:scale-90 transition-all opacity-0 group-hover:opacity-100"
+                                                        className="p-3 text-cyan-500 hover:bg-cyan-500/10 rounded-xl transition-all active:scale-90"
                                                     >
                                                         <FolderPlus size={18} />
                                                     </button>
                                                     {cat.user_id && (
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); deleteCategoryMutation.mutate(cat.id); }}
-                                                            className="p-3 text-gray-800 hover:text-red-500 transition-all active:scale-90 opacity-0 group-hover:opacity-100"
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </button>
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setNewName(cat.name);
+                                                                    setNewIcon(cat.icon || 'Store');
+                                                                    setNewColor(cat.color || '#6366f1');
+                                                                    setNewType(cat.type);
+                                                                    setEditingId(cat.id);
+                                                                    setEditorMode('EDIT_CAT');
+                                                                }}
+                                                                className="p-3 text-gray-400 hover:text-white transition-all active:scale-90"
+                                                            >
+                                                                <Pencil size={18} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); deleteCategoryMutation.mutate(cat.id); }}
+                                                                className="p-3 text-gray-800 hover:text-red-500 transition-all active:scale-90"
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
+                                                        </>
                                                     )}
-                                                    <ChevronRight size={18} className="text-gray-900 group-hover:translate-x-1 transition-all ml-2" />
+                                                    <ChevronRight size={18} className="text-gray-900 group-hover:translate-x-1 transition-all ml-1" />
                                                 </div>
                                             </div>
                                         ))}
@@ -231,10 +271,10 @@ const Categories: React.FC = () => {
                                 <button
                                     onClick={() => {
                                         if (viewingCategoryId) {
-                                            setSelectedCategoryId(viewingCategoryId);
-                                            setAddMode('SUB_CATEGORY');
+                                            setSelectedParentId(viewingCategoryId);
+                                            setEditorMode('CREATE_SUB');
                                         } else {
-                                            setAddMode('CATEGORY');
+                                            setEditorMode('CREATE_CAT');
                                         }
                                         resetForm();
                                     }}
@@ -271,9 +311,9 @@ const Categories: React.FC = () => {
                                         className="w-full bg-transparent border-none text-4xl font-black text-center focus:outline-none placeholder-gray-900 uppercase tracking-tighter"
                                         autoFocus
                                     />
-                                    {isAddMode === 'SUB_CATEGORY' && (
+                                    {(editorMode === 'CREATE_SUB' || editorMode === 'EDIT_SUB') && (
                                         <p className="text-[10px] text-cyan-500 font-black uppercase tracking-[5px] mt-2">
-                                            Parent: {categories?.find(c => c.id === viewingCategoryId || c.id === selectedCategoryId)?.name}
+                                            Parent: {categories?.find(c => c.id === viewingCategoryId || c.id === selectedParentId)?.name}
                                         </p>
                                     )}
                                 </div>
@@ -281,7 +321,7 @@ const Categories: React.FC = () => {
 
                             {/* Logic Archetype */}
                             <div className="space-y-4 px-4">
-                                {isAddMode === 'SUB_CATEGORY' && (
+                                {(editorMode === 'CREATE_SUB' || editorMode === 'EDIT_SUB') && (
                                     <button
                                         onClick={() => setNewIsSurety(!newIsSurety)}
                                         className={`w-full flex items-center justify-between p-4 rounded-[1.5rem] border transition-all active:scale-[0.98] ${newIsSurety
@@ -346,27 +386,41 @@ const Categories: React.FC = () => {
                             <div className="fixed bottom-0 left-0 right-0 p-6 bg-[#050505]/80 backdrop-blur-2xl border-t border-white/[0.05] z-50">
                                 <div className="max-w-xl mx-auto flex gap-4">
                                     <button
-                                        onClick={() => setAddMode('NONE')}
+                                        onClick={() => setEditorMode('NONE')}
                                         className="flex-1 py-5 rounded-[2rem] bg-white/5 text-gray-600 font-black uppercase text-xs tracking-[3px] transition-all active:scale-95 border border-white/[0.05] hover:text-white"
                                     >
                                         Drop
                                     </button>
                                     <Button
                                         onClick={() => {
-                                            if (isAddMode === 'CATEGORY') {
+                                            if (editorMode === 'CREATE_CAT') {
                                                 createCategoryMutation.mutate({ name: newName, icon: newIcon, color: newColor, type: newType });
-                                            } else {
+                                            } else if (editorMode === 'CREATE_SUB') {
                                                 createSubCategoryMutation.mutate({
                                                     name: newName,
                                                     icon: newIcon,
                                                     color: newColor,
                                                     type: newType,
-                                                    category_id: selectedCategoryId,
+                                                    category_id: selectedParentId,
                                                     is_surety: newIsSurety
+                                                });
+                                            } else if (editorMode === 'EDIT_CAT' && editingId) {
+                                                updateCategoryMutation.mutate({
+                                                    id: editingId,
+                                                    data: { name: newName, icon: newIcon, color: newColor, type: newType }
+                                                }, {
+                                                    onSuccess: () => setEditorMode('NONE')
+                                                });
+                                            } else if (editorMode === 'EDIT_SUB' && editingId) {
+                                                updateSubCategoryMutation.mutate({
+                                                    id: editingId,
+                                                    data: { name: newName, icon: newIcon, color: newColor, type: newType, is_surety: newIsSurety }
+                                                }, {
+                                                    onSuccess: () => setEditorMode('NONE')
                                                 });
                                             }
                                         }}
-                                        isLoading={createCategoryMutation.isPending || createSubCategoryMutation.isPending}
+                                        isLoading={createCategoryMutation.isPending || createSubCategoryMutation.isPending || updateCategoryMutation.isPending || updateSubCategoryMutation.isPending}
                                         className="flex-[2] py-5 rounded-[2rem] bg-white text-black font-black uppercase text-xs tracking-[4px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none"
                                     >
                                         <Save size={20} />
