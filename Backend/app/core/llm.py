@@ -36,8 +36,8 @@ class LocalLLMEngine:
             try:
                 from llama_cpp import Llama
                 from huggingface_hub import hf_hub_download
-            except ImportError:
-                logger.error("llama-cpp-python or huggingface-hub not installed. Cannot use local LLM.")
+            except Exception as e:
+                logger.error(f"Cannot load local LLM engine (likely missing system dependencies for llama_cpp): {e}")
                 return None
                 
             try:
@@ -214,6 +214,9 @@ class LLMService:
                 resp = await client.post(self.groq_url, headers=headers, json=payload, timeout=timeout)
                 if resp.status_code == 200:
                     return resp.json()['choices'][0]['message']['content']
+                elif resp.status_code == 429:
+                    logger.error(f"Groq API Rate Limit Reached (429). Falling back to Regex engine.")
+                    return None
                 else:
                     logger.error(f"Groq API Error ({resp.status_code}): {resp.text[:200]}")
                     return None
