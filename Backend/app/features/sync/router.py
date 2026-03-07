@@ -158,8 +158,9 @@ async def webhook_ingress(
 ):
     # Google Pub/Sub sends push tokens via query param usually
     if token and token != settings.GRIP_SECRET:
-         logger.warning(f"Webhook received with invalid token.")
-         raise HTTPException(status_code=401, detail="Unauthorized")
+         logger.warning(f"Webhook received with invalid token: '{token}' vs expected '{settings.GRIP_SECRET}'")
+         # We MUST return 200/202 to Pub/Sub to ACKnowledge the message, otherwise it retries infinitely
+         return {"status": "unauthorized_but_ignored"}
 
     message = payload.get("message", {})
     data_b64 = message.get("data")
