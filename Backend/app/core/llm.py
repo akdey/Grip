@@ -129,7 +129,7 @@ class LLMService:
     @property
     def is_enabled(self) -> bool:
         """Check if any LLM service is available."""
-        return HAS_LLAMA_CPP or bool(self.groq_api_key)
+        return HAS_LLAMA_CPP # or bool(self.groq_api_key)
 
     def _sanitize_for_external(self, text: str) -> str:
         """Extra PII scrub before sending to any external/third-party LLM API."""
@@ -170,15 +170,15 @@ class LLMService:
                 logger.warning(f">>> LLM_ENGINE: Local engine error: {e}")
 
         # 2. Try Groq (Fallback — external API, sanitize content)
-        if self.groq_api_key:
-            logger.info(f">>> LLM_ENGINE: Falling back to Groq ({self.groq_model})...")
-            sanitized_prompt = self._sanitize_for_external(prompt)
-            result = await self._call_groq(sanitized_prompt, system_prompt, temperature, response_format, timeout)
-            if result:
-                logger.info(">>> LLM_ENGINE: Groq success.")
-            return result
+        # if self.groq_api_key:
+        #     logger.info(f">>> LLM_ENGINE: Falling back to Groq ({self.groq_model})...")
+        #     sanitized_prompt = self._sanitize_for_external(prompt)
+        #     result = await self._call_groq(sanitized_prompt, system_prompt, temperature, response_format, timeout)
+        #     if result:
+        #         logger.info(">>> LLM_ENGINE: Groq success.")
+        #     return result
             
-        logger.warning("No LLM service (Local or Groq) is available.")
+        logger.warning("Local LLM engine is unavailable. Groq fallback is disabled.")
         return None
 
     async def _call_groq(
