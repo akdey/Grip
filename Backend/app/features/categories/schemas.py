@@ -19,6 +19,7 @@ class SubCategoryUpdate(BaseModel):
     icon: Optional[str] = None
     color: Optional[str] = None
     type: Optional[CategoryType] = None
+    is_surety: Optional[bool] = None
 
 class SubCategoryResponse(SubCategoryBase):
     id: uuid.UUID

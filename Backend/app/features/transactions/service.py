@@ -12,6 +12,7 @@ from app.features.categories.models import SubCategory
 from app.features.transactions.models import TransactionStatus
 from app.features.settle_up.models import SettleUpEntry
 from app.core.database import get_db
+from decimal import Decimal
 import logging
 logger = logging.getLogger(__name__)
 
@@ -280,6 +281,42 @@ class TransactionService:
         await self.db.refresh(txn)
         txns = await self._attach_icons([txn])
         return txns[0]
+
+    async def get_tags_summary(self, user_id: UUID) -> List[dict]:
+        stmt = select(Transaction.tags, Transaction.amount, Transaction.transaction_date).where(
+            Transaction.user_id == user_id,
+            Transaction.status == TransactionStatus.VERIFIED
+        )
+        result = await self.db.execute(stmt)
+        
+        tags_data = {}
+        for tags, amount, date in result.all():
+            if tags:
+                for tag in tags:
+                    clean_tag = tag.strip().lower()
+                    if clean_tag not in tags_data:
+                        tags_data[clean_tag] = {
+                            "tag": tag.strip(), 
+                            "count": 0, 
+                            "amount": Decimal("0"), 
+                            "last_used": None
+                        }
+                    
+                    tags_data[clean_tag]["count"] += 1
+                    tags_data[clean_tag]["amount"] += amount
+                    
+                    if date:
+                        current_last = tags_data[clean_tag]["last_used"]
+                        if not current_last or date > current_last:
+                            tags_data[clean_tag]["last_used"] = date
+                            
+        # Sort by count descending, then by last updated
+        sorted_tags = sorted(
+            tags_data.values(), 
+            key=lambda x: (x["count"], x["last_used"] or date.min), 
+            reverse=True
+        )
+        return sorted_tags
 
     async def get_categories(self) -> dict:
         # Legacy method - should probably be removed as we now have a dedicated Categories service

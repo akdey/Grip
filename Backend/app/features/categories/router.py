@@ -48,3 +48,22 @@ async def delete_sub_category(
 ):
     await service.delete_sub_category(user_id=current_user.id, sub_category_id=sub_category_id)
     return {"status": "success"}
+
+@router.patch("/{category_id}", response_model=schemas.CategoryResponse)
+async def update_category(
+    category_id: UUID,
+    data: schemas.CategoryUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[CategoryService, Depends()]
+):
+    return await service.update_category(user_id=current_user.id, category_id=category_id, data=data)
+
+@router.patch("/sub-categories/{sub_category_id}", response_model=schemas.SubCategoryResponse)
+async def update_sub_category(
+    sub_category_id: UUID,
+    data: schemas.SubCategoryUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[CategoryService, Depends()]
+):
+    return await service.update_sub_category(user_id=current_user.id, sub_category_id=sub_category_id, data=data)
+

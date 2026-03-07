@@ -9,7 +9,8 @@ from app.core.database import get_db
 from app.core.config import get_settings
 from app.features.auth.deps import get_current_user
 from app.features.auth.models import User
-from app.features.sync.service import SyncService
+import base64
+import json
 from app.features.sync.models import SyncLog
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,19 @@ async def google_callback(
         except Exception as profile_ex:
             logger.warning(f"Failed to fetch profile info for {current_user.email}: {profile_ex}")
 
+        # PROACTIVE: Setup Gmail Push Notifications
+        if settings.GMAIL_PUBSUB_TOPIC:
+            try:
+                gmail_service = build('gmail', 'v1', credentials=creds)
+                watch_request = {
+                    'labelIds': ['INBOX'],
+                    'topicName': settings.GMAIL_PUBSUB_TOPIC
+                }
+                watch_response = gmail_service.users().watch(userId='me', body=watch_request).execute()
+                logger.info(f"Successfully enabled Gmail push notifications for {db_user.email}. HistoryId: {watch_response.get('historyId')}")
+            except Exception as watch_ex:
+                logger.warning(f"Failed to enable Gmail push notifications for {db_user.email}: {watch_ex}")
+
         await db.commit()
         logger.info(f"Committed Gmail credentials for {current_user.email}")
         
@@ -139,12 +153,29 @@ async def webhook_ingress(
     background_tasks: BackgroundTasks, 
     service: Annotated[SyncService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
-    x_grip_secret: Annotated[str | None, Header()] = None
+    token: str = None
 ):
-    if x_grip_secret != settings.GRIP_SECRET:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    # Google Pub/Sub sends push tokens via query param usually
+    if token and token != settings.GRIP_SECRET:
+         logger.warning(f"Webhook received with invalid token.")
+         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    email = payload.get("emailAddress")
+    message = payload.get("message", {})
+    data_b64 = message.get("data")
+    if not data_b64:
+        logger.warning(f"Webhook received without data payload.")
+        return {"status": "ignored"}
+        
+    try:
+        data_str = base64.b64decode(data_b64).decode("utf-8")
+        data_json = json.loads(data_str)
+        email = data_json.get("emailAddress")
+        historyId = data_json.get("historyId")
+        logger.info(f"Webhook decoded for email: {email}, historyId: {historyId}")
+    except Exception as e:
+        logger.error(f"Failed to decode Pub/Sub message: {e}")
+        return {"status": "invalid_payload"}
+
     if not email:
         return {"status": "ignored"}
 

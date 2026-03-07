@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = ""
     FRONTEND_ORIGIN: str = "https://grip-akdey.vercel.app"  # Frontend URL for OAuth origin parameter
     GOOGLE_REDIRECT_URI: str = "postmessage"
+    GMAIL_PUBSUB_TOPIC: Optional[str] = None
+
     
     # Firebase Settings
     FIREBASE_CREDENTIALS_PATH: str = "firebase_credentials.json"
