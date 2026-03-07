@@ -44,7 +44,8 @@ def get_google_flow(redirect_uri: str = None):
             "https://www.googleapis.com/auth/userinfo.email",
             "https://www.googleapis.com/auth/userinfo.profile",
             "https://www.googleapis.com/auth/gmail.readonly"
-        ]
+        ],
+        autogenerate_code_verifier=False
     )
     flow.redirect_uri = redirect_uri
     return flow
@@ -95,12 +96,6 @@ async def google_callback(
     try:
         # Fetch token using the authorization code
         logger.debug(f"Fetching token for code: {code[:10]}...")
-        
-        # Disable PKCE specifically for this token exchange to match frontend
-        if "kwargs" not in flow.client_config:
-            flow.client_config["kwargs"] = {}
-        flow.client_config["kwargs"]["code_verifier"] = None
-        
         flow.fetch_token(code=code)
         creds = flow.credentials
         logger.info(f"Successfully fetched token for {current_user.email}")
