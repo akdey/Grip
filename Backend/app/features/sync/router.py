@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Header, 
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from google_auth_oauthlib.flow import Flow
-
 from app.core.database import get_db
 from app.core.config import get_settings
 from app.features.auth.deps import get_current_user
 from app.features.auth.models import User
+from app.features.sync.service import SyncService
 import base64
 import json
 from app.features.sync.models import SyncLog
