@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import uuid
 import logging
@@ -386,6 +387,25 @@ class SyncService:
         return sorted(trends_map.values(), key=lambda x: x["date"])
 
     async def execute_sync(self, user_id: uuid.UUID, source: str):
+        # 1. Debounce: If triggered by webhook, wait a few seconds to batch incoming pings
+        if source == "WEBHOOK":
+            delay = 5
+            logger.info(f"[Sync:{user_id}] Webhook triggered. Debouncing for {delay}s...")
+            await asyncio.sleep(delay)
+
+        # 2. Concurrency Guard: Don't start if another sync is already running for this user
+        # We check the DB for any 'IN_PROGRESS' logs for this user
+        active_stmt = (
+            select(SyncLog)
+            .where(SyncLog.user_id == user_id)
+            .where(SyncLog.status == "IN_PROGRESS")
+            .limit(1)
+        )
+        active_res = await self.db.execute(active_stmt)
+        if active_res.scalar_one_or_none():
+            logger.info(f"[Sync:{user_id}] A sync is already IN_PROGRESS. Skipping redundant {source} trigger.")
+            return
+
         log = await self._log_start(user_id, source)
         try:
             start_time = await self._get_last_sync_time(user_id)
