@@ -54,14 +54,14 @@ While others make you wait for "syncs" or manual entries, Grip is built to get y
 - **Timing Leakage Reports**: Detailed breakdown of how much "extra" money you could have made by simply shifting your SIP date.
 
 ### 🤖 Hybrid Intelligence — Fast, Private, Reliable
-- **Rule Engine (Primary)**: A deterministic, zero-latency, zero-cost pattern-matching engine handles >90% of Indian bank email formats. Works offline. No API calls needed.
-- **Groq AI (Fallback)**: Only called when the rule engine is uncertain. Sanitized snippets only — no raw PII ever sent externally.
-- **Automatic Transaction Extraction**: Connect Gmail once; transactions are extracted from bank alerts automatically
-- **Autonomous Notification Engine**: Scheduled email alerts for Gmail disconnection, surety bill reminders, and spending insights
-- **Hybrid Forecasting**: Combines Meta Prophet (statistical) + Groq LLM (contextual) to predict month-end expenses
-- **Smart Learning**: Remembers your merchant preferences, auto-categorizes future transactions
-- **Multi-Layer Spam Filter**: Sender whitelist + subject gates + body signals distinguish real transactions from marketing emails
-
+- **Local LLM Engine (Primary)**: A high-privacy, zero-cost LLM (SmolLM2-1.7B) runs natively on your server for extraction. No external API calls needed.
+- **Rule Engine (Secondary)**: A deterministic, zero-latency pattern-matching engine handles common Indian bank email formats.
+- **Automatic Transaction Extraction**: Connect Gmail once; transactions are extracted from bank alerts automatically.
+- **Webhook Sync Optimization**: Intelligent 5-second debouncing and concurrency guards prevent redundant syncs from batch emails.
+- **Autonomous Notification Engine**: Scheduled email alerts for Gmail disconnection, surety bill reminders, and spending insights.
+- **Hybrid Forecasting**: Combines Meta Prophet (statistical) + Local LLM (contextual) to predict month-end expenses.
+- **Smart Learning**: Remembers your merchant preferences, auto-categorizes future transactions.
+- **Multi-Layer Spam Filter**: Sender whitelist + subject gates + body signals distinguish real transactions from marketing emails.
 ### 🔒 Privacy Built-In, Not Bolted-On
 - **Local Rule Engine First**: The primary extraction runs 100% on-server — no data leaves for the common case
 - **Sanitization Before AI**: PAN, Aadhaar, Credit Card numbers masked *before* any external AI sees them
@@ -102,7 +102,7 @@ Grip processes your financial data through a sophisticated, privacy-preserving p
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ 3. AI EXTRACTION (Groq Llama 3.3)                               │
+│ 3. AI EXTRACTION (Local SmolLM2-1.7B)                           │
 │    Natural Language → Structured JSON                           │
 │    "Rs 1,250 debited from Card ending 4521 at Swiggy"          │
 │    ↓                                                             │
@@ -129,7 +129,7 @@ Grip processes your financial data through a sophisticated, privacy-preserving p
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │ 7. PREDICTIVE FORECASTING                                       │
-│    Historical Data → Prophet/Groq → Month-end burden prediction │
+│    Historical Data → Prophet/Local LLM → Month-end burden prediction│
 │    "Expected ₹12,500 in remaining expenses (18 days left)"     │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
