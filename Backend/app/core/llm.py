@@ -177,7 +177,6 @@ class LLMService:
                 # If it fails once with a severe error (like shared lib missing), we can disable it 
                 # for the rest of this worker's lifecycle to stop log spam.
                 if "shared object file" in str(e) or "libc" in str(e).lower():
-                    global HAS_LLAMA_CPP
                     HAS_LLAMA_CPP = False
                     logger.error(f">>> LLM_ENGINE: Fatal library error. Disabling local LLM: {e}")
                 else:
