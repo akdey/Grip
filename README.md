@@ -63,12 +63,12 @@ While others make you wait for "syncs" or manual entries, Grip is built to get y
 - **Smart Learning**: Remembers your merchant preferences, auto-categorizes future transactions.
 - **Multi-Layer Spam Filter**: Sender whitelist + subject gates + body signals distinguish real transactions from marketing emails.
 ### 🔒 Privacy Built-In, Not Bolted-On
-- **Local Rule Engine First**: The primary extraction runs 100% on-server — no data leaves for the common case
-- **Sanitization Before AI**: PAN, Aadhaar, Credit Card numbers masked *before* any external AI sees them
+- **100% On-Server Extraction**: Local LLM (SmolLM2-1.7B) runs natively on our server. Your financial data **never leaves your infrastructure** for extraction.
+- **Real-Time Privacy**: Gmail webhooks (via Google Pub/Sub) trigger immediate, secure parsing.
+- **Sanitization Before Processing**: PAN, Aadhaar, and Credit Card numbers are masked *before* the LLM even sees them, providing double-layered privacy.
 - **No Data Selling**: Your financial data stays yours. Period.
-- **Self-Hostable**: Open architecture—you control the deployment and data
-- **Read-Only Gmail**: OAuth 2.0 with minimal scopes; we can't send or modify your emails
-
+- **Self-Hostable**: Open architecture—you control the deployment and data.
+- **Read-Only Gmail**: OAuth 2.0 with minimal scopes; we can't send or modify your emails.
 
 ---
 
@@ -94,11 +94,10 @@ Grip processes your financial data through a sophisticated, privacy-preserving p
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ 2. PRIVACY SANITIZATION (LOCAL)                                 │
 │    Regex Engine → Masks PII → Safe for AI processing            │
-│    • Credit Card: ****-****-XXXX-1234                           │
-│    • Aadhaar: XXXX-XXXX-5678                                    │
-│    • UPI ID: user@***                                           │
+│    • Credit Card: 💳 ****-****-XXXX-1234                        │
+│    • Aadhaar: 🆔 XXXX-XXXX-5678                                 │
+│    • UPI ID: 👤 <email>@***                                     │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -497,12 +496,11 @@ Masked:   "UPI: ****@paytm paid ****@phonepe"
 ```
 
 **What Gets Sanitized:**
-- ✅ Credit card numbers (only last 4 digits visible)
-- ✅ PAN cards (only last 4 chars + 1 middle char)
-- ✅ Aadhaar numbers (only last 4 digits)
-- ✅ UPI IDs (username masked)
-- ✅ Phone numbers (middle digits masked)
-
+- ✅ Credit Card numbers (💳 12-digit masking, last 4 visible)
+- ✅ PAN cards (🆔 Professional alpha-numeric masking)
+- ✅ Aadhaar numbers (🆔 8-digit masking, last 4 visible)
+- ✅ UPI IDs (👤 <email> or <username> prefix masked)
+- ✅ Phone numbers (📱 middle 6 digits masked)
 **Security Architecture:**
 - JWT authentication with bcrypt password hashing
 - Email verification with OTP (SMTP)
@@ -612,9 +610,11 @@ GROQ_API_KEY=your-groq-api-key
 GROQ_MODEL=llama-3.3-70b-versatile
 USE_AI_FORECASTING=true
 
-# Gmail OAuth (for email sync)
+# Gmail OAuth & Webhooks (for Real-time Sync)
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-client-secret
+GMAIL_PUBSUB_TOPIC=projects/your-project/topics/gmail-updates
+FRONTEND_ORIGIN=http://localhost:5173 
 
 # Email (for OTP)
 SMTP_HOST=smtp.gmail.com
