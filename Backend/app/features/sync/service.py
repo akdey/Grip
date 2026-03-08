@@ -33,8 +33,10 @@ logger = logging.getLogger(__name__)
 
 
 class SyncService:
-    def __init__(self, 
-                 db: AsyncSession = Depends(get_db), 
+    # Class-level tracker for active sync tasks per user (debouncing and running)
+    _active_syncs = set()
+
+    def __init__(self,                  db: AsyncSession = Depends(get_db), 
                  transaction_service: TransactionService = Depends(),
                  category_service: CategoryService = Depends(),
                  wealth_service: WealthService = Depends(),
@@ -193,10 +195,17 @@ class SyncService:
              if re.search(r'\b(?:credited|received|deposit)\b', text, re.IGNORECASE):
                  txn_type = "CREDIT"
              
-             # 2. Search for UPI ID for the merchant
-             upi_match = re.search(r'\b([a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,})\b', text)
-             if upi_match:
-                 merchant = upi_match.group(1).title()
+             # 2. Search for UPI patterns for the merchant
+             # Format A: Business/UPI ID (user@bank)
+             upi_id_match = re.search(r'\b([a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,})\b', text)
+             
+             # Format B: UPI Transaction Path (UPI/P2P/something/Merchant/...)
+             upi_path_match = re.search(r'UPI/(?:P2P|P2M)/[^/]+/([^/]+?)(?:/|$)', text, re.IGNORECASE)
+             
+             if upi_path_match:
+                 merchant = upi_path_match.group(1).strip().title()
+             elif upi_id_match:
+                 merchant = upi_id_match.group(1).title()
                  
              logger.info(f"[Brain:{user_id}] Regex Fallback Extracted: ₹{amount} | Merchant: {merchant} | Type: {txn_type}")
 
@@ -387,174 +396,176 @@ class SyncService:
         return sorted(trends_map.values(), key=lambda x: x["date"])
 
     async def execute_sync(self, user_id: uuid.UUID, source: str):
-        # 1. Debounce: If triggered by webhook, wait a few seconds to batch incoming pings
-        if source == "WEBHOOK":
-            delay = 5
-            logger.info(f"[Sync:{user_id}] Webhook triggered. Debouncing for {delay}s...")
-            await asyncio.sleep(delay)
-
-        # 2. Concurrency Guard: Don't start if another sync is already running for this user
-        # We check the DB for any 'IN_PROGRESS' logs for this user
-        active_stmt = (
-            select(SyncLog)
-            .where(SyncLog.user_id == user_id)
-            .where(SyncLog.status == "IN_PROGRESS")
-            .limit(1)
-        )
-        active_res = await self.db.execute(active_stmt)
-        if active_res.scalar_one_or_none():
-            logger.info(f"[Sync:{user_id}] A sync is already IN_PROGRESS. Skipping redundant {source} trigger.")
+        # 0. Concurrency & Debounce Guard: 
+        # Skip if another sync is already debouncing or running for this user
+        if user_id in SyncService._active_syncs:
+            logger.info(f"[Sync:{user_id}] A sync is already PENDING/RUNNING. Skipping redundant {source} trigger.")
             return
 
-        log = await self._log_start(user_id, source)
+        SyncService._active_syncs.add(user_id)
+        
         try:
-            start_time = await self._get_last_sync_time(user_id)
-            logger.info(f"[Sync:{user_id}] Starting sync. source={source}, last_sync={start_time.isoformat() if start_time else 'FIRST_SYNC'}")
-            
-            messages = await self.fetch_gmail_changes(user_id, start_time)
-            
-            if not messages:
-                logger.info(f"[Sync:{user_id}] No messages returned from Gmail. Completing with 0 records.")
-                await self._log_end(log, "SUCCESS", 0)
-                return
-            
-            # Fetch categories once for context
-            db_categories = await self.category_service.get_categories(user_id)
-            
-            # Build hierarchy for context: "Category (Sub1, Sub2, Sub3)"
-            cat_list = []
-            for c in db_categories:
-                subs = [s.name for s in c.sub_categories]
-                if subs:
-                    cat_list.append(f"{c.name}: [{', '.join(subs)}]")
-                else:
-                     cat_list.append(c.name)
-            
-            processed_count = 0
-            dedup_skipped = 0
-            llm_failed = 0
-            zero_amount_skipped = 0
-            sync_summary = []
+            # 1. Debounce: If triggered by webhook, wait a few seconds to batch incoming burst pings
+            if source == "WEBHOOK":
+                delay = 5
+                logger.info(f"[Sync:{user_id}] Webhook triggered. Debouncing for {delay}s...")
+                await asyncio.sleep(delay)
 
-            for msg in messages:
-                dedup_payload = f"{msg['id']}:{msg['internalDate']}"
-                content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
+            log = await self._log_start(user_id, source)
+            try:
+                start_time = await self._get_last_sync_time(user_id)
+                logger.info(f"[Sync:{user_id}] Starting sync. source={source}, last_sync={start_time.isoformat() if start_time else 'FIRST_SYNC'}")
                 
-                if await self.txn_service.get_transaction_by_hash(content_hash):
-                    dedup_skipped += 1
-                    continue
+                messages = await self.fetch_gmail_changes(user_id, start_time)
                 
-                # Sanitize and send to extraction pipeline
-                raw_body = msg['body'] or msg['snippet']
-                clean_text = self.sanitizer.sanitize(raw_body)
-                extracted = await self.call_brain_api(
-                    text=clean_text,
-                    user_id=user_id,
-                    categories_context=cat_list,
-                    subject=msg.get('subject', ''),
-                    sender=msg.get('sender', '')
-                )
+                if not messages:
+                    logger.info(f"[Sync:{user_id}] No messages returned from Gmail. Completing with 0 records.")
+                    await self._log_end(log, "SUCCESS", 0)
+                    return
                 
-                # Skip if no valid amount was extracted (LLM timeout/failure or non-transaction email)
-                if abs(extracted["amount"]) == 0:
-                    merchant = extracted.get("merchant_name", "UNKNOWN")
-                    if merchant == "UNCATEGORIZED" or merchant == "UNKNOWN":
-                        llm_failed += 1
-                        logger.warning(f"[Sync:{user_id}] LLM failed for '{msg['subject']}' ({msg['id']}). Snippet: {msg['snippet'][:50]}...")
+                # Fetch categories once for context
+                db_categories = await self.category_service.get_categories(user_id)
+                
+                # Build hierarchy for context: "Category (Sub1, Sub2, Sub3)"
+                cat_list = []
+                for c in db_categories:
+                    subs = [s.name for s in c.sub_categories]
+                    if subs:
+                        cat_list.append(f"{c.name}: [{', '.join(subs)}]")
                     else:
-                        zero_amount_skipped += 1
-                        logger.info(f"[Sync:{user_id}] ₹0 found for '{merchant}' in '{msg['subject']}'. Skipping.")
-                    continue
+                        cat_list.append(c.name)
+            
+                processed_count = 0
+                dedup_skipped = 0
+                llm_failed = 0
+                zero_amount_skipped = 0
+                sync_summary = []
 
-                mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
-                cat, sub = extracted["category"], extracted["sub_category"]
-                
-                # Use mapping if available overrides
-                if mapping:
-                    cat, sub = mapping.default_category, mapping.default_sub_category
-                
-                # Determine amount sign based on explicit type or category
-                final_amount = abs(extracted["amount"])
-                
-                if extracted.get("transaction_type") == "DEBIT" and cat != "Income":
-                    final_amount = -final_amount
-                elif cat == "Income" or extracted.get("transaction_type") == "CREDIT":
-                    final_amount = final_amount
-                else:
-                    final_amount = -final_amount
+                for msg in messages:
+                    dedup_payload = f"{msg['id']}:{msg['internalDate']}"
+                    content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
+                    
+                    if await self.txn_service.get_transaction_by_hash(content_hash):
+                        dedup_skipped += 1
+                        continue
+                    
+                    # Sanitize and send to extraction pipeline
+                    raw_body = msg['body'] or msg['snippet']
+                    clean_text = self.sanitizer.sanitize(raw_body)
+                    extracted = await self.call_brain_api(
+                        text=clean_text,
+                        user_id=user_id,
+                        categories_context=cat_list,
+                        subject=msg.get('subject', ''),
+                        sender=msg.get('sender', '')
+                    )
+                    
+                    # Skip if no valid amount was extracted (LLM timeout/failure or non-transaction email)
+                    if abs(extracted["amount"]) == 0:
+                        merchant = extracted.get("merchant_name", "UNKNOWN")
+                        if merchant == "UNCATEGORIZED" or merchant == "UNKNOWN":
+                            llm_failed += 1
+                            logger.warning(f"[Sync:{user_id}] LLM failed for '{msg['subject']}' ({msg['id']}). Snippet: {msg['snippet'][:50]}...")
+                        else:
+                            zero_amount_skipped += 1
+                            logger.info(f"[Sync:{user_id}] ₹0 found for '{merchant}' in '{msg['subject']}'. Skipping.")
+                        continue
 
-                # Fetch surety status
-                stmt = select(SubCategory.is_surety).where(SubCategory.name == sub).limit(1)
-                res = await self.db.execute(stmt)
-                is_surety_flag = res.scalar() or False
+                    mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
+                    cat, sub = extracted["category"], extracted["sub_category"]
+                    
+                    # Use mapping if available overrides
+                    if mapping:
+                        cat, sub = mapping.default_category, mapping.default_sub_category
+                    
+                    # Determine amount sign based on explicit type or category
+                    final_amount = abs(extracted["amount"])
+                    
+                    if extracted.get("transaction_type") == "DEBIT" and cat != "Income":
+                        final_amount = -final_amount
+                    elif cat == "Income" or extracted.get("transaction_type") == "CREDIT":
+                        final_amount = final_amount
+                    else:
+                        final_amount = -final_amount
 
-                # Use date extracted from email body; fall back to Gmail delivery date
-                tx_date = None
-                if extracted.get("extracted_date"):
+                    # Fetch surety status
+                    stmt = select(SubCategory.is_surety).where(SubCategory.name == sub).limit(1)
+                    res = await self.db.execute(stmt)
+                    is_surety_flag = res.scalar() or False
+
+                    # Use date extracted from email body; fall back to Gmail delivery date
+                    tx_date = None
+                    if extracted.get("extracted_date"):
+                        try:
+                            from dateutil import parser as dateparser
+                            tx_date = dateparser.parse(extracted["extracted_date"]).date()
+                        except Exception:
+                            pass
+                    if not tx_date:
+                        tx_date = datetime.fromtimestamp(int(msg['internalDate']) / 1000).date()
+
+                    # Append sanitized subject to remarks for better manual review
+                    clean_subject = self.sanitizer.sanitize(msg.get('subject', ''))
+                    ext_icon = extracted.get("extractor", "")
+                    prefix = f"{ext_icon} | " if ext_icon else ""
+                    improved_remarks = f"{prefix}Synced via {source} | Subject: {clean_subject}"
+
+                    new_txn = await self.txn_service.create_transaction({
+                        "id": uuid.uuid4(),
+                        "user_id": user_id,
+                        "raw_content_hash": content_hash,
+                        "transaction_date": tx_date,
+                        "amount": final_amount,
+                        "currency": extracted["currency"],
+                        "merchant_name": extracted["merchant_name"],
+                        "category": cat,
+                        "sub_category": sub,
+                        "status": TransactionStatus.PENDING,
+                        "account_type": extracted["account_type"],
+                        "remarks": improved_remarks,
+                        "is_surety": is_surety_flag
+                    })
+                    
+                    # Attempt to map to Wealth/Investment (INTEGRATED)
+                    wealth_mapped = False
                     try:
-                        from dateutil import parser as dateparser
-                        tx_date = dateparser.parse(extracted["extracted_date"]).date()
-                    except Exception:
-                        pass
-                if not tx_date:
-                    tx_date = datetime.fromtimestamp(int(msg['internalDate']) / 1000).date()
+                        wealth_mapped = await self.wealth_service.process_transaction_match(new_txn)
+                    except Exception as w_ex:
+                        logger.error(f"[Sync:{user_id}] Wealth mapping failed for txn {new_txn.id}: {type(w_ex).__name__}")
 
-                # Append sanitized subject to remarks for better manual review
-                clean_subject = self.sanitizer.sanitize(msg.get('subject', ''))
-                ext_icon = extracted.get("extractor", "")
-                prefix = f"{ext_icon} | " if ext_icon else ""
-                improved_remarks = f"{prefix}Synced via {source} | Subject: {clean_subject}"
+                    sync_summary.append({
+                        "id": str(new_txn.id),
+                        "merchant": extracted["merchant_name"],
+                        "amount": final_amount,
+                        "category": cat,
+                        "wealth_mapped": wealth_mapped
+                    })
 
-                new_txn = await self.txn_service.create_transaction({
-                    "id": uuid.uuid4(),
-                    "user_id": user_id,
-                    "raw_content_hash": content_hash,
-                    "transaction_date": tx_date,
-                    "amount": final_amount,
-                    "currency": extracted["currency"],
-                    "merchant_name": extracted["merchant_name"],
-                    "category": cat,
-                    "sub_category": sub,
-                    "status": TransactionStatus.PENDING,
-                    "account_type": extracted["account_type"],
-                    "remarks": improved_remarks,
-                    "is_surety": is_surety_flag
-                })
+                    processed_count += 1
                 
-                # Attempt to map to Wealth/Investment (INTEGRATED)
-                wealth_mapped = False
-                try:
-                    wealth_mapped = await self.wealth_service.process_transaction_match(new_txn)
-                except Exception as w_ex:
-                    logger.error(f"[Sync:{user_id}] Wealth mapping failed for txn {new_txn.id}: {type(w_ex).__name__}")
-
-                sync_summary.append({
-                    "id": str(new_txn.id),
-                    "merchant": extracted["merchant_name"],
-                    "amount": final_amount,
-                    "category": cat,
-                    "wealth_mapped": wealth_mapped
-                })
-
-                processed_count += 1
-            
-            logger.info(
-                f"[Sync:{user_id}] Sync complete. "
-                f"fetched={len(messages)}, dedup_skipped={dedup_skipped}, "
-                f"llm_failed={llm_failed}, zero_amount_skipped={zero_amount_skipped}, "
-                f"processed={processed_count}"
-            )
-            await self._log_end(log, "SUCCESS", processed_count, summary=sync_summary)
-            
+                logger.info(
+                    f"[Sync:{user_id}] Sync complete. "
+                    f"fetched={len(messages)}, dedup_skipped={dedup_skipped}, "
+                    f"llm_failed={llm_failed}, zero_amount_skipped={zero_amount_skipped}, "
+                    f"processed={processed_count}"
+                )
+                await self._log_end(log, "SUCCESS", processed_count, summary=sync_summary)
+                
+            except Exception as e:
+                error_type = type(e).__name__
+                logger.error(f"[Sync:{user_id}] Sync process FAILED: {error_type}: {e}")
+                if str(e) == "GMAIL_DISCONNECTED":
+                    # Fetch user for notification
+                    result = await self.db.execute(select(User).where(User.id == user_id))
+                    user = result.scalar_one_or_none()
+                    if user and user.email:
+                        await self.notification_service.notify_gmail_disconnection(user_id, user.email, user.full_name or "Grip User")
+                    await self._log_end(log, "FAILED", 0, "Gmail connection lost. Please reconnect.")
+                else:
+                    await self._log_end(log, "FAILED", 0, f"{error_type}: {e}")
+                    
         except Exception as e:
-            error_type = type(e).__name__
-            logger.error(f"[Sync:{user_id}] Sync execution FAILED: {error_type}: {e}")
-            if str(e) == "GMAIL_DISCONNECTED":
-                # Fetch user for notification
-                result = await self.db.execute(select(User).where(User.id == user_id))
-                user = result.scalar_one_or_none()
-                if user and user.email:
-                    await self.notification_service.notify_gmail_disconnection(user_id, user.email, user.full_name or "Grip User")
-                await self._log_end(log, "FAILED", 0, "Gmail connection lost. Please reconnect.")
-            else:
-                await self._log_end(log, "FAILED", 0, f"{error_type}: {e}")
+            logger.error(f"[Sync:{user_id}] Fatal error in execute_sync: {e}")
+        finally:
+            # 3. Release the guard so next sync can run
+            SyncService._active_syncs.discard(user_id)
