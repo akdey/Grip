@@ -94,6 +94,7 @@ Grip processes your financial data through a sophisticated, privacy-preserving p
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
+│ 2. PRIVACY SANITIZATION (LOCAL)                                 │
 │    Regex Engine → Masks PII → Safe for AI processing            │
 │    • Credit Card: 💳 ****-****-XXXX-1234                        │
 │    • Aadhaar: 🆔 XXXX-XXXX-5678                                 │
@@ -605,16 +606,17 @@ DATABASE_URL=postgresql://user:pass@host:port/dbname
 SECRET_KEY=your-secret-key-here
 GRIP_SECRET=webhook-secret
 
-# AI
-GROQ_API_KEY=your-groq-api-key
-GROQ_MODEL=llama-3.3-70b-versatile
+# AI Features (Local SmolLM2-1.7B)
 USE_AI_FORECASTING=true
+ENABLE_SCHEDULER=true
+GROQ_API_KEY=your-groq-api-key # Optional fallback
+GROQ_MODEL=llama-3.3-70b-versatile
 
-# Gmail OAuth & Webhooks (for Real-time Sync)
+# Gmail OAuth & Webhooks (Real-time Sync)
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-client-secret
 GMAIL_PUBSUB_TOPIC=projects/your-project/topics/gmail-updates
-FRONTEND_ORIGIN=http://localhost:5173 
+FRONTEND_ORIGIN=http://localhost:5173
 
 # Email (for OTP)
 SMTP_HOST=smtp.gmail.com
