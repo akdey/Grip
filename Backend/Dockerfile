@@ -13,7 +13,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
-    musl \
+    cmake \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables for better stability with Stan (Prophet) and Llama-cpp
@@ -27,9 +28,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install llama-cpp-python using pre-built CPU-only wheels.
-# Using 0.2.89 as it has better glibc/manylinux compatibility on the CPU index.
-RUN pip install llama-cpp-python==0.2.89 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary :all:
+# Build llama-cpp-python from source to ensure it links against the local glibc (Debian).
+# This avoids 'libc.musl' errors common with pre-built wheels on HF Spaces.
+RUN CMAKE_ARGS="-DGGML_BLAS=OFF" FORCE_CMAKE=1 pip install --no-cache-dir llama-cpp-python==0.2.89
 
 # Pre-download the model into the image for instant startup
 # Using SmolLM2-1.7B (Instruct-GGUF) - much lighter (~1GB) and faster
