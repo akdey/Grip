@@ -200,7 +200,7 @@ class SyncService:
              upi_id_match = re.search(r'\b([a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,})\b', text)
              
              # Format B: UPI Transaction Path (UPI/P2P/something/Merchant/...)
-             upi_path_match = re.search(r'UPI/(?:P2P|P2M)/[^/]+/([^/]+?)(?:/|$)', text, re.IGNORECASE)
+             upi_path_match = re.search(r'UPI/(?:P2P|P2M)/[^/\r\n]+/([^/\r\n]+?)(?:/|\r|\n|$)', text, re.IGNORECASE)
              
              if upi_path_match:
                  merchant = upi_path_match.group(1).strip().title()
