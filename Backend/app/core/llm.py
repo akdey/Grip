@@ -10,9 +10,15 @@ from app.core.config import get_settings
 
 print(">>> LLM MODULE IMPORTED", flush=True)
 
-# We will lazy-import llama_cpp and huggingface_hub inside the methods to prevent 
-# module-level loading hangs during uvicorn worker startup.
-HAS_LLAMA_CPP = True # We assume true if the requirement is in the image, will check at runtime
+# Global flag to track if llama-cpp is available and usable on this system.
+HAS_LLAMA_CPP = False 
+try:
+    import llama_cpp
+    HAS_LLAMA_CPP = True
+except Exception:
+    # We don't log here to avoid cluttering startup logs if the user is running 
+    # in a environment where they explicitly didn't install it.
+    pass
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -149,6 +155,7 @@ class LLMService:
         timeout: float = 120.0 # Increased timeout for local inference
     ) -> Optional[str]:
         """Generic method to generate a response, prioritizing local execution."""
+        global HAS_LLAMA_CPP
         
         # 1. Try Local Engine (Primary — high privacy, no costs)
         if HAS_LLAMA_CPP:
@@ -165,9 +172,16 @@ class LLMService:
                 if res:
                     logger.info(">>> LLM_ENGINE: Local (SmolLM2) success.")
                     return res
-                logger.warning(">>> LLM_ENGINE: Local engine failed or returned empty.")
+                # If we get here it means inference failed or engine is broken
             except Exception as e:
-                logger.warning(f">>> LLM_ENGINE: Local engine error: {e}")
+                # If it fails once with a severe error (like shared lib missing), we can disable it 
+                # for the rest of this worker's lifecycle to stop log spam.
+                if "shared object file" in str(e) or "libc" in str(e).lower():
+                    global HAS_LLAMA_CPP
+                    HAS_LLAMA_CPP = False
+                    logger.error(f">>> LLM_ENGINE: Fatal library error. Disabling local LLM: {e}")
+                else:
+                    logger.warning(f">>> LLM_ENGINE: Local engine runtime error: {e}")
 
         # 2. Try Groq (Fallback — external API, sanitize content)
         # if self.groq_api_key:
