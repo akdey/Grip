@@ -158,7 +158,11 @@ class ForecastingService:
                         if is_monthly_spiky:
                             import statistics
                             median_val = statistics.median(monthly_values) if monthly_values else hist_monthly_avg
-                            predicted = max(predicted, median_val) # Rent shouldn't vanish
+                            # Apply a ceiling: Monthly recurring shouldn't suddenly spike more than 20% over max history
+                            max_val = max(monthly_values) if monthly_values else hist_monthly_avg
+                            predicted = max(predicted, median_val)
+                            predicted = min(predicted, max_val * 1.2) 
+                            
                             reason = f"Modeled as a monthly recurring expense ({cat})."
                         else:
                             predicted = min(predicted, hist_monthly_avg * 2)
@@ -178,14 +182,7 @@ class ForecastingService:
                     reason = f"Historical average (insufficient data for AI modeling in {cat})."
                 
                 if cat_total > 50: # Filter out noise
-                    breakdown.append(CategoryForecast(
-                        category=cat,
-                        predicted_amount=cat_total,
-                        reason=reason
-                    ))
-                    total_amount += cat_total
-                
-                if cat_total > 50: # Filter out noise
+                    logger.info(f"Forecast for {cat}: {cat_total} ({reason})")
                     breakdown.append(CategoryForecast(
                         category=cat,
                         predicted_amount=cat_total,
