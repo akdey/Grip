@@ -68,15 +68,9 @@ class ForecastingService:
              return ForecastResponse(amount=Decimal("0.00"), reason="No historical data found.", time_frame=time_frame, confidence="low")
 
         try:
-            # Prepare data: Group by category AND date, then sum amounts
-            # This ensures Prophet sees ONE value per day.
             df_all = pd.DataFrame(category_daily_history)
             if df_all.empty:
                 return ForecastResponse(amount=Decimal("0.00"), reason="No historical data found.", time_frame=time_frame, confidence="low")
-            
-            # Aggregate by category and date (ds)
-            df_all['ds'] = pd.to_datetime(df_all['ds'])
-            df_all = df_all.groupby(['category', 'ds'])['y'].sum().reset_index()
                 
             categories = df_all['category'].unique()
             
@@ -94,13 +88,13 @@ class ForecastingService:
             total_amount = Decimal("0.00")
             
             # Determine actual history days in the provided data
-            min_history_date = df_all['ds'].min()
+            min_history_date = pd.to_datetime(df_all['ds']).min()
             today = date.today()
             total_history_days = (today - min_history_date.date()).days + 1
             if total_history_days < 30: total_history_days = 120 # Fallback safety
             
             # Determine days to predict (from max historical date until end of next month)
-            max_history_date = df_all['ds'].max()
+            max_history_date = pd.to_datetime(df_all['ds']).max()
             days_to_predict = (end_date - max_history_date.date()).days
             
             if days_to_predict <= 0:
@@ -108,6 +102,7 @@ class ForecastingService:
 
             for cat in categories:
                 cat_df_raw = df_all[df_all['category'] == cat][['ds', 'y']].copy()
+                cat_df_raw['ds'] = pd.to_datetime(cat_df_raw['ds'])
                 
                 # 1. FIXED/RECURRING DETECTION (Most accurate for Rent, SIPs, etc.)
                 monthly_values = cat_monthly_totals.get(cat, [])
@@ -115,14 +110,12 @@ class ForecastingService:
                 num_txns = len(cat_df_raw)
                 
                 # Determine if it's a "Monthly Spiky" expense (Rent, Bills, SIPs)
-                # Logic: 1-5 transactions per month average (allow for multiple SIPs/bills)
+                # Logic: 1-2 transactions per month average
                 txns_per_month = num_txns / max(1, num_months)
-                # If category is "Investment" or matches known keywords, be more aggressive with monthly modeling
-                is_investment = "invest" in cat.lower() or "sip" in cat.lower() or "wealth" in cat.lower()
-                is_monthly_spiky = (num_months >= 2 and txns_per_month <= 6) or is_investment
+                is_monthly_spiky = num_months >= 2 and txns_per_month <= 2.5
                 
                 # 2. PROPHET FOR ALL (Optimized per category type)
-                if num_txns >= 3:
+                if num_txns >= 3: # Even small data can benefit from Prophet with monthly seasonality
                     try:
                         # Fill in missing days with 0 for accurate volume modeling
                         all_dates = pd.date_range(start=min_history_date, end=max_history_date, freq='D')
