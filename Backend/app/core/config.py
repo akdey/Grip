@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "llama-3.1-8b-instant"
     
     # Local LLM Settings
+    LOCAL_LLM_CONTEXT: int = 2048
     LOCAL_MODEL_REPO: str = "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF"
     LOCAL_MODEL_FILE: str = "smollm2-1.7b-instruct-q4_k_m.gguf"
     LOCAL_MODEL_DIR: str = "models"

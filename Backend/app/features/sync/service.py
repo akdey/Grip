@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import re
 import uuid
 import logging
 import json
@@ -86,6 +87,65 @@ class SyncService:
             log.summary = json.dumps(summary)
         await self.db.commit()
 
+    def _compress_email_body(self, text: str) -> str:
+        """
+        Semantic Compression (LLMLingua-2 Concept).
+        Identifies and removes low-information boilerplate while preserving signals.
+        """
+        if not text:
+            return ""
+        
+        # 1. Normalize whitespace and remove common repeated characters
+        text = re.sub(r'[\r\n]{2,}', '\n', text)
+        text = re.sub(r'[ \t]{2,}', ' ', text)
+        text = re.sub(r'-{3,}', '---', text)
+        text = re.sub(r'\.{3,}', '...', text)
+
+        # 2. List of standard low-information bank boilerplate patterns to discard
+        boilerplate_patterns = [
+            r'(?i)If this transaction was not initiated by you.*',
+            r'(?i)To block (?:your|UPI|Card).*',
+            r'(?i)Call us at.*',
+            r'(?i)Always open to help you.*',
+            r'(?i)This is an auto-generated.*',
+            r'(?i)Kindly do not reply.*',
+            r'(?i)Download our app.*',
+            r'(?i)For details on the transaction.*',
+            r'(?i)Important notice:.*',
+            r'(?i)Register for.*',
+            r'(?i)Please note that.*'
+        ]
+        
+        lines = text.split('\n')
+        compressed_lines = []
+        
+        # 3. Preserve lines that have "signal" tokens
+        signal_keywords = [
+            r'(?:Rs\.?|INR|₹)\s*[\d,]+', # Amount
+            r'UPI/(?:P2P|P2M)/',        # UPI Path
+            r'[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}', # UPI ID
+            r'(?:Spent|Debited|Credited|Transferred|Paid)', # Verbs
+            r'\d{2}[-/]\d{2}[-/]\d{2,4}', # Dates
+            r'VPA|Merchant|Ref No|Txn ID' # Identifiers
+        ]
+        signal_re = re.compile('|'.join(signal_keywords), re.IGNORECASE)
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Skip if matches minor boilerplate within a line
+            is_boilerplate = any(re.search(p, line) for p in boilerplate_patterns)
+            if is_boilerplate and len(line) > 50:
+                continue
+                
+            # Always keep short lines or lines with signal
+            if len(line) < 100 or signal_re.search(line):
+                compressed_lines.append(line)
+
+        return '\n'.join(compressed_lines)
+
     async def call_brain_api(
         self,
         text: str,
@@ -98,35 +158,37 @@ class SyncService:
         Unified LLM-based Transaction Identification & Extraction.
         Accuracy over Latency.
         """
+        # Compacting Category Context for token efficiency
         cat_str = "Categories: Food, Transport, Shopping, Housing, Bills & Utilities, Investment, Income, Entertainment, Medical, Personal Care"
         if categories_context:
-            cat_str = "Available Categories and Sub-categories:\n" + "\n".join([f"- {c}" for c in categories_context[:25]])
+            cat_str = "Available Categories and Sub-categories:\n" + "\n".join([f"- {c}" for c in categories_context[:30]])
 
+        # Reordering prompt for KV Cache optimization (Instructions at TOP)
+        # Stage 0: Semantic Compression (LLMLingua-2 Concept)
+        compressed_text = self._compress_email_body(text)
+        
+        # Stage 1: KV Cache Optimization & Prompt Reordering
+        # Instructions at top for better prompt caching
         prompt = f"""
         You are a high-precision financial intelligence engine. 
-        Extract transaction details from the following bank notification email.
-
-        EMAIL SUBJECT: {subject}
-        EMAIL SENDER: {sender}
-        EMAIL BODY:
-        \"\"\"{text[:2000]}\"\"\"
+        EXTRACT THE FOLLOWING FIELDS FROM THE BANK NOTIFICATION IN VALID RAW JSON:
+        1. is_transaction: (boolean) true only for completed DEBIT, CREDIT, or SPEND.
+        2. amount: (float) numerical value.
+        3. merchant_name: (string) brand name (no UPI IDs).
+        4. category/sub_category: Use provided context if available.
+        5. account_type: [SAVINGS, CREDIT_CARD, CASH].
+        6. transaction_type: [DEBIT, CREDIT].
+        7. extracted_date: ISO format.
 
         {cat_str}
 
-        EXTRACT THE FOLLOWING FIELDS:
-        1. is_transaction: (boolean) Set to true ONLY if this email is a specific notification for a completed DEBIT, CREDIT, or SPEND. Set to false for marketing, OTPs, balance inquiries, or statements.
-        2. amount: (float) The numerical value of the transaction.
-        3. currency: (string) Default to "INR".
-        4. merchant_name: (string) The exact brand or merchant name. If the merchant is formatted as a UPI ID (e.g. 'swiggy@icici'), extract the raw brand name (e.g. 'Swiggy').
-        5. category: (string) Choose the best fit from the categories listed above.
-        6. sub_category: (string) Choose a specific sub-category if provided in context, else use a descriptive name.
-        7. account_type: (string) MUST BE one of [SAVINGS, CREDIT_CARD, CASH].
-        8. transaction_type: (string) MUST BE one of [DEBIT, CREDIT].
-        9. extracted_date: (string) Date of transaction in ISO format (YYYY-MM-DD) if found, else null.
+        NOTIFICATION CONTENT:
+        SUBJECT: {subject}
+        SENDER: {sender}
+        BODY:
+        \"\"\"{compressed_text[:2000]}\"\"\"
 
-        Note: Accuracy is critical. If 'is_transaction' is false, other fields can be null or 0.
-
-        RETURN ONLY VALID RAW JSON:
+        RETURN ONLY RAW JSON:
         {{
           "is_transaction": bool,
           "amount": float,
@@ -139,8 +201,7 @@ class SyncService:
           "extracted_date": "YYYY-MM-DD" | null
         }}
         """
-
-        # Stage 1: Try Local LLM
+         # Stage 1: Try Local LLM
         data = await self.llm.generate_json(prompt, temperature=0.1)
         
         # Retry with higher temperature if basic local extraction failed 

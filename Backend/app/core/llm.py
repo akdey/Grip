@@ -71,17 +71,19 @@ class LocalLLMEngine:
                     model_path = os.path.abspath(downloaded_path)
                     logger.info(f"LocalLLMEngine: Download complete. Size: {os.path.getsize(model_path) / (1024*1024):.2f} MB")
                 
-                # Initialize Llama-cpp with strictly limited resources
-                # n_ctx: 1024 - Sufficient for transaction extraction, saves ~500MB RAM
-                # n_threads: 1 - Prevents CPU contention with Prophet/Stan workers
+                # Initialize Llama-cpp with optimized context and caching
+                # n_ctx: 2048 (default) - Sufficient for long emails + context
+                # n_threads: 1 - Prevents CPU contention
+                # logits_all: False - Saves memory
                 self._model = Llama(
                     model_path=model_path,
-                    n_ctx=1024,
+                    n_ctx=settings.LOCAL_LLM_CONTEXT,
                     n_threads=1,
                     n_gpu_layers=0, # Force CPU
+                    logits_all=False,
                     verbose=False
                 )
-                logger.info(f"Local LLM engine initialized successfully (ctx: 1024, threads: 1).")
+                logger.info(f"Local LLM engine initialized (ctx: {settings.LOCAL_LLM_CONTEXT}, threads: 1).")
                 return self._model
             except Exception as e:
                 logger.error(f"Failed to initialize local LLM engine: {e}")
