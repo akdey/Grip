@@ -109,39 +109,31 @@ class ForecastingService:
                 num_months = len(monthly_values)
                 num_txns = len(cat_df_raw)
                 
-                # Determine if it's a "Monthly Spiky" expense (Rent, Bills, SIPs)
-                # Logic: 1-2 transactions per month average
-                txns_per_month = num_txns / max(1, num_months)
-                is_monthly_spiky = num_months >= 2 and txns_per_month <= 2.5
+                # If it appears monthly but rarely (1-2 txns per month), it's a fixed expense
+                is_recurring = num_months >= 1 and (num_txns / max(1, num_months)) <= 4
                 
-                # 2. PROPHET FOR ALL (Optimized per category type)
-                if num_txns >= 3: # Even small data can benefit from Prophet with monthly seasonality
+                if is_recurring:
+                    import statistics
+                    # Use max or median for fixed costs
+                    predicted_monthly = statistics.median(monthly_values) if monthly_values else 0
+                    cat_total = Decimal(str(max(0, round(predicted_monthly, 2))))
+                    reason = "Projected based on monthly recurring patterns (Rent/SIP/RD/Bills)."
+                
+                # 2. PROPHET FOR FREQUENT DISCRETIONARY (Food, Shopping, etc.)
+                elif num_txns >= 15:
                     try:
-                        # Fill in missing days with 0 for accurate volume modeling
+                        # CRITICAL: Fill in missing days with 0 so Prophet doesn't think 
+                        # a sparse expense is a daily expense.
                         all_dates = pd.date_range(start=min_history_date, end=max_history_date, freq='D')
                         cat_df = cat_df_raw.set_index('ds').reindex(all_dates, fill_value=0).reset_index()
                         cat_df.columns = ['ds', 'y']
 
-                        # Adjust model parameters based on category behavior
-                        if is_monthly_spiky:
-                            # Rent/SIPs/Bills: Conservative trend, strong monthly cycle
-                            m = Prophet(
-                                daily_seasonality=False,
-                                weekly_seasonality=False,
-                                yearly_seasonality=False,
-                                changepoint_prior_scale=0.005 # Very conservative trend shifts
-                            )
-                            # Add custom 30.5 day seasonality for monthly spikes (Rent/SIPs)
-                            m.add_seasonality(name='monthly', period=30.5, fourier_order=5)
-                        else:
-                            # Discretionary (Food/Misc): Weekly patterns
-                            m = Prophet(
-                                daily_seasonality=False,
-                                weekly_seasonality=True,
-                                yearly_seasonality=False,
-                                changepoint_prior_scale=0.05 # Allow some trend adaptation
-                            )
-
+                        m = Prophet(
+                            daily_seasonality=False,
+                            weekly_seasonality=True,
+                            yearly_seasonality=False,
+                            changepoint_prior_scale=0.01 # Be conservative
+                        )
                         m.fit(cat_df)
                         
                         future = m.make_future_dataframe(periods=days_to_predict)
@@ -153,36 +145,24 @@ class ForecastingService:
                         predicted = forecast[mask]['yhat'].sum()
                         
                         # Safety Cap: Forecast should not realistically exceed 2x the historical monthly average
-                        # For monthly spiky, hold closer to the observed median if history is short
                         hist_monthly_avg = (cat_df_raw['y'].sum() / total_history_days) * 30
-                        if is_monthly_spiky:
-                            import statistics
-                            median_val = statistics.median(monthly_values) if monthly_values else hist_monthly_avg
-                            # Apply a ceiling: Monthly recurring shouldn't suddenly spike more than 20% over max history
-                            max_val = max(monthly_values) if monthly_values else hist_monthly_avg
-                            predicted = max(predicted, median_val)
-                            predicted = min(predicted, max_val * 1.2) 
-                            
-                            reason = f"Modeled as a monthly recurring expense ({cat})."
-                        else:
-                            predicted = min(predicted, hist_monthly_avg * 2)
-                            reason = f"Trend-based forecast for discretionary spending ({cat})."
+                        predicted = min(predicted, hist_monthly_avg * 2)
                         
                         cat_total = Decimal(str(max(0, round(predicted, 2))))
+                        reason = f"Trend-based forecast using {num_txns} data points."
                     except Exception as e:
                         logger.error(f"Error forecasting category {cat}: {e}")
                         avg_daily = cat_df_raw['y'].sum() / total_history_days
                         cat_total = Decimal(str(max(0, round(avg_daily * 30, 2))))
-                        reason = f"Fallback to average for {cat} due to model error."
+                        reason = "Forecasting model error; used historical monthly average."
                 
                 # 3. FALLBACK: SIMPLE MOVING AVERAGE
                 else:
                     avg_daily = cat_df_raw['y'].sum() / total_history_days
                     cat_total = Decimal(str(max(0, round(avg_daily * 30, 2))))
-                    reason = f"Historical average (insufficient data for AI modeling in {cat})."
+                    reason = "Forecasted using 4-month daily spend average."
                 
                 if cat_total > 50: # Filter out noise
-                    logger.info(f"Forecast for {cat}: {cat_total} ({reason})")
                     breakdown.append(CategoryForecast(
                         category=cat,
                         predicted_amount=cat_total,
