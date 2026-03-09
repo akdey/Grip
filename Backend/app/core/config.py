@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     FROM_NAME: str = "Grip"
 
     # External Email Relay (for bypassing cloud SMTP blocks)
-    EMAIL_RELAY_URL: Optional[str] = None  # e.g., "https://grip-email.vercel.app/send"
+    EMAIL_RELAY_URL: Optional[str] = "https://akdey-grip-email-relay.vercel.app/send"
     EMAIL_RELAY_SECRET: Optional[str] = None
     
     # Branding
