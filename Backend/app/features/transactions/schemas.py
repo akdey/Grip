@@ -20,6 +20,10 @@ class TransactionBase(BaseModel):
     remarks: Optional[str] = None
     tags: Optional[List[str]] = []
 
+    class Config:
+        str_strip_whitespace = True
+        populate_by_name = True
+
 class TransactionCreate(TransactionBase):
     raw_content_hash: str
     category: str
@@ -38,6 +42,9 @@ class ManualTransactionCreate(BaseModel):
     remarks: Optional[str] = None
     tags: Optional[List[str]] = []
 
+    class Config:
+        str_strip_whitespace = True
+
 class TransactionUpdate(BaseModel):
     # Used for verification/updates
     category: Optional[str] = None
@@ -46,6 +53,10 @@ class TransactionUpdate(BaseModel):
     status: Optional[TransactionStatus] = None
     remarks: Optional[str] = None
     tags: Optional[List[str]] = []
+
+    class Config:
+        str_strip_whitespace = True
+        populate_by_name = True
 
 class TransactionResponse(TransactionBase):
     id: UUID
@@ -74,6 +85,9 @@ class VerificationRequest(BaseModel):
     approved: bool # If False -> REJECTED
     tags: Optional[List[str]] = []
     remarks: Optional[str] = None
+
+    class Config:
+        str_strip_whitespace = True
 
 class CategoriesResponse(BaseModel):
     categories: dict[str, list[str]]

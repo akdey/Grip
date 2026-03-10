@@ -19,12 +19,12 @@ class SettleUpService:
         """
         stmt = (
             select(
-                SettleUpEntry.peer_name,
+                func.max(SettleUpEntry.peer_name).label("peer_name"),
                 func.sum(SettleUpEntry.amount).label("net_balance"),
                 func.max(SettleUpEntry.date).label("last_activity_date")
             )
             .where(SettleUpEntry.user_id == user_id)
-            .group_by(SettleUpEntry.peer_name)
+            .group_by(func.lower(SettleUpEntry.peer_name))
             .having(func.sum(SettleUpEntry.amount) != 0) # Optionally filter out settled (0) balances, or keep them for history
             .order_by(desc("last_activity_date"))
         )
@@ -43,10 +43,11 @@ class SettleUpService:
 
     async def get_peer_history(self, user_id: UUID, peer_name: str, limit: int = 50) -> List[SettleUpEntry]:
         """Gets the transaction history for a specific peer."""
+        peer_name_stripped = peer_name.strip()
         stmt = (
             select(SettleUpEntry)
             .where(SettleUpEntry.user_id == user_id)
-            .where(SettleUpEntry.peer_name.ilike(peer_name))
+            .where(SettleUpEntry.peer_name.ilike(peer_name_stripped))
             .order_by(SettleUpEntry.date.desc(), SettleUpEntry.created_at.desc())
             .limit(limit)
         )

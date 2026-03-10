@@ -10,6 +10,9 @@ class SettleUpEntryBase(BaseModel):
     remarks: Optional[str] = None
     date: Optional[date] = None
 
+    class Config:
+        str_strip_whitespace = True
+
 class SettleUpEntryCreate(SettleUpEntryBase):
     transaction_id: Optional[UUID] = None
 
@@ -18,6 +21,9 @@ class SettleUpEntryUpdate(BaseModel):
     amount: Optional[Decimal] = None
     remarks: Optional[str] = None
     date: Optional[date] = None
+
+    class Config:
+        str_strip_whitespace = True
 
 class SettleUpEntryResponse(SettleUpEntryBase):
     id: UUID
@@ -33,3 +39,6 @@ class PeerBalance(BaseModel):
     peer_name: str
     net_balance: Decimal
     last_activity_date: date
+
+    class Config:
+        str_strip_whitespace = True

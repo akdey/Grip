@@ -124,13 +124,13 @@ const AddEntry: React.FC = () => {
             const finalAmount = type === 'EXPENSE' ? -Math.abs(Number(amount)) : Math.abs(Number(amount));
             const payload = {
                 amount: finalAmount,
-                merchant_name: merchantName || category || 'Unspecified',
+                merchant_name: (merchantName || category || 'Unspecified').trim(),
                 category: category || 'Uncategorized',
                 sub_category: subCategory || 'Uncategorized',
                 transaction_date: `${date}T${time}:00`,
                 account_type: accountType === 'ACCOUNT' ? 'SAVINGS' : accountType,
                 credit_card_id: (accountType === 'CREDIT_CARD' && cardId) ? cardId : null,
-                remarks: remarks,
+                remarks: remarks?.trim(),
                 tags: tags,
                 is_manual: true,
                 is_surety: isSurety

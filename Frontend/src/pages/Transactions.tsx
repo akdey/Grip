@@ -430,7 +430,7 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
                 approved: true,
                 category: txn.category,
                 sub_category: txn.sub_category || 'Uncategorized',
-                merchant_name: txn.merchant_name || 'Unknown'
+                merchant_name: (txn.merchant_name || 'Unknown').trim()
             }
         });
     };

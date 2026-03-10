@@ -2,7 +2,7 @@ from uuid import UUID
 from typing import List, Optional
 from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from fastapi import HTTPException
 from fastapi import Depends
 from app.features.transactions.models import Transaction, MerchantMapping
@@ -165,7 +165,7 @@ class TransactionService:
             raw_merchant_key = txn.merchant_name 
             txn.merchant_name = verification.merchant_name
             
-            mapping_stmt = select(MerchantMapping).where(MerchantMapping.raw_merchant == raw_merchant_key)
+            mapping_stmt = select(MerchantMapping).where(func.lower(MerchantMapping.raw_merchant) == raw_merchant_key.strip().lower())
             mapping_result = await self.db.execute(mapping_stmt)
             existing_mapping = mapping_result.scalar_one_or_none()
             
@@ -194,7 +194,7 @@ class TransactionService:
         return txn
 
     async def get_merchant_mapping(self, raw_merchant: str) -> Optional[MerchantMapping]:
-        stmt = select(MerchantMapping).where(MerchantMapping.raw_merchant == raw_merchant)
+        stmt = select(MerchantMapping).where(func.lower(MerchantMapping.raw_merchant) == raw_merchant.strip().lower())
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
