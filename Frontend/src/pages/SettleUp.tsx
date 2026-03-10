@@ -288,17 +288,17 @@ const PeerHistoryDrawer = ({
                         {history.map((entry) => {
                             const isDebit = entry.amount < 0; // You gave money
                             return (
-                                <div key={entry.id} className="group flex items-center justify-between p-3.5 bg-white/[0.02] border border-white/[0.05] rounded-2xl relative">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDebit ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                                <div key={entry.id} className="group flex items-center justify-between p-3.5 bg-white/[0.02] border border-white/[0.05] rounded-2xl relative overflow-hidden">
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <div className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center ${isDebit ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                                             {isDebit ? <ArrowUpRight size={14} /> : <ArrowDownLeft size={14} />}
                                         </div>
-                                        <div>
+                                        <div className="min-w-0">
                                             <p className="text-xs font-bold text-gray-300">
                                                 {isDebit ? 'You lent' : 'You received'}
                                             </p>
                                             {entry.remarks && (
-                                                <p className="text-[9px] text-gray-600 mt-0.5 truncate max-w-[120px]">{entry.remarks}</p>
+                                                <p className="text-[9px] text-gray-600 mt-0.5 truncate">{entry.remarks}</p>
                                             )}
                                             <p className="text-[8px] text-gray-700 mt-0.5">
                                                 {formatDistanceToNow(parseISO(entry.date), { addSuffix: true })}
@@ -306,24 +306,25 @@ const PeerHistoryDrawer = ({
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity mr-1">
+                                    <div className="flex items-center gap-2 ml-3 flex-shrink-0 relative">
+                                        {/* Actions: Overlaying on hover for stability */}
+                                        <div className="absolute right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all bg-[#0d0d0d] pl-4 py-1 z-10 translate-x-2 group-hover:translate-x-0">
                                             <button
                                                 onClick={() => onEdit(entry)}
-                                                className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.1] transition-all"
+                                                className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.1] active:scale-90 transition-all"
                                             >
                                                 <Pencil size={12} />
                                             </button>
                                             <button
                                                 onClick={() => onDelete(entry.id)}
-                                                className="w-7 h-7 rounded-lg bg-red-500/5 border border-red-500/10 flex items-center justify-center text-red-500/60 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                                className="w-7 h-7 rounded-lg bg-red-500/5 border border-red-500/10 flex items-center justify-center text-red-500/60 hover:text-red-400 hover:bg-red-500/10 active:scale-90 transition-all"
                                             >
                                                 <Trash2 size={12} />
                                             </button>
                                         </div>
 
-                                        <div className="text-right">
-                                            <div className="flex items-center justify-end gap-1.5 mb-0.5">
+                                        <div className="text-right transition-opacity group-hover:opacity-20">
+                                            <div className="flex items-center justify-end gap-1 mb-0.5">
                                                 {entry.transaction_id && (
                                                     <span className="text-[6px] px-1 py-0 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-black uppercase tracking-tighter">
                                                         Synced
