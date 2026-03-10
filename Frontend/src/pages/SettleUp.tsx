@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, ArrowDownLeft, ArrowUpRight, Info } from 'lucide-react';
+import { ArrowLeft, Plus, ArrowDownLeft, ArrowUpRight, Info, Pencil, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { usePeerBalances, usePeerHistory, useAddLedgerEntry } from '../features/settle-up/hooks';
+import { usePeerBalances, usePeerHistory, useAddLedgerEntry, useUpdateSettleUpEntry, useDeleteSettleUpEntry } from '../features/settle-up/hooks';
 import { Loader } from '../components/ui/Loader';
 import { Drawer } from '../components/ui/Drawer';
 import { formatDistanceToNow, parseISO } from 'date-fns';
@@ -12,12 +12,16 @@ const SettleUp: React.FC = () => {
     const [selectedPeer, setSelectedPeer] = useState<string | null>(null);
     const [showAddForm, setShowAddForm] = useState(false);
 
-    // Add Entry State
+    // Add/Edit Entry State
+    const [editingEntry, setEditingEntry] = useState<any | null>(null);
     const [newPeerName, setNewPeerName] = useState('');
     const [newAmount, setNewAmount] = useState('');
     const [newRemarks, setNewRemarks] = useState('');
     const [newType, setNewType] = useState<'expense' | 'income'>('expense');
+
     const addMutation = useAddLedgerEntry();
+    const updateMutation = useUpdateSettleUpEntry();
+    const deleteMutation = useDeleteSettleUpEntry();
 
     const formatCurrency = (amount: number) =>
         new Intl.NumberFormat('en-IN', {
@@ -26,29 +30,56 @@ const SettleUp: React.FC = () => {
             maximumFractionDigits: 0
         }).format(Math.abs(amount));
 
-    const handleAddEntry = () => {
+    const handleSaveEntry = () => {
         if (!newPeerName.trim() || !newAmount.trim()) return;
 
         const amount = parseFloat(newAmount);
         if (isNaN(amount) || amount <= 0) return;
 
-        // Expense = You gave money out = negative amount (they owe you)
-        // Income = You received money = positive amount (you owe them less / they settled)
         const finalAmount = newType === 'expense' ? -amount : amount;
 
-        addMutation.mutate({
-            peer_name: newPeerName.trim(),
-            amount: finalAmount,
-            remarks: newRemarks.trim() || undefined,
-        }, {
-            onSuccess: () => {
-                setNewPeerName('');
-                setNewAmount('');
-                setNewRemarks('');
-                setNewType('expense');
-                setShowAddForm(false);
-            }
-        });
+        if (editingEntry) {
+            updateMutation.mutate({
+                id: editingEntry.id,
+                peer_name: newPeerName.trim(),
+                amount: finalAmount,
+                remarks: newRemarks.trim() || undefined,
+            }, {
+                onSuccess: () => resetForm()
+            });
+        } else {
+            addMutation.mutate({
+                peer_name: newPeerName.trim(),
+                amount: finalAmount,
+                remarks: newRemarks.trim() || undefined,
+            }, {
+                onSuccess: () => resetForm()
+            });
+        }
+    };
+
+    const resetForm = () => {
+        setNewPeerName('');
+        setNewAmount('');
+        setNewRemarks('');
+        setNewType('expense');
+        setEditingEntry(null);
+        setShowAddForm(false);
+    };
+
+    const handleEdit = (entry: any) => {
+        setEditingEntry(entry);
+        setNewPeerName(entry.peer_name);
+        setNewAmount(Math.abs(entry.amount).toString());
+        setNewType(entry.amount < 0 ? 'expense' : 'income');
+        setNewRemarks(entry.remarks || '');
+        setShowAddForm(true);
+    };
+
+    const handleDelete = (id: string) => {
+        if (confirm('Are you sure you want to delete this record?')) {
+            deleteMutation.mutate(id);
+        }
     };
 
     if (isLoading) return <Loader fullPage text="Loading balances" />;
@@ -127,10 +158,17 @@ const SettleUp: React.FC = () => {
                 isOpen={!!selectedPeer}
                 onClose={() => setSelectedPeer(null)}
                 formatCurrency={formatCurrency}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
             />
 
-            {/* Add Entry Drawer */}
-            <Drawer isOpen={showAddForm} onClose={() => setShowAddForm(false)} title="Add Record" height="h-[90vh]">
+            {/* Add/Edit Entry Drawer */}
+            <Drawer
+                isOpen={showAddForm}
+                onClose={resetForm}
+                title={editingEntry ? "Edit Record" : "Add Record"}
+                height="h-[90vh]"
+            >
                 <div className="space-y-6 px-2 pb-10">
                     {/* Info Note */}
                     <div className="flex items-start gap-3 p-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/10">
@@ -202,11 +240,11 @@ const SettleUp: React.FC = () => {
                     </div>
 
                     <button
-                        onClick={handleAddEntry}
-                        disabled={addMutation.isPending || !newPeerName.trim() || !newAmount.trim()}
+                        onClick={handleSaveEntry}
+                        disabled={addMutation.isPending || updateMutation.isPending || !newPeerName.trim() || !newAmount.trim()}
                         className="w-full py-5 rounded-[2rem] bg-white text-black font-black text-lg shadow-2xl active:scale-95 transition-all disabled:opacity-30 disabled:scale-100"
                     >
-                        {addMutation.isPending ? 'Adding...' : 'Add Record'}
+                        {addMutation.isPending || updateMutation.isPending ? 'Saving...' : (editingEntry ? 'Update Record' : 'Add Record')}
                     </button>
                 </div>
             </Drawer>
@@ -219,12 +257,16 @@ const PeerHistoryDrawer = ({
     peerName,
     isOpen,
     onClose,
-    formatCurrency
+    formatCurrency,
+    onEdit,
+    onDelete
 }: {
     peerName: string | null;
     isOpen: boolean;
     onClose: () => void;
     formatCurrency: (n: number) => string;
+    onEdit: (entry: any) => void;
+    onDelete: (id: string) => void;
 }) => {
     const { data: history, isLoading } = usePeerHistory(peerName || '');
 
@@ -246,7 +288,7 @@ const PeerHistoryDrawer = ({
                         {history.map((entry) => {
                             const isDebit = entry.amount < 0; // You gave money
                             return (
-                                <div key={entry.id} className="flex items-center justify-between p-3.5 bg-white/[0.02] border border-white/[0.05] rounded-2xl">
+                                <div key={entry.id} className="group flex items-center justify-between p-3.5 bg-white/[0.02] border border-white/[0.05] rounded-2xl relative">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDebit ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                                             {isDebit ? <ArrowUpRight size={14} /> : <ArrowDownLeft size={14} />}
@@ -256,22 +298,42 @@ const PeerHistoryDrawer = ({
                                                 {isDebit ? 'You lent' : 'You received'}
                                             </p>
                                             {entry.remarks && (
-                                                <p className="text-[9px] text-gray-600 mt-0.5 truncate max-w-[150px]">{entry.remarks}</p>
+                                                <p className="text-[9px] text-gray-600 mt-0.5 truncate max-w-[120px]">{entry.remarks}</p>
                                             )}
                                             <p className="text-[8px] text-gray-700 mt-0.5">
                                                 {formatDistanceToNow(parseISO(entry.date), { addSuffix: true })}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        {entry.transaction_id && (
-                                            <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-cyan-500/20 text-cyan-500/80 uppercase tracking-tighter">
-                                                Synced
-                                            </span>
-                                        )}
-                                        <p className={`font-black text-sm tracking-tighter ${isDebit ? 'text-white' : 'text-emerald-400'}`}>
-                                            {isDebit ? '-' : '+'}{formatCurrency(entry.amount)}
-                                        </p>
+
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity mr-1">
+                                            <button
+                                                onClick={() => onEdit(entry)}
+                                                className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.1] transition-all"
+                                            >
+                                                <Pencil size={12} />
+                                            </button>
+                                            <button
+                                                onClick={() => onDelete(entry.id)}
+                                                className="w-7 h-7 rounded-lg bg-red-500/5 border border-red-500/10 flex items-center justify-center text-red-500/60 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
+
+                                        <div className="text-right">
+                                            <div className="flex items-center justify-end gap-1.5 mb-0.5">
+                                                {entry.transaction_id && (
+                                                    <span className="text-[6px] px-1 py-0 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-black uppercase tracking-tighter">
+                                                        Synced
+                                                    </span>
+                                                )}
+                                                <p className={`font-black text-sm tracking-tighter ${isDebit ? 'text-white' : 'text-emerald-400'}`}>
+                                                    {isDebit ? '-' : '+'}{formatCurrency(entry.amount)}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             );

@@ -61,3 +61,33 @@ export const useAddLedgerEntry = () => {
         },
     });
 };
+
+export const useUpdateSettleUpEntry = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ id, ...entry }: Partial<LedgerEntryCreate> & { id: string }) => {
+            const { data } = await api.put<LedgerEntry>(`/settle-up/${id}`, entry);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['settle-up-balances'] });
+            queryClient.invalidateQueries({ queryKey: ['settle-up-history'] });
+        },
+    });
+};
+
+export const useDeleteSettleUpEntry = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const { data } = await api.delete(`/settle-up/${id}`);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['settle-up-balances'] });
+            queryClient.invalidateQueries({ queryKey: ['settle-up-history'] });
+        },
+    });
+};

@@ -67,3 +67,33 @@ class SettleUpService:
         await self.db.commit()
         await self.db.refresh(entry)
         return entry
+
+    async def update_settle_up_entry(self, user_id: UUID, entry_id: UUID, data: schemas.SettleUpEntryUpdate) -> SettleUpEntry:
+        """Updates an existing settle-up entry."""
+        stmt = select(SettleUpEntry).where(SettleUpEntry.id == entry_id, SettleUpEntry.user_id == user_id)
+        result = await self.db.execute(stmt)
+        entry = result.scalar_one_or_none()
+        
+        if not entry:
+            raise HTTPException(status_code=404, detail="Entry not found")
+
+        update_data = data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(entry, field, value)
+
+        await self.db.commit()
+        await self.db.refresh(entry)
+        return entry
+
+    async def delete_settle_up_entry(self, user_id: UUID, entry_id: UUID) -> bool:
+        """Deletes a settle-up entry."""
+        stmt = select(SettleUpEntry).where(SettleUpEntry.id == entry_id, SettleUpEntry.user_id == user_id)
+        result = await self.db.execute(stmt)
+        entry = result.scalar_one_or_none()
+        
+        if not entry:
+            raise HTTPException(status_code=404, detail="Entry not found")
+
+        await self.db.delete(entry)
+        await self.db.commit()
+        return True

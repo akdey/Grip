@@ -13,6 +13,12 @@ class SettleUpEntryBase(BaseModel):
 class SettleUpEntryCreate(SettleUpEntryBase):
     transaction_id: Optional[UUID] = None
 
+class SettleUpEntryUpdate(BaseModel):
+    peer_name: Optional[str] = None
+    amount: Optional[Decimal] = None
+    remarks: Optional[str] = None
+    date: Optional[date] = None
+
 class SettleUpEntryResponse(SettleUpEntryBase):
     id: UUID
     user_id: UUID

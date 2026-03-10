@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Annotated, List
 from fastapi import APIRouter, Depends
 from app.features.auth.deps import get_current_user
@@ -29,4 +30,22 @@ async def create_ledger_entry(
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[SettleUpService, Depends()]
 ):
-    return await service.add_ledger_entry(user_id=current_user.id, data=data) 
+    return await service.add_ledger_entry(user_id=current_user.id, data=data)
+
+@router.put("/{entry_id}", response_model=schemas.SettleUpEntryResponse)
+async def update_settle_up_entry(
+    entry_id: UUID,
+    data: schemas.SettleUpEntryUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[SettleUpService, Depends()]
+):
+    return await service.update_settle_up_entry(user_id=current_user.id, entry_id=entry_id, data=data)
+
+@router.delete("/{entry_id}")
+async def delete_settle_up_entry(
+    entry_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[SettleUpService, Depends()]
+):
+    await service.delete_settle_up_entry(user_id=current_user.id, entry_id=entry_id)
+    return {"status": "success"}
