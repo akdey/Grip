@@ -232,18 +232,6 @@ class SyncService:
 
         if data and data.get("is_transaction"):
             merchant = (data.get("merchant_name") or data.get("merchant") or "UNKNOWN").strip()
-            
-            # Post-LLM Sanity Check: Avoid common bank names as merchant
-            bank_names = [
-                "AXIS BANK", "HDFC BANK", "ICICI BANK", "SBI BANK", "KOTAK BANK", 
-                "INDUSIND BANK", "PAYTM BANK", "FEDERAL BANK", "YES BANK", "SMC"
-            ]
-            upper_merchant = merchant.upper()
-            if any(bank in upper_merchant for bank in bank_names) and len(merchant) < 25:
-                # If merchant is just "Axis Bank" or similar, it's likely a hallucination
-                logger.warning(f"[Brain:{user_id}] LLM hallucinated bank name as merchant: {merchant}. Triggering regex fallback.")
-                return self._regex_fallback_txn(text, user_id)
-                
             if abs(data.get("amount", 0.0)) > 0:
                 logger.info(f"[Brain:{user_id}] Extracted: ₹{data.get('amount')} | Merchant: {merchant}")
                 # Ensure required fields exist even if LLM missed them
