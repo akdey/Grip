@@ -113,7 +113,12 @@ class SyncService:
             r'(?i)For details on the transaction.*',
             r'(?i)Important notice:.*',
             r'(?i)Register for.*',
-            r'(?i)Please note that.*'
+            r'(?i)Please note that.*',
+            r'(?i)You are eligible for.*',
+            r'(?i)Pre-approved (?:loan|card|limit).*',
+            r'(?i)Cashback offer.*',
+            r'(?i)Reward points.*',
+            r'(?i)Enjoy (?:benefits|discounts).*'
         ]
         
         lines = text.split('\n')
@@ -171,14 +176,24 @@ class SyncService:
         # Instructions at top for better prompt caching
         prompt = f"""
         You are a high-precision financial intelligence engine. 
-        EXTRACT THE FOLLOWING FIELDS FROM THE BANK NOTIFICATION IN VALID RAW JSON:
-        1. is_transaction: (boolean) true only for completed DEBIT, CREDIT, or SPEND.
-        2. amount: (float) numerical value.
-        3. merchant_name: (string) brand name (no UPI IDs).
+        TASK: Extract transaction details from the bank notification below.
+
+        1. is_transaction: (boolean) 
+           - Set to TRUE only for actual DEBIT, CREDIT, or SPEND events that change a balance.
+           - Set to FALSE for: Promotional offers, "You can save", "Pre-approved", Rewards, Cashback offers, OTPs, or Security alerts.
+        
+        2. amount: (float) The exact numerical value transferred.
+        
+        3. merchant_name: (string) The actual BRAND or PERSON you paid.
+           - SEARCH PATTERNS: 'at [Merchant]', 'by [Merchant]', 'to [Merchant]', 'towards [Merchant]'.
+           - UPI HINT: In 'UPI/P2M/some-id/MerchantName', 'MerchantName' is the target.
+           - PROHIBITED: NEVER use a BANK NAME (e.g. Axis, HDFC, ICICI, SBI) as the merchant regardless of where it appears.
+           - CLEANING: Remove any UPI IDs or reference numbers from the name.
+        
         4. category/sub_category: Use provided context if available.
         5. account_type: [SAVINGS, CREDIT_CARD, CASH].
         6. transaction_type: [DEBIT, CREDIT].
-        7. extracted_date: ISO format.
+        7. extracted_date: ISO format (YYYY-MM-DD).
 
         {cat_str}
 
@@ -216,7 +231,19 @@ class SyncService:
         #     data = await self.llm.generate_json(prompt, temperature=0.1)
 
         if data and data.get("is_transaction"):
-            merchant = data.get("merchant_name") or data.get("merchant") or "UNKNOWN"
+            merchant = (data.get("merchant_name") or data.get("merchant") or "UNKNOWN").strip()
+            
+            # Post-LLM Sanity Check: Avoid common bank names as merchant
+            bank_names = [
+                "AXIS BANK", "HDFC BANK", "ICICI BANK", "SBI BANK", "KOTAK BANK", 
+                "INDUSIND BANK", "PAYTM BANK", "FEDERAL BANK", "YES BANK", "SMC"
+            ]
+            upper_merchant = merchant.upper()
+            if any(bank in upper_merchant for bank in bank_names) and len(merchant) < 25:
+                # If merchant is just "Axis Bank" or similar, it's likely a hallucination
+                logger.warning(f"[Brain:{user_id}] LLM hallucinated bank name as merchant: {merchant}. Triggering regex fallback.")
+                return self._regex_fallback_txn(text, user_id)
+                
             if abs(data.get("amount", 0.0)) > 0:
                 logger.info(f"[Brain:{user_id}] Extracted: ₹{data.get('amount')} | Merchant: {merchant}")
                 # Ensure required fields exist even if LLM missed them
