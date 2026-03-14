@@ -166,7 +166,7 @@ class SyncService:
         # Compacting Category Context for token efficiency
         cat_str = "Categories: Food, Transport, Shopping, Housing, Bills & Utilities, Investment, Income, Entertainment, Medical, Personal Care"
         if categories_context:
-            cat_str = "Available Categories and Sub-categories:\n" + "\n".join([f"- {c}" for c in categories_context[:30]])
+            cat_str = "Available Categories and Sub-categories:\n" + "\n".join([f"- {c}" for c in categories_context]) #[:30]
 
         # Reordering prompt for KV Cache optimization (Instructions at TOP)
         # Stage 0: Semantic Compression (LLMLingua-2 Concept)
@@ -194,6 +194,9 @@ class SyncService:
         5. account_type: [SAVINGS, CREDIT_CARD, CASH].
         6. transaction_type: [DEBIT, CREDIT].
         7. extracted_date: ISO format (YYYY-MM-DD).
+
+        Example: 'Spent 500 at Starbucks using HDFC Card' -> Merchant: 'Starbucks'.
+        Example: 'Get 10% off at Croma' -> is_transaction: false.
 
         {cat_str}
 
