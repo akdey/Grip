@@ -39,8 +39,8 @@ class Settings(BaseSettings):
     
     # Local LLM Settings
     LOCAL_LLM_CONTEXT: int = 2048
-    LOCAL_MODEL_REPO: str = "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF"
-    LOCAL_MODEL_FILE: str = "smollm2-1.7b-instruct-q4_k_m.gguf"
+    LOCAL_MODEL_REPO: str = "bartowski/Qwen2.5-3B-Instruct-GGUF"
+    LOCAL_MODEL_FILE: str = "Qwen2.5-3B-Instruct-Q4_K_M.gguf"
     LOCAL_MODEL_DIR: str = "models"
     
     GOOGLE_CLIENT_ID: str = ""
