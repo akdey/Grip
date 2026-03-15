@@ -37,6 +37,8 @@ jobs:
           FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
           GRIP_HF_LLM_URL: ${{ secrets.GRIP_HF_LLM_URL }}
           X_GRIP_HF_LLM_TOKEN: ${{ secrets.X_GRIP_HF_LLM_TOKEN }}
+          EMAIL_RELAY_URL: ${{ secrets.EMAIL_RELAY_URL }}
+          EMAIL_RELAY_SECRET: ${{ secrets.EMAIL_RELAY_SECRET }}
           ENVIRONMENT: production
         run: |
           cd Backend
