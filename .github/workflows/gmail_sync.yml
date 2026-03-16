@@ -1,12 +1,15 @@
 name: Gmail Sync
 
-on:
-  schedule:
+#on:
+  #schedule:
     # Runs every hour
     #- cron: '0 * * * *'
-    - cron: '0 0 * * *'
 on:
+  schedule:
+    # 10:00 AM IST = 04:30 UTC
+    - cron: '30 4 * * *'
   workflow_dispatch:
+
 
 jobs:
   sync-gmail:
