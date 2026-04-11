@@ -28,10 +28,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install llama-cpp-python using pre-built CPU wheels. 
-# We use v0.3.15 as it is more likely to have a pre-compiled binary available for Python 3.11 than the brand new 0.3.20.
-# The --only-binary flag ensures we never trigger a slow source compilation on HF.
-RUN pip install --no-cache-dir llama-cpp-python==0.3.15 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary=:all:
+# Install llama-cpp-python using pre-built CPU wheels.
+# We use v0.3.19 as it is the latest version with pre-compiled binaries for Python 3.11 on Linux.
+# The --only-binary flag ensures we never trigger a slow source compilation on Hugging Face.
+RUN pip install --no-cache-dir llama-cpp-python==0.3.19 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary=:all:
 
 # Pre-download the model into the image for instant startup on HF Spaces.
 # Using Gemma 4 E4B (Instruct-GGUF) - ~2.5GB model file.
