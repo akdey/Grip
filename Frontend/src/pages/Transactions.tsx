@@ -507,13 +507,21 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
                     {txn.status === 'PENDING' && (
                         <div className="flex items-center gap-1 ml-2">
                             <button
+                                onClick={handleDelete}
+                                disabled={deleteMutation.isPending}
+                                className="w-6 h-6 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 hover:bg-red-500/20 transition-all active:scale-95"
+                                title="Discard"
+                            >
+                                <Trash2 size={12} />
+                            </button>
+                            <button
                                 onClick={handleApprove}
                                 disabled={verifyMutation.isPending}
                                 className="w-6 h-6 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-500 hover:bg-green-500/20 transition-all active:scale-95"
+                                title="Approve"
                             >
                                 <Check size={12} />
                             </button>
-
                         </div>
                     )}
                 </div>

@@ -158,6 +158,8 @@ class TransactionService:
             txn.status = TransactionStatus.VERIFIED
             txn.category = verification.category
             txn.sub_category = verification.sub_category
+            if verification.amount is not None:
+                txn.amount = verification.amount
             txn.is_surety = await self._resolve_surety(verification.sub_category)
             txn.tags = verification.tags
             txn.remarks = verification.remarks

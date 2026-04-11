@@ -82,6 +82,7 @@ class VerificationRequest(BaseModel):
     category: str
     sub_category: str
     merchant_name: str # Confirmed merchant name to save to mapping
+    amount: Optional[Decimal] = None # Allow updating amount during approval
     approved: bool # If False -> REJECTED
     tags: Optional[List[str]] = []
     remarks: Optional[str] = None

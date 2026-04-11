@@ -28,9 +28,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Build llama-cpp-python from source for architectural support for Gemma 4 (released April 2026).
-# Using v0.3.20 which includes Day 0 support and tokenizer fixes.
-RUN CMAKE_ARGS="-DGGML_BLAS=OFF" FORCE_CMAKE=1 pip install --no-cache-dir llama-cpp-python==0.3.20
+# Install llama-cpp-python using pre-built CPU wheels to avoid slow compilation on HF.
+# Using v0.3.20 for Gemma 4 support.
+RUN pip install --no-cache-dir llama-cpp-python==0.3.20 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
 
 # Pre-download the model into the image for instant startup on HF Spaces.
 # Using Gemma 4 E4B (Instruct-GGUF) - ~2.5GB model file.

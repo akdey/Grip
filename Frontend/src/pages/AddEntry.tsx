@@ -290,6 +290,7 @@ const AddEntry: React.FC = () => {
                                             category: category || 'Uncategorized',
                                             sub_category: subCategory || 'Uncategorized',
                                             merchant_name: merchantName,
+                                            amount: type === 'EXPENSE' ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
                                             approved: false
                                         }
                                     }, { onSuccess: () => navigate(-1) });
@@ -577,6 +578,7 @@ const AddEntry: React.FC = () => {
                                     category: category || 'Uncategorized',
                                     sub_category: subCategory || 'Uncategorized',
                                     merchant_name: merchantName,
+                                    amount: type === 'EXPENSE' ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
                                     approved: true,
                                     tags: tags,
                                     remarks: remarks
