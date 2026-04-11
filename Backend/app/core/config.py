@@ -39,8 +39,8 @@ class Settings(BaseSettings):
     
     # Local LLM Settings
     LOCAL_LLM_CONTEXT: int = 2048
-    LOCAL_MODEL_REPO: str = "bartowski/Qwen2.5-3B-Instruct-GGUF"
-    LOCAL_MODEL_FILE: str = "Qwen2.5-3B-Instruct-Q4_K_M.gguf"
+    LOCAL_MODEL_REPO: str = "bartowski/google_gemma-4-E4B-it-GGUF"
+    LOCAL_MODEL_FILE: str = "google_gemma-4-E4B-it-Q4_K_M.gguf"
     LOCAL_MODEL_DIR: str = "models"
     
     GOOGLE_CLIENT_ID: str = ""

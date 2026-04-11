@@ -89,6 +89,14 @@ class LocalLLMEngine:
                 logger.error(f"Failed to initialize local LLM engine: {e}")
                 return None
 
+    def _strip_thoughts(self, text: str) -> str:
+        """Removes internal thinking blocks from Gemma 4 output."""
+        if not text:
+            return text
+        # Gemma 4 thought pattern: <|channel>thought ... <channel|>
+        text = re.sub(r'<\|channel>thought.*?<channel\|>', '', text, flags=re.DOTALL)
+        return text.strip()
+
     def generate(self, prompt: str, system_prompt: str, temperature: float) -> Optional[str]:
         """Generate response using the local model."""
         model = self._ensure_model()
@@ -96,19 +104,20 @@ class LocalLLMEngine:
             return None
             
         try:
-            # Format prompt for SmolLM2 (ChatML-style template)
-            formatted_prompt = f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
+            # Format prompt for Gemma 4
+            formatted_prompt = f"<|turn>system\n{system_prompt} <turn|>\n<|turn>user\n{prompt} <turn|>\n<|turn>model\n"
             
-            logger.debug(f"LocalLLMEngine: Starting inference with SmolLM2...")
+            logger.debug(f"LocalLLMEngine: Starting inference with Gemma 4...")
             output = model(
                 formatted_prompt,
-                max_tokens=600, # Increased slightly for longer mail drafts
+                max_tokens=800, # Increased for Gemma 4's reasoning capacity
                 temperature=temperature,
-                stop=["<|im_end|>", "<|endoftext|>"],
+                stop=["<turn|>", "<|turn>", "<|im_end|>", "<|endoftext|>"],
                 echo=False
             )
-            text = output['choices'][0]['text'].strip()
-            logger.info(f"LocalLLMEngine: Inference complete. Generated {len(text)} characters.")
+            raw_text = output['choices'][0]['text'].strip()
+            text = self._strip_thoughts(raw_text)
+            logger.info(f"LocalLLMEngine: Inference complete. Generated {len(text)} characters (stripped thoughts).")
             return text
         except Exception as e:
             logger.error(f"Error during local LLM inference: {e}")
@@ -172,7 +181,7 @@ class LLMService:
                     temperature
                 )
                 if res:
-                    logger.info(">>> LLM_ENGINE: Local (SmolLM2) success.")
+                    logger.info(">>> LLM_ENGINE: Local (Gemma 4) success.")
                     return res
                 # If we get here it means inference failed or engine is broken
             except Exception as e:

@@ -28,13 +28,14 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Build llama-cpp-python from source to ensure it links against the local glibc (Debian).
-# This avoids 'libc.musl' errors common with pre-built wheels on HF Spaces.
-RUN CMAKE_ARGS="-DGGML_BLAS=OFF" FORCE_CMAKE=1 pip install --no-cache-dir llama-cpp-python==0.2.89
+# Build llama-cpp-python from source for architectural support for Gemma 4 (released April 2026).
+# Using v0.3.20 which includes Day 0 support and tokenizer fixes.
+RUN CMAKE_ARGS="-DGGML_BLAS=OFF" FORCE_CMAKE=1 pip install --no-cache-dir llama-cpp-python==0.3.20
 
-# Pre-download Qwen2.5-3B-Instruct (GGUF) 
+# Pre-download the model into the image for instant startup on HF Spaces.
+# Using Gemma 4 E4B (Instruct-GGUF) - ~2.5GB model file.
 RUN mkdir -p models && \
-    python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id='bartowski/Qwen2.5-3B-Instruct-GGUF', filename='Qwen2.5-3B-Instruct-Q4_K_M.gguf', local_dir='models')"
+    python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id='bartowski/google_gemma-4-E4B-it-GGUF', filename='google_gemma-4-E4B-it-Q4_K_M.gguf', local_dir='models')"
 
 # Copy the rest of the application code
 COPY . .
