@@ -131,7 +131,7 @@ class SyncService:
             r'[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}', # UPI ID
             r'(?:Spent|Debited|Credited|Transferred|Paid)', # Verbs
             r'\d{2}[-/]\d{2}[-/]\d{2,4}', # Dates
-            r'VPA|Merchant|Ref No|Txn ID' # Identifiers
+            r'VPA|Merchant|Ref No|Txn ID|Order|Booking|Invoice|Billing|Reference|Thank you for' # Identifiers and human indicators
         ]
         signal_re = re.compile('|'.join(signal_keywords), re.IGNORECASE)
 
@@ -204,7 +204,7 @@ class SyncService:
         SUBJECT: {subject}
         SENDER: {sender}
         BODY:
-        \"\"\"{compressed_text[:2000]}\"\"\"
+        \"\"\"{compressed_text[:6000]}\"\"\"
 
         RETURN ONLY RAW JSON:
         {{

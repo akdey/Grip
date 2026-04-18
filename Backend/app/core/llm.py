@@ -110,7 +110,7 @@ class LocalLLMEngine:
             logger.debug(f"LocalLLMEngine: Starting inference with Gemma 4...")
             output = model(
                 formatted_prompt,
-                max_tokens=800, # Increased for Gemma 4's reasoning capacity
+                max_tokens=512, # Optimized for JSON response with more prompt headroom
                 temperature=temperature,
                 stop=["<turn|>", "<|turn>", "<|im_end|>", "<|endoftext|>"],
                 echo=False

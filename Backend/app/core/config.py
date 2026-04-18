@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "llama-3.1-8b-instant"
     
     # Local LLM Settings
-    LOCAL_LLM_CONTEXT: int = 2048
+    LOCAL_LLM_CONTEXT: int = 4096
     LOCAL_MODEL_REPO: str = "bartowski/google_gemma-4-E4B-it-GGUF"
     LOCAL_MODEL_FILE: str = "google_gemma-4-E4B-it-Q4_K_M.gguf"
     LOCAL_MODEL_DIR: str = "models"
