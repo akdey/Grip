@@ -41,10 +41,17 @@ class CategoryService:
         return category
 
     async def create_sub_category(self, user_id: UUID, data: schemas.SubCategoryCreate) -> SubCategory:
+        # Auto-inherit color from parent category if not provided
+        color = data.color
+        if not color:
+            stmt = select(Category.color).where(Category.id == data.category_id)
+            result = await self.db.execute(stmt)
+            color = result.scalar()
+
         sub_category = SubCategory(
             name=data.name,
             icon=data.icon,
-            color=data.color,
+            color=color,
             type=data.type,
             category_id=data.category_id,
             user_id=user_id,
