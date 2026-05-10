@@ -462,55 +462,30 @@ class AnalyticsService:
             end_date = date_range["month_end"]
             period_label = start_date.strftime("%B")
 
-        # Calculate Income
-        income_stmt = (
-            select(func.sum(Transaction.amount))
+        # Consolidated Summary Query
+        # We use conditional aggregation (CASE statements) to get all totals in one trip
+        # This replaces 4 sequential trips with 1.
+        summary_stmt = (
+            select(
+                func.sum(case((Transaction.category == "Income", Transaction.amount), else_=0)).label("total_income"),
+                func.sum(case((Transaction.category != "Income", Transaction.amount), else_=0)).label("total_expense_raw"),
+                func.sum(case((Transaction.sub_category == "Credit Card Payment", Transaction.amount), else_=0)).label("prior_settlement"),
+                func.sum(Transaction.amount).label("net_balance")
+            )
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category == "Income")
             .where(Transaction.transaction_date >= start_date)
             .where(Transaction.transaction_date <= end_date)
         )
         
-        expense_stmt = (
-            select(func.sum(Transaction.amount))
-            .where(Transaction.user_id == user_id)
-            .where(Transaction.category.notin_(["Income"]))
-            .where(Transaction.transaction_date >= start_date)
-            .where(Transaction.transaction_date <= end_date)
-        )
+        res = (await db.execute(summary_stmt)).one()
         
-        # Execute sequentially
-        income_res = await db.execute(income_stmt)
-        expense_res = await db.execute(expense_stmt)
-        
-        total_income = income_res.scalar() or Decimal("0")
-        total_expense_raw = abs(expense_res.scalar() or Decimal("0"))
-        
-        
-        # Calculate Prior Period Settlement (Strictly Credit Card Payments)
-        # We assume these payments are for previous month's dues.
-        prior_settlement_stmt = (
-            select(func.sum(Transaction.amount))
-            .where(Transaction.user_id == user_id)
-            .where(Transaction.sub_category == "Credit Card Payment")
-            .where(Transaction.transaction_date >= start_date)
-            .where(Transaction.transaction_date <= end_date)
-        )
-        prior_res = await db.execute(prior_settlement_stmt)
-        prior_period_settlement = abs(prior_res.scalar() or Decimal("0"))
+        total_income = res.total_income or Decimal("0")
+        total_expense_raw = abs(res.total_expense_raw or Decimal("0"))
+        prior_period_settlement = abs(res.prior_settlement or Decimal("0"))
+        net_balance = res.net_balance or Decimal("0")
         
         # Current Period Expense is Total Expense minus the settlements
-        # (Assuming total_expense_raw includes the CC payments, which it does as they are not Income)
         current_period_expense = total_expense_raw - prior_period_settlement
-        
-        balance_stmt = (
-            select(func.sum(Transaction.amount))
-            .where(Transaction.user_id == user_id)
-            .where(Transaction.transaction_date >= start_date)
-            .where(Transaction.transaction_date <= end_date)
-        )
-        balance_res = await db.execute(balance_stmt)
-        net_balance = balance_res.scalar() or Decimal("0")
         
         return MonthlySummaryResponse(
             total_income=total_income,
