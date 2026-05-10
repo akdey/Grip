@@ -246,24 +246,15 @@ class BillService:
             ))
         )
 
-        # Execute all in parallel
-        # Consolidated from 6 queries to 4 queries
-        excl_res, all_bills_res, past_res, curr_res = await asyncio.gather(
-            db.execute(excl_stmt),
-            db.execute(bill_stmt),
-            db.execute(past_stmt),
-            db.execute(curr_stmt)
-        )
-        
-        exclusions = excl_res.scalars().all()
-        all_bills = all_bills_res.scalars().all()
+        # Execute sequentially to avoid "another operation is in progress" errors 
+        # with asyncpg + single session. Pooling now makes this fast.
+        exclusions = (await db.execute(excl_stmt)).scalars().all()
+        all_bills = (await db.execute(bill_stmt)).scalars().all()
+        past_txns = list((await db.execute(past_stmt)).scalars().all())
+        curr_txns = list((await db.execute(curr_stmt)).scalars().all())
+
         unpaid_bills = [b for b in all_bills if not b.is_paid]
         recurring_bills = [b for b in all_bills if b.is_recurring]
-        
-        # Get surety subcategories from the txns themselves or a separate list? 
-        # To avoid another query, we rely on the in_(surety_sub_query) in the SQL above.
-        # But we still need the list for the Python-side logic below if used.
-        # Let's just keep the logic consistent.
 
         skipped_source_ids = {e.source_transaction_id for e in exclusions if e.exclusion_type == 'SKIP' and e.source_transaction_id}
         manual_paid_ids = {e.source_transaction_id for e in exclusions if e.exclusion_type == 'MANUAL_PAID' and e.source_transaction_id}

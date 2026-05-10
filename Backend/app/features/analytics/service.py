@@ -87,11 +87,9 @@ class AnalyticsService:
             .group_by(Transaction.category)
         )
         
-        # Execute in parallel
-        current_res, previous_res = await asyncio.gather(
-            db.execute(current_stmt),
-            db.execute(previous_stmt)
-        )
+        # Execute sequentially to avoid "another operation is in progress" errors
+        current_res = await db.execute(current_stmt)
+        previous_res = await db.execute(previous_stmt)
         
         current_by_category = {row.category: abs(row.total or Decimal("0")) for row in current_res.all()}
         current_total = sum(current_by_category.values())
@@ -144,31 +142,20 @@ class AnalyticsService:
             # wealth_service removed for decoupling
 
             
-            # Calculate days till end of month to align with salary cycle
             today = self._get_today()
             _, last_day = calendar.monthrange(today.year, today.month)
             days_till_month_end = last_day - today.day
-            
-            # 1. Execute multiple independent checks in parallel
-            #   - Bill/Surety Ledger (heavy)
-            #   - Credit Card exposure (fast)
-            #   - Active Goals (fast)
             
             goal_stmt = (
                 select(Goal)
                 .where(Goal.user_id == user_id)
                 .where(Goal.is_active == True)
             )
-
-            ledger_task = self.bill_service.get_obligations_ledger(db, user_id, days_ahead=days_till_month_end)
-            cc_task = self.cc_service.get_all_unbilled_for_user(db, user_id)
-            goal_task = db.execute(goal_stmt)
-
-            ledger_data, unbilled_cc, goal_res = await asyncio.gather(
-                ledger_task,
-                cc_task,
-                goal_task
-            )
+            
+            # 1. Execute multiple independent checks sequentially to avoid concurrency conflicts
+            ledger_data = await self.bill_service.get_obligations_ledger(db, user_id, days_ahead=days_till_month_end)
+            unbilled_cc = await self.cc_service.get_all_unbilled_for_user(db, user_id)
+            goal_res = await db.execute(goal_stmt)
 
             # 2. Process Bill/Surety results
             unpaid_bills_total = ledger_data["unpaid_total"]
@@ -265,18 +252,11 @@ class AnalyticsService:
                 .where(Transaction.transaction_date <= today_date)
             )
 
-            # 2. Execute everything in parallel
-            balance_task = db.execute(balance_stmt)
-            burden_task = self.calculate_burden(db, user_id)
-            count_task = db.execute(txn_count_stmt)
-            discretionary_task = db.execute(discretionary_stmt)
-
-            balance_result, frozen_breakdown, txn_count_result, discretionary_result = await asyncio.gather(
-                balance_task,
-                burden_task,
-                count_task,
-                discretionary_task
-            )
+            # 2. Execute sequentially to ensure stability with asyncpg
+            balance_result = await db.execute(balance_stmt)
+            frozen_breakdown = await self.calculate_burden(db, user_id)
+            txn_count_result = await db.execute(txn_count_stmt)
+            discretionary_result = await db.execute(discretionary_stmt)
             
             # 3. Process results
             current_balance = balance_result.scalar() or Decimal("0")
@@ -462,11 +442,9 @@ class AnalyticsService:
             .where(Transaction.transaction_date <= end_date)
         )
         
-        # Execute in parallel
-        income_res, expense_res = await asyncio.gather(
-            db.execute(income_stmt),
-            db.execute(expense_stmt)
-        )
+        # Execute sequentially
+        income_res = await db.execute(income_stmt)
+        expense_res = await db.execute(expense_stmt)
         
         total_income = income_res.scalar() or Decimal("0")
         total_expense_raw = abs(expense_res.scalar() or Decimal("0"))
