@@ -208,12 +208,19 @@ class AnalyticsService:
                 total_frozen=zero
             )
     
-    async def calculate_safe_to_spend_amount(
-        self,
-        db: AsyncSession,
-        user_id: UUID
-    ) -> SafeToSpendResponse:
-        """Calculate safe-to-spend amount with frozen funds and mathematical buffer till salary."""
+    # Global memory cache for Safe-to-Spend results
+    _safe_spend_cache = {} # user_id -> (result, timestamp)
+    SAFE_SPEND_TTL = 60 # 60 seconds
+
+    async def calculate_safe_to_spend_amount(self, db: AsyncSession, user_id: UUID, days_till_salary: Optional[int] = None) -> SafeToSpendResponse:
+        """Calculate the amount the user can safely spend until next salary."""
+        # 0. Check Hot Cache
+        now = time.time()
+        if user_id in self._safe_spend_cache:
+            res_obj, timestamp = self._safe_spend_cache[user_id]
+            if now - timestamp < self.SAFE_SPEND_TTL:
+                return res_obj
+
         try:
             # Calculate days till salary (1st of next month)
             today = self._get_today()
@@ -360,7 +367,7 @@ class AnalyticsService:
                 recommendation = f"✅ Healthy! ₹{buffer:.0f} buffered till salary ({salary_str})"
                 status = "success"
             
-            return SafeToSpendResponse(
+            response = SafeToSpendResponse(
                 current_balance=current_balance,
                 frozen_funds=frozen_breakdown,
                 buffer_amount=buffer,
@@ -369,6 +376,10 @@ class AnalyticsService:
                 recommendation=recommendation,
                 status=status
             )
+            
+            # Update Hot Cache
+            self._safe_spend_cache[user_id] = (response, time.time())
+            return response
         except Exception as e:
             logger.error(f"Error calculating safe to spend: {e}")
             # ... (error handling code remains the same) ...

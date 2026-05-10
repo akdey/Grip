@@ -210,48 +210,82 @@ class BillService:
         unpaid_total = Decimal("0.00")
         projected_total = Decimal("0.00")
         
-        # Define Statements - Consolidate Bill queries
-        excl_stmt = select(BillExclusion).where(BillExclusion.user_id == user_id)
-        # Fetch all relevant bills in one go (both unpaid and recurring)
-        bill_stmt = select(Bill).where(
-            Bill.user_id == user_id,
-            or_(Bill.is_paid == False, Bill.is_recurring == True)
-        )
+        from sqlalchemy import literal_column
+        # 1. Create a unified query to fetch everything in ONE trip
+        # We use a discriminator 'source_type' to tell them apart
         
-        # Subquery for surety subcategories
-        surety_sub_query = select(SubCategory.name).where(SubCategory.is_surety == True)
-        
+        # Bills subquery
+        b_sub = select(
+            Bill.id.label("id"),
+            Bill.title.label("title"),
+            Bill.amount.label("amount"),
+            Bill.due_date.label("date"),
+            literal_column("'BILL'").label("source_type"),
+            Bill.is_paid.label("is_paid"),
+            Bill.is_recurring.label("is_recurring"),
+            Bill.category.label("category"),
+            Bill.sub_category.label("sub_category")
+        ).where(Bill.user_id == user_id).where(or_(Bill.is_paid == False, Bill.is_recurring == True))
+
+        # Exclusions subquery
+        e_sub = select(
+            BillExclusion.id.label("id"),
+            BillExclusion.merchant_pattern.label("title"),
+            literal_column("0").label("amount"),
+            literal_column("NULL").label("date"),
+            literal_column("'EXCLUSION'").label("source_type"),
+            literal_column("FALSE").label("is_paid"),
+            literal_column("FALSE").label("is_recurring"),
+            BillExclusion.subcategory_pattern.label("category"),
+            BillExclusion.exclusion_type.label("sub_category")
+        ).where(BillExclusion.user_id == user_id)
+
+        # Surety Subcategories for filtering txns
+        surety_sub_names = select(SubCategory.name).where(SubCategory.is_surety == True)
+
+        # Transactions subquery (Last 60 days)
+        sixty_days_ago = today - timedelta(days=60)
+        t_sub = select(
+            Transaction.id.label("id"),
+            Transaction.merchant_name.label("title"),
+            Transaction.amount.label("amount"),
+            Transaction.transaction_date.label("date"),
+            literal_column("'TXN'").label("source_type"),
+            literal_column("FALSE").label("is_paid"),
+            Transaction.is_surety.label("is_recurring"), # Using recurrence field for is_surety flag
+            Transaction.category.label("category"),
+            Transaction.sub_category.label("sub_category")
+        ).where(Transaction.user_id == user_id).where(Transaction.transaction_date >= sixty_days_ago).where(or_(
+            Transaction.is_surety == True,
+            Transaction.sub_category.in_(surety_sub_names)
+        ))
+
+        unified_stmt = b_sub.union_all(e_sub, t_sub)
+        unified_res = await db.execute(unified_stmt)
+        rows = unified_res.all()
+
+        # 2. Distribute results into local variables
+        all_bills = []
+        exclusions = []
+        past_txns = []
+        curr_txns = []
+
         prev_range = get_previous_month_date_range(today)
         curr_range = get_month_date_range(today)
-        
-        past_stmt = (
-            select(Transaction)
-            .where(Transaction.user_id == user_id)
-            .where(Transaction.transaction_date >= prev_range["month_start"])
-            .where(Transaction.transaction_date <= prev_range["month_end"])
-            .where(or_(
-                Transaction.is_surety == True,
-                Transaction.sub_category.in_(surety_sub_query)
-            ))
-        )
-        
-        curr_stmt = (
-            select(Transaction)
-            .where(Transaction.user_id == user_id)
-            .where(Transaction.transaction_date >= curr_range["month_start"])
-            .where(Transaction.transaction_date <= curr_range["month_end"])
-            .where(or_(
-                Transaction.is_surety == True,
-                Transaction.sub_category.in_(surety_sub_query)
-            ))
-        )
 
-        # Execute sequentially to avoid "another operation is in progress" errors 
-        # with asyncpg + single session. Pooling now makes this fast.
-        exclusions = (await db.execute(excl_stmt)).scalars().all()
-        all_bills = (await db.execute(bill_stmt)).scalars().all()
-        past_txns = list((await db.execute(past_stmt)).scalars().all())
-        curr_txns = list((await db.execute(curr_stmt)).scalars().all())
+        for row in rows:
+            stype = row.source_type
+            if stype == 'BILL':
+                # Re-map back to objects for existing logic
+                all_bills.append(Bill(id=row.id, title=row.title, amount=row.amount, due_date=row.date, is_paid=row.is_paid, is_recurring=row.is_recurring, category=row.category, sub_category=row.sub_category))
+            elif stype == 'EXCLUSION':
+                exclusions.append(BillExclusion(id=row.id, merchant_pattern=row.title, subcategory_pattern=row.category, exclusion_type=row.sub_category))
+            elif stype == 'TXN':
+                txn_obj = Transaction(id=row.id, merchant_name=row.title, amount=row.amount, transaction_date=row.date, is_surety=row.is_recurring, category=row.category, sub_category=row.sub_category)
+                if prev_range["month_start"] <= row.date <= prev_range["month_end"]:
+                    past_txns.append(txn_obj)
+                elif curr_range["month_start"] <= row.date <= curr_range["month_end"]:
+                    curr_txns.append(txn_obj)
 
         unpaid_bills = [b for b in all_bills if not b.is_paid]
         recurring_bills = [b for b in all_bills if b.is_recurring]
