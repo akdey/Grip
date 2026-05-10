@@ -440,19 +440,12 @@ class SyncService:
         Renew the Gmail watch subscription to keep push notifications alive.
         Should be called periodically (e.g. during every sync).
         """
-        logger.info(f"[Sync:{user_id}] Attempting to renew Gmail watch on topic: {settings.GMAIL_PUBSUB_TOPIC}")
         if not settings.GMAIL_PUBSUB_TOPIC:
-            logger.warning(f"[Sync:{user_id}] GMAIL_PUBSUB_TOPIC is not configured. Skipping watch renewal.")
             return
 
         result = await self.db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
-        if not user:
-            logger.warning(f"[Sync:{user_id}] User not found for watch renewal.")
-            return
-            
-        if not user.gmail_credentials:
-            logger.warning(f"[Sync:{user_id}] User has no Gmail credentials. Skipping watch renewal.")
+        if not user or not user.gmail_credentials:
             return
 
         try:
@@ -476,7 +469,7 @@ class SyncService:
             # If we changed topics or have a stale watch, we must stop it first.
             try:
                 service.users().stop(userId='me').execute()
-                logger.info(f"[Sync:{user_id}] Stopped existing Gmail watch to prepare for renewal.")
+                logger.debug(f"[Sync:{user_id}] Stopped existing Gmail watch to prepare for renewal.")
             except Exception as stop_ex:
                 # If there was no watch, this might fail, which is fine.
                 logger.debug(f"[Sync:{user_id}] Note: No existing watch to stop or stop failed: {stop_ex}")

@@ -12,8 +12,6 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # 1. Check for Bypass/Exception Routes
         path = request.url.path
-        method = request.method
-        logger.info(f"Incoming {method} request to: {path}")
         
         is_exception = False
         for route in settings.EXCEPTION_ROUTES:
@@ -26,7 +24,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 break
         
         if is_exception:
-            logger.info(f"Bypassing authentication for exception route: {path}")
+            logger.debug(f"Bypassing authentication for path: {path}")
             return await call_next(request)
         
         # 2. Extract Token

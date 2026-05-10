@@ -160,8 +160,6 @@ async def webhook_ingress(
     token: str = None,
     request: Request = None
 ):
-    logger.info(f"Webhook received! Method: {request.method if request else 'UNKNOWN'}, Token present: {token is not None}")
-    
     if request and request.method == "GET":
         return {"status": "ok", "message": "Grip Webhook Endpoint Operational"}
 
