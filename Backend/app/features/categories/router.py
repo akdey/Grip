@@ -13,7 +13,7 @@ async def get_categories(
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[CategoryService, Depends()]
 ):
-    return await service.get_categories(user_id=current_user.id)
+    return await service.get_cached_categories(user_id=current_user.id)
 
 @router.post("/", response_model=schemas.CategoryResponse)
 async def create_category(

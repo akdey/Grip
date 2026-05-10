@@ -8,9 +8,25 @@ from app.features.categories.models import Category, SubCategory
 from app.features.categories import schemas
 from app.core.database import get_db
 
+import time
+
 class CategoryService:
+    _cache = None
+    _cache_time = 0
+    CACHE_TTL = 3600  # 1 hour
+
     def __init__(self, db: AsyncSession = Depends(get_db)):
         self.db = db
+
+    async def get_cached_categories(self, user_id: UUID) -> List[Category]:
+        """Get categories with a simple memory cache to save DB round-trips."""
+        now = time.time()
+        # Note: In a multi-user environment, we'd need a per-user cache key
+        # but since system categories are shared, we cache those globally.
+        if CategoryService._cache is None or (now - CategoryService._cache_time) > self.CACHE_TTL:
+            CategoryService._cache = await self.get_categories(user_id)
+            CategoryService._cache_time = now
+        return CategoryService._cache
 
     async def get_categories(self, user_id: UUID) -> List[Category]:
         # Fetch both system categories (user_id=None) and user-specific categories

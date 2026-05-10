@@ -40,11 +40,15 @@ class TransactionService:
 
     async def _attach_icons(self, transactions: List[Transaction]) -> List[Transaction]:
         from app.features.categories.models import Category
+        from app.features.categories.service import CategoryService
         
-        # Fetch all categories to create a mapping
-        cat_stmt = select(Category)
-        cat_result = await self.db.execute(cat_stmt)
-        categories = cat_result.scalars().all()
+        # Use CategoryService to get cached categories
+        cat_service = CategoryService(self.db)
+        # We use a dummy user_id here for system categories, 
+        # or we could pass the actual user_id if we want user-specific icons
+        # but for icon mapping, system defaults are usually enough.
+        user_id = transactions[0].user_id if transactions else None
+        categories = await cat_service.get_cached_categories(user_id)
         
         cat_map = {c.name.lower(): {"icon": c.icon, "color": c.color} for c in categories}
         sub_map = {}
