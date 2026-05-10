@@ -282,15 +282,22 @@ class SyncService:
              upi_path_match = re.search(r'UPI/(?:P2P|P2M)/[^/\r\n]+/([^/\r\n]+?)(?:/|\r|\n|$)', text, re.IGNORECASE)
              
              # Format C: General "by/at/to/towards/from" patterns
-             # Captures names like "GROWW INVEST TECH P" in "by ACH-DR-GROWW INVEST TECH P"
-             general_match = re.search(r'\b(?:at|by|to|towards|from)\s+([A-Z0-9\s.\-]{3,100})(?:\s+on|\s+at|\s+using|\s+for|\.|\r|\n|$)', text, re.IGNORECASE)
+             # Find all occurrences to handle cases where "by" or "to" appears multiple times
+             all_general = re.findall(r'\b(?:at|by|to|towards|from)\s+([A-Z0-9\s.\-]{3,100})(?:\s+on|\s+at|\s+using|\s+for|\.|\r|\n|$)', text, re.IGNORECASE)
 
              if upi_path_match:
                  merchant = upi_path_match.group(1).strip().title()
              elif upi_id_match:
                  merchant = upi_id_match.group(1).title()
-             elif general_match:
-                 raw_merchant = general_match.group(1).strip()
+             elif all_general:
+                 # Strategy: Pick the match that contains a bank prefix, otherwise pick the first one
+                 best_match = all_general[0]
+                 for m in all_general:
+                     if re.search(r'^(?:ACH-DR-|UPI-|NEFT-|IMPS-|RTGS-|DEBIT-)', m.strip(), re.IGNORECASE):
+                         best_match = m
+                         break
+                 
+                 raw_merchant = best_match.strip()
                  # Clean common bank prefixes
                  clean_merchant = re.sub(r'^(?:ACH-DR-|UPI-|NEFT-|IMPS-|RTGS-|DEBIT-)', '', raw_merchant, flags=re.IGNORECASE).strip()
                  merchant = clean_merchant.title()
