@@ -107,7 +107,7 @@ app.include_router(wealth_router, prefix=f"{settings.API_V1_STR}/wealth", tags=[
 app.include_router(export_router, prefix=f"{settings.API_V1_STR}/export", tags=["export"])
 app.include_router(settle_up_router, prefix=f"{settings.API_V1_STR}/settle-up", tags=["settle-up"])
 
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, Response
 import os
 
 @app.get("/", tags=["status"])
@@ -134,3 +134,9 @@ async def terms_of_service():
     if os.path.exists(static_path):
         return FileResponse(static_path)
     return HTMLResponse("<h1>Terms of Service</h1><p>Grip Intelligence Terms of Service are being updated.</p>")
+
+@app.get("/robots.txt", response_class=Response, tags=["legal"])
+async def robots_txt():
+    """Handle robots.txt requests to avoid 404s and potential webhook interference."""
+    content = "User-agent: *\nDisallow: /api/\nAllow: /\n"
+    return Response(content=content, media_type="text/plain")

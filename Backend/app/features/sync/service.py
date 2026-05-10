@@ -435,6 +435,54 @@ class SyncService:
                 raise Exception("GMAIL_DISCONNECTED")
             raise
 
+    async def renew_watch(self, user_id: uuid.UUID):
+        """
+        Renew the Gmail watch subscription to keep push notifications alive.
+        Should be called periodically (e.g. during every sync).
+        """
+        if not settings.GMAIL_PUBSUB_TOPIC:
+            return
+
+        result = await self.db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user or not user.gmail_credentials:
+            return
+
+        try:
+            creds_data = user.gmail_credentials
+            creds = Credentials(
+                token=creds_data.get('token'),
+                refresh_token=creds_data.get('refresh_token'),
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=settings.GOOGLE_CLIENT_ID,
+                client_secret=settings.GOOGLE_CLIENT_SECRET,
+                scopes=["https://www.googleapis.com/auth/gmail.readonly"]
+            )
+            
+            # Refresh if needed
+            if creds.expired and creds.refresh_token:
+                creds.refresh(GoogleRequest())
+            
+            service = build('gmail', 'v1', credentials=creds)
+            watch_request = {
+                'labelIds': ['INBOX'],
+                'topicName': settings.GMAIL_PUBSUB_TOPIC
+            }
+            watch_response = service.users().watch(userId='me', body=watch_request).execute()
+            logger.info(f"[Sync:{user_id}] Renewed Gmail watch. historyId: {watch_response.get('historyId')}")
+            
+            # Persist refreshed token if it changed
+            if creds.token != creds_data.get('token'):
+                user.gmail_credentials = {
+                    "token": creds.token,
+                    "refresh_token": creds.refresh_token,
+                    "expiry": creds.expiry.isoformat() if creds.expiry else None
+                }
+                await self.db.commit()
+                
+        except Exception as e:
+            logger.warning(f"[Sync:{user_id}] Failed to renew Gmail watch: {e}")
+
     async def get_sync_trends(self, user_id: uuid.UUID, days: int = 30):
         """Get transaction origination trends (Manual vs Automated)."""
         from sqlalchemy import func, cast, Date
@@ -496,6 +544,9 @@ class SyncService:
                 logger.info(f"[Sync:{user_id}] Starting sync. source={source}, last_sync={start_time.isoformat() if start_time else 'FIRST_SYNC'}")
                 
                 messages = await self.fetch_gmail_changes(user_id, start_time)
+                
+                # Renew watch proactively on every sync
+                await self.renew_watch(user_id)
                 
                 if not messages:
                     logger.info(f"[Sync:{user_id}] No messages returned from Gmail. Completing with 0 records.")

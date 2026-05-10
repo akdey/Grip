@@ -156,6 +156,8 @@ async def webhook_ingress(
     db: Annotated[AsyncSession, Depends(get_db)],
     token: str = None
 ):
+    logger.info(f"Webhook received! Token present: {token is not None}")
+    
     # Google Pub/Sub sends push tokens via query param usually
     if token and token != settings.GRIP_SECRET:
          # SANITIZED: Do not print the actual token or secret to logs
