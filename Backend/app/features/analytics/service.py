@@ -226,43 +226,43 @@ class AnalyticsService:
                 _, last_day = calendar.monthrange(today.year, today.month)
                 days_till_salary = last_day - today.day + 1
             
-            # 1. Prepare all independent queries/tasks
-            balance_stmt = (
-                select(func.sum(Transaction.amount))
-                .where(Transaction.user_id == user_id)
-                .where(Transaction.account_type.in_([AccountType.CASH, AccountType.SAVINGS]))
-            )
-            
-            txn_count_stmt = (
-                select(func.count(Transaction.id))
-                .where(Transaction.user_id == user_id)
-            )
-
+            # 1. Prepare combined query to fetch everything in ONE trip
             today_date = self._get_today()
             thirty_days_ago = today_date - timedelta(days=30)
             
-            discretionary_stmt = (
+            # Subquery for discretionary sum
+            discretionary_sub = (
                 select(func.sum(Transaction.amount))
                 .where(Transaction.user_id == user_id)
                 .where(Transaction.category.notin_(["Income", "Investment", "Housing", "Bill Payment", "Transfer", "EMI", "Loan", "Insurance", "Misc"]))
                 .where(Transaction.sub_category != "Credit Card Payment")
                 .where(Transaction.is_surety == False)
-                .where(func.abs(Transaction.amount) <= 5000)  # Exclude large one-off purchases > 5k
+                .where(func.abs(Transaction.amount) <= 5000)
                 .where(Transaction.transaction_date >= thirty_days_ago)
                 .where(Transaction.transaction_date <= today_date)
+                .scalar_subquery()
             )
 
-            # 2. Execute sequentially to ensure stability with asyncpg
-            balance_result = await db.execute(balance_stmt)
+            # Mega query: Total Balance, Txn Count, and Discretionary Sum
+            mega_stmt = (
+                select(
+                    func.sum(Transaction.amount).label("balance"),
+                    func.count(Transaction.id).label("txn_count"),
+                    discretionary_sub.label("discretionary_sum")
+                )
+                .where(Transaction.user_id == user_id)
+                .where(Transaction.account_type.in_([AccountType.CASH, AccountType.SAVINGS]))
+            )
+
+            # 2. Execute sequentially - but now we only have 2 main hits (Mega + Burden)
+            mega_res = (await db.execute(mega_stmt)).one()
             frozen_breakdown = await self.calculate_burden(db, user_id)
-            txn_count_result = await db.execute(txn_count_stmt)
-            discretionary_result = await db.execute(discretionary_stmt)
             
             # 3. Process results
-            current_balance = balance_result.scalar() or Decimal("0")
-            total_transactions = txn_count_result.scalar() or 0
+            current_balance = mega_res.balance or Decimal("0")
+            total_transactions = mega_res.txn_count or 0
             is_new_user = total_transactions == 0
-            total_discretionary_30d = abs(discretionary_result.scalar() or Decimal("0"))
+            total_discretionary_30d = abs(mega_res.discretionary_sum or Decimal("0"))
             
             # Calculate average daily discretionary expense
             avg_daily_discretionary = total_discretionary_30d / Decimal("30")
