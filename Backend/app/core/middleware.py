@@ -1,4 +1,5 @@
 from fastapi import Request, Response, status
+import time
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from jose import jwt, JWTError
@@ -57,10 +58,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         request.state.user_email = email
         # logger.debug(f"Token valid for {email}, proceeding statelessly for {path}")
         
-        # 5. Process request
         try:
             response = await call_next(request)
-            logger.info(f"Response: {response.status_code} for {path}")
             return response
         except Exception as e:
             logger.error(f"Error in middleware processing {path}: {e}", exc_info=True)
@@ -68,4 +67,26 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 status_code=500,
                 content={"detail": "Internal Server Error in Middleware", "msg": str(e)}
             )
+
+class PerformanceLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.perf_counter()
+        path = request.url.path
+        
+        try:
+            response = await call_next(request)
+            process_time = (time.perf_counter() - start_time) * 1000
+            
+            # Log with high visibility for slow requests (> 500ms)
+            log_msg = f"[{request.method}] {path} - Status: {response.status_code} | Time: {process_time:.2f}ms"
+            if process_time > 500:
+                logger.warning(f"🕒 SLOW REQUEST: {log_msg}")
+            else:
+                logger.info(f"🕒 {log_msg}")
+                
+            response.headers["X-Process-Time"] = f"{process_time:.2f}ms"
+            return response
+        except Exception as e:
+            logger.error(f"PerformanceMiddleware Error: {e}")
+            return await call_next(request)
 

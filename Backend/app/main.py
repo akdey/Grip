@@ -14,7 +14,7 @@ print(">>> LOGGING SYSTEM READY", flush=True)
 
 from app.core.config import get_settings
 from app.core.database import engine, Base
-from app.core.middleware import AuthenticationMiddleware
+from app.core.middleware import AuthenticationMiddleware, PerformanceLoggingMiddleware
 
 from app.features.auth.router import router as auth_router
 from app.features.transactions.router import router as transactions_router
@@ -65,6 +65,7 @@ app = FastAPI(
 )
 #app.router.redirect_slashes = False
 app.add_middleware(AuthenticationMiddleware)
+app.add_middleware(PerformanceLoggingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
