@@ -1,6 +1,6 @@
 from typing import Annotated
 import logging
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Header, status
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Header, status, Request
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from google_auth_oauthlib.flow import Flow
@@ -149,15 +149,22 @@ async def google_callback(
         raise HTTPException(status_code=400, detail=f"Invalid authorization code: {str(e)}")
 
 @router.post("/webhook", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/webhook/", status_code=status.HTTP_202_ACCEPTED)
+@router.get("/webhook")
+@router.get("/webhook/")
 async def webhook_ingress(
     payload: dict, 
     background_tasks: BackgroundTasks, 
     service: Annotated[SyncService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: str = None
+    token: str = None,
+    request: Request = None
 ):
-    logger.info(f"Webhook received! Token present: {token is not None}")
+    logger.info(f"Webhook received! Method: {request.method if request else 'UNKNOWN'}, Token present: {token is not None}")
     
+    if request and request.method == "GET":
+        return {"status": "ok", "message": "Grip Webhook Endpoint Operational"}
+
     # Google Pub/Sub sends push tokens via query param usually
     if token and token != settings.GRIP_SECRET:
          # SANITIZED: Do not print the actual token or secret to logs
