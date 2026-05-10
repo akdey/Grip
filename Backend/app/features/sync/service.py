@@ -281,10 +281,19 @@ class SyncService:
              # Format B: UPI Transaction Path (UPI/P2P/something/Merchant/...)
              upi_path_match = re.search(r'UPI/(?:P2P|P2M)/[^/\r\n]+/([^/\r\n]+?)(?:/|\r|\n|$)', text, re.IGNORECASE)
              
+             # Format C: General "by/at/to/towards/from" patterns
+             # Captures names like "GROWW INVEST TECH P" in "by ACH-DR-GROWW INVEST TECH P"
+             general_match = re.search(r'\b(?:at|by|to|towards|from)\s+([A-Z0-9\s.\-]{3,100})(?:\s+on|\s+at|\s+using|\s+for|\.|\r|\n|$)', text, re.IGNORECASE)
+
              if upi_path_match:
                  merchant = upi_path_match.group(1).strip().title()
              elif upi_id_match:
                  merchant = upi_id_match.group(1).title()
+             elif general_match:
+                 raw_merchant = general_match.group(1).strip()
+                 # Clean common bank prefixes
+                 clean_merchant = re.sub(r'^(?:ACH-DR-|UPI-|NEFT-|IMPS-|RTGS-|DEBIT-)', '', raw_merchant, flags=re.IGNORECASE).strip()
+                 merchant = clean_merchant.title()
                  
              logger.info(f"[Brain:{user_id}] Regex Fallback Extracted: ₹{amount} | Merchant: {merchant} | Type: {txn_type}")
 
@@ -484,7 +493,6 @@ class SyncService:
                 'topicName': settings.GMAIL_PUBSUB_TOPIC
             }
             watch_response = service.users().watch(userId='me', body=watch_request).execute()
-            logger.info(f"[Sync:{user_id}] Successfully renewed Gmail watch on topic: {settings.GMAIL_PUBSUB_TOPIC}. historyId: {watch_response.get('historyId')}")
             
             # Persist refreshed token if it changed
             if creds.token != creds_data.get('token'):
