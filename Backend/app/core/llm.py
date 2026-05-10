@@ -109,6 +109,8 @@ class LocalLLMEngine:
             formatted_prompt = f"<|turn>system\n{system_prompt} <turn|>\n<|turn>user\n{prompt} <turn|>\n<|turn>model\n"
             
             logger.debug(f"LocalLLMEngine: Starting inference with Gemma 4...")
+            import time
+            start_t = time.perf_counter()
             output = model(
                 formatted_prompt,
                 max_tokens=512, # Optimized for JSON response with more prompt headroom
@@ -116,9 +118,10 @@ class LocalLLMEngine:
                 stop=["<turn|>", "<|turn>", "<|im_end|>", "<|endoftext|>"],
                 echo=False
             )
+            inf_time = (time.perf_counter() - start_t) * 1000
             raw_text = output['choices'][0]['text'].strip()
             text = self._strip_thoughts(raw_text)
-            logger.info(f"LocalLLMEngine: Inference complete. Generated {len(text)} characters (stripped thoughts).")
+            logger.info(f"LocalLLMEngine: Inference complete. Took {inf_time:.2f}ms. Generated {len(text)} characters.")
             return text
         except Exception as e:
             logger.error(f"Error during local LLM inference: {e}")

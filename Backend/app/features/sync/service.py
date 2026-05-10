@@ -5,7 +5,6 @@ import uuid
 import logging
 import json
 import base64
-import time
 from datetime import datetime, timedelta
 from typing import Optional, List
 from sqlalchemy import select, desc
@@ -220,8 +219,7 @@ class SyncService:
           "extracted_date": "YYYY-MM-DD" | null
         }}
         """
-        # Stage 1: Try Local LLM
-        t_llm_start = time.perf_counter()
+         # Stage 1: Try Local LLM
         data = await self.llm.generate_json(prompt, temperature=0.1)
         
         # Retry with higher temperature if basic local extraction failed 
@@ -229,9 +227,6 @@ class SyncService:
             logger.warning(f"[Brain:{user_id}] Initial LLM extraction failed or returned 0 amount. Retrying with higher temp.")
             retry_prompt = prompt + "\n\nCRITICAL: You MUST output valid JSON. Extract the transaction amount. Do not output 0 if a payment occurred."
             data = await self.llm.generate_json(retry_prompt, temperature=0.4)
-        
-        t_llm = (time.perf_counter() - t_llm_start) * 1000
-        logger.info(f"⏱️ LLM INFERENCE: {t_llm:.2f}ms")
 
         # Stage 2: Fallback to Groq if Local fails or returns non-transaction
         # if not data and self.llm.groq_api_key:
@@ -563,22 +558,17 @@ class SyncService:
 
             log = await self._log_start(user_id, source)
             try:
-                last_sync = await self._get_last_sync_time(user_id)
-                logger.info(f"[Sync:{user_id}] Starting sync. source={source}, last_sync={last_sync.isoformat() if last_sync else 'None'}")
+                start_time = await self._get_last_sync_time(user_id)
+                logger.info(f"[Sync:{user_id}] Starting sync. source={source}, last_sync={start_time.isoformat() if start_time else 'FIRST_SYNC'}")
                 
-                sync_start_time = time.perf_counter()
-        
-                # 1. Renew watch (ensure subscription is alive)
-                t_watch_start = time.perf_counter()
+                # Renew watch proactively at the start of every sync
                 await self.renew_watch(user_id)
-                t_watch = (time.perf_counter() - t_watch_start) * 1000
-                logger.info(f"⏱️ GMAIL WATCH RENEWAL: {t_watch:.2f}ms")
-
-                # 2. Fetch changes
+                
+                import time
                 t_fetch_start = time.perf_counter()
-                messages = await self.fetch_gmail_changes(user_id, last_sync)
+                messages = await self.fetch_gmail_changes(user_id, start_time)
                 t_fetch = (time.perf_counter() - t_fetch_start) * 1000
-                logger.info(f"⏱️ GMAIL API FETCH: {t_fetch:.2f}ms")
+                logger.info(f"[Sync:{user_id}] Gmail fetch complete. Found {len(messages)} items in {t_fetch:.2f}ms")
                 
                 if not messages:
                     logger.info(f"[Sync:{user_id}] No messages returned from Gmail. Completing with 0 records.")
@@ -614,6 +604,8 @@ class SyncService:
                     # Sanitize and send to extraction pipeline
                     raw_body = msg['body'] or msg['snippet']
                     clean_text = self.sanitizer.sanitize(raw_body)
+                    
+                    t_brain_start = time.perf_counter()
                     extracted = await self.call_brain_api(
                         text=clean_text,
                         user_id=user_id,
@@ -621,6 +613,8 @@ class SyncService:
                         subject=msg.get('subject', ''),
                         sender=msg.get('sender', '')
                     )
+                    t_brain = (time.perf_counter() - t_brain_start) * 1000
+                    logger.debug(f"[Sync:{user_id}] Brain extraction for {msg['id']} took {t_brain:.2f}ms")
                     
                     # Skip if no valid amount was extracted (LLM timeout/failure or non-transaction email)
                     if abs(extracted["amount"]) == 0:
