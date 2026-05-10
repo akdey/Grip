@@ -32,30 +32,22 @@ try:
         
         # Supabase-specific configuration
         if "supabase" in db_url.lower():
-            # Use NullPool for Supabase Transaction Pooler (port 6543)
-            if ":6543" in db_url:
-                poolclass = NullPool
-            
             # Permissive SSL context for Supabase
             ssl_context = ssl.create_default_context()
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
             connect_args["ssl"] = ssl_context
 
-    # Create engine
-    engine_kwargs = {"echo": False, "connect_args": connect_args}
-    
-    if poolclass is NullPool:
-        engine_kwargs["poolclass"] = NullPool
-    else:
-        engine_kwargs.update({
-            "pool_pre_ping": True,
-            "pool_recycle": 300,
-            "pool_size": 10,
-            "max_overflow": 20,
-        })
-    
-    engine = create_async_engine(db_url, **engine_kwargs)
+    # Create engine with robust pooling
+    engine = create_async_engine(
+        db_url,
+        echo=False,
+        connect_args=connect_args,
+        pool_size=10,
+        max_overflow=20,
+        pool_recycle=300,
+        pool_pre_ping=True
+    )
     
 except Exception as e:
     print(f"CRITICAL: Failed to create database engine: {e}")
