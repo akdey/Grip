@@ -289,18 +289,6 @@ class SyncService:
                  merchant = upi_path_match.group(1).strip().title()
              elif upi_id_match:
                  merchant = upi_id_match.group(1).title()
-             elif all_general:
-                 # Strategy: Pick the match that contains a bank prefix, otherwise pick the first one
-                 best_match = all_general[0]
-                 for m in all_general:
-                     if re.search(r'^(?:ACH-DR-|UPI-|NEFT-|IMPS-|RTGS-|DEBIT-)', m.strip(), re.IGNORECASE):
-                         best_match = m
-                         break
-                 
-                 raw_merchant = best_match.strip()
-                 # Clean common bank prefixes
-                 clean_merchant = re.sub(r'^(?:ACH-DR-|UPI-|NEFT-|IMPS-|RTGS-|DEBIT-)', '', raw_merchant, flags=re.IGNORECASE).strip()
-                 merchant = clean_merchant.title()
                  
              logger.info(f"[Brain:{user_id}] Regex Fallback Extracted: ₹{amount} | Merchant: {merchant} | Type: {txn_type}")
 
