@@ -96,14 +96,9 @@ async def get_financial_forecast(
     db: Annotated[AsyncSession, Depends(get_db)],
     service: Annotated[ForecastingService, Depends()]
 ):
-    # Execute data gathering in parallel
-    category_daily_task = get_category_daily_expenses(db, current_user.id, days=120)
-    monthly_breakdown_task = get_monthly_category_breakdown(db, current_user.id, months=4)
-    
-    category_daily, monthly_breakdown = await asyncio.gather(
-        category_daily_task,
-        monthly_breakdown_task
-    )
+    # Execute data gathering sequentially to ensure stability with asyncpg
+    category_daily = await get_category_daily_expenses(db, current_user.id, days=120)
+    monthly_breakdown = await get_monthly_category_breakdown(db, current_user.id, months=4)
     
     forecast = await service.calculate_safe_to_spend(category_daily, monthly_breakdown)
     

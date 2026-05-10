@@ -243,26 +243,63 @@ class AnalyticsService:
                 .scalar_subquery()
             )
 
-            # Mega query: Total Balance, Txn Count, and Discretionary Sum
+            # Subquery for Goals
+            goal_sub = (
+                select(func.sum(Goal.monthly_contribution))
+                .where(Goal.user_id == user_id)
+                .where(Goal.is_active == True)
+                .scalar_subquery()
+            )
+
+            # Subquery for unbilled CC
+            unbilled_cc_sub = (
+                select(func.sum(Transaction.amount))
+                .where(Transaction.user_id == user_id)
+                .where(Transaction.category != "Income")
+                .where(Transaction.account_type == AccountType.CREDIT_CARD)
+                .scalar_subquery()
+            )
+
+            # Mega query: Total Balance, Txn Count, Discretionary Sum, Goals, and Unbilled CC
             mega_stmt = (
                 select(
                     func.sum(Transaction.amount).label("balance"),
                     func.count(Transaction.id).label("txn_count"),
-                    discretionary_sub.label("discretionary_sum")
+                    discretionary_sub.label("discretionary_sum"),
+                    goal_sub.label("goals_total"),
+                    unbilled_cc_sub.label("unbilled_cc")
                 )
                 .where(Transaction.user_id == user_id)
                 .where(Transaction.account_type.in_([AccountType.CASH, AccountType.SAVINGS]))
             )
 
-            # 2. Execute sequentially - but now we only have 2 main hits (Mega + Burden)
+            # 2. Execute sequentially - only 2 main hits: Mega + Ledger
             mega_res = (await db.execute(mega_stmt)).one()
-            frozen_breakdown = await self.calculate_burden(db, user_id)
+            # We still need the ledger for specific unpaid bills and projections
+            ledger_data = await self.bill_service.get_obligations_ledger(db, user_id, days_ahead=days_till_salary)
             
             # 3. Process results
             current_balance = mega_res.balance or Decimal("0")
             total_transactions = mega_res.txn_count or 0
             is_new_user = total_transactions == 0
             total_discretionary_30d = abs(mega_res.discretionary_sum or Decimal("0"))
+            
+            # Extract combined burden components
+            unpaid_bills = ledger_data["unpaid_total"]
+            projected_surety = ledger_data["projected_total"]
+            unbilled_cc = abs(mega_res.unbilled_cc or Decimal("0"))
+            active_goals = mega_res.goals_total or Decimal("0")
+            
+            total_frozen = unpaid_bills + projected_surety + unbilled_cc + active_goals
+            
+            frozen_breakdown = FrozenFundsBreakdown(
+                unpaid_bills=unpaid_bills,
+                projected_surety=projected_surety,
+                unbilled_cc=unbilled_cc,
+                active_goals=active_goals,
+                total_frozen=total_frozen,
+                obligations=ledger_data["items"]
+            )
             
             # Calculate average daily discretionary expense
             avg_daily_discretionary = total_discretionary_30d / Decimal("30")
