@@ -15,9 +15,10 @@ HAS_LLAMA_CPP = False
 try:
     import llama_cpp
     HAS_LLAMA_CPP = True
-except Exception:
-    # We don't log here to avoid cluttering startup logs if the user is running 
-    # in a environment where they explicitly didn't install it.
+    print(">>> LLM_ENGINE: llama-cpp-python imported successfully.", flush=True)
+except Exception as e:
+    # Capturing the error to help debug HF Space deployment issues
+    print(f">>> LLM_ENGINE: Failed to import llama-cpp-python: {e}", flush=True)
     pass
 
 settings = get_settings()
