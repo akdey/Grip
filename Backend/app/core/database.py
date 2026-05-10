@@ -70,12 +70,5 @@ class Base(DeclarativeBase):
 
 # Dependency
 async def get_db():
-    import time
-    import logging
-    logger = logging.getLogger("app.core.database")
-    
-    start_t = time.perf_counter()
     async with AsyncSessionLocal() as session:
-        db_init_time = (time.perf_counter() - start_t) * 1000
-        logger.info(f"DB_PERF: Session initialized in {db_init_time:.2f}ms")
         yield session
