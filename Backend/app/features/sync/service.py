@@ -471,12 +471,22 @@ class SyncService:
                 creds.refresh(GoogleRequest())
             
             service = build('gmail', 'v1', credentials=creds)
+            
+            # CRITICAL FIX: Gmail only allows one watch per (user, app). 
+            # If we changed topics or have a stale watch, we must stop it first.
+            try:
+                service.users().stop(userId='me').execute()
+                logger.info(f"[Sync:{user_id}] Stopped existing Gmail watch to prepare for renewal.")
+            except Exception as stop_ex:
+                # If there was no watch, this might fail, which is fine.
+                logger.debug(f"[Sync:{user_id}] Note: No existing watch to stop or stop failed: {stop_ex}")
+
             watch_request = {
                 'labelIds': ['INBOX'],
                 'topicName': settings.GMAIL_PUBSUB_TOPIC
             }
             watch_response = service.users().watch(userId='me', body=watch_request).execute()
-            logger.info(f"[Sync:{user_id}] Renewed Gmail watch. historyId: {watch_response.get('historyId')}")
+            logger.info(f"[Sync:{user_id}] Successfully renewed Gmail watch on topic: {settings.GMAIL_PUBSUB_TOPIC}. historyId: {watch_response.get('historyId')}")
             
             # Persist refreshed token if it changed
             if creds.token != creds_data.get('token'):
