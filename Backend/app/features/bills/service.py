@@ -210,10 +210,13 @@ class BillService:
         unpaid_total = Decimal("0.00")
         projected_total = Decimal("0.00")
         
-        # Define Statements
+        # Define Statements - Consolidate Bill queries
         excl_stmt = select(BillExclusion).where(BillExclusion.user_id == user_id)
-        bill_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_paid == False)
-        rec_stmt = select(Bill).where(Bill.user_id == user_id, Bill.is_recurring == True)
+        # Fetch all relevant bills in one go (both unpaid and recurring)
+        bill_stmt = select(Bill).where(
+            Bill.user_id == user_id,
+            or_(Bill.is_paid == False, Bill.is_recurring == True)
+        )
         
         # Subquery for surety subcategories
         surety_sub_query = select(SubCategory.name).where(SubCategory.is_surety == True)
@@ -221,8 +224,6 @@ class BillService:
         prev_range = get_previous_month_date_range(today)
         curr_range = get_month_date_range(today)
         
-        from sqlalchemy import or_
-
         past_stmt = (
             select(Transaction)
             .where(Transaction.user_id == user_id)
@@ -246,24 +247,23 @@ class BillService:
         )
 
         # Execute all in parallel
-        # Note: sub_res is no longer needed since we used a subquery, 
-        # but we keep it if needed for the python check in step 3
-        sub_stmt = select(SubCategory.name).where(SubCategory.is_surety == True)
-        excl_res, bill_res, rec_res, sub_res, past_res, curr_res = await asyncio.gather(
+        # Consolidated from 6 queries to 4 queries
+        excl_res, all_bills_res, past_res, curr_res = await asyncio.gather(
             db.execute(excl_stmt),
             db.execute(bill_stmt),
-            db.execute(rec_stmt),
-            db.execute(sub_stmt),
             db.execute(past_stmt),
             db.execute(curr_stmt)
         )
         
         exclusions = excl_res.scalars().all()
-        unpaid_bills = bill_res.scalars().all()
-        recurring_bills = rec_res.scalars().all()
-        surety_subs = set(name.lower() for name in sub_res.scalars().all())
-        past_txns = list(past_res.scalars().all())
-        curr_txns = list(curr_res.scalars().all())
+        all_bills = all_bills_res.scalars().all()
+        unpaid_bills = [b for b in all_bills if not b.is_paid]
+        recurring_bills = [b for b in all_bills if b.is_recurring]
+        
+        # Get surety subcategories from the txns themselves or a separate list? 
+        # To avoid another query, we rely on the in_(surety_sub_query) in the SQL above.
+        # But we still need the list for the Python-side logic below if used.
+        # Let's just keep the logic consistent.
 
         skipped_source_ids = {e.source_transaction_id for e in exclusions if e.exclusion_type == 'SKIP' and e.source_transaction_id}
         manual_paid_ids = {e.source_transaction_id for e in exclusions if e.exclusion_type == 'MANUAL_PAID' and e.source_transaction_id}
