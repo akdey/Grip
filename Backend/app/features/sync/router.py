@@ -1,6 +1,6 @@
 from typing import Annotated
 import logging
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Header, status, Request
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Header, status
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from google_auth_oauthlib.flow import Flow
@@ -150,19 +150,13 @@ async def google_callback(
 
 @router.post("/webhook", status_code=status.HTTP_202_ACCEPTED)
 @router.post("/webhook/", status_code=status.HTTP_202_ACCEPTED)
-@router.get("/webhook")
-@router.get("/webhook/")
 async def webhook_ingress(
     payload: dict, 
     background_tasks: BackgroundTasks, 
     service: Annotated[SyncService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: str = None,
-    request: Request = None
+    token: str = None
 ):
-    if request and request.method == "GET":
-        return {"status": "ok", "message": "Grip Webhook Endpoint Operational"}
-
     # Google Pub/Sub sends push tokens via query param usually
     if token and token != settings.GRIP_SECRET:
          # SANITIZED: Do not print the actual token or secret to logs
