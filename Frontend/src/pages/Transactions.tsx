@@ -109,8 +109,11 @@ const Transactions: React.FC = () => {
         const now = startOfToday();
 
         const parseTxnDate = (t: any) => t.transaction_date ? parseISO(t.transaction_date) : new Date(t.created_at);
+        
+        // Filter out pending transactions from the main list so they don't appear twice
+        const verifiedOnly = transactions.filter(txn => txn.status !== 'PENDING');
 
-        transactions.forEach(txn => {
+        verifiedOnly.forEach(txn => {
             const date = parseTxnDate(txn);
             let label = "";
 
