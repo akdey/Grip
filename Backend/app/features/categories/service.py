@@ -43,6 +43,12 @@ class CategoryService:
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
+    @classmethod
+    def invalidate_cache(cls):
+        """Force the cache to refresh on the next request."""
+        cls._cache = None
+        cls._cache_time = 0
+
     async def create_category(self, user_id: UUID, data: schemas.CategoryCreate) -> Category:
         category = Category(
             name=data.name,
@@ -54,6 +60,7 @@ class CategoryService:
         self.db.add(category)
         await self.db.commit()
         await self.db.refresh(category)
+        self.invalidate_cache()
         return category
 
     async def create_sub_category(self, user_id: UUID, data: schemas.SubCategoryCreate) -> SubCategory:
@@ -76,6 +83,7 @@ class CategoryService:
         self.db.add(sub_category)
         await self.db.commit()
         await self.db.refresh(sub_category)
+        self.invalidate_cache()
         return sub_category
 
     async def delete_category(self, user_id: UUID, category_id: UUID):
@@ -86,6 +94,7 @@ class CategoryService:
             raise HTTPException(status_code=404, detail="Category not found or you don't have permission")
         await self.db.delete(category)
         await self.db.commit()
+        self.invalidate_cache()
 
     async def delete_sub_category(self, user_id: UUID, sub_category_id: UUID):
         stmt = select(SubCategory).where(SubCategory.id == sub_category_id, SubCategory.user_id == user_id)
@@ -95,6 +104,7 @@ class CategoryService:
             raise HTTPException(status_code=404, detail="SubCategory not found or you don't have permission")
         await self.db.delete(sub_category)
         await self.db.commit()
+        self.invalidate_cache()
 
     async def update_category(self, user_id: UUID, category_id: UUID, data: schemas.CategoryUpdate) -> Category:
         stmt = select(Category).where(Category.id == category_id, Category.user_id == user_id)
@@ -109,6 +119,7 @@ class CategoryService:
             
         await self.db.commit()
         await self.db.refresh(category)
+        self.invalidate_cache()
         return category
 
     async def update_sub_category(self, user_id: UUID, sub_category_id: UUID, data: schemas.SubCategoryUpdate) -> SubCategory:
@@ -124,5 +135,6 @@ class CategoryService:
             
         await self.db.commit()
         await self.db.refresh(sub_category)
+        self.invalidate_cache()
         return sub_category
 
