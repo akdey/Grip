@@ -30,19 +30,17 @@ class CategoryService:
 
     async def get_categories(self, user_id: UUID) -> List[Category]:
         # Fetch both system categories (user_id=None) and user-specific categories
-        # Use joinedload to fetch everything in a SINGLE round-trip (better for high-latency DB)
-        from sqlalchemy.orm import joinedload
+        # Use contains_eager with explicit join to fetch everything in a SINGLE round-trip
+        from sqlalchemy.orm import contains_eager
         stmt = (
             select(Category)
+            .outerjoin(Category.sub_categories)
             .where((Category.user_id == None) | (Category.user_id == user_id))
-            .options(
-                joinedload(Category.sub_categories).and_(
-                    (SubCategory.user_id == None) | (SubCategory.user_id == user_id)
-                )
-            )
+            .where((SubCategory.user_id == None) | (SubCategory.user_id == user_id))
+            .options(contains_eager(Category.sub_categories))
         )
         result = await self.db.execute(stmt)
-        # Unique is required when using joinedload with collection relationships
+        # unique() is required when using eager loading on collections
         return result.unique().scalars().all()
 
     @classmethod
