@@ -25,18 +25,20 @@ class TransactionService:
     def __init__(self, db: AsyncSession = Depends(get_db)):
         self.db = db
 
-    async def _resolve_surety(self, sub_category_name: str) -> bool:
-        """Resolve is_surety flag from SubCategory table."""
+    async def _resolve_surety(self, sub_category_name: str, user_id: UUID = None) -> bool:
+        """Resolve is_surety flag from the categories cache."""
         if not sub_category_name:
             return False
             
-        # We need to find the sub_category. Since we store strings in Transaction, 
-        # we try to match by name. 
-        # Note: Names might not be unique globally if system allows per-user dupes, 
-        # but usually consistent enough for surety check.
-        stmt = select(SubCategory.is_surety).where(SubCategory.name == sub_category_name).limit(1)
-        result = await self.db.execute(stmt)
-        return result.scalar() or False
+        from app.features.categories.service import CategoryService
+        cat_service = CategoryService(self.db)
+        categories = await cat_service.get_cached_categories(user_id)
+        
+        for cat in categories:
+            for sub in cat.sub_categories:
+                if sub.name.lower() == sub_category_name.lower():
+                    return sub.is_surety
+        return False
 
     async def _attach_icons(self, transactions: List[Transaction]) -> List[Transaction]:
         from app.features.categories.models import Category
@@ -164,7 +166,7 @@ class TransactionService:
             txn.sub_category = verification.sub_category
             if verification.amount is not None:
                 txn.amount = verification.amount
-            txn.is_surety = await self._resolve_surety(verification.sub_category)
+            txn.is_surety = await self._resolve_surety(verification.sub_category, user_id)
             txn.tags = verification.tags
             txn.remarks = verification.remarks
             
@@ -191,7 +193,6 @@ class TransactionService:
                 txn.transaction_date = txn.created_at.date()
 
         await self.db.commit()
-        await self.db.refresh(txn)
 
         # Shadow to Settle Up ledger if this is a loan-related category
         if verification.approved:
@@ -236,7 +237,7 @@ class TransactionService:
             "raw_content_hash": content_hash,
             "status": TransactionStatus.VERIFIED,
             "is_manual": True,
-            "is_surety": txn_data.get("is_surety", False) or await self._resolve_surety(txn_data.get("sub_category"))
+            "is_surety": txn_data.get("is_surety", False) or await self._resolve_surety(txn_data.get("sub_category"), user_id)
         })
         
         txn = await self.create_transaction(txn_data)
@@ -281,10 +282,9 @@ class TransactionService:
              # But if only category changed, re-evaluate. 
              # Check if is_surety is in update_data
              if "is_surety" not in update_data:
-                txn.is_surety = await self._resolve_surety(txn.sub_category)
+                txn.is_surety = await self._resolve_surety(txn.sub_category, user_id)
             
         await self.db.commit()
-        await self.db.refresh(txn)
         txns = await self._attach_icons([txn])
         return txns[0]
 
@@ -342,7 +342,6 @@ class TransactionService:
             
         txn.is_settled = not txn.is_settled
         await self.db.commit()
-        await self.db.refresh(txn)
         
         txns = await self._attach_icons([txn])
         return txns[0]
