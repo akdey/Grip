@@ -1,10 +1,13 @@
 import logging
 import asyncio
+import calendar
+import time
 from uuid import UUID
 from decimal import Decimal
-from typing import Dict, Optional
+from typing import List, Optional, Dict
+from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, case
 from app.features.transactions.models import Transaction, AccountType
 from app.features.goals.models import Goal
 from app.features.analytics.schemas import (
