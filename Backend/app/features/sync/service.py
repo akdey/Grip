@@ -10,6 +10,7 @@ from typing import Optional, List
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
+import time
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -36,6 +37,8 @@ logger = logging.getLogger(__name__)
 class SyncService:
     # Class-level tracker for active sync tasks per user (debouncing and running)
     _active_syncs = set()
+    _trends_cache = {} # user_id -> (timestamp, data)
+    TRENDS_CACHE_TTL = 600 # 10 minutes
 
     def __init__(self,                  db: AsyncSession = Depends(get_db), 
                  transaction_service: TransactionService = Depends(),
@@ -503,6 +506,12 @@ class SyncService:
 
     async def get_sync_trends(self, user_id: uuid.UUID, days: int = 30):
         """Get transaction origination trends (Manual vs Automated)."""
+        now = time.time()
+        if user_id in SyncService._trends_cache:
+            ts, data = SyncService._trends_cache[user_id]
+            if (now - ts) < self.TRENDS_CACHE_TTL:
+                return data
+
         from sqlalchemy import func, cast, Date
         from app.features.transactions.models import Transaction
         
@@ -537,8 +546,13 @@ class SyncService:
             else:
                 # Automated (Sync)
                 trends_map[date_str]["system"] += val
-                
-        return sorted(trends_map.values(), key=lambda x: x["date"])
+        
+        sorted_trends = sorted(trends_map.values(), key=lambda x: x["date"])
+        
+        # Cache the result
+        SyncService._trends_cache[user_id] = (now, sorted_trends)
+        
+        return sorted_trends
 
     async def execute_sync(self, user_id: uuid.UUID, source: str):
         # 0. Concurrency & Debounce Guard: 
