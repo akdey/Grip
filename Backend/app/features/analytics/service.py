@@ -262,11 +262,14 @@ class AnalyticsService:
             )
 
             # Subquery for unbilled CC
+            # We only count UNSETTLED and NON-SURETY transactions to avoid double counting with obligations
             unbilled_cc_sub = (
                 select(func.sum(Transaction.amount))
                 .where(Transaction.user_id == user_id)
                 .where(Transaction.category != "Income")
                 .where(Transaction.account_type == AccountType.CREDIT_CARD)
+                .where(Transaction.is_settled == False)
+                .where(Transaction.is_surety == False)
                 .scalar_subquery()
             )
 

@@ -29,6 +29,7 @@ async def get_liquidity_dashboard(
         .where(Transaction.user_id == current_user.id)
         .where(Transaction.category != "Income")
         .where(Transaction.account_type == "CREDIT_CARD")
+        .where(Transaction.is_settled == False)
     )
     
     bills_stmt = (
