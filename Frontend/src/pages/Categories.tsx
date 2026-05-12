@@ -54,7 +54,7 @@ const Categories: React.FC = () => {
     });
 
     const createSubCategoryMutation = useMutation({
-        mutationFn: async (data: any) => await api.post('/categories/sub-categories/', data),
+        mutationFn: async (data: any) => await api.post('/categories/sub-categories', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
             setEditorMode('NONE');
