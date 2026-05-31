@@ -31,8 +31,9 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install llama-cpp-python using pre-built CPU wheels.
-# We use v0.2.85 as it is extremely stable and widely compatible with Debian/glibc environments.
-RUN pip install --no-cache-dir llama-cpp-python==0.2.85 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --force-reinstall
+# v0.3.19 is the minimum version with Gemma 4 architecture support.
+# --only-binary ensures we never trigger a slow source compilation on Hugging Face.
+RUN pip install --no-cache-dir llama-cpp-python==0.3.19 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --only-binary=:all:
 
 # Pre-download the model into the image for instant startup on HF Spaces.
 # Using Gemma 4 E4B (Instruct-GGUF) - ~2.5GB model file.
