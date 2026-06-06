@@ -30,13 +30,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install llama-cpp-python (v0.3.19 supports Gemma 4).
-# Since pre-built glibc wheels aren't readily available, we compile from source.
+# Install llama-cpp-python (Latest).
+# We compile from source because pre-built glibc wheels aren't always available.
 # CRITICAL FIX for OOM (137): llama-cpp-python uses Ninja, which ignores MAKEFLAGS.
 # We MUST set CMAKE_BUILD_PARALLEL_LEVEL=1 to limit it to a single thread.
 ENV CMAKE_ARGS="-DGGML_CPU=ON"
 ENV CMAKE_BUILD_PARALLEL_LEVEL="1"
-RUN pip install --no-cache-dir llama-cpp-python==0.3.19
+RUN pip install --no-cache-dir --upgrade llama-cpp-python
 
 # Pre-download the model into the image for instant startup on HF Spaces.
 # Using Gemma 4 E4B (Instruct-GGUF) - ~2.5GB model file.
