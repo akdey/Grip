@@ -35,7 +35,7 @@ jobs:
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           FROM_NAME: ${{ secrets.FROM_NAME }}
           FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
-          GRIP_HF_LLM_URL: ${{ secrets.GRIP_HF_LLM_URL }}
+          GRIP_HF_URL: ${{ secrets.GRIP_HF_URL }}
           X_GRIP_HF_LLM_TOKEN: ${{ secrets.X_GRIP_HF_LLM_TOKEN }}
           EMAIL_RELAY_URL: ${{ secrets.EMAIL_RELAY_URL }}
           EMAIL_RELAY_SECRET: ${{ secrets.EMAIL_RELAY_SECRET }}
@@ -55,7 +55,7 @@ jobs:
           # has the full Gemma 4 model loaded and running.
           from app.core import llm as llm_module
 
-          _hf_base = os.environ.get('GRIP_HF_LLM_URL', '').rstrip('/')
+          _hf_base = os.environ.get('GRIP_HF_URL', '').rstrip('/')
           _grip_secret = os.environ.get('GRIP_SECRET', '')
           _generate_url = f'{_hf_base}/api/v1/internal/generate'
 
