@@ -46,6 +46,7 @@ jobs:
           python -c "
           import asyncio
           import os
+          import time
           import httpx
 
           # --- Remote LLM Patch ---
@@ -55,6 +56,21 @@ jobs:
           _grip_secret = os.environ.get('GRIP_SECRET', '')
           _generate_url = f'{_hf_base}/api/v1/internal/generate'
 
+          async def _prewarm_hf_space():
+              print(f'Pre-warming HF Space at {_hf_base}...')
+              for i in range(5):
+                  try:
+                      async with httpx.AsyncClient() as client:
+                          resp = await client.get(_hf_base, timeout=10.0)
+                          if resp.status_code == 200:
+                              print('HF Space is awake and active!')
+                              return True
+                  except Exception:
+                      pass
+                  print(f'Space is warming up/sleeping, waiting 30 seconds... (Attempt {i+1}/5)')
+                  await asyncio.sleep(30)
+              return False
+
           class _RemoteLLMService:
               @property
               def is_enabled(self):
@@ -63,6 +79,9 @@ jobs:
               async def generate_response(self, prompt, system_prompt=None, temperature=0.5, **kwargs):
                   if not self.is_enabled:
                       return None
+                  
+                  await _prewarm_hf_space()
+
                   try:
                       async with httpx.AsyncClient() as client:
                           resp = await client.post(
@@ -73,13 +92,15 @@ jobs:
                                   'temperature': temperature
                               },
                               headers={'X-Grip-Secret': _grip_secret},
-                              timeout=90.0
+                              timeout=180.0
                           )
                           if resp.status_code == 200:
                               return resp.json().get('result')
                           print(f'Remote LLM returned {resp.status_code}: {resp.text[:200]}')
                   except Exception as e:
+                      import traceback
                       print(f'Remote LLM call failed: {e}')
+                      traceback.print_exc()
                   return None
 
               async def generate_json(self, prompt, **kwargs):
