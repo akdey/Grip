@@ -35,17 +35,60 @@ jobs:
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           FROM_NAME: ${{ secrets.FROM_NAME }}
           FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
-          # GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          # GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
-          GRIP_HF_LLM_URL: ${{ secrets.GRIP_HF_LLM_URL }}
+          GRIP_HF_URL: ${{ secrets.GRIP_HF_URL }}
           X_GRIP_HF_LLM_TOKEN: ${{ secrets.X_GRIP_HF_LLM_TOKEN }}
           EMAIL_RELAY_URL: ${{ secrets.EMAIL_RELAY_URL }}
           EMAIL_RELAY_SECRET: ${{ secrets.EMAIL_RELAY_SECRET }}
+          GRIP_SECRET: ${{ secrets.GRIP_SECRET }}
           ENVIRONMENT: production
         run: |
           cd Backend
           python -c "
           import asyncio
+          import os
+          import httpx
+
+          # --- Remote LLM Patch ---
+          from app.core import llm as llm_module
+
+          _hf_base = os.environ.get('GRIP_HF_URL', '').rstrip('/')
+          _grip_secret = os.environ.get('GRIP_SECRET', '')
+          _generate_url = f'{_hf_base}/api/v1/internal/generate'
+
+          class _RemoteLLMService:
+              @property
+              def is_enabled(self):
+                  return bool(_hf_base and _grip_secret)
+
+              async def generate_response(self, prompt, system_prompt=None, temperature=0.5, **kwargs):
+                  if not self.is_enabled:
+                      return None
+                  try:
+                      async with httpx.AsyncClient() as client:
+                          resp = await client.post(
+                              _generate_url,
+                              json={
+                                  'prompt': prompt,
+                                  'system_prompt': system_prompt or 'You are a helpful financial assistant.',
+                                  'temperature': temperature
+                              },
+                              headers={'X-Grip-Secret': _grip_secret},
+                              timeout=90.0
+                          )
+                          if resp.status_code == 200:
+                              return resp.json().get('result')
+                          print(f'Remote LLM returned {resp.status_code}: {resp.text[:200]}')
+                  except Exception as e:
+                      print(f'Remote LLM call failed: {e}')
+                  return None
+
+              async def generate_json(self, prompt, **kwargs):
+                  return None
+
+          llm_module._llm_service = _RemoteLLMService()
+          print(f'Remote LLM patched. Endpoint: {_generate_url}. Enabled: {llm_module._llm_service.is_enabled}')
+          # --- End Patch ---
+
           from app.core.scheduler import run_weekly_insights
           
           async def main():

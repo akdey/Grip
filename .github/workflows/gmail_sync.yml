@@ -1,15 +1,10 @@
 name: Gmail Sync
 
-#on:
-  #schedule:
-    # Runs every hour
-    #- cron: '0 * * * *'
 on:
   schedule:
     # 10:00 AM IST = 04:30 UTC
     - cron: '30 4 * * *'
   workflow_dispatch:
-
 
 jobs:
   sync-gmail:
@@ -19,14 +14,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Cache HuggingFace Models
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/huggingface
-          key: ${{ runner.os }}-huggingface-smollm2-1.7b
-          restore-keys: |
-            ${{ runner.os }}-huggingface-
-      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -34,11 +21,9 @@ jobs:
       
       - name: Install dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y build-essential cmake g++
           cd Backend
           pip install --upgrade pip
           pip install -r requirements.txt
-          CMAKE_ARGS="-DGGML_AVX2=ON" pip install llama-cpp-python
       
       - name: Run Gmail Sync
         env:
@@ -53,18 +38,62 @@ jobs:
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           FROM_NAME: ${{ secrets.FROM_NAME }}
           FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
-          GRIP_HF_LLM_URL: ${{ secrets.GRIP_HF_LLM_URL }}
+          GRIP_HF_URL: ${{ secrets.GRIP_HF_URL }}
           X_GRIP_HF_LLM_TOKEN: ${{ secrets.X_GRIP_HF_LLM_TOKEN }}
+          GRIP_SECRET: ${{ secrets.GRIP_SECRET }}
           ENVIRONMENT: production
         run: |
           cd Backend
           python -c "
           import asyncio
+          import os
+          import httpx
+
+          # --- Remote LLM Patch ---
+          from app.core import llm as llm_module
+
+          _hf_base = os.environ.get('GRIP_HF_URL', '').rstrip('/')
+          _grip_secret = os.environ.get('GRIP_SECRET', '')
+          _generate_url = f'{_hf_base}/api/v1/internal/generate'
+
+          class _RemoteLLMService:
+              @property
+              def is_enabled(self):
+                  return bool(_hf_base and _grip_secret)
+
+              async def generate_response(self, prompt, system_prompt=None, temperature=0.5, **kwargs):
+                  if not self.is_enabled:
+                      return None
+                  try:
+                      async with httpx.AsyncClient() as client:
+                          resp = await client.post(
+                              _generate_url,
+                              json={
+                                  'prompt': prompt,
+                                  'system_prompt': system_prompt or 'You are a helpful financial assistant.',
+                                  'temperature': temperature
+                              },
+                              headers={'X-Grip-Secret': _grip_secret},
+                              timeout=90.0
+                          )
+                          if resp.status_code == 200:
+                              return resp.json().get('result')
+                          print(f'Remote LLM returned {resp.status_code}: {resp.text[:200]}')
+                  except Exception as e:
+                      print(f'Remote LLM call failed: {e}')
+                  return None
+
+              async def generate_json(self, prompt, **kwargs):
+                  return None
+
+          llm_module._llm_service = _RemoteLLMService()
+          print(f'Remote LLM patched. Endpoint: {_generate_url}. Enabled: {llm_module._llm_service.is_enabled}')
+          # --- End Patch ---
+
           from app.core.scheduler import run_gmail_sync
           
           async def main():
               print('Starting Gmail sync...')
-              # We need to ensure we run the sync for all users
               try:
                   await run_gmail_sync()
                   print('Gmail sync completed successfully!')
