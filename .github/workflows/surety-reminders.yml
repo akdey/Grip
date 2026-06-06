@@ -25,6 +25,19 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
       
+      - name: Cache LLM Model
+        id: cache-model
+        uses: actions/cache@v4
+        with:
+          path: Backend/models
+          key: ${{ runner.os }}-llm-model-gemma-4-v1
+
+      - name: Download LLM Model
+        if: steps.cache-model.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p Backend/models
+          curl -L -o Backend/models/google_gemma-4-E4B-it-Q4_K_M.gguf https://huggingface.co/bartowski/google_gemma-4-E4B-it-GGUF/resolve/main/google_gemma-4-E4B-it-Q4_K_M.gguf
+      
       - name: Run Reminders
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
