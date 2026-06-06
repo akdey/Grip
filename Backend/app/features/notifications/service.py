@@ -145,16 +145,32 @@ class NotificationService:
         user = result.scalar_one_or_none()
         if not user or not user.email: return
 
-        name = self._derive_name(user.email, full_name)
-        subject = f"Reminder: Payment Due for {bill_title}"
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo(settings.APP_TIMEZONE)
+        today = datetime.now(tz).date()
+        days_left = (due_date.date() - today).days
         
-        reminder_message = f"Your recurring payment for {bill_title} is due soon."
+        due_str = f"in {days_left} days" if days_left > 1 else "tomorrow"
+        if days_left <= 0:
+            due_str = "today"
+
+        name = self._derive_name(user.email, full_name)
+        
+        # Premium dynamic subject lines
+        if days_left == 1:
+            subject = f"Final Reminder: Payment Due Tomorrow for {bill_title}"
+        elif days_left == 2:
+            subject = f"Reminder: Payment Due in 2 Days for {bill_title}"
+        else:
+            subject = f"Reminder: Payment Due for {bill_title}"
+            
+        reminder_message = f"Your recurring payment for {bill_title} is due {due_str}."
         
         if self.llm.is_enabled:
             prompt = f"""
             Persona: Sassy, witty, premium personal CFO.
             Task: Write a reminder message for {name} regarding their upcoming payment.
-            Context: The payment for '{bill_title}' of amount ₹{abs(amount):,.2f} is due on {due_date.strftime('%d %B, %Y')}.
+            Context: The payment for '{bill_title}' of amount ₹{abs(amount):,.2f} is due {due_str} (on {due_date.strftime('%d %B, %Y')}).
             - Max 30 words. No quotes, no markdown.
             - Be cheeky or witty. Example: 'Grip protocol check, {name}: your rent is due soon. Make sure your account is fueled so you keep a roof over your head.'
             """

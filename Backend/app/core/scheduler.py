@@ -42,10 +42,10 @@ async def run_daily_price_sync():
 
 async def run_surety_reminders():
     """
-    Check for payments due exactly 2 days from today and send notifications.
+    Check for payments due exactly 1 or 2 days from today and send notifications.
     Includes explicit Bills, Credit Cards, and Auto-detected Sureties.
     """
-    logger.info("Starting Surety Reminders Scan (2 days prior)...")
+    logger.info("Starting Surety Reminders Scan (1 & 2 days prior)...")
     import zoneinfo
     from app.features.auth.models import User
     from app.features.bills.service import BillService
@@ -54,7 +54,7 @@ async def run_surety_reminders():
     
     tz = zoneinfo.ZoneInfo(settings.APP_TIMEZONE)
     today = datetime.now(tz).date()
-    target_date = today + timedelta(days=2)
+    target_dates = [today + timedelta(days=1), today + timedelta(days=2)]
     
     async with AsyncSessionLocal() as db:
         llm_service = get_llm_service()
@@ -96,7 +96,7 @@ async def run_surety_reminders():
                             last_day = monthrange(next_month.year, next_month.month)[1]
                             due_date = next_month.replace(day=last_day)
                             
-                    if due_date == target_date:
+                    if due_date in target_dates:
                         # Calculate unbilled amount
                         from app.utils.finance_utils import get_billing_cycle_dates
                         cycle_dates = get_billing_cycle_dates(card.statement_date)
@@ -124,8 +124,8 @@ async def run_surety_reminders():
                 for item in ledger["items"]:
                     if item.type in ["BILL", "SURETY_TXN"]:
                         if item.status in ["PROJECTED", "PENDING", "OVERDUE"]:
-                            # We check if due date matches target date (2 days prior)
-                            if item.due_date == target_date:
+                            # We check if due date matches one of our target dates
+                            if item.due_date in target_dates:
                                 await notification_service.send_surety_reminder(
                                     user.id,
                                     full_name,
@@ -383,8 +383,8 @@ def start_scheduler():
     # Run Gmail sync every hour
     scheduler.add_job(run_gmail_sync, 'interval', hours=1)
     
-    # Run Surety reminders daily at 9:00 AM IST (3:30 AM UTC)
-    reminder_trigger = CronTrigger(hour=3, minute=30)
+    # Run Surety reminders daily at 7:00 AM IST (1:30 AM UTC)
+    reminder_trigger = CronTrigger(hour=1, minute=30)
     scheduler.add_job(run_surety_reminders, reminder_trigger)
     
     # Run Weekly Insights on Sunday at 10:00 AM IST (4:30 AM UTC)
