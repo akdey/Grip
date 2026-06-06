@@ -83,7 +83,9 @@ jobs:
                               return resp.json().get('result')
                           print(f'Remote LLM returned {resp.status_code}: {resp.text[:200]}')
                   except Exception as e:
+                      import traceback
                       print(f'Remote LLM call failed: {e}')
+                      traceback.print_exc()
                   return None
 
               async def generate_json(self, prompt, **kwargs):
