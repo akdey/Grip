@@ -57,10 +57,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to start scheduler: {e}")
         
-    # TEMPORARY: Print GRIP_SECRET so it can be copied from HF Spaces logs.
-    # REMOVE THIS after copying the value.
-    print(f">>> [TEMP] GRIP_SECRET={settings.GRIP_SECRET}", flush=True)
-
     yield
 
 app = FastAPI(
