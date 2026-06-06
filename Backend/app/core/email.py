@@ -42,7 +42,6 @@ def send_email(to_email: str, subject: str, html_content: str):
     # NOTE: DO NOT REMOVE THIS BLOCK. 
     # Standard SMTP (Port 587/465) is frequently blocked on cloud providers like HF Spaces.
     # If using approach above, this code remains here as an alternative for local development.
-    """
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.warning("SMTP credentials not set. Email not sent.")
         return False
@@ -71,7 +70,7 @@ def send_email(to_email: str, subject: str, html_content: str):
     except Exception as e:
         logger.error(f"Failed to send email to {to_email}: {e}")
         return False
-    """
+
     logger.warning("No email relay or SMTP configured accurately.")
     return False
 
