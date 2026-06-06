@@ -30,11 +30,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install llama-cpp-python using pre-built CPU wheels.
-# v0.3.19 is the minimum version with Gemma 4 architecture support.
-# We download directly from PyPI to get the 'manylinux' (glibc) wheel,
-# avoiding the custom index which incorrectly served a 'musllinux' (Alpine) wheel.
-RUN pip install --no-cache-dir llama-cpp-python==0.3.19 --only-binary=:all:
+# Install llama-cpp-python (v0.3.19 supports Gemma 4).
+# Since pre-built glibc wheels for this version aren't available on PyPI/Abetlen,
+# we compile from source. CRITICAL: We set MAKEFLAGS="-j1" to limit compilation
+# to a single thread. This prevents the memory exhaustion (OOM) on Hugging Face Spaces.
+ENV CMAKE_ARGS="-DGGML_CPU=ON"
+ENV MAKEFLAGS="-j1"
+RUN pip install --no-cache-dir llama-cpp-python==0.3.19
 
 # Pre-download the model into the image for instant startup on HF Spaces.
 # Using Gemma 4 E4B (Instruct-GGUF) - ~2.5GB model file.
