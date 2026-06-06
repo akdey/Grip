@@ -59,6 +59,20 @@ jobs:
         run: |
           cd Backend
           python -c "
+          import os
+          print('--- DIAGNOSTICS ---')
+          print('Current working directory:', os.getcwd())
+          print('Models dir exists:', os.path.exists('models'))
+          if os.path.exists('models'):
+              print('Files in models:', os.listdir('models'))
+              for f in os.listdir('models'):
+                  p = os.path.join('models', f)
+                  print(f'File: {f}, Size: {os.path.getsize(p)} bytes')
+          if os.path.exists('/proc/meminfo'):
+              with open('/proc/meminfo') as f:
+                  for _ in range(8):
+                      print(f.readline().strip())
+          print('-------------------')
           import asyncio
           from app.core.scheduler import run_surety_reminders
           
