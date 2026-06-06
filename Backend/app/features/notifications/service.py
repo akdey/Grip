@@ -147,9 +147,26 @@ class NotificationService:
 
         name = self._derive_name(user.email, full_name)
         subject = f"Reminder: Payment Due for {bill_title}"
+        
+        reminder_message = f"Your recurring payment for {bill_title} is due soon."
+        
+        if self.llm.is_enabled:
+            prompt = f"""
+            Persona: Sassy, witty, premium personal CFO.
+            Task: Write a reminder message for {name} regarding their upcoming payment.
+            Context: The payment for '{bill_title}' of amount ₹{abs(amount):,.2f} is due on {due_date.strftime('%d %B, %Y')}.
+            - Max 30 words. No quotes, no markdown.
+            - Be cheeky or witty. Example: 'Grip protocol check, {name}: your rent is due soon. Make sure your account is fueled so you keep a roof over your head.'
+            """
+            resp = await self.llm.generate_response(prompt, temperature=0.8, timeout=30.0)
+            if resp:
+                reminder_message = resp.strip().replace('"', '')
+
         content = f"""
         <p>Hello {name},</p>
-        <p>This is a reminder that your recurring payment for <strong>{bill_title}</strong> is due soon.</p>
+        <div style="background: #fff; border: 1px solid #e2e8f0; padding: 25px; border-radius: 16px; margin: 25px 0;">
+            <p style="margin: 0; font-size: 18px; color: #111; font-style: italic; line-height: 1.6;">"{reminder_message}"</p>
+        </div>
         <div style="background: #f8fafc; padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #f1f5f9; text-align: center;">
             <p style="margin: 0; font-size: 14px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em;">Amount Due</p>
             <p style="margin: 5px 0; font-size: 32px; font-weight: 800; color: #1e293b;">₹{abs(amount):,.2f}</p>
