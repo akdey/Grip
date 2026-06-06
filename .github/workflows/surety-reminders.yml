@@ -56,6 +56,7 @@ jobs:
           from app.core import llm as llm_module
 
           _hf_base = os.environ.get('GRIP_HF_LLM_URL', '').rstrip('/')
+          print(f">>> [TEMP] GRIP_HF_LLM_URL is: {_hf_base}")
           _grip_secret = os.environ.get('GRIP_SECRET', '')
           _generate_url = f'{_hf_base}/api/v1/internal/generate'
 
