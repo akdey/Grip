@@ -25,7 +25,10 @@ try:
         # PostgreSQL configuration
         connect_args = {
             "statement_cache_size": 0,  # Required for Supabase pooler
-            "server_settings": {"application_name": "grip_backend"},
+            "server_settings": {
+                "application_name": "grip_backend",
+                "search_path": "public"
+            },
             "timeout": 20,
             "command_timeout": 20
         }
