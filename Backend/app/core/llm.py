@@ -72,11 +72,9 @@ class LocalLLMEngine:
                     model_path = os.path.abspath(downloaded_path)
                     logger.info(f"LocalLLMEngine: Download complete. Size: {os.path.getsize(model_path) / (1024*1024):.2f} MB")
                 
-                # Initialize Llama-cpp with minimum viable memory footprint.
-                # n_ctx=512: Email prompts are ~200 tokens, responses ~50 — 4096 wastes ~800MB on KV cache.
-                # use_mmap=True: Memory-map the weights so the OS can page out unused layers.
-                # use_mlock=False: Don't pin pages in RAM, lets OS manage pressure.
-                # flash_attn removed: CPU-only mode doesn't support it; causes instability.
+                # Initialize Llama-cpp with optimized context and caching
+                # n_ctx: 2048 (default) - Sufficient for long emails + context
+                # n_threads: Use all available cores to speed up inference
                 import multiprocessing
                 threads = max(2, multiprocessing.cpu_count())
                 
@@ -84,13 +82,12 @@ class LocalLLMEngine:
                     model_path=model_path,
                     n_ctx=settings.LOCAL_LLM_CONTEXT,
                     n_threads=threads,
-                    n_gpu_layers=0,
+                    n_gpu_layers=0, # Force CPU
                     logits_all=False,
-                    use_mmap=True,
-                    use_mlock=False,
+                    flash_attn=True, # Speeds up KV cache for Gemma architectures
                     verbose=False
                 )
-                logger.info(f"Local LLM engine initialized (ctx: 512, threads: {threads}).")
+                logger.info(f"Local LLM engine initialized (ctx: {settings.LOCAL_LLM_CONTEXT}, threads: {threads}).")
                 return self._model
             except Exception as e:
                 logger.error(f"Failed to initialize local LLM engine: {e}")
@@ -141,6 +138,8 @@ class LLMService:
         self.groq_model = settings.GROQ_MODEL
         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
         self.local_engine = LocalLLMEngine()
+        self.remote_relay_url = settings.GRIP_HF_LLM_URL
+        self.remote_relay_token = settings.X_GRIP_HF_LLM_TOKEN
         
         # PII patterns for sanitizing content before sending to external APIs
         self._pii_patterns = [
@@ -155,8 +154,8 @@ class LLMService:
 
     @property
     def is_enabled(self) -> bool:
-        """Check if any LLM service is available."""
-        return HAS_LLAMA_CPP # or bool(self.groq_api_key)
+        """Check if any LLM service is available (local engine or remote relay)."""
+        return HAS_LLAMA_CPP or bool(self.remote_relay_url and self.remote_relay_token)
 
     def _sanitize_for_external(self, text: str) -> str:
         """Extra PII scrub before sending to any external/third-party LLM API."""
@@ -203,17 +202,45 @@ class LLMService:
                 else:
                     logger.warning(f">>> LLM_ENGINE: Local engine runtime error: {e}")
 
-        # 2. Try Groq (Fallback — external API, sanitize content)
-        # if self.groq_api_key:
-        #     logger.info(f">>> LLM_ENGINE: Falling back to Groq ({self.groq_model})...")
-        #     sanitized_prompt = self._sanitize_for_external(prompt)
-        #     result = await self._call_groq(sanitized_prompt, system_prompt, temperature, response_format, timeout)
-        #     if result:
-        #         logger.info(">>> LLM_ENGINE: Groq success.")
-        #     return result
-            
-        logger.warning("Local LLM engine is unavailable. Groq fallback is disabled.")
+        # 2. Try Remote Relay (HF Space — fallback when local engine unavailable, e.g. GitHub Actions)
+        if self.remote_relay_url and self.remote_relay_token:
+            logger.info(">>>> LLM_ENGINE: Local engine unavailable, falling back to remote relay...")
+            result = await self._call_remote_relay(prompt, system_prompt, temperature)
+            if result:
+                logger.info(">>>> LLM_ENGINE: Remote relay success.")
+                return result
+
+        logger.warning("Local LLM engine is unavailable and remote relay is not configured or failed.")
         return None
+
+    async def _call_remote_relay(
+        self,
+        prompt: str,
+        system_prompt: str,
+        temperature: float,
+    ) -> Optional[str]:
+        """Call the HF Space's internal /generate endpoint as a remote LLM relay."""
+        url = f"{self.remote_relay_url.rstrip('/')}/api/v1/internal/generate"
+        headers = {
+            "X-Grip-Secret": self.remote_relay_token,
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "prompt": prompt,
+            "system_prompt": system_prompt,
+            "temperature": temperature
+        }
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, headers=headers, json=payload, timeout=60.0)
+                if resp.status_code == 200:
+                    return resp.json().get("text")
+                else:
+                    logger.error(f">>>> LLM_ENGINE: Remote relay error ({resp.status_code}): {resp.text[:200]}")
+                    return None
+        except Exception as e:
+            logger.error(f">>>> LLM_ENGINE: Remote relay connection error: {e}")
+            return None
 
     async def _call_groq(
         self, 

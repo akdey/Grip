@@ -29,6 +29,7 @@ from app.features.goals.router import router as goals_router
 from app.features.export.router import router as export_router
 from app.features.wealth.router import router as wealth_router
 from app.features.settle_up.router import router as settle_up_router
+from app.features.internal.router import router as internal_router
 from app.features.sync.models import SyncLog 
 from app.features.settle_up.models import SettleUpEntry  # Ensure table creation
 
@@ -106,6 +107,7 @@ app.include_router(goals_router, prefix=f"{settings.API_V1_STR}/goals", tags=["g
 app.include_router(wealth_router, prefix=f"{settings.API_V1_STR}/wealth", tags=["wealth"])
 app.include_router(export_router, prefix=f"{settings.API_V1_STR}/export", tags=["export"])
 app.include_router(settle_up_router, prefix=f"{settings.API_V1_STR}/settle-up", tags=["settle-up"])
+app.include_router(internal_router, prefix=f"{settings.API_V1_STR}/internal", tags=["internal"])
 
 from fastapi.responses import HTMLResponse, FileResponse
 import os

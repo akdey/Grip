@@ -25,21 +25,6 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Cache LLM Model
-        id: cache-model
-        uses: actions/cache@v4
-        with:
-          path: Backend/models
-          key: ${{ runner.os }}-llm-model-gemma-4-v2
-
-      - name: Download LLM Model
-        if: steps.cache-model.outputs.cache-hit != 'true'
-        env:
-          HF_TOKEN: ${{ secrets.X_GRIP_HF_LLM_TOKEN }}
-        run: |
-          mkdir -p Backend/models
-          hf download bartowski/google_gemma-4-E4B-it-GGUF google_gemma-4-E4B-it-Q4_K_M.gguf --local-dir Backend/models
-      
       - name: Run Reminders
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -51,35 +36,20 @@ jobs:
           FROM_NAME: ${{ secrets.FROM_NAME }}
           FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
           GRIP_HF_LLM_URL: ${{ secrets.GRIP_HF_LLM_URL }}
-          X_GRIP_HF_LLM_TOKEN: ${{ secrets.X_GRIP_HF_LLM_TOKEN }}
-          HF_TOKEN: ${{ secrets.X_GRIP_HF_LLM_TOKEN }}
+          X_GRIP_HF_LLM_TOKEN: ${{ secrets.GRIP_SECRET }}
           EMAIL_RELAY_URL: ${{ secrets.EMAIL_RELAY_URL }}
           EMAIL_RELAY_SECRET: ${{ secrets.EMAIL_RELAY_SECRET }}
           ENVIRONMENT: production
         run: |
           cd Backend
           python -c "
-          import os
-          print('--- DIAGNOSTICS ---')
-          print('Current working directory:', os.getcwd())
-          print('Models dir exists:', os.path.exists('models'))
-          if os.path.exists('models'):
-              print('Files in models:', os.listdir('models'))
-              for f in os.listdir('models'):
-                  p = os.path.join('models', f)
-                  print(f'File: {f}, Size: {os.path.getsize(p)} bytes')
-          if os.path.exists('/proc/meminfo'):
-              with open('/proc/meminfo') as f:
-                  for _ in range(8):
-                      print(f.readline().strip())
-          print('-------------------')
           import asyncio
           from app.core.scheduler import run_surety_reminders
-          
+
           async def main():
               print('Starting Surety Bill Reminders Scan...')
               await run_surety_reminders()
               print('Reminders scan finished.')
-          
+
           asyncio.run(main())
           "

@@ -28,7 +28,8 @@ class Settings(BaseSettings):
         "/api/v1/auth/token",
         "/api/v1/auth/google-login",
         "/api/v1/auth/google/one-tap",
-        "/api/v1/sync/webhook"
+        "/api/v1/sync/webhook",
+        "/api/v1/internal/generate",
     ]
     
     USE_AI_FORECASTING: bool = True
@@ -42,6 +43,10 @@ class Settings(BaseSettings):
     LOCAL_MODEL_REPO: str = "bartowski/google_gemma-4-E4B-it-GGUF"
     LOCAL_MODEL_FILE: str = "google_gemma-4-E4B-it-Q4_K_M.gguf"
     LOCAL_MODEL_DIR: str = "models"
+    
+    # Remote LLM Relay (HF Space — fallback when local engine is unavailable)
+    GRIP_HF_LLM_URL: Optional[str] = None       # e.g. https://<user>-<space>.hf.space
+    X_GRIP_HF_LLM_TOKEN: Optional[str] = None   # Shared secret matching GRIP_SECRET on the Space
     
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
