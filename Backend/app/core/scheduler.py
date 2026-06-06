@@ -42,49 +42,100 @@ async def run_daily_price_sync():
 
 async def run_surety_reminders():
     """
-    Check for payments due today or in the next 3 days and send notifications.
+    Check for payments due exactly 2 days from today and send notifications.
+    Includes explicit Bills, Credit Cards, and Auto-detected Sureties.
     """
-    logger.info("Starting Surety Reminders Scan...")
+    logger.info("Starting Surety Reminders Scan (2 days prior)...")
+    import zoneinfo
     from app.features.auth.models import User
-    from app.features.bills.models import Bill
-    from app.features.credit_cards.models import CreditCard
+    from app.features.bills.service import BillService
+    from app.features.credit_cards.service import CreditCardService
     from app.features.notifications.service import NotificationService
     
-    today = date.today()
-    reminder_window = today + timedelta(days=3)
+    tz = zoneinfo.ZoneInfo(settings.APP_TIMEZONE)
+    today = datetime.now(tz).date()
+    target_date = today + timedelta(days=2)
     
     async with AsyncSessionLocal() as db:
         llm_service = get_llm_service()
         notification_service = NotificationService(db, llm_service)
+        bill_service = BillService()
+        cc_service = CreditCardService()
         
-        # Check explicit bills, join with User for personalization
-        stmt = (
-            select(Bill, User.full_name)
-            .join(User, Bill.user_id == User.id)
-            .where(
-                and_(
-                    Bill.due_date >= today,
-                    Bill.due_date <= reminder_window,
-                    Bill.is_paid == False
-                )
-            )
-        )
+        # 1. Fetch all users
+        stmt_users = select(User)
+        res_users = await db.execute(stmt_users)
+        users = res_users.scalars().all()
         
-        result = await db.execute(stmt)
-        upcoming_data = result.all()
-        
-        for bill, full_name in upcoming_data:
+        for user in users:
+            full_name = user.full_name or user.email.split('@')[0]
+            
+            # --- PART A: Credit Cards ---
             try:
-                await notification_service.send_surety_reminder(
-                    bill.user_id, 
-                    full_name,
-                    bill.title, 
-                    float(bill.amount), 
-                    datetime.combine(bill.due_date, datetime.min.time())
-                )
-                logger.info(f"Sent reminder for bill: {bill.title}")
+                cards = await cc_service.get_user_cards(db, user.id, active_only=True)
+                for card in cards:
+                    # Calculate next payment due date in Asia/Kolkata
+                    due_day = card.payment_due_date
+                    try:
+                        due_date = today.replace(day=due_day)
+                    except ValueError:
+                        from calendar import monthrange
+                        last_day = monthrange(today.year, today.month)[1]
+                        due_date = today.replace(day=last_day)
+                        
+                    if due_date < today:
+                        # Move to next month
+                        if today.month == 12:
+                            next_month = date(today.year + 1, 1, 1)
+                        else:
+                            next_month = date(today.year, today.month + 1, 1)
+                        try:
+                            due_date = next_month.replace(day=due_day)
+                        except ValueError:
+                            from calendar import monthrange
+                            last_day = monthrange(next_month.year, next_month.month)[1]
+                            due_date = next_month.replace(day=last_day)
+                            
+                    if due_date == target_date:
+                        # Calculate unbilled amount
+                        from app.utils.finance_utils import get_billing_cycle_dates
+                        cycle_dates = get_billing_cycle_dates(card.statement_date)
+                        unbilled = await cc_service.get_unbilled_amount(
+                            db,
+                            card.id,
+                            cycle_dates["cycle_start"],
+                            cycle_dates["cycle_end"]
+                        )
+                        if unbilled > 0:
+                            await notification_service.send_surety_reminder(
+                                user.id,
+                                full_name,
+                                f"{card.card_name} Payment",
+                                float(unbilled),
+                                datetime.combine(due_date, datetime.min.time())
+                            )
+                            logger.info(f"Sent credit card reminder for card: {card.card_name} to user {user.id}")
             except Exception as e:
-                logger.error(f"Failed to send reminder for bill {bill.id}: {e}")
+                logger.error(f"Failed to check credit card reminders for user {user.id}: {e}")
+
+            # --- PART B: Bills & Auto-detected Sureties ---
+            try:
+                ledger = await bill_service.get_obligations_ledger(db, user.id, days_ahead=60, include_hidden=False)
+                for item in ledger["items"]:
+                    if item.type in ["BILL", "SURETY_TXN"]:
+                        if item.status in ["PROJECTED", "PENDING", "OVERDUE"]:
+                            # We check if due date matches target date (2 days prior)
+                            if item.due_date == target_date:
+                                await notification_service.send_surety_reminder(
+                                    user.id,
+                                    full_name,
+                                    item.title,
+                                    float(item.amount),
+                                    datetime.combine(item.due_date, datetime.min.time())
+                                )
+                                logger.info(f"Sent reminder for {item.type}: {item.title} to user {user.id}")
+            except Exception as e:
+                logger.error(f"Failed to check ledger reminders for user {user.id}: {e}")
                 
     logger.info("Surety Reminders Completed.")
 
