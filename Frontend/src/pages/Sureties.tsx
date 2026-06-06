@@ -27,7 +27,7 @@ const Sureties: React.FC = () => {
         setActionLoading({ id: suretyId, action: 'PAID' });
         createExclusion.mutate({
             source_transaction_id: sourceId,
-            exclusion_type: 'MANUAL_PAID' as any
+            exclusion_type: 'MANUAL_PAID'
         }, {
             onSettled: () => setActionLoading(null)
         });

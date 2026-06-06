@@ -85,7 +85,7 @@ export const useCreateExclusion = () => {
             source_transaction_id?: string,
             merchant_pattern?: string,
             subcategory_pattern?: string,
-            exclusion_type: 'SKIP' | 'PERMANENT'
+            exclusion_type: 'SKIP' | 'PERMANENT' | 'MANUAL_PAID'
         }) => {
             await api.post('/bills/surety/exclusion', exclusion);
         },

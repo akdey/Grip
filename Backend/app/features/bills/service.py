@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import List, Optional, Set, Tuple
 from calendar import monthrange
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, null
 from app.core.config import get_settings
 from app.features.bills.models import Bill, BillExclusion
 from app.features.bills.schemas import BillCreate, BillUpdate, SuretyExclusionCreate
@@ -224,7 +224,8 @@ class BillService:
             Bill.is_paid.label("is_paid"),
             Bill.is_recurring.label("is_recurring"),
             Bill.category.label("category"),
-            Bill.sub_category.label("sub_category")
+            Bill.sub_category.label("sub_category"),
+            null().label("source_id")
         ).where(Bill.user_id == user_id).where(or_(Bill.is_paid == False, Bill.is_recurring == True))
 
         # Exclusions subquery
@@ -237,7 +238,8 @@ class BillService:
             literal_column("FALSE").label("is_paid"),
             literal_column("FALSE").label("is_recurring"),
             BillExclusion.subcategory_pattern.label("category"),
-            BillExclusion.exclusion_type.label("sub_category")
+            BillExclusion.exclusion_type.label("sub_category"),
+            BillExclusion.source_transaction_id.label("source_id")
         ).where(BillExclusion.user_id == user_id)
 
         # Surety Subcategories for filtering txns
@@ -254,7 +256,8 @@ class BillService:
             literal_column("FALSE").label("is_paid"),
             Transaction.is_surety.label("is_recurring"), # Using recurrence field for is_surety flag
             Transaction.category.label("category"),
-            Transaction.sub_category.label("sub_category")
+            Transaction.sub_category.label("sub_category"),
+            null().label("source_id")
         ).where(Transaction.user_id == user_id).where(Transaction.transaction_date >= sixty_days_ago).where(or_(
             Transaction.is_surety == True,
             Transaction.sub_category.in_(surety_sub_names)
@@ -279,7 +282,13 @@ class BillService:
                 # Re-map back to objects for existing logic
                 all_bills.append(Bill(id=row.id, title=row.title, amount=row.amount, due_date=row.date, is_paid=row.is_paid, is_recurring=row.is_recurring, category=row.category, sub_category=row.sub_category))
             elif stype == 'EXCLUSION':
-                exclusions.append(BillExclusion(id=row.id, merchant_pattern=row.title, subcategory_pattern=row.category, exclusion_type=row.sub_category))
+                exclusions.append(BillExclusion(
+                    id=row.id,
+                    merchant_pattern=row.title,
+                    subcategory_pattern=row.category,
+                    exclusion_type=row.sub_category,
+                    source_transaction_id=row.source_id
+                ))
             elif stype == 'TXN':
                 txn_obj = Transaction(id=row.id, merchant_name=row.title, amount=row.amount, transaction_date=row.date, is_surety=row.is_recurring, category=row.category, sub_category=row.sub_category)
                 if prev_range["month_start"] <= row.date <= prev_range["month_end"]:
