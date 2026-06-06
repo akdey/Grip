@@ -72,9 +72,11 @@ class LocalLLMEngine:
                     model_path = os.path.abspath(downloaded_path)
                     logger.info(f"LocalLLMEngine: Download complete. Size: {os.path.getsize(model_path) / (1024*1024):.2f} MB")
                 
-                # Initialize Llama-cpp with optimized context and caching
-                # n_ctx: 2048 (default) - Sufficient for long emails + context
-                # n_threads: Use all available cores to speed up inference
+                # Initialize Llama-cpp with minimum viable memory footprint.
+                # n_ctx=512: Email prompts are ~200 tokens, responses ~50 — 4096 wastes ~800MB on KV cache.
+                # use_mmap=True: Memory-map the weights so the OS can page out unused layers.
+                # use_mlock=False: Don't pin pages in RAM, lets OS manage pressure.
+                # flash_attn removed: CPU-only mode doesn't support it; causes instability.
                 import multiprocessing
                 threads = max(2, multiprocessing.cpu_count())
                 
@@ -82,12 +84,13 @@ class LocalLLMEngine:
                     model_path=model_path,
                     n_ctx=settings.LOCAL_LLM_CONTEXT,
                     n_threads=threads,
-                    n_gpu_layers=0, # Force CPU
+                    n_gpu_layers=0,
                     logits_all=False,
-                    flash_attn=True, # Speeds up KV cache for Gemma architectures
+                    use_mmap=True,
+                    use_mlock=False,
                     verbose=False
                 )
-                logger.info(f"Local LLM engine initialized (ctx: {settings.LOCAL_LLM_CONTEXT}, threads: {threads}).")
+                logger.info(f"Local LLM engine initialized (ctx: 512, threads: {threads}).")
                 return self._model
             except Exception as e:
                 logger.error(f"Failed to initialize local LLM engine: {e}")
