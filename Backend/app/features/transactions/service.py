@@ -173,21 +173,25 @@ class TransactionService:
             raw_merchant_key = txn.merchant_name 
             txn.merchant_name = verification.merchant_name
             
-            mapping_stmt = select(MerchantMapping).where(func.lower(MerchantMapping.raw_merchant) == raw_merchant_key.strip().lower())
-            mapping_result = await self.db.execute(mapping_stmt)
-            existing_mapping = mapping_result.scalar_one_or_none()
+            raw_merchant_clean = raw_merchant_key.strip().upper() if raw_merchant_key else ""
+            is_placeholder = not raw_merchant_clean or raw_merchant_clean in {"UNKNOWN", "UNCATEGORIZED", "NULL", "UNKNOWN MERCHANT"}
             
-            if existing_mapping:
-                 existing_mapping.display_name = verification.merchant_name
-                 existing_mapping.default_category = verification.category
-                 existing_mapping.default_sub_category = verification.sub_category
-            else:
-                 self.db.add(MerchantMapping(
-                     raw_merchant=raw_merchant_key or "UNKNOWN",
-                     display_name=verification.merchant_name,
-                     default_category=verification.category,
-                     default_sub_category=verification.sub_category
-                 ))
+            if not is_placeholder:
+                mapping_stmt = select(MerchantMapping).where(func.lower(MerchantMapping.raw_merchant) == raw_merchant_key.strip().lower())
+                mapping_result = await self.db.execute(mapping_stmt)
+                existing_mapping = mapping_result.scalar_one_or_none()
+                
+                if existing_mapping:
+                     existing_mapping.display_name = verification.merchant_name
+                     existing_mapping.default_category = verification.category
+                     existing_mapping.default_sub_category = verification.sub_category
+                else:
+                     self.db.add(MerchantMapping(
+                         raw_merchant=raw_merchant_key,
+                         display_name=verification.merchant_name,
+                         default_category=verification.category,
+                         default_sub_category=verification.sub_category
+                     ))
                  
             if not txn.transaction_date:
                 txn.transaction_date = txn.created_at.date()
@@ -201,6 +205,12 @@ class TransactionService:
         return txn
 
     async def get_merchant_mapping(self, raw_merchant: str) -> Optional[MerchantMapping]:
+        if not raw_merchant:
+            return None
+        raw_merchant_clean = raw_merchant.strip().upper()
+        if raw_merchant_clean in {"UNKNOWN", "UNCATEGORIZED", "NULL", "UNKNOWN MERCHANT"}:
+            return None
+            
         stmt = select(MerchantMapping).where(func.lower(MerchantMapping.raw_merchant) == raw_merchant.strip().lower())
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()

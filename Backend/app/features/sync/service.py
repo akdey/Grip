@@ -154,6 +154,47 @@ class SyncService:
 
         return '\n'.join(compressed_lines)
 
+    def _extract_email_body(self, payload: dict) -> str:
+        """Recursively extract text/plain or text/html body from message payload."""
+        mime_type = payload.get('mimeType', '')
+        
+        # Base cases
+        if mime_type == 'text/plain':
+            data = payload.get('body', {}).get('data')
+            if data:
+                return base64.urlsafe_b64decode(data).decode()
+        elif mime_type == 'text/html':
+            data = payload.get('body', {}).get('data')
+            if data:
+                html_body = base64.urlsafe_b64decode(data).decode()
+                # Strip HTML tags
+                import html
+                text = re.sub(r'<[^>]+>', ' ', html_body)
+                return html.unescape(text)
+                
+        # Recursive cases for multiparts
+        parts = payload.get('parts', [])
+        # Prefer text/plain first
+        for part in parts:
+            if part.get('mimeType') == 'text/plain':
+                body = self._extract_email_body(part)
+                if body:
+                    return body
+                    
+        # Fallback to other parts (like nested multiparts or text/html)
+        for part in parts:
+            if part.get('mimeType') != 'text/plain':
+                body = self._extract_email_body(part)
+                if body:
+                    return body
+                    
+        # Check outer body for non-multipart emails
+        data = payload.get('body', {}).get('data')
+        if data:
+            return base64.urlsafe_b64decode(data).decode()
+            
+        return ""
+
     async def call_brain_api(
         self,
         text: str,
@@ -182,14 +223,23 @@ class SyncService:
         TASK: Extract transaction details from the bank notification below.
 
         1. is_transaction: (boolean) 
-           - Set to TRUE only for actual DEBIT, CREDIT, or SPEND events that change a balance.
-           - Set to FALSE for: Promotional offers, "You can save", "Pre-approved", Rewards, Cashback offers, OTPs, or Security alerts.
+           - Set to TRUE ONLY for actual successful DEBIT, CREDIT, or SPEND events that result in money moving and changing a balance.
+           - Set to FALSE for all other transaction-related or generic emails, specifically:
+             * One-Time Passwords (OTPs) / Verification Codes (e.g. "OTP for transaction...", "Code to authorize...")
+             * Declined / Failed / Cancelled / Rejected transaction alerts (e.g. "transaction declined due to...", "transaction failed")
+             * Payment Reminders or Bills Due alerts (e.g. "Your bill of Rs. X is due", "Minimum payment due...")
+             * Promotional offers / Pre-approved limits (e.g. "Pre-approved loan", "Save Rs. X", "Apply for card")
+             * Rewards / Cashback / Points balance updates (unless it is an actual cashback CREDIT transaction changing your balance)
+             * Login alerts / Security alerts / Card block notifications (e.g. "Login detected", "Card blocked")
+             * Statement notifications (e.g. "Monthly statement for card ending...")
+             * Beneficiary additions (e.g. "Beneficiary successfully registered")
         
         2. amount: (float) The exact numerical value transferred.
         
-        3. merchant_name: (string) The actual BRAND or PERSON you paid.
+        3. merchant_name: (string) The actual BRAND, PERSON, or BILLING DESCRIPTOR you paid/transferred to.
            - SEARCH PATTERNS: 'at [Merchant]', 'by [Merchant]', 'to [Merchant]', 'towards [Merchant]'.
            - UPI HINT: In 'UPI/P2M/some-id/MerchantName', 'MerchantName' is the target.
+           - DESCRIPTORS: If paid to a clearing house or billing service (e.g. 'ACH-DR-Indian Clearing Cor', 'BILLDESK', 'PAYTM', etc.), extract that billing descriptor as the merchant name.
            - PROHIBITED: NEVER use a BANK NAME (e.g. Axis, HDFC, ICICI, SBI) as the merchant regardless of where it appears.
            - CLEANING: Remove any UPI IDs or reference numbers from the name.
         
@@ -198,8 +248,10 @@ class SyncService:
         6. transaction_type: [DEBIT, CREDIT].
         7. extracted_date: ISO format (YYYY-MM-DD).
 
-        Example: 'Spent 500 at Starbucks using HDFC Card' -> Merchant: 'Starbucks'.
+        Example: 'Spent 500 at Starbucks using HDFC Card' -> Merchant: 'Starbucks', is_transaction: true.
         Example: 'Get 10% off at Croma' -> is_transaction: false.
+        Example: 'OTP for transaction of Rs 500 at Amazon' -> is_transaction: false.
+        Example: 'Your transaction of Rs 1000 at Zomato was declined' -> is_transaction: false.
 
         {cat_str}
 
@@ -399,18 +451,7 @@ class SyncService:
             for msg_meta in messages:
                 msg = service.users().messages().get(userId='me', id=msg_meta['id']).execute()
                 
-                body = ""
-                parts = msg['payload'].get('parts', [])
-                for part in parts:
-                    if part['mimeType'] == 'text/plain':
-                        data = part['body'].get('data')
-                        if data:
-                            body = base64.urlsafe_b64decode(data).decode()
-                            break
-                if not body:
-                    data = msg['payload']['body'].get('data')
-                    if data:
-                        body = base64.urlsafe_b64decode(data).decode()
+                body = self._extract_email_body(msg.get('payload', {}))
 
                 if not body:
                     body_extract_failures += 1
