@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 
 try:
+    import sklearn
     from lightgbm import LGBMRegressor
     LIGHTGBM_AVAILABLE = True
 except ImportError:
@@ -187,7 +188,7 @@ class LightGBMForecaster:
                 learning_rate=0.05,
                 max_depth=5,
                 num_leaves=15,
-                min_child_samples=2,
+                min_child_samples=1,
                 random_state=42,
                 verbosity=-1
             )
