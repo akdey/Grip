@@ -14,6 +14,7 @@ except ImportError:
     LIGHTGBM_AVAILABLE = False
     LGBMRegressor = None
 
+from fastapi import Depends
 from app.core.config import get_settings
 from app.features.forecasting.schemas import ForecastResponse, CategoryForecast
 from app.core.llm import get_llm_service, LLMService
