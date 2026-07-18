@@ -32,12 +32,12 @@ RECURRING_KEYWORDS = {
 def is_recurring(text: str) -> int:
     if not text:
         return 0
-    text_lower = text.lower()
+    text_lower = str(text).lower()
     return 1 if any(kw in text_lower for kw in RECURRING_KEYWORDS) else 0
 
 
 class LightGBMForecaster:
-    """Tabular ML Forecaster using LightGBM for Category and Subcategory expenditure."""
+    """Tabular ML Forecaster using LightGBM with Rolling Velocity & Recurring Safeguards."""
 
     @staticmethod
     def prepare_data(raw_transactions: List[dict]) -> pd.DataFrame:
@@ -46,18 +46,15 @@ class LightGBMForecaster:
 
         df = pd.DataFrame(raw_transactions)
         
-        # Standardize date column
         date_col = 'transaction_date' if 'transaction_date' in df.columns else ('date' if 'date' in df.columns else 'ds')
         if date_col not in df.columns:
             return pd.DataFrame()
 
         df['date'] = pd.to_datetime(df[date_col])
 
-        # Standardize amount column
         amt_col = 'amount' if 'amount' in df.columns else 'y'
         df['amount'] = df[amt_col].abs().astype(float)
 
-        # Standardize category & subcategory
         df['category'] = df['category'].fillna('Uncategorized').astype(str)
         
         sub_col = 'sub_category' if 'sub_category' in df.columns else ('subcategory' if 'subcategory' in df.columns else None)
@@ -69,86 +66,13 @@ class LightGBMForecaster:
         df['merchant_name'] = df['merchant_name'].fillna('') if 'merchant_name' in df.columns else ''
         df['remarks'] = df['remarks'].fillna('') if 'remarks' in df.columns else ''
 
-        # Extract discrete numerical columns
+        # Filter out 0 or near-zero amounts
+        df = df[df['amount'] > 0.01].copy()
+
         df['year'] = df['date'].dt.year
         df['month'] = df['date'].dt.month
 
         return df
-
-    @classmethod
-    def build_monthly_feature_matrix(cls, df_raw: pd.DataFrame) -> pd.DataFrame:
-        if df_raw.empty:
-            return pd.DataFrame()
-
-        # Group by year, month, category, subcategory and calculate sum of amount
-        agg = (
-            df_raw.groupby(['year', 'month', 'category', 'subcategory'], as_index=False)
-            .agg({
-                'amount': 'sum',
-                'merchant_name': lambda s: ' '.join(set(s)),
-                'remarks': lambda s: ' '.join(set(s))
-            })
-        )
-
-        # Calculate is_recurring_keyword feature
-        agg['is_recurring_keyword'] = agg.apply(
-            lambda r: int(
-                is_recurring(r['category']) or 
-                is_recurring(r['subcategory']) or 
-                is_recurring(r['merchant_name']) or 
-                is_recurring(r['remarks'])
-            ),
-            axis=1
-        )
-
-        # Create continuous monthly grid per (category, subcategory) pair for exact lag shifting
-        all_pairs = agg[['category', 'subcategory']].drop_duplicates()
-        
-        min_date = pd.to_datetime(f"{agg['year'].min()}-{agg['month'].min():02d}-01")
-        max_date = pd.to_datetime(f"{agg['year'].max()}-{agg['month'].max():02d}-01")
-        
-        all_months = pd.date_range(start=min_date, end=max_date, freq='MS')
-        
-        grid_rows = []
-        for dt in all_months:
-            for _, pair in all_pairs.iterrows():
-                grid_rows.append({
-                    'year': dt.year,
-                    'month': dt.month,
-                    'category': pair['category'],
-                    'subcategory': pair['subcategory'],
-                    'period': dt
-                })
-        
-        grid = pd.DataFrame(grid_rows)
-        grid['period_str'] = grid['period'].dt.strftime('%Y-%m')
-        
-        agg['period_dt'] = pd.to_datetime(agg['year'].astype(str) + '-' + agg['month'].astype(str).str.zfill(2) + '-01')
-        agg['period_str'] = agg['period_dt'].dt.strftime('%Y-%m')
-
-        merged = pd.merge(
-            grid,
-            agg[['period_str', 'category', 'subcategory', 'amount', 'is_recurring_keyword']],
-            on=['period_str', 'category', 'subcategory'],
-            how='left'
-        )
-
-        merged['amount'] = merged['amount'].fillna(0.0)
-        
-        merged['is_recurring_keyword'] = merged.apply(
-            lambda r: r['is_recurring_keyword'] if pd.notna(r['is_recurring_keyword']) 
-            else int(is_recurring(str(r['category'])) or is_recurring(str(r['subcategory']))),
-            axis=1
-        )
-
-        # Sort chronologically within group for lag generation
-        merged = merged.sort_values(by=['category', 'subcategory', 'period']).reset_index(drop=True)
-
-        # Lag features: amount_last_month (shift 1) and amount_last_year (shift 12)
-        merged['amount_last_month'] = merged.groupby(['category', 'subcategory'])['amount'].shift(1).fillna(0.0)
-        merged['amount_last_year'] = merged.groupby(['category', 'subcategory'])['amount'].shift(12).fillna(0.0)
-
-        return merged
 
     @classmethod
     def train_and_forecast_next_month(
@@ -157,115 +81,244 @@ class LightGBMForecaster:
         target_year: int, 
         target_month: int
     ) -> Tuple[Decimal, List[CategoryForecast], str]:
-        """Train LightGBM model and forecast next month expenditures."""
         df_raw = cls.prepare_data(raw_transactions)
         if df_raw.empty:
             return Decimal("0.00"), [], "No historical transaction data available."
 
-        matrix = cls.build_monthly_feature_matrix(df_raw)
-        if matrix.empty or len(matrix['period_str'].unique()) < 2:
+        # Group by year, month, category, subcategory
+        monthly_agg = (
+            df_raw.groupby(['year', 'month', 'category', 'subcategory'], as_index=False)
+            .agg({
+                'amount': 'sum',
+                'merchant_name': lambda s: ' '.join(set(s)),
+                'remarks': lambda s: ' '.join(set(s))
+            })
+        )
+
+        monthly_agg['period_dt'] = pd.to_datetime(
+            monthly_agg['year'].astype(str) + '-' + monthly_agg['month'].astype(str).str.zfill(2) + '-01'
+        )
+        monthly_agg['period_str'] = monthly_agg['period_dt'].dt.strftime('%Y-%m')
+
+        # Filter to active categories/subcategories in the last 12 months
+        max_dt = monthly_agg['period_dt'].max()
+        cutoff_dt = max_dt - pd.DateOffset(months=12)
+        
+        recent_agg = monthly_agg[monthly_agg['period_dt'] >= cutoff_dt]
+        active_pairs = recent_agg[['category', 'subcategory']].drop_duplicates()
+
+        if active_pairs.empty:
+            active_pairs = monthly_agg[['category', 'subcategory']].drop_duplicates()
+
+        # Build feature dataset for training across all periods
+        all_periods = pd.date_range(start=monthly_agg['period_dt'].min(), end=max_dt, freq='MS')
+        
+        feature_rows = []
+        for pair in active_pairs.itertuples():
+            cat = pair.category
+            subcat = pair.subcategory
+
+            sub_df = monthly_agg[(monthly_agg['category'] == cat) & (monthly_agg['subcategory'] == subcat)].sort_values('period_dt')
+            if sub_df.empty:
+                continue
+
+            rec_flag = int(
+                is_recurring(cat) or is_recurring(subcat) or 
+                any(is_recurring(m) for m in sub_df['merchant_name']) or 
+                any(is_recurring(r) for r in sub_df['remarks'])
+            )
+
+            spend_by_period = sub_df.set_index('period_dt')['amount'].to_dict()
+
+            for p_dt in all_periods:
+                target_y = spend_by_period.get(p_dt, 0.0)
+
+                p_1m = p_dt - pd.DateOffset(months=1)
+                p_2m = p_dt - pd.DateOffset(months=2)
+                p_3m = p_dt - pd.DateOffset(months=3)
+                p_12m = p_dt - pd.DateOffset(years=1)
+
+                v_1m = spend_by_period.get(p_1m, 0.0)
+                v_2m = spend_by_period.get(p_2m, 0.0)
+                v_3m = spend_by_period.get(p_3m, 0.0)
+                v_12m = spend_by_period.get(p_12m, 0.0)
+
+                hist_spends = [spend_by_period.get(p_dt - pd.DateOffset(months=m), 0.0) for m in range(1, 7)]
+                non_zero_spends = [s for s in hist_spends if s > 0]
+                
+                mean_3m = np.mean(hist_spends[:3]) if hist_spends[:3] else 0.0
+                mean_6m = np.mean(hist_spends) if hist_spends else 0.0
+                max_6m = np.max(hist_spends) if hist_spends else 0.0
+                median_recent = np.median(non_zero_spends) if non_zero_spends else 0.0
+
+                feature_rows.append({
+                    'period_dt': p_dt,
+                    'year': p_dt.year,
+                    'month': p_dt.month,
+                    'category': cat,
+                    'subcategory': subcat,
+                    'amount_last_1m': float(v_1m),
+                    'amount_last_2m': float(v_2m),
+                    'amount_last_3m': float(v_3m),
+                    'mean_3m': float(mean_3m),
+                    'mean_6m': float(mean_6m),
+                    'max_6m': float(max_6m),
+                    'median_recent': float(median_recent),
+                    'amount_last_year': float(v_12m),
+                    'is_recurring_keyword': rec_flag,
+                    'amount': float(target_y)
+                })
+
+        feat_df = pd.DataFrame(feature_rows)
+        if feat_df.empty:
             return cls._fallback_forecast(df_raw, target_year, target_month)
 
-        feature_cols = ['year', 'month', 'category', 'subcategory', 'amount_last_month', 'amount_last_year', 'is_recurring_keyword']
-        
-        # Convert categorical columns
-        matrix['category'] = matrix['category'].astype('category')
-        matrix['subcategory'] = matrix['subcategory'].astype('category')
+        feature_cols = [
+            'year', 'month', 'category', 'subcategory', 
+            'amount_last_1m', 'amount_last_2m', 'amount_last_3m', 
+            'mean_3m', 'mean_6m', 'max_6m', 'amount_last_year', 'is_recurring_keyword'
+        ]
 
-        # Filter training data
-        train_df = matrix.dropna(subset=['amount']).copy()
-        
+        feat_df['category'] = feat_df['category'].astype('category')
+        feat_df['subcategory'] = feat_df['subcategory'].astype('category')
+
+        target_dt = pd.to_datetime(f"{target_year}-{target_month:02d}-01")
+        train_mask = feat_df['period_dt'] < target_dt
+        train_df = feat_df[train_mask].copy()
+
+        if train_df.empty or len(train_df['period_dt'].unique()) < 2:
+            return cls._fallback_forecast(df_raw, target_year, target_month)
+
         X_train = train_df[feature_cols]
         y_train = train_df['amount']
 
-        if not LIGHTGBM_AVAILABLE:
-            logger.warning("LightGBM not installed. Using fallback moving average forecaster.")
-            return cls._fallback_forecast(df_raw, target_year, target_month)
+        # Build inference rows for target_dt
+        infer_rows = []
+        for pair in active_pairs.itertuples():
+            cat = pair.category
+            subcat = pair.subcategory
 
-        try:
-            model = LGBMRegressor(
-                n_estimators=100,
-                learning_rate=0.05,
-                max_depth=5,
-                num_leaves=15,
-                min_child_samples=1,
-                random_state=42,
-                verbosity=-1
+            sub_df = monthly_agg[(monthly_agg['category'] == cat) & (monthly_agg['subcategory'] == subcat)].sort_values('period_dt')
+            spend_by_period = sub_df.set_index('period_dt')['amount'].to_dict()
+
+            p_1m = target_dt - pd.DateOffset(months=1)
+            p_2m = target_dt - pd.DateOffset(months=2)
+            p_3m = target_dt - pd.DateOffset(months=3)
+            p_12m = target_dt - pd.DateOffset(years=1)
+
+            v_1m = spend_by_period.get(p_1m, 0.0)
+            v_2m = spend_by_period.get(p_2m, 0.0)
+            v_3m = spend_by_period.get(p_3m, 0.0)
+            v_12m = spend_by_period.get(p_12m, 0.0)
+
+            hist_spends = [spend_by_period.get(target_dt - pd.DateOffset(months=m), 0.0) for m in range(1, 7)]
+            non_zero_spends = [s for s in hist_spends if s > 0]
+
+            mean_3m = np.mean(hist_spends[:3]) if hist_spends[:3] else 0.0
+            mean_6m = np.mean(hist_spends) if hist_spends else 0.0
+            max_6m = np.max(hist_spends) if hist_spends else 0.0
+            median_recent = np.median(non_zero_spends) if non_zero_spends else 0.0
+
+            rec_flag = int(
+                is_recurring(cat) or is_recurring(subcat) or 
+                any(is_recurring(m) for m in sub_df['merchant_name']) or 
+                any(is_recurring(r) for r in sub_df['remarks'])
             )
-            
-            model.fit(
-                X_train, 
-                y_train, 
-                categorical_feature=['category', 'subcategory']
-            )
 
-            # Build inference rows for target_year, target_month
-            pairs = matrix[['category', 'subcategory']].drop_duplicates()
+            infer_rows.append({
+                'year': target_year,
+                'month': target_month,
+                'category': cat,
+                'subcategory': subcat,
+                'amount_last_1m': float(v_1m),
+                'amount_last_2m': float(v_2m),
+                'amount_last_3m': float(v_3m),
+                'mean_3m': float(mean_3m),
+                'mean_6m': float(mean_6m),
+                'max_6m': float(max_6m),
+                'median_recent': float(median_recent),
+                'amount_last_year': float(v_12m),
+                'is_recurring_keyword': rec_flag
+            })
 
-            infer_rows = []
-            target_dt = pd.to_datetime(f"{target_year}-{target_month:02d}-01")
-            year_ago_dt = target_dt - pd.DateOffset(years=1)
-            year_ago_str = year_ago_dt.strftime('%Y-%m')
+        X_infer = pd.DataFrame(infer_rows)
+        X_infer['category'] = X_infer['category'].astype('category')
+        X_infer['subcategory'] = X_infer['subcategory'].astype('category')
 
-            for _, pair in pairs.iterrows():
-                cat = pair['category']
-                subcat = pair['subcategory']
+        if LIGHTGBM_AVAILABLE:
+            try:
+                model = LGBMRegressor(
+                    n_estimators=150,
+                    learning_rate=0.03,
+                    max_depth=6,
+                    num_leaves=31,
+                    min_child_samples=1,
+                    random_state=42,
+                    verbosity=-1
+                )
+                model.fit(X_train, y_train, categorical_feature=['category', 'subcategory'])
+                preds = model.predict(X_infer[feature_cols])
+                preds = np.maximum(0, preds)
+                X_infer['predicted_amount'] = preds
+            except Exception as e:
+                logger.error(f"LightGBM fitting error: {e}", exc_info=True)
+                X_infer['predicted_amount'] = X_infer['mean_3m']
+        else:
+            X_infer['predicted_amount'] = X_infer['mean_3m']
 
-                sub_df = matrix[(matrix['category'] == cat) & (matrix['subcategory'] == subcat)].sort_values('period')
-                last_m_val = sub_df['amount'].iloc[-1] if not sub_df.empty else 0.0
+        # Apply Recurring Safeguard & Velocity Floor
+        breakdown: List[CategoryForecast] = []
+        total_amount = Decimal("0.00")
 
-                yago_df = sub_df[sub_df['period_str'] == year_ago_str]
-                last_y_val = yago_df['amount'].iloc[0] if not yago_df.empty else 0.0
+        for _, row in X_infer.iterrows():
+            pred = float(row['predicted_amount'])
+            rec_flag = int(row['is_recurring_keyword'])
+            med_recent = float(row['median_recent'])
+            mean_3m = float(row['mean_3m'])
+            v_1m = float(row['amount_last_1m'])
 
-                rec_val = int(is_recurring(str(cat)) or is_recurring(str(subcat)))
+            # 1. Recurring Safeguard: Rent/EMI/SIP/Insurance shouldn't drop below median/last month recurring bill
+            if rec_flag == 1 and med_recent > 0:
+                base_recurring = max(med_recent, v_1m)
+                if pred < 0.8 * base_recurring:
+                    pred = base_recurring
 
-                infer_rows.append({
-                    'year': target_year,
-                    'month': target_month,
-                    'category': cat,
-                    'subcategory': subcat,
-                    'amount_last_month': float(last_m_val),
-                    'amount_last_year': float(last_y_val),
-                    'is_recurring_keyword': rec_val
-                })
+            # 2. Velocity floor for active categories: Floor to 70% of 3m average if active
+            elif mean_3m > 0 and pred < 0.5 * mean_3m:
+                pred = max(pred, 0.7 * mean_3m)
 
-            X_infer = pd.DataFrame(infer_rows)
-            X_infer['category'] = X_infer['category'].astype('category')
-            X_infer['subcategory'] = X_infer['subcategory'].astype('category')
+            pred_val = round(pred, 2)
+            if pred_val > 1.0:
+                amt_dec = Decimal(str(pred_val))
+                cat_name = str(row['category'])
+                sub_name = str(row['subcategory'])
 
-            preds = model.predict(X_infer[feature_cols])
-            preds = np.maximum(0, preds)
+                reason_msg = f"LightGBM ML forecast based on rolling 3m mean ({mean_3m:.2f}) and recent spend."
+                if rec_flag == 1:
+                    reason_msg = f"Recurring expense projected based on monthly cycle ({pred_val:.2f})."
 
-            X_infer['predicted_amount'] = preds
+                breakdown.append(CategoryForecast(
+                    category=cat_name,
+                    sub_category=sub_name if sub_name != 'General' else None,
+                    predicted_amount=amt_dec,
+                    reason=reason_msg
+                ))
+                total_amount += amt_dec
 
-            breakdown: List[CategoryForecast] = []
-            total_amount = Decimal("0.00")
+        # 3. Overall Calibration Guard:
+        # Scale total predictions if they dip below 85% of recent 3-month average total monthly spending
+        recent_monthly_totals = monthly_agg.groupby('period_dt')['amount'].sum()
+        if len(recent_monthly_totals) >= 2:
+            hist_monthly_avg = float(recent_monthly_totals.tail(3).mean())
+            if hist_monthly_avg > 0 and float(total_amount) < 0.75 * hist_monthly_avg:
+                scale_factor = (0.85 * hist_monthly_avg) / max(1.0, float(total_amount))
+                total_amount = Decimal("0.00")
+                for item in breakdown:
+                    item.predicted_amount = Decimal(str(round(float(item.predicted_amount) * scale_factor, 2)))
+                    total_amount += item.predicted_amount
 
-            for _, row in X_infer.iterrows():
-                pred_val = round(float(row['predicted_amount']), 2)
-                if pred_val > 1.0:
-                    amt_dec = Decimal(str(pred_val))
-                    cat_name = str(row['category'])
-                    sub_name = str(row['subcategory'])
-                    
-                    reason_msg = f"LightGBM prediction based on last month ({row['amount_last_month']:.2f}) and seasonal lag ({row['amount_last_year']:.2f})."
-                    if row['is_recurring_keyword'] == 1:
-                        reason_msg += " Recurring pattern recognized."
-
-                    breakdown.append(CategoryForecast(
-                        category=cat_name,
-                        sub_category=sub_name if sub_name != 'General' else None,
-                        predicted_amount=amt_dec,
-                        reason=reason_msg
-                    ))
-                    total_amount += amt_dec
-
-            breakdown.sort(key=lambda x: x.predicted_amount, reverse=True)
-            return total_amount, breakdown, "Tabular LightGBM model with lag & seasonal features"
-
-        except Exception as e:
-            logger.error(f"Error in LightGBM forecasting: {e}", exc_info=True)
-            return cls._fallback_forecast(df_raw, target_year, target_month)
+        breakdown.sort(key=lambda x: x.predicted_amount, reverse=True)
+        return total_amount, breakdown, "LightGBM Tabular ML model with rolling velocity and recurring safeguards"
 
     @classmethod
     def _fallback_forecast(
@@ -274,15 +327,30 @@ class LightGBMForecaster:
         target_year: int, 
         target_month: int
     ) -> Tuple[Decimal, List[CategoryForecast], str]:
-        """Fallback moving average forecast when ML training is unavailable."""
+        """Fallback forecast using recent 3-month moving average per category/subcategory."""
         if df_raw.empty:
             return Decimal("0.00"), [], "No transaction data."
 
-        grouped = df_raw.groupby(['category', 'subcategory'])['amount'].mean().reset_index()
+        df_raw['year'] = df_raw['date'].dt.year
+        df_raw['month'] = df_raw['date'].dt.month
+        df_raw['period_dt'] = pd.to_datetime(
+            df_raw['year'].astype(str) + '-' + df_raw['month'].astype(str).str.zfill(2) + '-01'
+        )
+
+        max_dt = df_raw['period_dt'].max()
+        cutoff_dt = max_dt - pd.DateOffset(months=3)
+        recent_df = df_raw[df_raw['period_dt'] >= cutoff_dt]
+
+        if recent_df.empty:
+            recent_df = df_raw
+
+        monthly_spends = recent_df.groupby(['category', 'subcategory', 'period_dt'])['amount'].sum().reset_index()
+        avg_spends = monthly_spends.groupby(['category', 'subcategory'])['amount'].mean().reset_index()
+
         breakdown = []
         total_amount = Decimal("0.00")
 
-        for _, row in grouped.iterrows():
+        for _, row in avg_spends.iterrows():
             amt = Decimal(str(round(float(row['amount']), 2)))
             if amt > 1.0:
                 cat_name = str(row['category'])
@@ -291,12 +359,12 @@ class LightGBMForecaster:
                     category=cat_name,
                     sub_category=sub_name if sub_name != 'General' else None,
                     predicted_amount=amt,
-                    reason="Historical average spend baseline."
+                    reason="Recent 3-month moving average baseline."
                 ))
                 total_amount += amt
 
         breakdown.sort(key=lambda x: x.predicted_amount, reverse=True)
-        return total_amount, breakdown, "Simple moving average baseline forecast"
+        return total_amount, breakdown, "Recent moving average baseline forecast"
 
 
 class ForecastingService:

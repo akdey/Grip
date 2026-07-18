@@ -103,7 +103,7 @@ async def get_financial_forecast(
     db: Annotated[AsyncSession, Depends(get_db)],
     service: Annotated[ForecastingService, Depends()]
 ):
-    raw_transactions = await get_raw_transactions_for_forecasting(db, current_user.id, days=730)
+    raw_transactions = await get_raw_transactions_for_forecasting(db, current_user.id, days=1095)
     monthly_breakdown = await get_monthly_category_breakdown(db, current_user.id, months=4)
     
     forecast = await service.calculate_safe_to_spend(raw_transactions, monthly_breakdown)

@@ -176,7 +176,7 @@ async def get_category_daily_expenses(db: AsyncSession, user_id: str, days: int 
     ]
 
 
-async def get_raw_transactions_for_forecasting(db: AsyncSession, user_id: str, days: int = 730):
+async def get_raw_transactions_for_forecasting(db: AsyncSession, user_id: str, days: int = 1095):
     """Return raw transactions for tabular LightGBM forecasting."""
     start_date = (datetime.now() - timedelta(days=days)).date()
 
