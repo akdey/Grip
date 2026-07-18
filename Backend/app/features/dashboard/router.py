@@ -8,7 +8,13 @@ from app.features.auth.deps import get_current_user
 from app.features.auth.models import User
 from app.features.transactions.models import Transaction
 
-from app.features.dashboard.service import get_daily_expenses, get_category_expenses_history, get_monthly_category_breakdown, get_category_daily_expenses
+from app.features.dashboard.service import (
+    get_daily_expenses, 
+    get_category_expenses_history, 
+    get_monthly_category_breakdown, 
+    get_category_daily_expenses,
+    get_raw_transactions_for_forecasting
+)
 from app.features.forecasting.service import ForecastingService
 
 router = APIRouter()
@@ -97,11 +103,10 @@ async def get_financial_forecast(
     db: Annotated[AsyncSession, Depends(get_db)],
     service: Annotated[ForecastingService, Depends()]
 ):
-    # Execute data gathering sequentially to ensure stability with asyncpg
-    category_daily = await get_category_daily_expenses(db, current_user.id, days=120)
+    raw_transactions = await get_raw_transactions_for_forecasting(db, current_user.id, days=730)
     monthly_breakdown = await get_monthly_category_breakdown(db, current_user.id, months=4)
     
-    forecast = await service.calculate_safe_to_spend(category_daily, monthly_breakdown)
+    forecast = await service.calculate_safe_to_spend(raw_transactions, monthly_breakdown)
     
     return {
         "predicted_burden_30d": forecast.amount,
@@ -110,3 +115,4 @@ async def get_financial_forecast(
         "time_frame": forecast.time_frame,
         "breakdown": forecast.breakdown
     }
+

@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set environment variables for better stability with Stan (Prophet) and Llama-cpp
+# Set environment variables for better thread stability (LightGBM & Llama-cpp)
 ENV OMP_NUM_THREADS 1
 ENV MKL_NUM_THREADS 1
 ENV OPENBLAS_NUM_THREADS 1

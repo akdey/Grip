@@ -58,6 +58,7 @@ export interface ForecastInfo {
     time_frame: string;
     breakdown: Array<{
         category: string;
+        sub_category?: string;
         predicted_amount: number;
         reason: string;
     }>;

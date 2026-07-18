@@ -272,7 +272,14 @@ const Dashboard: React.FC = () => {
                                                     </div>
                                                     <div className="flex-1 min-w-0 py-1">
                                                         <div className="flex items-center justify-between mb-1.5">
-                                                            <span className="text-sm font-black text-white uppercase tracking-tight">{item.category}</span>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="text-sm font-black text-white uppercase tracking-tight">{item.category}</span>
+                                                                {item.sub_category && (
+                                                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-white/[0.06] text-cyan-300 border border-white/10 uppercase tracking-wider">
+                                                                        {item.sub_category}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             <span className="text-base font-black text-cyan-400 tracking-tighter">{formatCurrency(item.predicted_amount)}</span>
                                                         </div>
                                                         <p className="text-[11px] text-gray-500 font-medium leading-relaxed max-w-[90%]">{item.reason}</p>

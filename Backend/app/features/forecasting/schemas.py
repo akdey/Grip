@@ -4,6 +4,7 @@ from decimal import Decimal
 
 class CategoryForecast(BaseModel):
     category: str
+    sub_category: Optional[str] = None
     predicted_amount: Decimal
     reason: str
 

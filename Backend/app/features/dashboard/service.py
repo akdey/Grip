@@ -174,3 +174,40 @@ async def get_category_daily_expenses(db: AsyncSession, user_id: str, days: int 
         for row in rows
         if row.day is not None
     ]
+
+
+async def get_raw_transactions_for_forecasting(db: AsyncSession, user_id: str, days: int = 730):
+    """Return raw transactions for tabular LightGBM forecasting."""
+    start_date = (datetime.now() - timedelta(days=days)).date()
+
+    stmt = (
+        select(
+            Transaction.transaction_date,
+            Transaction.amount,
+            Transaction.category,
+            Transaction.sub_category,
+            Transaction.merchant_name,
+            Transaction.remarks
+        )
+        .where(Transaction.user_id == user_id)
+        .where(Transaction.category != "Income")
+        .where(Transaction.transaction_date >= start_date)
+        .order_by(Transaction.transaction_date.asc())
+    )
+
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    return [
+        {
+            "transaction_date": row.transaction_date.isoformat() if row.transaction_date else None,
+            "amount": abs(float(row.amount or 0)),
+            "category": row.category or "Uncategorized",
+            "sub_category": row.sub_category or "General",
+            "merchant_name": row.merchant_name or "",
+            "remarks": row.remarks or ""
+        }
+        for row in rows
+        if row.transaction_date is not None
+    ]
+

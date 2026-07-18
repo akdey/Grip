@@ -61,7 +61,7 @@ While others make you wait for "syncs" or manual entries, Grip is built to get y
 - **Automatic Transaction Extraction**: Connect Gmail once; transactions are extracted from bank alerts automatically.
 - **Webhook Sync Optimization**: Intelligent 5-second debouncing and concurrency guards prevent redundant syncs from batch emails.
 - **Autonomous Notification Engine**: Scheduled email alerts for Gmail disconnection, surety bill reminders, and spending insights.
-- **Hybrid Forecasting**: Combines Meta Prophet (statistical) + Local LLM (contextual) to predict month-end expenses.
+- **Tabular ML Forecasting**: LightGBM Tabular Machine Learning (category/subcategory features + 1-month and 12-month lag memory) to predict month-end expenses.
 - **Smart Learning**: Remembers your merchant preferences, auto-categorizes future transactions.
 - **Multi-Layer Spam Filter**: Sender whitelist + subject gates + body signals distinguish real transactions from marketing emails.
 ### 🔒 Privacy Built-In, Not Bolted-On
@@ -131,7 +131,7 @@ Grip processes your financial data through a sophisticated, privacy-preserving p
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │ 7. PREDICTIVE FORECASTING                                       │
-│    Historical Data → Prophet/Local LLM → Month-end burden prediction│
+│    Historical Data → LightGBM Tabular ML → Category/Subcategory burden prediction│
 │    "Expected ₹12,500 in remaining expenses (18 days left)"     │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
@@ -309,13 +309,11 @@ your SIP date for future investments."
 - Natural language processing handles different email formats
 - Works with major Indian banks (ICICI, HDFC, SBI, Axis, Kotak, and others)
 
-**Hybrid Forecasting Engine**
-- **Meta Prophet**: Statistical time-series analysis of daily spending patterns
-- **Groq LLM**: Category-level breakdowns with contextual reasoning
-  - "Food & Dining trending 20% higher: 4 weekend restaurant visits vs 2 last month"
-  - "Expected ₹12,500 in remaining expenses (18 days left in month)"
-- Predicts month-end spending based on historical patterns
-- Adapts to seasonal patterns, holidays, and lifestyle changes
+**Tabular ML Forecasting Engine (LightGBM)**
+- **Migrated from Meta Prophet to LightGBM**:
+  - *Why the change?* The univariate Meta Prophet model evaluated spending as a single aggregate line across time, missing category and subcategory interaction dynamics, seasonal subscriptions, and recurring bill patterns. Prophet also required heavy C++/Stan compilation and large binary memory usage on free hosting spaces.
+  - *LightGBM Tabular Architecture*: Features a multi-dimensional matrix incorporating `['year', 'month', 'category', 'subcategory', 'amount_last_month', 'amount_last_year', 'is_recurring_keyword']` to natively predict expenditure per category and subcategory.
+  - *Real-Time On-the-Fly Training*: LightGBM model fitting happens **on-the-fly inside the API request** (`/forecast` endpoint) in **~10–20 milliseconds**. No offline background training, cron jobs, or pre-trained model weight downloads are required! Every time `/forecast` is called, LightGBM fits the user's latest historical transactions in real time and returns predictions instantly.
 
 **Merchant Intelligence & Memory**
 - First time: "SWIGGY*BANGALORE127" → AI suggests "Food & Dining"
@@ -542,7 +540,7 @@ Masked:   "UPI: ****@paytm paid ****@phonepe"
 - **Database**: PostgreSQL with SQLAlchemy (async) + asyncpg
 - **AI/ML**:
   - **Groq** (Llama 3.3 70B) - Transaction extraction & forecasting
-  - **Meta Prophet** - Statistical time-series forecasting
+  - **LightGBM** - Tabular gradient boosted machine learning for category & subcategory expense forecasting
   - **scipy** - XIRR calculation (Newton-Raphson optimization)
 - **Data APIs**:
   - **mfapi.in** - Mutual fund NAV data (India)

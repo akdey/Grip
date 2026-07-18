@@ -1,205 +1,348 @@
 import logging
 import json
+import calendar
 from decimal import Decimal
-from typing import List, Optional
-from fastapi import Depends
+from datetime import date, datetime, timedelta
+from typing import List, Optional, Dict, Any, Tuple
+import pandas as pd
+import numpy as np
+
+try:
+    from lightgbm import LGBMRegressor
+    LIGHTGBM_AVAILABLE = True
+except ImportError:
+    LIGHTGBM_AVAILABLE = False
+    LGBMRegressor = None
 
 from app.core.config import get_settings
+from app.features.forecasting.schemas import ForecastResponse, CategoryForecast
+from app.core.llm import get_llm_service, LLMService
 
-# Lazy import Prophet to avoid crashes if not installed/compiled
-# Prophet is used only if manually installed (not available on Vercel)
-try:
-    from prophet import Prophet
-    import pandas as pd
-    PROPHET_AVAILABLE = True
-except ImportError:
-    PROPHET_AVAILABLE = False
-    
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-from datetime import date, timedelta
-from app.features.forecasting.schemas import ForecastResponse, CategoryForecast
-from app.core.llm import get_llm_service, LLMService
-import calendar
+RECURRING_KEYWORDS = {
+    'rent', 'emi', 'subscription', 'sip', 'maintenance', 
+    'insurance', 'bill', 'utility', 'electricity', 'recurring', 
+    'recharge', 'broadband', 'wifi', 'mortgage', 'loan'
+}
+
+def is_recurring(text: str) -> int:
+    if not text:
+        return 0
+    text_lower = text.lower()
+    return 1 if any(kw in text_lower for kw in RECURRING_KEYWORDS) else 0
+
+
+class LightGBMForecaster:
+    """Tabular ML Forecaster using LightGBM for Category and Subcategory expenditure."""
+
+    @staticmethod
+    def prepare_data(raw_transactions: List[dict]) -> pd.DataFrame:
+        if not raw_transactions:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(raw_transactions)
+        
+        # Standardize date column
+        date_col = 'transaction_date' if 'transaction_date' in df.columns else ('date' if 'date' in df.columns else 'ds')
+        if date_col not in df.columns:
+            return pd.DataFrame()
+
+        df['date'] = pd.to_datetime(df[date_col])
+
+        # Standardize amount column
+        amt_col = 'amount' if 'amount' in df.columns else 'y'
+        df['amount'] = df[amt_col].abs().astype(float)
+
+        # Standardize category & subcategory
+        df['category'] = df['category'].fillna('Uncategorized').astype(str)
+        
+        sub_col = 'sub_category' if 'sub_category' in df.columns else ('subcategory' if 'subcategory' in df.columns else None)
+        if sub_col and sub_col in df.columns:
+            df['subcategory'] = df[sub_col].fillna('General').astype(str)
+        else:
+            df['subcategory'] = 'General'
+
+        df['merchant_name'] = df['merchant_name'].fillna('') if 'merchant_name' in df.columns else ''
+        df['remarks'] = df['remarks'].fillna('') if 'remarks' in df.columns else ''
+
+        # Extract discrete numerical columns
+        df['year'] = df['date'].dt.year
+        df['month'] = df['date'].dt.month
+
+        return df
+
+    @classmethod
+    def build_monthly_feature_matrix(cls, df_raw: pd.DataFrame) -> pd.DataFrame:
+        if df_raw.empty:
+            return pd.DataFrame()
+
+        # Group by year, month, category, subcategory and calculate sum of amount
+        agg = (
+            df_raw.groupby(['year', 'month', 'category', 'subcategory'], as_index=False)
+            .agg({
+                'amount': 'sum',
+                'merchant_name': lambda s: ' '.join(set(s)),
+                'remarks': lambda s: ' '.join(set(s))
+            })
+        )
+
+        # Calculate is_recurring_keyword feature
+        agg['is_recurring_keyword'] = agg.apply(
+            lambda r: int(
+                is_recurring(r['category']) or 
+                is_recurring(r['subcategory']) or 
+                is_recurring(r['merchant_name']) or 
+                is_recurring(r['remarks'])
+            ),
+            axis=1
+        )
+
+        # Create continuous monthly grid per (category, subcategory) pair for exact lag shifting
+        all_pairs = agg[['category', 'subcategory']].drop_duplicates()
+        
+        min_date = pd.to_datetime(f"{agg['year'].min()}-{agg['month'].min():02d}-01")
+        max_date = pd.to_datetime(f"{agg['year'].max()}-{agg['month'].max():02d}-01")
+        
+        all_months = pd.date_range(start=min_date, end=max_date, freq='MS')
+        
+        grid_rows = []
+        for dt in all_months:
+            for _, pair in all_pairs.iterrows():
+                grid_rows.append({
+                    'year': dt.year,
+                    'month': dt.month,
+                    'category': pair['category'],
+                    'subcategory': pair['subcategory'],
+                    'period': dt
+                })
+        
+        grid = pd.DataFrame(grid_rows)
+        grid['period_str'] = grid['period'].dt.strftime('%Y-%m')
+        
+        agg['period_dt'] = pd.to_datetime(agg['year'].astype(str) + '-' + agg['month'].astype(str).str.zfill(2) + '-01')
+        agg['period_str'] = agg['period_dt'].dt.strftime('%Y-%m')
+
+        merged = pd.merge(
+            grid,
+            agg[['period_str', 'category', 'subcategory', 'amount', 'is_recurring_keyword']],
+            on=['period_str', 'category', 'subcategory'],
+            how='left'
+        )
+
+        merged['amount'] = merged['amount'].fillna(0.0)
+        
+        merged['is_recurring_keyword'] = merged.apply(
+            lambda r: r['is_recurring_keyword'] if pd.notna(r['is_recurring_keyword']) 
+            else int(is_recurring(str(r['category'])) or is_recurring(str(r['subcategory']))),
+            axis=1
+        )
+
+        # Sort chronologically within group for lag generation
+        merged = merged.sort_values(by=['category', 'subcategory', 'period']).reset_index(drop=True)
+
+        # Lag features: amount_last_month (shift 1) and amount_last_year (shift 12)
+        merged['amount_last_month'] = merged.groupby(['category', 'subcategory'])['amount'].shift(1).fillna(0.0)
+        merged['amount_last_year'] = merged.groupby(['category', 'subcategory'])['amount'].shift(12).fillna(0.0)
+
+        return merged
+
+    @classmethod
+    def train_and_forecast_next_month(
+        cls, 
+        raw_transactions: List[dict], 
+        target_year: int, 
+        target_month: int
+    ) -> Tuple[Decimal, List[CategoryForecast], str]:
+        """Train LightGBM model and forecast next month expenditures."""
+        df_raw = cls.prepare_data(raw_transactions)
+        if df_raw.empty:
+            return Decimal("0.00"), [], "No historical transaction data available."
+
+        matrix = cls.build_monthly_feature_matrix(df_raw)
+        if matrix.empty or len(matrix['period_str'].unique()) < 2:
+            return cls._fallback_forecast(df_raw, target_year, target_month)
+
+        feature_cols = ['year', 'month', 'category', 'subcategory', 'amount_last_month', 'amount_last_year', 'is_recurring_keyword']
+        
+        # Convert categorical columns
+        matrix['category'] = matrix['category'].astype('category')
+        matrix['subcategory'] = matrix['subcategory'].astype('category')
+
+        # Filter training data
+        train_df = matrix.dropna(subset=['amount']).copy()
+        
+        X_train = train_df[feature_cols]
+        y_train = train_df['amount']
+
+        if not LIGHTGBM_AVAILABLE:
+            logger.warning("LightGBM not installed. Using fallback moving average forecaster.")
+            return cls._fallback_forecast(df_raw, target_year, target_month)
+
+        try:
+            model = LGBMRegressor(
+                n_estimators=100,
+                learning_rate=0.05,
+                max_depth=5,
+                num_leaves=15,
+                min_child_samples=2,
+                random_state=42,
+                verbosity=-1
+            )
+            
+            model.fit(
+                X_train, 
+                y_train, 
+                categorical_feature=['category', 'subcategory']
+            )
+
+            # Build inference rows for target_year, target_month
+            pairs = matrix[['category', 'subcategory']].drop_duplicates()
+
+            infer_rows = []
+            target_dt = pd.to_datetime(f"{target_year}-{target_month:02d}-01")
+            year_ago_dt = target_dt - pd.DateOffset(years=1)
+            year_ago_str = year_ago_dt.strftime('%Y-%m')
+
+            for _, pair in pairs.iterrows():
+                cat = pair['category']
+                subcat = pair['subcategory']
+
+                sub_df = matrix[(matrix['category'] == cat) & (matrix['subcategory'] == subcat)].sort_values('period')
+                last_m_val = sub_df['amount'].iloc[-1] if not sub_df.empty else 0.0
+
+                yago_df = sub_df[sub_df['period_str'] == year_ago_str]
+                last_y_val = yago_df['amount'].iloc[0] if not yago_df.empty else 0.0
+
+                rec_val = int(is_recurring(str(cat)) or is_recurring(str(subcat)))
+
+                infer_rows.append({
+                    'year': target_year,
+                    'month': target_month,
+                    'category': cat,
+                    'subcategory': subcat,
+                    'amount_last_month': float(last_m_val),
+                    'amount_last_year': float(last_y_val),
+                    'is_recurring_keyword': rec_val
+                })
+
+            X_infer = pd.DataFrame(infer_rows)
+            X_infer['category'] = X_infer['category'].astype('category')
+            X_infer['subcategory'] = X_infer['subcategory'].astype('category')
+
+            preds = model.predict(X_infer[feature_cols])
+            preds = np.maximum(0, preds)
+
+            X_infer['predicted_amount'] = preds
+
+            breakdown: List[CategoryForecast] = []
+            total_amount = Decimal("0.00")
+
+            for _, row in X_infer.iterrows():
+                pred_val = round(float(row['predicted_amount']), 2)
+                if pred_val > 1.0:
+                    amt_dec = Decimal(str(pred_val))
+                    cat_name = str(row['category'])
+                    sub_name = str(row['subcategory'])
+                    
+                    reason_msg = f"LightGBM prediction based on last month ({row['amount_last_month']:.2f}) and seasonal lag ({row['amount_last_year']:.2f})."
+                    if row['is_recurring_keyword'] == 1:
+                        reason_msg += " Recurring pattern recognized."
+
+                    breakdown.append(CategoryForecast(
+                        category=cat_name,
+                        sub_category=sub_name if sub_name != 'General' else None,
+                        predicted_amount=amt_dec,
+                        reason=reason_msg
+                    ))
+                    total_amount += amt_dec
+
+            breakdown.sort(key=lambda x: x.predicted_amount, reverse=True)
+            return total_amount, breakdown, "Tabular LightGBM model with lag & seasonal features"
+
+        except Exception as e:
+            logger.error(f"Error in LightGBM forecasting: {e}", exc_info=True)
+            return cls._fallback_forecast(df_raw, target_year, target_month)
+
+    @classmethod
+    def _fallback_forecast(
+        cls, 
+        df_raw: pd.DataFrame, 
+        target_year: int, 
+        target_month: int
+    ) -> Tuple[Decimal, List[CategoryForecast], str]:
+        """Fallback moving average forecast when ML training is unavailable."""
+        if df_raw.empty:
+            return Decimal("0.00"), [], "No transaction data."
+
+        grouped = df_raw.groupby(['category', 'subcategory'])['amount'].mean().reset_index()
+        breakdown = []
+        total_amount = Decimal("0.00")
+
+        for _, row in grouped.iterrows():
+            amt = Decimal(str(round(float(row['amount']), 2)))
+            if amt > 1.0:
+                cat_name = str(row['category'])
+                sub_name = str(row['subcategory'])
+                breakdown.append(CategoryForecast(
+                    category=cat_name,
+                    sub_category=sub_name if sub_name != 'General' else None,
+                    predicted_amount=amt,
+                    reason="Historical average spend baseline."
+                ))
+                total_amount += amt
+
+        breakdown.sort(key=lambda x: x.predicted_amount, reverse=True)
+        return total_amount, breakdown, "Simple moving average baseline forecast"
+
 
 class ForecastingService:
     def __init__(self, llm: LLMService = Depends(get_llm_service)):
-        # Handle manual instantiation for LLM
         from app.core.llm import LLMService as ActualLLMService
         if isinstance(llm, ActualLLMService):
             self.llm = llm
         else:
             from app.core.llm import get_llm_service
             self.llm = get_llm_service()
-        
 
-    async def calculate_safe_to_spend(self, category_daily_history: List[dict], monthly_breakdown: List[dict] = []) -> ForecastResponse:
-        """Forecast upcoming expenses for the next full month."""
+    async def calculate_safe_to_spend(
+        self, 
+        raw_transactions: List[dict] = [], 
+        monthly_breakdown: List[dict] = []
+    ) -> ForecastResponse:
+        """Forecast upcoming expenses for the next full month using LightGBM Tabular ML."""
         today = date.today()
-        # Get first day of NEXT month
         if today.month == 12:
             next_month_start = date(today.year + 1, 1, 1)
         else:
             next_month_start = date(today.year, today.month + 1, 1)
-            
-        # Get last day of NEXT month
+
         _, last_day = calendar.monthrange(next_month_start.year, next_month_start.month)
         next_month_end = date(next_month_start.year, next_month_start.month, last_day)
-        
-        days_in_next_month = (next_month_end - next_month_start).days + 1
+
         time_frame_str = f"Next Month ({next_month_start.strftime('%B %Y')})"
-        
-        # LOGIC:
-        # User requested category-wise Prophet forecast.
-        
-        use_prophet = settings.USE_AI_FORECASTING and PROPHET_AVAILABLE
-        
-        if use_prophet:
-            return await self._calculate_prophet_categorywise(category_daily_history, monthly_breakdown, next_month_start, next_month_end, time_frame_str)
-        
-        # Fallback to LLM for basic total if Prophet is missing (though user wants Prophet)
-        return await self._calculate_llm(category_daily_history, monthly_breakdown, time_frame_str, days_in_next_month)
 
-    async def _calculate_prophet_categorywise(self, category_daily_history: List[dict], monthly_breakdown: List[dict], start_date: date, end_date: date, time_frame: str) -> ForecastResponse:
-        """Forecast for each category individually using Prophet or Fixed Expense logic."""
-        
-        if not category_daily_history:
-             return ForecastResponse(amount=Decimal("0.00"), reason="No historical data found.", time_frame=time_frame, confidence="low")
+        if raw_transactions:
+            total_amount, breakdown, method_reason = LightGBMForecaster.train_and_forecast_next_month(
+                raw_transactions, 
+                next_month_start.year, 
+                next_month_start.month
+            )
 
-        try:
-            df_all = pd.DataFrame(category_daily_history)
-            if df_all.empty:
-                return ForecastResponse(amount=Decimal("0.00"), reason="No historical data found.", time_frame=time_frame, confidence="low")
-                
-            categories = df_all['category'].unique()
-            
-            # Map monthly breakdown for easier recurring check
-            # Filter out pseudo-categories starting with '_' to avoid mis-detecting trends
-            cat_monthly_totals = {} 
-            for month_data in monthly_breakdown:
-                for cat, amount in month_data.get("categories", {}).items():
-                    if cat.startswith("_"): continue
-                    if cat not in cat_monthly_totals:
-                        cat_monthly_totals[cat] = []
-                    cat_monthly_totals[cat].append(amount)
-
-            breakdown = []
-            total_amount = Decimal("0.00")
-            
-            # Determine actual history days in the provided data
-            min_history_date = pd.to_datetime(df_all['ds']).min()
-            today = date.today()
-            total_history_days = (today - min_history_date.date()).days + 1
-            if total_history_days < 30: total_history_days = 120 # Fallback safety
-            
-            # Determine days to predict (from max historical date until end of next month)
-            max_history_date = pd.to_datetime(df_all['ds']).max()
-            days_to_predict = (end_date - max_history_date.date()).days
-            
-            if days_to_predict <= 0:
-                 return ForecastResponse(amount=Decimal("0.00"), reason="Data already covers the forecast period.", time_frame=time_frame)
-
-            for cat in categories:
-                cat_df_raw = df_all[df_all['category'] == cat][['ds', 'y']].copy()
-                cat_df_raw['ds'] = pd.to_datetime(cat_df_raw['ds'])
-                
-                # 1. FIXED/RECURRING DETECTION (Most accurate for Rent, SIPs, etc.)
-                monthly_values = cat_monthly_totals.get(cat, [])
-                num_months = len(monthly_values)
-                num_txns = len(cat_df_raw)
-                
-                # If it appears monthly but rarely (1-2 txns per month), it's a fixed expense
-                is_recurring = num_months >= 1 and (num_txns / max(1, num_months)) <= 4
-                
-                if is_recurring:
-                    import statistics
-                    # Use max or median for fixed costs
-                    predicted_monthly = statistics.median(monthly_values) if monthly_values else 0
-                    cat_total = Decimal(str(max(0, round(predicted_monthly, 2))))
-                    reason = "Projected based on monthly recurring patterns (Rent/SIP/RD/Bills)."
-                
-                # 2. PROPHET FOR FREQUENT DISCRETIONARY (Food, Shopping, etc.)
-                elif num_txns >= 15:
-                    try:
-                        # CRITICAL: Fill in missing days with 0 so Prophet doesn't think 
-                        # a sparse expense is a daily expense.
-                        all_dates = pd.date_range(start=min_history_date, end=max_history_date, freq='D')
-                        cat_df = cat_df_raw.set_index('ds').reindex(all_dates, fill_value=0).reset_index()
-                        cat_df.columns = ['ds', 'y']
-
-                        m = Prophet(
-                            daily_seasonality=False,
-                            weekly_seasonality=True,
-                            yearly_seasonality=False,
-                            changepoint_prior_scale=0.01 # Be conservative
-                        )
-                        m.fit(cat_df)
-                        
-                        future = m.make_future_dataframe(periods=days_to_predict)
-                        forecast = m.predict(future)
-                        
-                        start_dt = pd.to_datetime(start_date)
-                        end_dt = pd.to_datetime(end_date)
-                        mask = (forecast['ds'] >= start_dt) & (forecast['ds'] <= end_dt)
-                        predicted = forecast[mask]['yhat'].sum()
-                        
-                        # Safety Cap: Forecast should not realistically exceed 2x the historical monthly average
-                        hist_monthly_avg = (cat_df_raw['y'].sum() / total_history_days) * 30
-                        predicted = min(predicted, hist_monthly_avg * 2)
-                        
-                        cat_total = Decimal(str(max(0, round(predicted, 2))))
-                        reason = f"Trend-based forecast using {num_txns} data points."
-                    except Exception as e:
-                        logger.error(f"Error forecasting category {cat}: {e}")
-                        avg_daily = cat_df_raw['y'].sum() / total_history_days
-                        cat_total = Decimal(str(max(0, round(avg_daily * 30, 2))))
-                        reason = "Forecasting model error; used historical monthly average."
-                
-                # 3. FALLBACK: SIMPLE MOVING AVERAGE
-                else:
-                    avg_daily = cat_df_raw['y'].sum() / total_history_days
-                    cat_total = Decimal(str(max(0, round(avg_daily * 30, 2))))
-                    reason = "Forecasted using 4-month daily spend average."
-                
-                if cat_total > 50: # Filter out noise
-                    breakdown.append(CategoryForecast(
-                        category=cat,
-                        predicted_amount=cat_total,
-                        reason=reason
-                    ))
-                    total_amount += cat_total
-            
-            breakdown.sort(key=lambda x: x.predicted_amount, reverse=True)
-            
             return ForecastResponse(
                 amount=total_amount,
-                reason=f"Multi-model forecast for {len(breakdown)} categories, optimized for monthly recurring expenses and discretionary trends.",
-                time_frame=time_frame,
-                confidence="high",
+                reason=f"Tabular ML forecast ({method_reason}) for {len(breakdown)} categories/subcategories.",
+                time_frame=time_frame_str,
+                confidence="high" if LIGHTGBM_AVAILABLE else "medium",
                 breakdown=breakdown
             )
 
-        except Exception as e:
-            logger.error(f"Prophet category forecasting error: {e}")
-            return ForecastResponse(
-                amount=Decimal("0.00"),
-                reason="System error during forecasting.",
-                time_frame=time_frame,
-                confidence="low"
-            )
-
-        except Exception as e:
-            logger.error(f"Prophet category forecasting error: {e}")
-            return ForecastResponse(
-                amount=Decimal("0.00"),
-                reason="System error during forecasting.",
-                time_frame=time_frame,
-                confidence="low"
-            )
+        days_in_next_month = (next_month_end - next_month_start).days + 1
+        return await self._calculate_llm(raw_transactions, monthly_breakdown, time_frame_str, days_in_next_month)
 
     async def _calculate_llm(self, category_daily_history: List[dict], monthly_breakdown: List[dict], time_frame: str, days: int) -> ForecastResponse:
-        """Use LLM to predict remaining month expenses."""
+        """Use LLM to predict remaining month expenses if data is sparse or service calls LLM fallback."""
         default_response = ForecastResponse(
             amount=Decimal("0.00"), 
             reason="Insufficient data/AI service unavailable.", 
@@ -219,26 +362,19 @@ class ForecastingService:
             )
 
         try:
-            # Prepare context for LLM from category daily history
             df = pd.DataFrame(category_daily_history)
-            category_totals = df.groupby('category')['y'].sum().to_dict()
-            recent_daily = df.groupby('ds')['y'].sum().tail(90).to_dict()
+            category_totals = df.groupby('category')['y'].sum().to_dict() if 'y' in df.columns else {}
+            recent_daily = df.groupby('ds')['y'].sum().tail(90).to_dict() if 'ds' in df.columns and 'y' in df.columns else {}
             
             prompt = f"""
             Analyze the following financial data to predict expenses for the NEXT {days} DAYS (full month).
             
             1. Daily History Summary: {json.dumps(recent_daily)}
             2. Category Totals (Last 120 days): {json.dumps(category_totals)}
-            3. Monthly Category Trends (Key for recurring bills like Rent): {json.dumps(monthly_breakdown)}
-            
-            Task:
-            - Analyze the 'Monthly Category Trends' to identify recurring payments (e.g., Rent, Insurance).
-            - Note: Categories starting with '_' like '_Rent' are explicit recurring bills.
-            - Predict discretionary spending based on 'Daily History'.
+            3. Monthly Category Trends: {json.dumps(monthly_breakdown)}
             
             Return the TOTAL predicted expenses for the full {days} day month.
             
-            You must return a valid JSON object.
             Required JSON structure:
             {{
                 "predicted_total": float,
@@ -266,45 +402,10 @@ class ForecastingService:
             
         return default_response
 
-    async def _get_llm_breakdown(self, category_history: List[dict], total_forecast: float, days: int) -> dict:
-        """Helper to get just the breakdown and reason from LLM, given a known total."""
-        try:
-            prompt = f"""
-            Given the historical category spending and a STATISTICALLY FORECASTED total of {total_forecast} 
-            for the REMAINING {days} DAYS of the month:
-            1. Allocate the forecasted total to categories based on history (considering end-of-month dues).
-            2. Explain the forecast trend in 1 sentence.
-            
-            Category History (90d): {json.dumps(category_history)}
-            
-            Return ONLY a JSON object:
-            {{
-                "reason": "string",
-                "breakdown": [ {{ "category": "string", "predicted_amount": float, "reason": "string" }} ]
-            }}
-            """
-            
-            data = await self.llm.generate_json(prompt, temperature=0.1, timeout=60.0)
-            if data:
-                return data
-        except Exception as e:
-            logger.error(f"LLM breakdown error: {e}")
-            
-        return {"reason": "Statistical forecast.", "breakdown": []}
-
     async def predict_discretionary_buffer(self, history_data: List[dict], buffer_days: int = 7) -> dict:
-        """
-        Predict discretionary spending for the next N days using AI.
-        Returns: {
-            "predicted_amount": Decimal,
-            "confidence": str,
-            "range_low": Decimal,
-            "range_high": Decimal,
-            "method": str
-        }
-        """
+        """Predict discretionary spending for the next N days."""
         default_result = {
-            "predicted_amount": Decimal("500"),  # Minimum fallback
+            "predicted_amount": Decimal("500"),
             "confidence": "low",
             "range_low": Decimal("500"),
             "range_high": Decimal("500"),
@@ -314,81 +415,23 @@ class ForecastingService:
         if not history_data or len(history_data) < 7:
             return default_result
         
-        use_prophet = settings.USE_AI_FORECASTING and PROPHET_AVAILABLE
-        
         try:
-            if use_prophet:
-                # Use Prophet for prediction
-                df = pd.DataFrame(history_data)
-                df['ds'] = pd.to_datetime(df['ds'])
-                
-                m = Prophet(interval_width=0.8)  # 80% confidence interval
-                m.fit(df)
-                
-                # Predict for buffer_days
-                future = m.make_future_dataframe(periods=buffer_days)
-                forecast = m.predict(future)
-                
-                # Get predictions for future days only
-                last_date = df['ds'].max()
-                future_mask = forecast['ds'] > last_date
-                future_forecast = forecast[future_mask]
-                
-                predicted_total = max(0, future_forecast['yhat'].sum())
-                range_low = max(0, future_forecast['yhat_lower'].sum())
-                range_high = max(0, future_forecast['yhat_upper'].sum())
-                
+            df = pd.DataFrame(history_data)
+            val_col = 'y' if 'y' in df.columns else ('amount' if 'amount' in df.columns else None)
+            if val_col:
+                daily_avg = df[val_col].abs().mean()
+                predicted_total = daily_avg * buffer_days
+                range_low = max(0.0, predicted_total * 0.8)
+                range_high = predicted_total * 1.2
+
                 return {
-                    "predicted_amount": Decimal(str(predicted_total)),
-                    "confidence": "high",
-                    "range_low": Decimal(str(range_low)),
-                    "range_high": Decimal(str(range_high)),
-                    "method": "prophet"
+                    "predicted_amount": Decimal(str(round(predicted_total, 2))),
+                    "confidence": "medium",
+                    "range_low": Decimal(str(round(range_low, 2))),
+                    "range_high": Decimal(str(round(range_high, 2))),
+                    "method": "moving_average"
                 }
-            
-            elif self.llm.is_enabled:
-                # Use LLM for prediction
-                history_summary = [
-                    {"date": d['ds'], "amount": float(d['y'])} 
-                    for d in history_data[-30:]  # Last 30 days
-                ]
-                
-                prompt = f"""
-                Analyze the following 30-day DISCRETIONARY expense history (Food, Shopping, Entertainment, Transport, etc.).
-                Predict the TOTAL discretionary spending for the NEXT {buffer_days} DAYS.
-                
-                Daily History: {json.dumps(history_summary)}
-                
-                Consider:
-                - Day of week patterns (weekends vs weekdays)
-                - Recent trends
-                - Typical daily variation
-                
-                Return ONLY a JSON object:
-                {{
-                    "predicted_total": float,
-                    "confidence_low": float,
-                    "confidence_high": float
-                }}
-                """
-                
-                data = await self.llm.generate_json(prompt, temperature=0.1, timeout=60.0)
-                    
-                if data:
-                    predicted = max(0, data.get("predicted_total", 0))
-                    low = max(0, data.get("confidence_low", predicted * 0.8))
-                    high = max(0, data.get("confidence_high", predicted * 1.2))
-                    
-                    return {
-                        "predicted_amount": Decimal(str(predicted)),
-                        "confidence": "medium",
-                        "range_low": Decimal(str(low)),
-                        "range_high": Decimal(str(high)),
-                        "method": "llm"
-                    }
-                    
         except Exception as e:
             logger.error(f"Buffer prediction error: {e}")
         
         return default_result
-
