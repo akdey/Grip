@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { useVariance, useInvestments, useMonthlySummary, useSpendTrends } from '../features/dashboard/hooks';
 import { SpendTrendChart } from '../components/analytics/SpendTrendChart';
-import { AskGripAI } from '../components/analytics/AskGripAI';
 import { Card } from '../components/ui/Card';
 
 const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
@@ -99,9 +98,6 @@ const Analytics: React.FC = () => {
             </header>
 
             <div className="space-y-10 animate-enter">
-                {/* AI Natural Language Financial Assistant */}
-                <AskGripAI />
-
                 {/* Period Selector & Navigator */}
                 <div className="space-y-8">
                     {/* Month Navigator */}
