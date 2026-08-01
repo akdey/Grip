@@ -214,9 +214,10 @@ class LightGBMForecaster:
         target_sin = float(np.sin(2 * np.pi * target_month / 12))
         target_cos = float(np.cos(2 * np.pi * target_month / 12))
 
-        # Track per-category EWMA and Deterministic Recurring projections
+        # Track per-category EWMA, Deterministic Recurring projections, and active recency status
         ewma_dict: Dict[Tuple[str, str], float] = {}
         deterministic_dict: Dict[Tuple[str, str], Tuple[bool, float, str]] = {}
+        is_active_category: Dict[Tuple[str, str], bool] = {}
 
         for pair in active_pairs.itertuples():
             cat = pair.category
@@ -225,14 +226,11 @@ class LightGBMForecaster:
             sub_df = monthly_agg[(monthly_agg['category'] == cat) & (monthly_agg['subcategory'] == subcat)].sort_values('period_dt')
             spend_by_period = sub_df.set_index('period_dt')['amount'].to_dict()
 
-            non_zero_series = sub_df[sub_df['amount'] > 0]['amount']
-            active_count = len(non_zero_series)
+            # Continuous monthly series including zeroes for inactive months
+            full_series = pd.Series([spend_by_period.get(p, 0.0) for p in all_periods], index=all_periods)
 
-            # Compute EWMA with span=3 (alpha = 2/(3+1) = 0.5)
-            if active_count > 0:
-                ewma_val = float(non_zero_series.ewm(span=3, adjust=False).mean().iloc[-1])
-            else:
-                ewma_val = 0.0
+            # Compute EWMA on continuous time series (zero-spend months properly decay the average)
+            ewma_val = float(full_series.ewm(span=3, adjust=False).mean().iloc[-1]) if not full_series.empty else 0.0
             ewma_dict[(cat, subcat)] = ewma_val
 
             rec_flag = int(
@@ -241,8 +239,29 @@ class LightGBMForecaster:
                 any(is_recurring(r) for r in sub_df['remarks'])
             )
 
+            p_1m = target_dt - pd.DateOffset(months=1)
+            p_2m = target_dt - pd.DateOffset(months=2)
+            p_3m = target_dt - pd.DateOffset(months=3)
+            p_12m = target_dt - pd.DateOffset(years=1)
+
+            v_1m = spend_by_period.get(p_1m, 0.0)
+            v_2m = spend_by_period.get(p_2m, 0.0)
+            v_3m = spend_by_period.get(p_3m, 0.0)
+            v_12m = spend_by_period.get(p_12m, 0.0)
+
+            recent_3m_total = v_1m + v_2m + v_3m
+
+            # Recency Gate: Exclude dormant categories with $0 spend in the last 3 months
+            if recent_3m_total == 0:
+                is_active_category[(cat, subcat)] = False
+            else:
+                is_active_category[(cat, subcat)] = True
+
+            non_zero_series = sub_df[sub_df['amount'] > 0]['amount']
+            active_count = len(non_zero_series)
+
             # Check if this category qualifies for Deterministic Recurrence Engine
-            if rec_flag == 1 and active_count >= 2:
+            if rec_flag == 1 and active_count >= 2 and is_active_category[(cat, subcat)]:
                 recent_amounts = non_zero_series.tail(6).tolist()
                 med_amt = float(np.median(recent_amounts))
                 std_amt = float(np.std(recent_amounts))
@@ -260,17 +279,7 @@ class LightGBMForecaster:
             else:
                 deterministic_dict[(cat, subcat)] = (False, 0.0, "")
 
-            p_1m = target_dt - pd.DateOffset(months=1)
-            p_2m = target_dt - pd.DateOffset(months=2)
-            p_3m = target_dt - pd.DateOffset(months=3)
-            p_12m = target_dt - pd.DateOffset(years=1)
-
-            v_1m = spend_by_period.get(p_1m, 0.0)
-            v_2m = spend_by_period.get(p_2m, 0.0)
-            v_3m = spend_by_period.get(p_3m, 0.0)
-            v_12m = spend_by_period.get(p_12m, 0.0)
-
-            hist_spends = [spend_by_period.get(target_dt - pd.DateOffset(months=m), 0.0) for m in range(1, 7)]
+            hist_spends = [v_1m, v_2m, v_3m, spend_by_period.get(target_dt - pd.DateOffset(months=4), 0.0), spend_by_period.get(target_dt - pd.DateOffset(months=5), 0.0), spend_by_period.get(target_dt - pd.DateOffset(months=6), 0.0)]
             non_zero_spends = [s for s in hist_spends if s > 0]
 
             mean_3m = float(np.mean(hist_spends[:3])) if hist_spends[:3] else 0.0
@@ -345,10 +354,15 @@ class LightGBMForecaster:
             sub_name = str(row['subcategory'])
             key = (cat_name, sub_name)
 
+            # Skip inactive / dormant categories (e.g. Home Build or old one-offs with $0 in last 3m)
+            if not is_active_category.get(key, True):
+                continue
+
             is_det, det_val, det_reason = deterministic_dict.get(key, (False, 0.0, ""))
             med_recent = float(row['median_recent'])
             max_6m = float(row['max_6m'])
             mean_3m = float(row['mean_3m'])
+            v_1m = float(row['amount_last_1m'])
             ewma_val = ewma_dict.get(key, mean_3m)
             active_cnt = int(row['active_months_count'])
 
@@ -358,19 +372,19 @@ class LightGBMForecaster:
             else:
                 lgb_val = lgb_preds_map.get(key, ewma_val)
                 
-                # Ensemble Blend: 50% regularized LightGBM + 50% EWMA if >= 4 active months, else EWMA
+                # Ensemble Blend: 50% regularized LightGBM + 50% EWMA if active, else EWMA
                 if active_cnt >= 4 and key in lgb_preds_map:
                     raw_pred = 0.5 * lgb_val + 0.5 * ewma_val
-                    reason_msg = f"Hybrid ML ensemble forecast based on rolling trends ({mean_3m:.2f})."
+                    reason_msg = f"Hybrid ML ensemble forecast based on rolling trends (${mean_3m:.2f})."
                 else:
                     raw_pred = ewma_val
-                    reason_msg = f"Exponential moving average forecast based on recent trend ({ewma_val:.2f})."
+                    reason_msg = f"Exponential moving average forecast based on recent trend (${ewma_val:.2f})."
 
-                # Clamping bounds for discretionary costs
-                if med_recent > 0 and max_6m > 0:
-                    clamped_pred = max(0.2 * med_recent, min(2.5 * max_6m, raw_pred))
-                elif mean_3m > 0:
-                    clamped_pred = max(0.3 * mean_3m, min(3.0 * mean_3m, raw_pred))
+                # Tight Clamping bounds for discretionary costs so predictions don't explode:
+                if mean_3m > 0:
+                    clamped_pred = min(raw_pred, 1.25 * max(mean_3m, v_1m))
+                elif v_1m > 0:
+                    clamped_pred = min(raw_pred, 1.25 * v_1m)
                 else:
                     clamped_pred = raw_pred
 
