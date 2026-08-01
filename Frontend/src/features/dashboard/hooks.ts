@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 
 export interface IdentifiedObligation {
@@ -142,23 +142,3 @@ export const useSpendTrends = (days: number = 30, frequency: 'daily' | 'weekly' 
         },
     });
 };
-
-export interface AIQueryResponse {
-    title: string;
-    summary: string;
-    chart_type: 'bar' | 'line' | 'pie' | 'metric';
-    x_axis?: string;
-    y_axis?: string;
-    generated_sql: string;
-    data: Record<string, any>[];
-}
-
-export const useAIQuery = () => {
-    return useMutation({
-        mutationFn: async (query: string) => {
-            const { data } = await api.post<AIQueryResponse>('/analytics/ai-query/', { query });
-            return data;
-        },
-    });
-};
-

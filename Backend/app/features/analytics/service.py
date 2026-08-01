@@ -2,24 +2,20 @@ import logging
 import asyncio
 import calendar
 import time
-import re
 from uuid import UUID
 from decimal import Decimal
 from typing import List, Optional, Dict
 from datetime import date, timedelta
-from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, case, text
+from sqlalchemy import select, func, case
 from app.features.transactions.models import Transaction, AccountType
 from app.features.goals.models import Goal
-from app.core.llm import get_llm_service
 from app.features.analytics.schemas import (
     CategoryVariance,
     VarianceAnalysis,
     FrozenFundsBreakdown,
     SafeToSpendResponse,
-    MonthlySummaryResponse,
-    AIQueryResponse
+    MonthlySummaryResponse
 )
 from app.features.bills.service import BillService
 from app.features.credit_cards.service import CreditCardService
@@ -584,155 +580,3 @@ class AnalyticsService:
             SpendTrendPoint(date=row.date if isinstance(row.date, date) else row.date.date(), amount=row.amount)
             for row in data_points
         ])
-
-    async def execute_ai_query(
-        self,
-        db: AsyncSession,
-        user_id: UUID,
-        user_query: str
-    ) -> AIQueryResponse:
-        """
-        Translates natural language questions into SQL using local Gemma 4 / LLM engine,
-        validates query safety, executes against DB, and returns structured data & chart config.
-        """
-        llm_service = get_llm_service()
-        if not llm_service.is_enabled:
-            raise HTTPException(
-                status_code=503,
-                detail="LLM engine is currently initializing or unavailable."
-            )
-
-        db_schema = """
-TABLE transactions (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
-    amount NUMERIC(12, 2) NOT NULL, -- negative for expense, positive for income
-    category VARCHAR(255) NOT NULL, -- e.g., 'Groceries', 'Dining Out', 'Shopping', 'Bills & Utilities', 'Income', 'Transfers', 'Entertainment', 'Transport'
-    sub_category VARCHAR(255),
-    description TEXT,
-    merchant VARCHAR(255),
-    account_type VARCHAR(50), -- 'CREDIT_CARD', 'BANK', 'CASH'
-    transaction_date DATE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE
-);
-
-TABLE categories (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL -- 'NEED', 'WANT', 'INVESTMENT'
-);
-
-TABLE bills (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    amount NUMERIC(12, 2) NOT NULL,
-    due_date DATE NOT NULL,
-    status VARCHAR(50) -- 'PENDING', 'PAID', 'OVERDUE'
-);
-
-TABLE credit_cards (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
-    card_name VARCHAR(255) NOT NULL,
-    credit_limit NUMERIC(12, 2),
-    current_statement_balance NUMERIC(12, 2)
-);
-"""
-
-        system_prompt = f"""
-You are a PostgreSQL financial intelligence expert for GRIP app.
-Translate the user's natural language question into a PostgreSQL query and chart config.
-
-DATABASE SCHEMA:
-{db_schema}
-
-RULES:
-1. Always output a SINGLE JSON object. No explanation text outside JSON.
-2. In your SQL query, ALWAYS filter by user_id = :user_id.
-3. Use PostgreSQL functions (e.g. DATE_TRUNC('month', transaction_date), ABS(amount), SUM(ABS(amount))).
-4. Note: transaction amount is NEGATIVE for expenses and POSITIVE for income. To aggregate expense amounts in charts, use SUM(ABS(amount)).
-5. Return JSON format:
-{{
-    "sql": "SELECT DATE_TRUNC('month', transaction_date) AS month, SUM(ABS(amount)) AS total_spend FROM transactions WHERE user_id = :user_id AND category = 'Groceries' GROUP BY 1 ORDER BY 1 ASC",
-    "title": "Monthly Groceries Expenditure",
-    "summary": "Shows month-by-month spending on Groceries.",
-    "chart_type": "bar", -- choices: "bar", "line", "pie", "metric"
-    "x_axis": "month",
-    "y_axis": "total_spend"
-}}
-"""
-
-        # Generate JSON using LLM Service
-        generated = await llm_service.generate_json(
-            prompt=user_query,
-            system_prompt=system_prompt,
-            temperature=0.1
-        )
-
-        if not generated or "sql" not in generated:
-            raise HTTPException(
-                status_code=400,
-                detail="Unable to interpret query into SQL. Please try rephrasing your financial question."
-            )
-
-        sql_str = generated["sql"].strip()
-
-        # Clean markdown if present
-        sql_str = re.sub(r'^```sql\s*', '', sql_str, flags=re.IGNORECASE)
-        sql_str = re.sub(r'```$', '', sql_str).strip()
-
-        # Safety Check: Enforce SELECT or WITH statement only
-        upper_sql = sql_str.upper()
-        if not (upper_sql.startswith("SELECT") or upper_sql.startswith("WITH")):
-            raise HTTPException(status_code=400, detail="Generated query violated safety rules (only SELECT queries permitted).")
-
-        trimmed_check = sql_str.rstrip(";").upper()
-        for kw in ["INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE", "CREATE", "GRANT", "REVOKE"]:
-            if re.search(r'\b' + kw + r'\b', trimmed_check):
-                raise HTTPException(status_code=400, detail=f"Query rejected due to forbidden operation: {kw}")
-
-        # Ensure user_id parameter scoping is present
-        if ":user_id" not in sql_str and "user_id" not in sql_str:
-            raise HTTPException(status_code=400, detail="Query safety rule violated: user_id scoping is mandatory.")
-
-        # Limit maximum output rows
-        if "LIMIT" not in upper_sql:
-            sql_str = f"{sql_str.rstrip(';')} LIMIT 100;"
-
-        # Execute query against database
-        try:
-            res = await db.execute(text(sql_str), {"user_id": str(user_id)})
-            mappings = res.mappings().all()
-            
-            formatted_data = []
-            for row in mappings:
-                row_dict = {}
-                for k, v in row.items():
-                    if isinstance(v, (datetime, date)):
-                        row_dict[k] = v.isoformat()
-                    elif isinstance(v, Decimal):
-                        row_dict[k] = float(v)
-                    elif isinstance(v, UUID):
-                        row_dict[k] = str(v)
-                    else:
-                        row_dict[k] = v
-                formatted_data.append(row_dict)
-
-            return AIQueryResponse(
-                title=generated.get("title", "Analysis Result"),
-                summary=generated.get("summary", f"Result for '{user_query}'"),
-                chart_type=generated.get("chart_type", "bar"),
-                x_axis=generated.get("x_axis"),
-                y_axis=generated.get("y_axis"),
-                generated_sql=sql_str,
-                data=formatted_data
-            )
-        except Exception as e:
-            logger.error(f"Error executing AI generated SQL ({sql_str}): {e}")
-            raise HTTPException(
-                status_code=400,
-                detail=f"Could not execute generated query against database: {str(e)}"
-            )
-
