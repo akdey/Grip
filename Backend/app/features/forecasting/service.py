@@ -37,7 +37,7 @@ def is_recurring(text: str) -> int:
 
 
 class LightGBMForecaster:
-    """Tabular ML Forecaster using LightGBM with Rolling Velocity & Recurring Safeguards."""
+    """Hybrid Personal Finance Forecaster using Deterministic Recurring Detection + Regularized LightGBM/EWMA Ensemble."""
 
     @staticmethod
     def prepare_data(raw_transactions: List[dict]) -> pd.DataFrame:
@@ -100,19 +100,22 @@ class LightGBMForecaster:
         )
         monthly_agg['period_str'] = monthly_agg['period_dt'].dt.strftime('%Y-%m')
 
-        # Filter to active categories/subcategories in the last 12 months
         max_dt = monthly_agg['period_dt'].max()
+        min_dt = monthly_agg['period_dt'].min()
+        global_start_year = min_dt.year
+        global_start_month = min_dt.month
+
+        # Filter to active categories/subcategories in the last 12 months
         cutoff_dt = max_dt - pd.DateOffset(months=12)
-        
         recent_agg = monthly_agg[monthly_agg['period_dt'] >= cutoff_dt]
         active_pairs = recent_agg[['category', 'subcategory']].drop_duplicates()
 
         if active_pairs.empty:
             active_pairs = monthly_agg[['category', 'subcategory']].drop_duplicates()
 
-        # Build feature dataset for training across all periods
-        all_periods = pd.date_range(start=monthly_agg['period_dt'].min(), end=max_dt, freq='MS')
-        
+        all_periods = pd.date_range(start=min_dt, end=max_dt, freq='MS')
+
+        # Feature dataset construction with lag-warmup protection
         feature_rows = []
         for pair in active_pairs.itertuples():
             cat = pair.category
@@ -122,15 +125,19 @@ class LightGBMForecaster:
             if sub_df.empty:
                 continue
 
+            spend_by_period = sub_df.set_index('period_dt')['amount'].to_dict()
+
             rec_flag = int(
                 is_recurring(cat) or is_recurring(subcat) or 
                 any(is_recurring(m) for m in sub_df['merchant_name']) or 
                 any(is_recurring(r) for r in sub_df['remarks'])
             )
 
-            spend_by_period = sub_df.set_index('period_dt')['amount'].to_dict()
-
             for p_dt in all_periods:
+                # Require at least 3 months lag depth to prevent synthetic zero inflation
+                if p_dt < min_dt + pd.DateOffset(months=3):
+                    continue
+
                 target_y = spend_by_period.get(p_dt, 0.0)
 
                 p_1m = p_dt - pd.DateOffset(months=1)
@@ -146,25 +153,39 @@ class LightGBMForecaster:
                 hist_spends = [spend_by_period.get(p_dt - pd.DateOffset(months=m), 0.0) for m in range(1, 7)]
                 non_zero_spends = [s for s in hist_spends if s > 0]
                 
-                mean_3m = np.mean(hist_spends[:3]) if hist_spends[:3] else 0.0
-                mean_6m = np.mean(hist_spends) if hist_spends else 0.0
-                max_6m = np.max(hist_spends) if hist_spends else 0.0
-                median_recent = np.median(non_zero_spends) if non_zero_spends else 0.0
+                mean_3m = float(np.mean(hist_spends[:3])) if hist_spends[:3] else 0.0
+                std_3m = float(np.std(hist_spends[:3])) if hist_spends[:3] else 0.0
+                mean_6m = float(np.mean(hist_spends)) if hist_spends else 0.0
+                max_6m = float(np.max(hist_spends)) if hist_spends else 0.0
+                median_recent = float(np.median(non_zero_spends)) if non_zero_spends else 0.0
+
+                # Cyclical temporal features & relative time index
+                sin_month = float(np.sin(2 * np.pi * p_dt.month / 12))
+                cos_month = float(np.cos(2 * np.pi * p_dt.month / 12))
+                months_from_start = (p_dt.year - global_start_year) * 12 + (p_dt.month - global_start_month)
+
+                velocity_1m_3m = v_1m / (mean_3m + 1.0)
+                volatility_ratio = std_3m / (mean_3m + 1.0)
 
                 feature_rows.append({
                     'period_dt': p_dt,
-                    'year': p_dt.year,
-                    'month': p_dt.month,
+                    'months_from_start': months_from_start,
+                    'sin_month': sin_month,
+                    'cos_month': cos_month,
                     'category': cat,
                     'subcategory': subcat,
                     'amount_last_1m': float(v_1m),
                     'amount_last_2m': float(v_2m),
                     'amount_last_3m': float(v_3m),
-                    'mean_3m': float(mean_3m),
-                    'mean_6m': float(mean_6m),
-                    'max_6m': float(max_6m),
-                    'median_recent': float(median_recent),
+                    'mean_3m': mean_3m,
+                    'std_3m': std_3m,
+                    'mean_6m': mean_6m,
+                    'max_6m': max_6m,
+                    'median_recent': median_recent,
                     'amount_last_year': float(v_12m),
+                    'velocity_1m_3m': float(velocity_1m_3m),
+                    'volatility_ratio': float(volatility_ratio),
+                    'active_months_count': len(non_zero_spends),
                     'is_recurring_keyword': rec_flag,
                     'amount': float(target_y)
                 })
@@ -174,9 +195,10 @@ class LightGBMForecaster:
             return cls._fallback_forecast(df_raw, target_year, target_month)
 
         feature_cols = [
-            'year', 'month', 'category', 'subcategory', 
+            'months_from_start', 'sin_month', 'cos_month', 'category', 'subcategory', 
             'amount_last_1m', 'amount_last_2m', 'amount_last_3m', 
-            'mean_3m', 'mean_6m', 'max_6m', 'amount_last_year', 'is_recurring_keyword'
+            'mean_3m', 'std_3m', 'mean_6m', 'max_6m', 'amount_last_year', 
+            'velocity_1m_3m', 'volatility_ratio', 'active_months_count', 'is_recurring_keyword'
         ]
 
         feat_df['category'] = feat_df['category'].astype('category')
@@ -186,20 +208,57 @@ class LightGBMForecaster:
         train_mask = feat_df['period_dt'] < target_dt
         train_df = feat_df[train_mask].copy()
 
-        if train_df.empty or len(train_df['period_dt'].unique()) < 2:
-            return cls._fallback_forecast(df_raw, target_year, target_month)
-
-        X_train = train_df[feature_cols]
-        y_train = train_df['amount']
-
-        # Build inference rows for target_dt
+        # Build inference dataset for target_dt
         infer_rows = []
+        target_months_from_start = (target_year - global_start_year) * 12 + (target_month - global_start_month)
+        target_sin = float(np.sin(2 * np.pi * target_month / 12))
+        target_cos = float(np.cos(2 * np.pi * target_month / 12))
+
+        # Track per-category EWMA and Deterministic Recurring projections
+        ewma_dict: Dict[Tuple[str, str], float] = {}
+        deterministic_dict: Dict[Tuple[str, str], Tuple[bool, float, str]] = {}
+
         for pair in active_pairs.itertuples():
             cat = pair.category
             subcat = pair.subcategory
 
             sub_df = monthly_agg[(monthly_agg['category'] == cat) & (monthly_agg['subcategory'] == subcat)].sort_values('period_dt')
             spend_by_period = sub_df.set_index('period_dt')['amount'].to_dict()
+
+            non_zero_series = sub_df[sub_df['amount'] > 0]['amount']
+            active_count = len(non_zero_series)
+
+            # Compute EWMA with span=3 (alpha = 2/(3+1) = 0.5)
+            if active_count > 0:
+                ewma_val = float(non_zero_series.ewm(span=3, adjust=False).mean().iloc[-1])
+            else:
+                ewma_val = 0.0
+            ewma_dict[(cat, subcat)] = ewma_val
+
+            rec_flag = int(
+                is_recurring(cat) or is_recurring(subcat) or 
+                any(is_recurring(m) for m in sub_df['merchant_name']) or 
+                any(is_recurring(r) for r in sub_df['remarks'])
+            )
+
+            # Check if this category qualifies for Deterministic Recurrence Engine
+            if rec_flag == 1 and active_count >= 2:
+                recent_amounts = non_zero_series.tail(6).tolist()
+                med_amt = float(np.median(recent_amounts))
+                std_amt = float(np.std(recent_amounts))
+                
+                # Low volatility recurring cost (Rent, SIP, EMI, Subscription)
+                if std_amt / (med_amt + 1e-5) < 0.35 or active_count >= 3:
+                    fixed_amt = round(med_amt, 2)
+                    deterministic_dict[(cat, subcat)] = (
+                        True, 
+                        fixed_amt, 
+                        f"Fixed recurring cost based on monthly cycle (${fixed_amt:.2f})."
+                    )
+                else:
+                    deterministic_dict[(cat, subcat)] = (False, 0.0, "")
+            else:
+                deterministic_dict[(cat, subcat)] = (False, 0.0, "")
 
             p_1m = target_dt - pd.DateOffset(months=1)
             p_2m = target_dt - pd.DateOffset(months=2)
@@ -214,30 +273,33 @@ class LightGBMForecaster:
             hist_spends = [spend_by_period.get(target_dt - pd.DateOffset(months=m), 0.0) for m in range(1, 7)]
             non_zero_spends = [s for s in hist_spends if s > 0]
 
-            mean_3m = np.mean(hist_spends[:3]) if hist_spends[:3] else 0.0
-            mean_6m = np.mean(hist_spends) if hist_spends else 0.0
-            max_6m = np.max(hist_spends) if hist_spends else 0.0
-            median_recent = np.median(non_zero_spends) if non_zero_spends else 0.0
+            mean_3m = float(np.mean(hist_spends[:3])) if hist_spends[:3] else 0.0
+            std_3m = float(np.std(hist_spends[:3])) if hist_spends[:3] else 0.0
+            mean_6m = float(np.mean(hist_spends)) if hist_spends else 0.0
+            max_6m = float(np.max(hist_spends)) if hist_spends else 0.0
+            median_recent = float(np.median(non_zero_spends)) if non_zero_spends else 0.0
 
-            rec_flag = int(
-                is_recurring(cat) or is_recurring(subcat) or 
-                any(is_recurring(m) for m in sub_df['merchant_name']) or 
-                any(is_recurring(r) for r in sub_df['remarks'])
-            )
+            velocity_1m_3m = v_1m / (mean_3m + 1.0)
+            volatility_ratio = std_3m / (mean_3m + 1.0)
 
             infer_rows.append({
-                'year': target_year,
-                'month': target_month,
+                'months_from_start': target_months_from_start,
+                'sin_month': target_sin,
+                'cos_month': target_cos,
                 'category': cat,
                 'subcategory': subcat,
                 'amount_last_1m': float(v_1m),
                 'amount_last_2m': float(v_2m),
                 'amount_last_3m': float(v_3m),
-                'mean_3m': float(mean_3m),
-                'mean_6m': float(mean_6m),
-                'max_6m': float(max_6m),
-                'median_recent': float(median_recent),
+                'mean_3m': mean_3m,
+                'std_3m': std_3m,
+                'mean_6m': mean_6m,
+                'max_6m': max_6m,
+                'median_recent': median_recent,
                 'amount_last_year': float(v_12m),
+                'velocity_1m_3m': float(velocity_1m_3m),
+                'volatility_ratio': float(volatility_ratio),
+                'active_months_count': len(non_zero_spends),
                 'is_recurring_keyword': rec_flag
             })
 
@@ -245,58 +307,77 @@ class LightGBMForecaster:
         X_infer['category'] = X_infer['category'].astype('category')
         X_infer['subcategory'] = X_infer['subcategory'].astype('category')
 
-        if LIGHTGBM_AVAILABLE:
+        # Fit regularized LightGBM on small dataset
+        lgb_preds_map: Dict[Tuple[str, str], float] = {}
+
+        if LIGHTGBM_AVAILABLE and not train_df.empty and len(train_df['period_dt'].unique()) >= 2:
             try:
+                X_train = train_df[feature_cols]
+                y_train = train_df['amount']
+
                 model = LGBMRegressor(
-                    n_estimators=150,
-                    learning_rate=0.03,
-                    max_depth=6,
-                    num_leaves=31,
-                    min_child_samples=1,
+                    n_estimators=40,          # Reduced trees to prevent overfitting small sample size
+                    learning_rate=0.05,
+                    max_depth=3,              # Shallow tree depth for small datasets
+                    num_leaves=7,             # Max 7 leaves per tree
+                    min_child_samples=3,      # At least 3 samples required per leaf
+                    reg_alpha=0.1,            # L1 regularization
+                    reg_lambda=1.0,           # L2 regularization
+                    subsample=0.8,
                     random_state=42,
                     verbosity=-1
                 )
                 model.fit(X_train, y_train, categorical_feature=['category', 'subcategory'])
                 preds = model.predict(X_infer[feature_cols])
                 preds = np.maximum(0, preds)
-                X_infer['predicted_amount'] = preds
+
+                for idx, row in X_infer.iterrows():
+                    key = (str(row['category']), str(row['subcategory']))
+                    lgb_preds_map[key] = float(preds[idx])
             except Exception as e:
                 logger.error(f"LightGBM fitting error: {e}", exc_info=True)
-                X_infer['predicted_amount'] = X_infer['mean_3m']
-        else:
-            X_infer['predicted_amount'] = X_infer['mean_3m']
 
-        # Apply Recurring Safeguard & Velocity Floor
         breakdown: List[CategoryForecast] = []
         total_amount = Decimal("0.00")
 
         for _, row in X_infer.iterrows():
-            pred = float(row['predicted_amount'])
-            rec_flag = int(row['is_recurring_keyword'])
+            cat_name = str(row['category'])
+            sub_name = str(row['subcategory'])
+            key = (cat_name, sub_name)
+
+            is_det, det_val, det_reason = deterministic_dict.get(key, (False, 0.0, ""))
             med_recent = float(row['median_recent'])
+            max_6m = float(row['max_6m'])
             mean_3m = float(row['mean_3m'])
-            v_1m = float(row['amount_last_1m'])
+            ewma_val = ewma_dict.get(key, mean_3m)
+            active_cnt = int(row['active_months_count'])
 
-            # 1. Recurring Safeguard: Rent/EMI/SIP/Insurance shouldn't drop below median/last month recurring bill
-            if rec_flag == 1 and med_recent > 0:
-                base_recurring = max(med_recent, v_1m)
-                if pred < 0.8 * base_recurring:
-                    pred = base_recurring
+            if is_det:
+                pred_val = det_val
+                reason_msg = det_reason
+            else:
+                lgb_val = lgb_preds_map.get(key, ewma_val)
+                
+                # Ensemble Blend: 50% regularized LightGBM + 50% EWMA if >= 4 active months, else EWMA
+                if active_cnt >= 4 and key in lgb_preds_map:
+                    raw_pred = 0.5 * lgb_val + 0.5 * ewma_val
+                    reason_msg = f"Hybrid ML ensemble forecast based on rolling trends ({mean_3m:.2f})."
+                else:
+                    raw_pred = ewma_val
+                    reason_msg = f"Exponential moving average forecast based on recent trend ({ewma_val:.2f})."
 
-            # 2. Velocity floor for active categories: Floor to 70% of 3m average if active
-            elif mean_3m > 0 and pred < 0.5 * mean_3m:
-                pred = max(pred, 0.7 * mean_3m)
+                # Clamping bounds for discretionary costs
+                if med_recent > 0 and max_6m > 0:
+                    clamped_pred = max(0.2 * med_recent, min(2.5 * max_6m, raw_pred))
+                elif mean_3m > 0:
+                    clamped_pred = max(0.3 * mean_3m, min(3.0 * mean_3m, raw_pred))
+                else:
+                    clamped_pred = raw_pred
 
-            pred_val = round(pred, 2)
+                pred_val = round(clamped_pred, 2)
+
             if pred_val > 1.0:
                 amt_dec = Decimal(str(pred_val))
-                cat_name = str(row['category'])
-                sub_name = str(row['subcategory'])
-
-                reason_msg = f"LightGBM ML forecast based on rolling 3m mean ({mean_3m:.2f}) and recent spend."
-                if rec_flag == 1:
-                    reason_msg = f"Recurring expense projected based on monthly cycle ({pred_val:.2f})."
-
                 breakdown.append(CategoryForecast(
                     category=cat_name,
                     sub_category=sub_name if sub_name != 'General' else None,
@@ -305,20 +386,8 @@ class LightGBMForecaster:
                 ))
                 total_amount += amt_dec
 
-        # 3. Overall Calibration Guard:
-        # Scale total predictions if they dip below 85% of recent 3-month average total monthly spending
-        recent_monthly_totals = monthly_agg.groupby('period_dt')['amount'].sum()
-        if len(recent_monthly_totals) >= 2:
-            hist_monthly_avg = float(recent_monthly_totals.tail(3).mean())
-            if hist_monthly_avg > 0 and float(total_amount) < 0.75 * hist_monthly_avg:
-                scale_factor = (0.85 * hist_monthly_avg) / max(1.0, float(total_amount))
-                total_amount = Decimal("0.00")
-                for item in breakdown:
-                    item.predicted_amount = Decimal(str(round(float(item.predicted_amount) * scale_factor, 2)))
-                    total_amount += item.predicted_amount
-
         breakdown.sort(key=lambda x: x.predicted_amount, reverse=True)
-        return total_amount, breakdown, "LightGBM Tabular ML model with rolling velocity and recurring safeguards"
+        return total_amount, breakdown, "Hybrid Deterministic + Small-Sample Regularized ML Ensemble Engine"
 
     @classmethod
     def _fallback_forecast(
