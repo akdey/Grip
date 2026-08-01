@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 from decimal import Decimal
 from datetime import date
@@ -66,3 +66,16 @@ class SpendTrendPoint(BaseModel):
 
 class SpendTrendResponse(BaseModel):
     trends: List[SpendTrendPoint]
+
+class AIQueryRequest(BaseModel):
+    query: str
+
+class AIQueryResponse(BaseModel):
+    title: str
+    summary: str
+    chart_type: str  # "bar", "line", "pie", "metric"
+    x_axis: Optional[str] = None
+    y_axis: Optional[str] = None
+    generated_sql: str
+    data: List[Dict[str, Any]] = []
+

@@ -10,7 +10,9 @@ from app.features.analytics.schemas import (
     SafeToSpendResponse,
     MonthlySummaryResponse,
     SpendTrendResponse,
-    SpendTrendFrequency
+    SpendTrendFrequency,
+    AIQueryRequest,
+    AIQueryResponse
 )
 from app.features.analytics.service import AnalyticsService
 
@@ -83,3 +85,17 @@ async def get_spend_trends(
     Get spending trends for the last N days with specific frequency.
     """
     return await service.get_spend_trends(db, current_user.id, days, frequency)
+
+
+@router.post("/ai-query/", response_model=AIQueryResponse)
+async def execute_ai_query(
+    body: AIQueryRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[AnalyticsService, Depends()]
+):
+    """
+    Execute natural language financial query via local Gemma 4 / SQL generation.
+    """
+    return await service.execute_ai_query(db, current_user.id, body.query)
+
