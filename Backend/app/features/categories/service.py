@@ -55,10 +55,12 @@ class CategoryService:
             icon=data.icon,
             color=data.color,
             type=data.type,
-            user_id=user_id
+            user_id=user_id,
+            sub_categories=[]
         )
         self.db.add(category)
         await self.db.commit()
+        await self.db.refresh(category, ["sub_categories"])
         self.invalidate_cache()
         return category
 
@@ -105,7 +107,11 @@ class CategoryService:
         self.invalidate_cache()
 
     async def update_category(self, user_id: UUID, category_id: UUID, data: schemas.CategoryUpdate) -> Category:
-        stmt = select(Category).where(Category.id == category_id, Category.user_id == user_id)
+        stmt = (
+            select(Category)
+            .options(selectinload(Category.sub_categories))
+            .where(Category.id == category_id, Category.user_id == user_id)
+        )
         result = await self.db.execute(stmt)
         category = result.scalar_one_or_none()
         if not category:
@@ -116,7 +122,7 @@ class CategoryService:
             setattr(category, key, value)
             
         await self.db.commit()
-        await self.db.refresh(category)
+        await self.db.refresh(category, ["sub_categories"])
         self.invalidate_cache()
         return category
 
