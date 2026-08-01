@@ -84,7 +84,7 @@ class LocalLLMEngine:
                     n_threads=threads,
                     n_gpu_layers=0, # Force CPU
                     logits_all=False,
-                    flash_attn=True, # Speeds up KV cache for Gemma architectures
+                    flash_attn=False, # Disabled: prevents GGML SWA assertion crash on CPU
                     verbose=False
                 )
                 logger.info(f"Local LLM engine initialized (ctx: {settings.LOCAL_LLM_CONTEXT}, threads: {threads}).")
@@ -108,21 +108,35 @@ class LocalLLMEngine:
             return None
             
         try:
-            # Format prompt for Gemma 4
-            formatted_prompt = f"<|turn>system\n{system_prompt} <turn|>\n<|turn>user\n{prompt} <turn|>\n<|turn>model\n"
-            
             logger.debug(f"LocalLLMEngine: Starting inference with Gemma 4...")
             import time
             start_t = time.perf_counter()
-            output = model(
-                formatted_prompt,
-                max_tokens=512, # Optimized for JSON response with more prompt headroom
-                temperature=temperature,
-                stop=["<turn|>", "<|turn>", "<|im_end|>", "<|endoftext|>"],
-                echo=False
-            )
+            
+            # Use native chat completion API to handle GGUF chat template safely
+            try:
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                messages.append({"role": "user", "content": prompt})
+
+                output = model.create_chat_completion(
+                    messages=messages,
+                    max_tokens=512,
+                    temperature=temperature
+                )
+                raw_text = output['choices'][0]['message']['content'].strip()
+            except Exception as chat_err:
+                logger.warning(f"LocalLLMEngine: create_chat_completion failed ({chat_err}), falling back to direct prompt execution.")
+                formatted_prompt = f"System: {system_prompt}\nUser: {prompt}\nAssistant:"
+                output = model(
+                    formatted_prompt,
+                    max_tokens=512,
+                    temperature=temperature,
+                    echo=False
+                )
+                raw_text = output['choices'][0]['text'].strip()
+
             inf_time = (time.perf_counter() - start_t) * 1000
-            raw_text = output['choices'][0]['text'].strip()
             text = self._strip_thoughts(raw_text)
             logger.info(f"LocalLLMEngine: Inference complete. Took {inf_time:.2f}ms. Generated {len(text)} characters.")
             return text
