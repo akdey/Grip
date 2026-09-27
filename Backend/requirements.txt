@@ -2,7 +2,8 @@
 llama-cpp-python==0.2.85
 fastapi
 uvicorn
-sqlalchemy
+sqlalchemy[asyncio]
+greenlet
 asyncpg
 aiosqlite
 alembic
