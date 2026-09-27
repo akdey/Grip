@@ -353,6 +353,12 @@ class TransactionService:
         txn.is_settled = not txn.is_settled
         await self.db.commit()
         
+        try:
+            from app.features.analytics.service import AnalyticsService
+            AnalyticsService._safe_spend_cache.pop(user_id, None)
+        except Exception:
+            pass
+            
         txns = await self._attach_icons([txn])
         return txns[0]
 

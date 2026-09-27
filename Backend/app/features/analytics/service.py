@@ -157,7 +157,8 @@ class AnalyticsService:
             
             # 1. Execute multiple independent checks sequentially to avoid concurrency conflicts
             ledger_data = await self.bill_service.get_obligations_ledger(db, user_id, days_ahead=days_till_month_end)
-            unbilled_cc = await self.cc_service.get_all_unbilled_for_user(db, user_id)
+            cc_exposure_data = await self.cc_service.get_card_exposure_ledger(db, user_id)
+            unbilled_cc = cc_exposure_data["total_exposure"]
             goal_res = await db.execute(goal_stmt)
 
             # 2. Process Bill/Surety results
@@ -195,7 +196,9 @@ class AnalyticsService:
                 unbilled_cc=unbilled_cc,
                 active_goals=active_goals_total,
                 total_frozen=total_frozen,
-                obligations=all_obligations
+                obligations=all_obligations,
+                card_exposure=cc_exposure_data["items"],
+                card_breakdown=cc_exposure_data["card_breakdown"]
             )
 
 
@@ -286,10 +289,11 @@ class AnalyticsService:
                 .where(Transaction.account_type.in_([AccountType.CASH, AccountType.SAVINGS]))
             )
 
-            # 2. Execute sequentially - only 2 main hits: Mega + Ledger
+            # 2. Execute sequentially - only 2 main hits: Mega + Ledger + CC Exposure
             mega_res = (await db.execute(mega_stmt)).one()
             # We still need the ledger for specific unpaid bills and projections
             ledger_data = await self.bill_service.get_obligations_ledger(db, user_id, days_ahead=days_till_salary)
+            cc_exposure_data = await self.cc_service.get_card_exposure_ledger(db, user_id)
             
             # 3. Process results
             current_balance = mega_res.balance or Decimal("0")
@@ -300,7 +304,7 @@ class AnalyticsService:
             # Extract combined burden components
             unpaid_bills = ledger_data["unpaid_total"]
             projected_surety = ledger_data["projected_total"]
-            unbilled_cc = abs(mega_res.unbilled_cc or Decimal("0"))
+            unbilled_cc = cc_exposure_data["total_exposure"]
             active_goals = mega_res.goals_total or Decimal("0")
             
             total_frozen = unpaid_bills + projected_surety + unbilled_cc + active_goals
@@ -311,7 +315,9 @@ class AnalyticsService:
                 unbilled_cc=unbilled_cc,
                 active_goals=active_goals,
                 total_frozen=total_frozen,
-                obligations=ledger_data["items"]
+                obligations=ledger_data["items"],
+                card_exposure=cc_exposure_data["items"],
+                card_breakdown=cc_exposure_data["card_breakdown"]
             )
             
             # Calculate average daily discretionary expense

@@ -12,6 +12,27 @@ export interface IdentifiedObligation {
     sub_category?: string;
 }
 
+export interface CardExposureItem {
+    id: string;
+    merchant_name: string;
+    amount: number;
+    transaction_date: string;
+    card_id?: string;
+    card_name?: string;
+    last_four_digits?: string;
+    category?: string;
+    sub_category?: string;
+    status: string;
+}
+
+export interface CardExposureSummary {
+    card_id?: string;
+    card_name: string;
+    last_four_digits?: string;
+    amount: number;
+    count: number;
+}
+
 export interface SafeToSpend {
     current_balance: number;
     frozen_funds: {
@@ -21,6 +42,8 @@ export interface SafeToSpend {
         active_goals: number;
         total_frozen: number;
         obligations: IdentifiedObligation[];
+        card_exposure?: CardExposureItem[];
+        card_breakdown?: CardExposureSummary[];
     };
     buffer_amount: number;
     safe_to_spend: number;

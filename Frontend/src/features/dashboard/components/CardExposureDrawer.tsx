@@ -1,0 +1,223 @@
+import React, { memo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown, CreditCard as CardIcon, CheckCircle2, Circle, Layers } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import type { SafeToSpend, CardExposureItem } from '../hooks';
+import { useToggleSettledStatus } from '../../transactions/hooks';
+
+interface CardExposureDrawerProps {
+    isOpen: boolean;
+    onClose: () => void;
+    safeToSpend: SafeToSpend | undefined;
+    formatCurrency: (amount: number) => string;
+}
+
+export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
+    isOpen,
+    onClose,
+    safeToSpend,
+    formatCurrency
+}) => {
+    const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+    const toggleSettledMutation = useToggleSettledStatus();
+
+    const exposureItems = safeToSpend?.frozen_funds?.card_exposure || [];
+    const cardBreakdown = safeToSpend?.frozen_funds?.card_breakdown || [];
+    const totalExposure = Number(safeToSpend?.frozen_funds?.unbilled_cc || 0);
+
+    const filteredItems = selectedCardId
+        ? exposureItems.filter(item => (item.card_id || 'unassigned') === selectedCardId)
+        : exposureItems;
+
+    const parseDateSafe = (dateStr: string) => {
+        try {
+            return parseISO(dateStr);
+        } catch {
+            return new Date(dateStr);
+        }
+    };
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-[2000] flex justify-center pointer-events-none">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
+                    />
+                    <motion.div
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
+                    >
+                        {/* Header */}
+                        <div className="p-6 sm:p-10 border-b border-white/10 flex items-center justify-between bg-gradient-to-b from-white/[0.05] to-transparent shrink-0">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-3">
+                                    <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic">Card Exposure Ledger</h2>
+                                    <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                                        Active CC Swipes
+                                    </span>
+                                </div>
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[4px] mt-1">Unsettled credit card charges & debt</p>
+                            </div>
+                            <button
+                                onClick={onClose}
+                                className="w-14 h-14 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white transition-all shadow-xl group"
+                                aria-label="Close card exposure ledger"
+                            >
+                                <ChevronDown size={28} className="group-hover:translate-y-0.5 transition-transform" />
+                            </button>
+                        </div>
+
+                        {/* Content Area */}
+                        <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-6 custom-scrollbar">
+                            {/* Card Breakdown Pills/Cards */}
+                            {cardBreakdown.length > 0 && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between px-1">
+                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[3px]">Cards in Exposure</span>
+                                        {selectedCardId && (
+                                            <button
+                                                onClick={() => setSelectedCardId(null)}
+                                                className="text-[9px] font-bold text-amber-400 uppercase tracking-wider hover:underline"
+                                            >
+                                                Show All Cards
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {cardBreakdown.map((card) => {
+                                            const isSelected = selectedCardId === (card.card_id || 'unassigned');
+                                            return (
+                                                <div
+                                                    key={card.card_id || 'unassigned'}
+                                                    onClick={() => setSelectedCardId(isSelected ? null : (card.card_id || 'unassigned'))}
+                                                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group active:scale-[0.98] ${
+                                                        isSelected
+                                                            ? 'bg-amber-500/10 border-amber-500/30'
+                                                            : 'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                                                            <CardIcon size={16} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-black text-white uppercase tracking-tight line-clamp-1">{card.card_name}</p>
+                                                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">
+                                                                {card.last_four_digits ? `•••• ${card.last_four_digits}` : 'Unassigned'} • {card.count} {card.count === 1 ? 'swipe' : 'swipes'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-sm font-black text-amber-400 tracking-tighter">
+                                                            {formatCurrency(card.amount)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Section Header for Items */}
+                            <div className="flex items-center justify-between px-1 pt-2">
+                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[3px]">
+                                    {selectedCardId ? 'Filtered Swipes' : 'All Unsettled Swipes'} ({filteredItems.length})
+                                </span>
+                                <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">
+                                    Click checkmark to settle
+                                </span>
+                            </div>
+
+                            {/* Swipes List */}
+                            <div className="space-y-3">
+                                {filteredItems.length > 0 ? (
+                                    filteredItems.map((item: CardExposureItem) => (
+                                        <div
+                                            key={item.id}
+                                            className="p-4 rounded-3xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between group hover:bg-white/[0.04] transition-all"
+                                        >
+                                            <div className="flex items-center gap-4 min-w-0">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleSettledMutation.mutate(item.id);
+                                                    }}
+                                                    disabled={toggleSettledMutation.isPending}
+                                                    title="Mark this transaction as settled"
+                                                    className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all shrink-0 ${
+                                                        toggleSettledMutation.isPending
+                                                            ? 'opacity-40 cursor-not-allowed bg-white/[0.05]'
+                                                            : 'bg-amber-500/10 text-amber-400 hover:bg-emerald-500/20 hover:text-emerald-400 active:scale-90 cursor-pointer'
+                                                    }`}
+                                                >
+                                                    <Circle size={18} />
+                                                </button>
+
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-black text-white uppercase tracking-tight truncate">
+                                                        {item.merchant_name}
+                                                    </p>
+                                                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                            {item.card_name}
+                                                            {item.last_four_digits ? ` •••• ${item.last_four_digits}` : ''}
+                                                        </span>
+                                                        <span className="text-[8px] text-gray-600 font-bold uppercase tracking-wider">
+                                                            {format(parseDateSafe(item.transaction_date), 'MMM dd')}
+                                                        </span>
+                                                        <span className="text-[8px] text-amber-400/70 font-black uppercase tracking-wider">
+                                                            • {item.status}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="text-right shrink-0 ml-4">
+                                                <p className="text-sm font-black text-white tracking-tighter">
+                                                    {formatCurrency(item.amount)}
+                                                </p>
+                                                <p className="text-[7px] text-gray-700 font-bold uppercase tracking-widest mt-0.5">
+                                                    {item.sub_category || item.category || 'General'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="py-20 text-center">
+                                        <CardIcon size={36} className="mx-auto text-gray-800 mb-4 opacity-20" />
+                                        <p className="text-gray-600 font-black uppercase tracking-[4px] text-xs">No card exposure identified</p>
+                                        <p className="text-gray-700 text-[10px] font-medium mt-1">All credit card swipes are fully settled</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Footer Total */}
+                        <div className="p-8 sm:p-12 bg-white/[0.02] border-t border-white/[0.05] shrink-0">
+                            <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Total Card Exposure</span>
+                                    <span className="text-[9px] text-gray-700 font-bold uppercase tracking-widest">
+                                        Sum of all unsettled swipes
+                                    </span>
+                                </div>
+                                <span className="text-2xl font-black text-amber-400 tracking-tighter">
+                                    {formatCurrency(totalExposure)}
+                                </span>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+    );
+});

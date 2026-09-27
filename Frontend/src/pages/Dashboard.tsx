@@ -27,6 +27,7 @@ import { OutflowLedger } from '../features/dashboard/components/OutflowLedger';
 import { SafeToSpendHero } from '../features/dashboard/components/SafeToSpendHero';
 import { FrozenAllocation } from '../features/dashboard/components/FrozenAllocation';
 import { AIForecast } from '../features/dashboard/components/AIForecast';
+import { CardExposureDrawer } from '../features/dashboard/components/CardExposureDrawer';
 
 import { Logo } from '../components/ui/Logo';
 
@@ -36,18 +37,19 @@ const Dashboard: React.FC = () => {
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showForecastDetails, setShowForecastDetails] = useState(false);
     const [showObligations, setShowObligations] = useState(false);
+    const [showCardExposure, setShowCardExposure] = useState(false);
     const [scope, setScope] = useState('month');
     const [showScopeMenu, setShowScopeMenu] = useState(false);
 
     // Lock body scroll when any modal is open
     React.useEffect(() => {
-        if (showForecastDetails || showObligations || showAuthModal) {
+        if (showForecastDetails || showObligations || showCardExposure || showAuthModal) {
             document.body.style.overflow = 'hidden';
             return () => {
                 document.body.style.overflow = '';
             };
         }
-    }, [showForecastDetails, showObligations, showAuthModal]);
+    }, [showForecastDetails, showObligations, showCardExposure, showAuthModal]);
 
     const togglePrivacy = React.useCallback(() => {
         if (showSensitive) {
@@ -186,6 +188,7 @@ const Dashboard: React.FC = () => {
                     isLoading={isSafeLoading}
                     formatCurrency={formatCurrency}
                     onShowObligations={() => setShowObligations(true)}
+                    onShowCardExposure={() => setShowCardExposure(true)}
                 />
 
                 <AIForecast
@@ -412,6 +415,14 @@ const Dashboard: React.FC = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Card Exposure Ledger Drawer */}
+            <CardExposureDrawer
+                isOpen={showCardExposure}
+                onClose={() => setShowCardExposure(false)}
+                safeToSpend={safeToSpend}
+                formatCurrency={formatCurrency}
+            />
         </div >
     );
 };

@@ -34,6 +34,25 @@ class IdentifiedObligation(BaseModel):
     sub_category: Optional[str] = None
     source_id: Optional[str] = None
 
+class CardExposureItem(BaseModel):
+    id: str
+    merchant_name: str
+    amount: Decimal
+    transaction_date: date
+    card_id: Optional[str] = None
+    card_name: Optional[str] = None
+    last_four_digits: Optional[str] = None
+    category: Optional[str] = None
+    sub_category: Optional[str] = None
+    status: str = "UNSETTLED"
+
+class CardExposureSummary(BaseModel):
+    card_id: Optional[str] = None
+    card_name: str
+    last_four_digits: Optional[str] = None
+    amount: Decimal
+    count: int
+
 class FrozenFundsBreakdown(BaseModel):
     unpaid_bills: Decimal
     projected_surety: Decimal
@@ -41,6 +60,8 @@ class FrozenFundsBreakdown(BaseModel):
     active_goals: Decimal = Decimal(0)
     total_frozen: Decimal
     obligations: List[IdentifiedObligation] = []
+    card_exposure: List[CardExposureItem] = []
+    card_breakdown: List[CardExposureSummary] = []
 
 class SafeToSpendResponse(BaseModel):
     current_balance: Decimal

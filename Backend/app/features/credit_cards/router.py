@@ -40,6 +40,16 @@ async def list_credit_cards(
     return cards
 
 
+@router.get("/exposure")
+async def get_card_exposure(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[CreditCardService, Depends()]
+):
+    """Get all unsettled credit card swipes and active exposure breakdown."""
+    return await service.get_card_exposure_ledger(db, current_user.id)
+
+
 @router.get("/{card_id}", response_model=CreditCardResponse)
 async def get_credit_card(
     card_id: UUID,

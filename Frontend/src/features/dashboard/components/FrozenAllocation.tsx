@@ -7,13 +7,15 @@ interface FrozenAllocationProps {
     isLoading: boolean;
     formatCurrency: (amount: number) => string;
     onShowObligations: () => void;
+    onShowCardExposure?: () => void;
 }
 
 export const FrozenAllocation: React.FC<FrozenAllocationProps> = memo(({
     safeToSpend,
     isLoading,
     formatCurrency,
-    onShowObligations
+    onShowObligations,
+    onShowCardExposure
 }) => {
     if (isLoading) {
         return (
@@ -64,9 +66,12 @@ export const FrozenAllocation: React.FC<FrozenAllocationProps> = memo(({
                     </div>
                 </div>
 
-                <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all">
+                <div
+                    onClick={onShowCardExposure}
+                    className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all cursor-pointer group active:scale-[0.98]"
+                >
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-inner">
+                        <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
                             <Lock size={18} />
                         </div>
                         <div>
@@ -74,9 +79,12 @@ export const FrozenAllocation: React.FC<FrozenAllocationProps> = memo(({
                             <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mt-0.5">Pending CC Swipes</p>
                         </div>
                     </div>
-                    <div className="text-right">
-                        <p className="font-black text-white text-sm tracking-tighter">{formatCurrency(Number(safeToSpend?.frozen_funds?.unbilled_cc) || 0)}</p>
-                        <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Settlement Limit</p>
+                    <div className="text-right flex items-center gap-3">
+                        <div>
+                            <p className="font-black text-white text-sm tracking-tighter">{formatCurrency(Number(safeToSpend?.frozen_funds?.unbilled_cc) || 0)}</p>
+                            <p className="text-[7px] text-gray-700 font-bold uppercase tracking-wider mt-0.5">Settlement Limit</p>
+                        </div>
+                        <ArrowRight size={14} className="text-gray-700 group-hover:text-amber-400 group-hover:translate-x-1 transition-all" />
                     </div>
                 </div>
             </div>

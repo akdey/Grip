@@ -160,30 +160,104 @@ class CreditCardService:
             utilization_percentage=utilization
         )
     
+    async def get_card_exposure_ledger(
+        self,
+        db: AsyncSession,
+        user_id: UUID
+    ) -> dict:
+        """
+        Get all unsettled credit card transactions representing card exposure.
+        Returns: {
+            "total_exposure": Decimal,
+            "items": List[CardExposureItem],
+            "card_breakdown": List[CardExposureSummary]
+        }
+        """
+        from sqlalchemy import or_
+        from app.features.transactions.models import AccountType
+        from app.features.analytics.schemas import CardExposureItem, CardExposureSummary
+        
+        stmt = (
+            select(Transaction, CreditCard)
+            .outerjoin(CreditCard, Transaction.credit_card_id == CreditCard.id)
+            .where(Transaction.user_id == user_id)
+            .where(Transaction.category != "Income")
+            .where(
+                or_(
+                    Transaction.account_type == AccountType.CREDIT_CARD,
+                    Transaction.credit_card_id.isnot(None)
+                )
+            )
+            .where(Transaction.is_settled == False)
+            .where(Transaction.is_surety == False)
+            .order_by(Transaction.transaction_date.desc().nulls_last(), Transaction.created_at.desc())
+        )
+        
+        res = await db.execute(stmt)
+        rows = res.all()
+        
+        items = []
+        total_exposure = Decimal("0.00")
+        card_group_map = {}
+        
+        for txn, card in rows:
+            amt = abs(txn.amount or Decimal("0.00"))
+            total_exposure += amt
+            
+            card_id_str = str(card.id) if card else None
+            card_name = card.card_name if card else "Credit Card"
+            card_last_four = card.last_four_digits if card else None
+            
+            t_date = txn.transaction_date or (txn.created_at.date() if txn.created_at else date.today())
+            
+            items.append(CardExposureItem(
+                id=str(txn.id),
+                merchant_name=txn.merchant_name or txn.remarks or txn.category or "Credit Card Transaction",
+                amount=amt,
+                transaction_date=t_date,
+                card_id=card_id_str,
+                card_name=card_name,
+                last_four_digits=card_last_four,
+                category=txn.category,
+                sub_category=txn.sub_category,
+                status="UNSETTLED"
+            ))
+            
+            group_key = card_id_str or "unassigned"
+            if group_key not in card_group_map:
+                card_group_map[group_key] = {
+                    "card_id": card_id_str,
+                    "card_name": card_name,
+                    "last_four_digits": card_last_four,
+                    "amount": Decimal("0.00"),
+                    "count": 0
+                }
+            card_group_map[group_key]["amount"] += amt
+            card_group_map[group_key]["count"] += 1
+            
+        card_breakdown = [
+            CardExposureSummary(
+                card_id=data["card_id"],
+                card_name=data["card_name"],
+                last_four_digits=data["last_four_digits"],
+                amount=data["amount"],
+                count=data["count"]
+            )
+            for data in card_group_map.values()
+        ]
+        card_breakdown.sort(key=lambda x: x.amount, reverse=True)
+        
+        return {
+            "total_exposure": total_exposure,
+            "items": items,
+            "card_breakdown": card_breakdown
+        }
+
     async def get_all_unbilled_for_user(
         self,
         db: AsyncSession,
         user_id: UUID
     ) -> Decimal:
-        """Get total unbilled amount across all active credit cards for a user."""
-        # 1. Get all active card IDs for this user
-        card_stmt = select(CreditCard.id).where(CreditCard.user_id == user_id, CreditCard.is_active == True)
-        card_res = await db.execute(card_stmt)
-        card_ids = [row[0] for row in card_res.all()]
-        
-        if not card_ids:
-            return Decimal("0.00")
-            
-        # 2. Get sum of all unsettled transactions for these cards
-        # Note: We use is_settled=False as the source of truth for unbilled debt
-        stmt = (
-            select(func.sum(Transaction.amount))
-            .where(Transaction.credit_card_id.in_(card_ids))
-            .where(Transaction.is_settled == False)
-        )
-        
-        result = await db.execute(stmt)
-        amount = result.scalar() or Decimal("0.00")
-        
-        # Expenses are negative, so negate to get positive debt amount
-        return -amount
+        """Get total unbilled amount across all credit card exposure for a user."""
+        res = await self.get_card_exposure_ledger(db, user_id)
+        return res["total_exposure"]
