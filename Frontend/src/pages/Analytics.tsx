@@ -6,6 +6,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns
 import { useVariance, useInvestments, useMonthlySummary, useSpendTrends, useSafeToSpend } from '../features/dashboard/hooks';
 import { useCategories } from '../features/transactions/categoryHooks';
 import { SpendTrendChart } from '../components/analytics/SpendTrendChart';
+import { MonthlyExpenseCalendar } from '../components/analytics/MonthlyExpenseCalendar';
 import { Card } from '../components/ui/Card';
 
 const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
@@ -278,6 +279,12 @@ const Analytics: React.FC = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Monthly Expense Calendar Matrix */}
+                <MonthlyExpenseCalendar
+                    currentMonth={referenceDate}
+                    showSensitive={showSensitive}
+                />
 
                 {/* Outflow Analysis Section */}
                 <div className="space-y-6">

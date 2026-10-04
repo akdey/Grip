@@ -15,7 +15,11 @@ from app.features.analytics.schemas import (
     VarianceAnalysis,
     FrozenFundsBreakdown,
     SafeToSpendResponse,
-    MonthlySummaryResponse
+    MonthlySummaryResponse,
+    LiquidityBreakdown,
+    LiquiditySummary,
+    AccrualBurnSummary,
+    AssetMovement
 )
 from app.features.bills.service import BillService
 from app.features.credit_cards.service import CreditCardService
@@ -63,14 +67,15 @@ class AnalyticsService:
         current_range = get_month_date_range(target_date)
         previous_range = get_previous_month_date_range(target_date)
         
-        # Prepare Current month spending query (Accrual expenses: exclude Income and Debt Transfer)
+        # Prepare Current month spending query (Accrual expenses: exclude Income, Investment, and Debt Transfer)
         current_stmt = (
             select(
                 Transaction.category,
                 func.sum(func.abs(Transaction.amount)).label("total")
             )
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category.notin_(["Income"]))
+            .where(Transaction.category.notin_(["Income", "Investment"]))
+            .where(~func.lower(Transaction.category).like("%invest%"))
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= current_range["month_start"])
@@ -78,14 +83,15 @@ class AnalyticsService:
             .group_by(Transaction.category)
         )
         
-        # Prepare Previous month spending query (Accrual expenses: exclude Income and Debt Transfer)
+        # Prepare Previous month spending query (Accrual expenses: exclude Income, Investment, and Debt Transfer)
         previous_stmt = (
             select(
                 Transaction.category,
                 func.sum(func.abs(Transaction.amount)).label("total")
             )
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category.notin_(["Income"]))
+            .where(Transaction.category.notin_(["Income", "Investment"]))
+            .where(~func.lower(Transaction.category).like("%invest%"))
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= previous_range["month_start"])
@@ -493,13 +499,16 @@ class AnalyticsService:
             period_label = start_date.strftime("%B")
 
         # Consolidated Summary Query adhering to strict Accrual vs Cash Accounting:
-        # 1. DIRECT_EXPENSE: Outflow from liquid accounts (SAVINGS, CASH) for goods/services
-        # 2. CREDIT_EXPENSE: Outflow from liability accounts (CREDIT_CARD) for goods/services
+        # Consolidated Summary Query adhering to strict Accrual vs Cash Accounting:
+        # 1. DIRECT_EXPENSE: Outflow from liquid accounts (SAVINGS, CASH) for goods/services (strictly excluding Investments & CC payments)
+        # 2. CREDIT_EXPENSE: Outflow from liability accounts (CREDIT_CARD) for goods/services (strictly excluding Investments & CC payments)
         # 3. DEBT_TRANSFER: Movement from liquid account to settle credit card liability (Sub Category = "Credit Card Payment", Account = SAVINGS/CASH)
-        # 4. Liquid Inflows: Inflows to SAVINGS/CASH
+        # 4. CAPITAL_OUTFLOW: Capital moved from liquid accounts into wealth accumulation / investments (Category = "Investment", Account = SAVINGS/CASH)
+        # 5. Liquid Inflows: Inflows to SAVINGS/CASH
         is_liquid = Transaction.account_type.in_([AccountType.SAVINGS, AccountType.CASH])
         is_cc = Transaction.account_type == AccountType.CREDIT_CARD
         is_cc_payment = func.lower(Transaction.sub_category) == "credit card payment"
+        is_investment = func.lower(Transaction.category).like("%invest%")
         is_outflow = Transaction.amount < 0
         is_inflow = (Transaction.category == "Income") | (Transaction.amount > 0)
 
@@ -508,15 +517,23 @@ class AnalyticsService:
             else_=0
         )
         direct_expense_case = case(
-            ((is_liquid & (Transaction.category != "Income") & ~is_cc_payment & is_outflow), func.abs(Transaction.amount)),
+            ((is_liquid & (Transaction.category != "Income") & ~is_investment & ~is_cc_payment & is_outflow), func.abs(Transaction.amount)),
             else_=0
         )
         credit_expense_case = case(
-            ((is_cc & (Transaction.category != "Income") & ~is_cc_payment & is_outflow), func.abs(Transaction.amount)),
+            ((is_cc & (Transaction.category != "Income") & ~is_investment & ~is_cc_payment & is_outflow), func.abs(Transaction.amount)),
             else_=0
         )
         debt_transfer_case = case(
             ((is_liquid & is_cc_payment & is_outflow), func.abs(Transaction.amount)),
+            else_=0
+        )
+        capital_outflow_case = case(
+            ((is_liquid & is_investment & is_outflow), func.abs(Transaction.amount)),
+            else_=0
+        )
+        unsettled_credit_case = case(
+            ((is_cc & (Transaction.category != "Income") & ~is_investment & ~is_cc_payment & is_outflow & (Transaction.is_settled == False)), func.abs(Transaction.amount)),
             else_=0
         )
 
@@ -525,7 +542,9 @@ class AnalyticsService:
                 func.coalesce(func.sum(liquid_inflows_case), 0).label("liquid_inflows"),
                 func.coalesce(func.sum(direct_expense_case), 0).label("direct_expense"),
                 func.coalesce(func.sum(credit_expense_case), 0).label("credit_expense"),
-                func.coalesce(func.sum(debt_transfer_case), 0).label("debt_transfer")
+                func.coalesce(func.sum(debt_transfer_case), 0).label("debt_transfer"),
+                func.coalesce(func.sum(capital_outflow_case), 0).label("capital_outflow"),
+                func.coalesce(func.sum(unsettled_credit_case), 0).label("unsettled_credit")
             )
             .where(Transaction.user_id == user_id)
             .where(Transaction.transaction_date >= start_date)
@@ -538,25 +557,25 @@ class AnalyticsService:
         direct_expense = res.direct_expense or Decimal("0")
         credit_expense = res.credit_expense or Decimal("0")
         debt_transfer = res.debt_transfer or Decimal("0")
+        capital_investments = res.capital_outflow or Decimal("0")
+        unsettled_credit = res.unsettled_credit or Decimal("0")
         
-        # A. Accrual View ("Expenses Incurred"):
+        # A. Accrual View ("Lifestyle Consumption Burn" / "Expenses Incurred"):
         # Formula: SUM(DIRECT_EXPENSE) + SUM(CREDIT_EXPENSE)
-        # Rule: Strictly EXCLUDE all DEBT_TRANSFER (Credit Card Payments). Paying a credit card bill is a balance sheet settlement, NOT an expense.
+        # Rule: Strictly EXCLUDE all DEBT_TRANSFER (Balance sheet settlement) and CAPITAL_OUTFLOW (Wealth building).
         accrual_expense = direct_expense + credit_expense
         
         # B. Prior Settlement ("Debt Servicing"):
         # Formula: SUM(DEBT_TRANSFER)
-        # Represents: Cash paid from liquid accounts this period to pay off credit card debt incurred in previous periods.
         prior_period_settlement = debt_transfer
         
         # C. Cash Outflow Ledger ("Actual Liquid Cash Drain"):
-        # Formula: SUM(DIRECT_EXPENSE) + SUM(DEBT_TRANSFER)
-        # Represents: The total liquid cash that actually exited bank and cash accounts during this period.
-        # Rule: Strictly EXCLUDE CREDIT_EXPENSE (new card swipes do not pull cash from the bank until settled).
-        cash_outflow = direct_expense + debt_transfer
+        # Formula: SUM(DIRECT_EXPENSE) + SUM(DEBT_TRANSFER) + SUM(CAPITAL_OUTFLOW)
+        # Represents: The total liquid cash that exited bank and cash accounts during this period.
+        cash_outflow = direct_expense + debt_transfer + capital_investments
         
         # D. Gross Liquid Balance:
-        # Formula: (Inflows to SAVINGS/CASH) - (DIRECT_EXPENSE + DEBT_TRANSFER)
+        # Formula: (Inflows to SAVINGS/CASH) - (DIRECT_EXPENSE + DEBT_TRANSFER + CAPITAL_OUTFLOW)
         gross_liquid_balance = total_income - cash_outflow
         
         # E. Cumulative Liquid Account Balance (Bank + Cash) up to end of this period:
@@ -569,7 +588,26 @@ class AnalyticsService:
         cum_res = await db.scalar(cum_stmt)
         cumulative_liquid_balance = cum_res or Decimal("0")
         
+        period_key = start_date.strftime("%Y-%m")
+
+        liquidity_summary = LiquiditySummary(
+            total_cash_outflow=cash_outflow,
+            breakdown=LiquidityBreakdown(
+                direct_lifestyle_expenses=direct_expense,
+                capital_investments=capital_investments,
+                debt_settlements=debt_transfer
+            )
+        )
+        accrual_burn_summary = AccrualBurnSummary(
+            true_consumption_burn=accrual_expense,
+            unsettled_credit_liability=unsettled_credit
+        )
+        asset_movement = AssetMovement(
+            capital_allocated_to_assets=capital_investments
+        )
+
         return MonthlySummaryResponse(
+            period=period_key,
             total_income=total_income,
             total_expense=accrual_expense,
             balance=gross_liquid_balance,
@@ -579,9 +617,13 @@ class AnalyticsService:
             prior_period_settlement=prior_period_settlement,
             direct_expense=direct_expense,
             credit_expense=credit_expense,
+            capital_investments=capital_investments,
             cash_outflow=cash_outflow,
             gross_liquid_balance=gross_liquid_balance,
-            cumulative_liquid_balance=cumulative_liquid_balance
+            cumulative_liquid_balance=cumulative_liquid_balance,
+            liquidity_summary=liquidity_summary,
+            accrual_burn_summary=accrual_burn_summary,
+            asset_movement=asset_movement
         )
 
     async def get_spend_trends(
@@ -618,7 +660,8 @@ class AnalyticsService:
                 func.sum(func.abs(Transaction.amount)).label("amount")
             )
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category.notin_(["Income", "Transfer"]))
+            .where(Transaction.category.notin_(["Income", "Transfer", "Investment"]))
+            .where(~func.lower(Transaction.category).like("%invest%"))
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= start_date)

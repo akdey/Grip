@@ -6,7 +6,8 @@ interface OutflowLedgerProps {
     priorSettlement: number;      // Prior Settlement: SUM(DEBT_TRANSFER)
     directExpense?: number;       // SUM(DIRECT_EXPENSE)
     creditExpense?: number;       // SUM(CREDIT_EXPENSE)
-    cashOutflow?: number;         // Cash Outflow: SUM(DIRECT_EXPENSE) + SUM(DEBT_TRANSFER)
+    capitalInvestments?: number;  // SUM(CAPITAL_OUTFLOW)
+    cashOutflow?: number;         // Cash Outflow: SUM(DIRECT_EXPENSE) + SUM(DEBT_TRANSFER) + SUM(CAPITAL_OUTFLOW)
     isLoading: boolean;
     formatCurrency: (amount: number) => string;
 }
@@ -16,6 +17,7 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
     priorSettlement,
     directExpense,
     creditExpense,
+    capitalInvestments = 0,
     cashOutflow,
     isLoading,
     formatCurrency
@@ -46,7 +48,8 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
     // Resolve unified direct expense (Bank & Cash Spends)
     const resolvedDirect = directExpense !== undefined ? directExpense : Math.max(0, currentExpense - (creditExpense || 0));
     const resolvedCredit = creditExpense !== undefined ? creditExpense : Math.max(0, currentExpense - resolvedDirect);
-    const resolvedCashDrain = cashOutflow !== undefined ? cashOutflow : (resolvedDirect + priorSettlement);
+    const resolvedInvestments = capitalInvestments;
+    const resolvedCashDrain = cashOutflow !== undefined ? cashOutflow : (resolvedDirect + priorSettlement + resolvedInvestments);
 
     const isAccrual = viewMode === 'ACCRUAL';
     const activeTotal = isAccrual ? currentExpense : resolvedCashDrain;
@@ -107,11 +110,11 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
             <div className="space-y-4">
                 {isAccrual ? (
                     <>
-                        {/* Direct Bank Expenses */}
+                        {/* Direct Lifestyle Expenses */}
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center text-[10px]">
                                 <span className="font-bold text-secondary tracking-wide">
-                                    Direct Bank Expenses
+                                    Direct Lifestyle Expenses
                                     <span className="text-[9px] text-text-muted ml-1.5 font-normal">({calcPct(resolvedDirect)})</span>
                                 </span>
                                 <span className="font-black text-primary">{formatCurrency(resolvedDirect)}</span>
@@ -147,11 +150,11 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                     </>
                 ) : (
                     <>
-                        {/* Direct Bank Expenses */}
+                        {/* Direct Lifestyle Expenses */}
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center text-[10px]">
                                 <span className="font-bold text-secondary tracking-wide">
-                                    Direct Bank Expenses
+                                    Direct Lifestyle Expenses
                                     <span className="text-[9px] text-text-muted ml-1.5 font-normal">({calcPct(resolvedDirect)})</span>
                                 </span>
                                 <span className="font-black text-primary">{formatCurrency(resolvedDirect)}</span>
@@ -184,6 +187,27 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                                 />
                             </div>
                         </div>
+
+                        {/* Capital Investments (SIP, RD, FD, Wealth) */}
+                        {resolvedInvestments > 0 && (
+                            <div className="space-y-1.5">
+                                <div className="flex justify-between items-center text-[10px]">
+                                    <span className="font-bold text-secondary tracking-wide">
+                                        Capital Investments (SIP / RD)
+                                        <span className="text-[9px] text-text-muted ml-1.5 font-normal">({calcPct(resolvedInvestments)})</span>
+                                    </span>
+                                    <span className="font-black text-primary">{formatCurrency(resolvedInvestments)}</span>
+                                </div>
+                                <div className="h-1.5 w-full bg-surface-pill rounded-full overflow-hidden">
+                                    <motion.div
+                                        initial={{ scaleX: 0 }}
+                                        animate={{ scaleX: Math.min(1, resolvedInvestments / maxVal) }}
+                                        style={{ transformOrigin: 'left' }}
+                                        className="h-full bg-emerald-500/80 rounded-full w-full"
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </>
                 )}
             </div>

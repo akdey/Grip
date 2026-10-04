@@ -72,7 +72,24 @@ class SafeToSpendResponse(BaseModel):
     recommendation: str
     status: str # "success", "warning", "critical", "negative"
 
+class LiquidityBreakdown(BaseModel):
+    direct_lifestyle_expenses: Decimal = Decimal(0)
+    capital_investments: Decimal = Decimal(0)
+    debt_settlements: Decimal = Decimal(0)
+
+class LiquiditySummary(BaseModel):
+    total_cash_outflow: Decimal = Decimal(0)
+    breakdown: LiquidityBreakdown
+
+class AccrualBurnSummary(BaseModel):
+    true_consumption_burn: Decimal = Decimal(0)
+    unsettled_credit_liability: Decimal = Decimal(0)
+
+class AssetMovement(BaseModel):
+    capital_allocated_to_assets: Decimal = Decimal(0)
+
 class MonthlySummaryResponse(BaseModel):
+    period: Optional[str] = None
     total_income: Decimal
     total_expense: Decimal
     balance: Decimal
@@ -82,9 +99,13 @@ class MonthlySummaryResponse(BaseModel):
     prior_period_settlement: Decimal = Decimal(0)
     direct_expense: Decimal = Decimal(0)
     credit_expense: Decimal = Decimal(0)
+    capital_investments: Decimal = Decimal(0)
     cash_outflow: Decimal = Decimal(0)
     gross_liquid_balance: Decimal = Decimal(0)
     cumulative_liquid_balance: Decimal = Decimal(0)
+    liquidity_summary: Optional[LiquiditySummary] = None
+    accrual_burn_summary: Optional[AccrualBurnSummary] = None
+    asset_movement: Optional[AssetMovement] = None
 
 class SpendTrendPoint(BaseModel):
     date: date

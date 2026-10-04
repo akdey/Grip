@@ -340,9 +340,9 @@ const More: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Month Card */}
+                        {/* Month / Analytics Card */}
                         <div
-                            onClick={() => navigate('/transactions?view=month')}
+                            onClick={() => navigate('/analytics')}
                             className="p-3.5 bg-surface-subtle rounded-2xl border border-border-subtle hover:bg-surface-hover transition-all cursor-pointer group active:scale-[0.98]"
                         >
                             <div className="flex items-center justify-between mb-2">
@@ -351,8 +351,8 @@ const More: React.FC = () => {
                                         <Calendar size={14} />
                                     </div>
                                     <div>
-                                        <span className="text-[11px] font-black text-primary uppercase tracking-wider block">Calendar</span>
-                                        <span className="text-[8px] text-text-muted font-bold uppercase tracking-wider block">This Month</span>
+                                        <span className="text-[11px] font-black text-primary uppercase tracking-wider block">Monthly Flow</span>
+                                        <span className="text-[8px] text-text-muted font-bold uppercase tracking-wider block">Analytics View</span>
                                     </div>
                                 </div>
                                 <ArrowUpRight size={14} className="text-text-muted group-hover:text-primary transition-colors" />

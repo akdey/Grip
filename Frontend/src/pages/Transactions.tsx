@@ -53,9 +53,22 @@ const Transactions: React.FC = () => {
 
     // Filter State
     const [limit, setLimit] = useState(200);
-    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [currentMonth, setCurrentMonth] = useState(() => {
+        const d = searchParams.get('date');
+        if (d) {
+            try { return parseISO(d); } catch (e) {}
+        }
+        return new Date();
+    });
     const [isFilterOpen, setFilterOpen] = useState(false);
     const [isSortOpen, setIsSortOpen] = useState(false);
+
+    useEffect(() => {
+        const d = searchParams.get('date');
+        if (d) {
+            try { setCurrentMonth(parseISO(d)); } catch (e) {}
+        }
+    }, [searchParams]);
 
     // Sorting & Grouping State
     const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc' | 'category_asc' | 'merchant_asc'>('date_desc');

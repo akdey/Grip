@@ -60,6 +60,7 @@ export interface VarianceAnalysis {
 }
 
 export interface MonthlySummary {
+    period?: string;
     total_income: number;
     total_expense: number;
     balance: number;
@@ -69,9 +70,25 @@ export interface MonthlySummary {
     prior_period_settlement: number;
     direct_expense?: number;
     credit_expense?: number;
+    capital_investments?: number;
     cash_outflow?: number;
     gross_liquid_balance?: number;
     cumulative_liquid_balance?: number;
+    liquidity_summary?: {
+        total_cash_outflow: number;
+        breakdown: {
+            direct_lifestyle_expenses: number;
+            capital_investments: number;
+            debt_settlements: number;
+        };
+    };
+    accrual_burn_summary?: {
+        true_consumption_burn: number;
+        unsettled_credit_liability: number;
+    };
+    asset_movement?: {
+        capital_allocated_to_assets: number;
+    };
 }
 
 export interface InvestmentSummary {

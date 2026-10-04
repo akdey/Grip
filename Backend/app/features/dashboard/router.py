@@ -79,7 +79,7 @@ async def get_investments_dashboard(
     stmt = (
         select(Transaction.sub_category, func.sum(Transaction.amount))
         .where(Transaction.user_id == current_user.id)
-        .where(Transaction.category == "Investment")
+        .where(func.lower(Transaction.category).like("%invest%"))
     )
 
     if month and year:

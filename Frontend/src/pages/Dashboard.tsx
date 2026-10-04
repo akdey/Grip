@@ -174,6 +174,7 @@ const Dashboard: React.FC = () => {
                     priorSettlement={Number(summary?.prior_period_settlement || 0)}
                     directExpense={Number(summary?.direct_expense || 0)}
                     creditExpense={Number(summary?.credit_expense || 0)}
+                    capitalInvestments={Number(summary?.capital_investments || 0)}
                     cashOutflow={Number(summary?.cash_outflow || 0)}
                     isLoading={isSummaryLoading}
                     formatCurrency={formatCurrency}
