@@ -164,6 +164,15 @@ class TransactionService:
             txn.sub_category = verification.sub_category
             if verification.amount is not None:
                 txn.amount = verification.amount
+            if verification.account_type is not None:
+                txn.account_type = verification.account_type
+                if verification.account_type != "CREDIT_CARD":
+                    txn.credit_card_id = None
+            if verification.credit_card_id is not None:
+                txn.credit_card_id = verification.credit_card_id
+            if verification.transaction_date is not None:
+                t_date = verification.transaction_date.date() if hasattr(verification.transaction_date, "date") else verification.transaction_date
+                txn.transaction_date = t_date
             txn.is_surety = await self._resolve_surety(verification.sub_category, user_id)
             txn.tags = verification.tags
             txn.remarks = verification.remarks

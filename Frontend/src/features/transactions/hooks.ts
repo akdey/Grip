@@ -78,7 +78,21 @@ export const useToggleSettledStatus = () => {
 export const useVerifyTransaction = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async ({ id, data }: { id: string, data: { category: string, sub_category: string, merchant_name: string, approved: bool, amount?: number } }) => {
+        mutationFn: async ({ id, data }: { 
+            id: string, 
+            data: { 
+                category: string, 
+                sub_category: string, 
+                merchant_name: string, 
+                approved: boolean, 
+                amount?: number,
+                account_type?: string,
+                credit_card_id?: string | null,
+                transaction_date?: string,
+                tags?: string[],
+                remarks?: string
+            } 
+        }) => {
             const { data: response } = await api.patch<Transaction>(`/transactions/${id}/verify`, data);
             return response;
         },

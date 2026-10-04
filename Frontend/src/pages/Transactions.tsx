@@ -423,10 +423,44 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
     const verifyMutation = useVerifyTransaction();
     const dateObj = txn.transaction_date ? parseISO(txn.transaction_date) : new Date(txn.created_at);
 
+    const today = startOfToday();
+    const daysDiff = differenceInCalendarDays(dateObj, today);
+    const absDaysDiff = Math.abs(daysDiff);
+    const isDateOutside3Days = absDaysDiff > 3;
+
+    const hasValidSource = Boolean(
+        txn.account_type === 'SAVINGS' ||
+        txn.account_type === 'ACCOUNT' ||
+        txn.account_type === 'CASH' ||
+        (txn.account_type === 'CREDIT_CARD' && txn.credit_card_id) ||
+        txn.credit_card_id
+    );
+
     if (txn.amount === 0) return null;
 
     const handleApprove = (e: React.MouseEvent) => {
         e.stopPropagation();
+
+        if (!hasValidSource) {
+            alert(
+                'Validation Error: Payment source (Bank, Cash, or Credit Card) is not assigned to this transaction.\n\n' +
+                'Please open and review the transaction to assign a source.'
+            );
+            navigate(`/transactions/${txn.id}`);
+            return;
+        }
+
+        if (isDateOutside3Days) {
+            const direction = daysDiff < 0 ? `${absDaysDiff} days in the past` : `${absDaysDiff} days in the future`;
+            const proceed = window.confirm(
+                `⚠️ Date Verification Warning:\n\n` +
+                `The transaction date (${format(dateObj, 'dd MMM yyyy')}) is ${direction} relative to today.\n\n` +
+                `Sometimes parsers or LLMs pick the wrong date from messages.\n\n` +
+                `Do you want to proceed and approve with this date?`
+            );
+            if (!proceed) return;
+        }
+
         verifyMutation.mutate({
             id: txn.id,
             data: {
@@ -492,8 +526,12 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
                 </p>
                 <div className="flex items-center justify-end gap-1 mt-1.5">
                     {txn.status === 'PENDING' ? (
-                        <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-amber-500/40 text-amber-500 bg-amber-500/10 uppercase tracking-tighter">
-                            Review
+                        <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter ${
+                            !hasValidSource || isDateOutside3Days
+                                ? 'border-amber-500/50 text-amber-400 bg-amber-500/20'
+                                : 'border-amber-500/40 text-amber-500 bg-amber-500/10'
+                        }`}>
+                            {!hasValidSource ? '⚠️ Set Source' : (isDateOutside3Days ? '⚠️ Check Date' : 'Review')}
                         </span>
                     ) : (
                         <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter ${txn.is_manual ? 'border-amber-500/20 text-amber-500/80' : 'border-cyan-500/20 text-cyan-500/80'

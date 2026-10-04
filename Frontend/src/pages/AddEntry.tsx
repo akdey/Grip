@@ -28,9 +28,10 @@ import {
     X,
     Plus,
     Store,
-    Sparkles
+    Sparkles,
+    AlertTriangle
 } from 'lucide-react';
-import { format, parse, parseISO } from 'date-fns';
+import { format, parse, parseISO, startOfToday, differenceInCalendarDays } from 'date-fns';
 import { Drawer } from '../components/ui/Drawer';
 import { CalculatorDrawer } from '../components/ui/CalculatorDrawer';
 import { CategoryIcon } from '../components/ui/CategoryIcon';
@@ -58,7 +59,7 @@ const AddEntry: React.FC = () => {
     const [tagInput, setTagInput] = useState('');
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [time, setTime] = useState(format(new Date(), 'HH:mm'));
-    const [accountType, setAccountType] = useState('ACCOUNT'); // Default to Bank
+    const [accountType, setAccountType] = useState<string>(''); // No default; user must select Bank, Cash, or a Card
     const [cardId, setCardId] = useState('');
     const [isSurety, setIsSurety] = useState(false);
 
@@ -88,7 +89,7 @@ const AddEntry: React.FC = () => {
             setRemarks('');
             setTags([]);
             setIsSurety(false);
-            setAccountType('ACCOUNT'); // Default to Bank
+            setAccountType(''); // No default
             setCardId('');
             setDate(format(new Date(), 'yyyy-MM-dd'));
             setTime(format(new Date(), 'HH:mm'));
@@ -107,7 +108,13 @@ const AddEntry: React.FC = () => {
             setRemarks(existingTxn.remarks || '');
             setTags(existingTxn.tags || []);
             setIsSurety(existingTxn.is_surety);
-            setAccountType(existingTxn.account_type === 'SAVINGS' ? 'ACCOUNT' : (existingTxn.credit_card_id ? 'CREDIT_CARD' : existingTxn.account_type));
+            const rawAcc = existingTxn.account_type || '';
+            const mappedAcc = rawAcc === 'SAVINGS'
+                ? 'ACCOUNT'
+                : (rawAcc === 'CASH'
+                    ? 'CASH'
+                    : (rawAcc === 'CREDIT_CARD' || existingTxn.credit_card_id ? 'CREDIT_CARD' : ''));
+            setAccountType(mappedAcc);
             setCardId(existingTxn.credit_card_id || '');
 
             const txnDate = existingTxn.transaction_date ? parseISO(existingTxn.transaction_date) : (existingTxn.created_at ? parseISO(existingTxn.created_at) : new Date());
@@ -118,6 +125,45 @@ const AddEntry: React.FC = () => {
             else setType('EXPENSE');
         }
     }, [existingTxn, id]);
+
+    // Validation rules
+    const isSourceSelected = Boolean(
+        accountType === 'ACCOUNT' ||
+        accountType === 'CASH' ||
+        (accountType === 'CREDIT_CARD' && cardId)
+    );
+
+    const txnDateObj = parse(date, 'yyyy-MM-dd', new Date());
+    const today = startOfToday();
+    const daysDiff = differenceInCalendarDays(txnDateObj, today);
+    const absDaysDiff = Math.abs(daysDiff);
+    const isDateOutside3Days = absDaysDiff > 3;
+
+    const validateAndConfirm = (): boolean => {
+        if (!amount || Number(amount) <= 0) {
+            alert('Please enter a valid magnitude / amount.');
+            return false;
+        }
+        if (!category) {
+            alert('Please select a category for this transaction.');
+            return false;
+        }
+        if (!isSourceSelected) {
+            alert('Validation Error: Please select a payment source (Bank, Cash, or Credit Card).');
+            return false;
+        }
+        if (isDateOutside3Days) {
+            const direction = daysDiff < 0 ? `${absDaysDiff} days in the past` : `${absDaysDiff} days in the future`;
+            const proceed = window.confirm(
+                `⚠️ Date Verification Warning:\n\n` +
+                `The transaction date (${format(txnDateObj, 'dd MMM yyyy')}) is ${direction} relative to today.\n\n` +
+                `Sometimes parsers or LLMs pick the wrong date from messages.\n\n` +
+                `Do you want to proceed and save with this date?`
+            );
+            if (!proceed) return false;
+        }
+        return true;
+    };
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -152,12 +198,14 @@ const AddEntry: React.FC = () => {
     });
 
     const handleSave = () => {
+        if (!validateAndConfirm()) return;
         mutation.mutate(undefined, {
             onSuccess: () => navigate(-1)
         });
     };
 
     const handleSaveAndNew = () => {
+        if (!validateAndConfirm()) return;
         mutation.mutate(undefined, {
             onSuccess: () => {
                 setAmount('');
@@ -169,10 +217,37 @@ const AddEntry: React.FC = () => {
                 setIsSurety(false);
                 setTempCategory(null);
                 setView('CATEGORIES');
-                // Keep Date, Time, Account Type, Card ID for faster entry
-                // Maybe focus amount input?
+                setAccountType('');
+                setCardId('');
+                setDate(format(new Date(), 'yyyy-MM-dd'));
+                setTime(format(new Date(), 'HH:mm'));
                 document.querySelector('input[type="number"]')?.focus();
             }
+        });
+    };
+
+    const handleApprove = () => {
+        if (!validateAndConfirm()) return;
+        const finalAmount = type === 'EXPENSE' ? -Math.abs(Number(amount)) : Math.abs(Number(amount));
+        const fullDateTime = `${date}T${time}:00`;
+        const mappedAccountType = accountType === 'ACCOUNT' ? 'SAVINGS' : accountType;
+
+        verifyMutation.mutate({
+            id: id!,
+            data: {
+                category: category || 'Uncategorized',
+                sub_category: subCategory || 'Uncategorized',
+                merchant_name: merchantName,
+                amount: finalAmount,
+                approved: true,
+                tags: tags,
+                remarks: remarks,
+                account_type: mappedAccountType,
+                credit_card_id: accountType === 'CREDIT_CARD' ? cardId : undefined,
+                transaction_date: fullDateTime,
+            }
+        }, {
+            onSuccess: () => navigate(-1)
         });
     };
 
@@ -425,14 +500,31 @@ const AddEntry: React.FC = () => {
                                     />
                                 </div>
                             </div>
+                            {isDateOutside3Days && (
+                                <div className="flex items-center gap-2 px-3.5 py-2.5 bg-amber-500/10 border border-amber-500/25 rounded-2xl text-amber-400 text-[10px] font-bold mt-2">
+                                    <AlertTriangle size={14} className="shrink-0 text-amber-400" />
+                                    <span>
+                                        Notice: Selected date is {absDaysDiff} days {daysDiff < 0 ? 'in the past' : 'in the future'} ({format(txnDateObj, 'MMM d, yyyy')}). Verify if the LLM picked a wrong date.
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Payment Channel */}
                         <div className="space-y-2">
-                            <label className="text-[8px] text-gray-600 font-black uppercase tracking-[2px] ml-1 opacity-60">Settlement Route</label>
-                            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                            <div className="flex items-center justify-between">
+                                <label className="text-[8px] text-gray-600 font-black uppercase tracking-[2px] ml-1 opacity-60">Settlement Route</label>
+                                {!isSourceSelected && (
+                                    <span className="text-[8px] text-amber-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                                        * Source Required (Bank / Cash / Card)
+                                    </span>
+                                )}
+                            </div>
+                            <div className={`flex gap-2 overflow-x-auto no-scrollbar pb-1 p-1 -m-1 rounded-2xl transition-all ${
+                                !isSourceSelected ? 'ring-1 ring-amber-500/30 bg-amber-500/[0.02]' : ''
+                            }`}>
                                 <button
-                                    onClick={() => setAccountType('ACCOUNT')}
+                                    onClick={() => { setAccountType('ACCOUNT'); setCardId(''); }}
                                     className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all whitespace-nowrap min-w-[90px] justify-center ${accountType === 'ACCOUNT'
                                         ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
                                         : 'bg-white/[0.02] border-white/[0.05] text-gray-600'
@@ -442,7 +534,7 @@ const AddEntry: React.FC = () => {
                                     <span className="text-[8px] font-black uppercase tracking-widest">Bank</span>
                                 </button>
                                 <button
-                                    onClick={() => setAccountType('CASH')}
+                                    onClick={() => { setAccountType('CASH'); setCardId(''); }}
                                     className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all whitespace-nowrap min-w-[90px] justify-center ${accountType === 'CASH'
                                         ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400'
                                         : 'bg-white/[0.02] border-white/[0.05] text-gray-600'
@@ -600,23 +692,13 @@ const AddEntry: React.FC = () => {
                 <div className="fixed bottom-6 right-6 z-[60] flex items-center gap-3">
                     {existingTxn?.status === 'PENDING' ? (
                         <button
-                            onClick={() => verifyMutation.mutate({
-                                id: id!,
-                                data: {
-                                    category: category || 'Uncategorized',
-                                    sub_category: subCategory || 'Uncategorized',
-                                    merchant_name: merchantName,
-                                    amount: type === 'EXPENSE' ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
-                                    approved: true,
-                                    tags: tags,
-                                    remarks: remarks
-                                }
-                            }, { onSuccess: () => navigate(-1) })}
-                            disabled={verifyMutation.isPending || !amount || !category}
+                            onClick={handleApprove}
+                            disabled={verifyMutation.isPending || !amount || !category || !isSourceSelected}
                             className={`
                                 h-14 px-8 rounded-full bg-white text-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all
-                                ${verifyMutation.isPending || !amount || !category ? 'opacity-20' : 'hover:scale-105'}
+                                ${verifyMutation.isPending || !amount || !category || !isSourceSelected ? 'opacity-20 cursor-not-allowed' : 'hover:scale-105'}
                             `}
+                            title={!isSourceSelected ? "Please select a payment source" : "Approve Transaction"}
                         >
                             <span className="text-xs font-black uppercase tracking-widest">Approve</span>
                             <Check size={20} strokeWidth={3} />
@@ -626,23 +708,24 @@ const AddEntry: React.FC = () => {
                             {!id && (
                                 <button
                                     onClick={handleSaveAndNew}
-                                    disabled={mutation.isPending || !amount || !category}
+                                    disabled={mutation.isPending || !amount || !category || !isSourceSelected}
                                     className={`
                                         w-14 h-14 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/10 active:scale-95 transition-all
-                                        ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white/20'}
+                                        ${mutation.isPending || !amount || !category || !isSourceSelected ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white/20'}
                                     `}
-                                    title="Save & Add Another"
+                                    title={!isSourceSelected ? "Please select a payment source" : "Save & Add Another"}
                                 >
                                     <Plus size={24} strokeWidth={2.5} />
                                 </button>
                             )}
                             <button
                                 onClick={handleSave}
-                                disabled={mutation.isPending || !amount || !category}
+                                disabled={mutation.isPending || !amount || !category || !isSourceSelected}
                                 className={`
                                     w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-2xl shadow-indigo-500/20 active:scale-95 transition-all
-                                    ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6'}
+                                    ${mutation.isPending || !amount || !category || !isSourceSelected ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6'}
                                 `}
+                                title={!isSourceSelected ? "Please select a payment source" : "Save Entry"}
                             >
                                 <Save size={24} strokeWidth={2.5} />
                             </button>

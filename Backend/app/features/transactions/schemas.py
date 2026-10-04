@@ -86,6 +86,9 @@ class VerificationRequest(BaseModel):
     approved: bool # If False -> REJECTED
     tags: Optional[List[str]] = []
     remarks: Optional[str] = None
+    account_type: Optional[AccountType] = None
+    credit_card_id: Optional[UUID] = None
+    transaction_date: Optional[datetime] = None
 
     class Config:
         str_strip_whitespace = True
