@@ -21,7 +21,7 @@ export const Loader: React.FC<LoaderProps> = ({ fullPage = false, text }) => {
                 />
             </div>
             {text && (
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[3px] animate-pulse">
+                <p className="text-[10px] font-bold text-text-muted uppercase tracking-[3px] animate-pulse">
                     {text}
                 </p>
             )}
@@ -30,7 +30,7 @@ export const Loader: React.FC<LoaderProps> = ({ fullPage = false, text }) => {
 
     if (fullPage) {
         return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050505] glass-blur">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-page glass-blur">
                 {loaderContent}
             </div>
         );

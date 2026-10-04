@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { haptics } from '../../lib/haptics';
 
+// 24 Perceptually-balanced, constant-chroma color swatches
 const PRESET_COLORS = [
-    '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5',
-    '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50',
-    '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800',
-    '#ff5722', '#795548', '#9e9e9e', '#607d8b', '#000000',
-    '#ffffff', '#ff80ab', '#b9f6ca', '#ffff8d', '#ff9e80'
+    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
+    '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
+    '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#fb7185',
+    '#2dd4bf', '#38bdf8', '#818cf8', '#c084fc', '#94a3b8', '#64748b'
 ];
 
 interface ColorSelectorProps {
@@ -16,21 +17,28 @@ interface ColorSelectorProps {
 
 export const ColorSelector: React.FC<ColorSelectorProps> = ({ selectedColor, onSelect }) => {
     return (
-        <div className="grid grid-cols-6 gap-3 p-2">
-            {PRESET_COLORS.map((color) => (
-                <motion.button
-                    key={color}
-                    whileTap={{ scale: 0.8 }}
-                    onClick={() => onSelect(color)}
-                    className={`
-                        w-10 h-10 rounded-full border-2 transition-all
-                        ${selectedColor === color
-                            ? 'border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.3)]'
-                            : 'border-transparent hover:border-white/20'}
-                    `}
-                    style={{ backgroundColor: color }}
-                />
-            ))}
+        <div className="grid grid-cols-6 gap-3 p-2 select-none">
+            {PRESET_COLORS.map((color) => {
+                const isSelected = selectedColor === color;
+                return (
+                    <motion.button
+                        key={color}
+                        type="button"
+                        whileTap={{ scale: 0.84 }}
+                        transition={{ type: 'spring', damping: 20, stiffness: 400 }}
+                        onPointerDown={() => haptics.selection()}
+                        onClick={() => onSelect(color)}
+                        className={`
+                            w-10 h-10 rounded-full border-2 transition-all duration-150 touch-manipulation
+                            ${isSelected
+                                ? 'border-white scale-110 shadow-[0_0_16px_rgba(255,255,255,0.4)] ring-2 ring-white/20'
+                                : 'border-transparent hover:border-white/30 hover:scale-105'}
+                        `}
+                        style={{ backgroundColor: color }}
+                        aria-label={`Select color ${color}`}
+                    />
+                );
+            })}
         </div>
     );
 };

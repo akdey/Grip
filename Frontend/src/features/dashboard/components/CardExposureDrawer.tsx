@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, CreditCard as CardIcon, ArrowUpRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { haptics } from '../../../lib/haptics';
 import type { SafeToSpend, CardExposureItem } from '../hooks';
 
 interface CardExposureDrawerProps {
@@ -45,38 +46,66 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={onClose}
+                        onClick={() => {
+                            haptics.selection();
+                            onClose();
+                        }}
                         className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
                     />
                     <motion.div
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
-                        transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
+                        transition={{ type: 'spring', damping: 28, stiffness: 340, mass: 0.85 }}
+                        drag="y"
+                        dragConstraints={{ top: 0, bottom: 0 }}
+                        dragElastic={{ top: 0.14, bottom: 0.8 }}
+                        onDragEnd={(_, info) => {
+                            if (info.offset.y > 140 || info.velocity.y > 550) {
+                                haptics.impact('light');
+                                onClose();
+                            } else {
+                                haptics.selection();
+                            }
+                        }}
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] glass-drawer rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.7)] overflow-hidden pointer-events-auto z-[2000] select-none touch-none"
                     >
+                        {/* Grabber Pill */}
+                        <div
+                            className="flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing"
+                            onClick={() => {
+                                haptics.selection();
+                                onClose();
+                            }}
+                        >
+                            <div className="w-10 h-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95" />
+                        </div>
+
                         {/* Header */}
-                        <div className="p-6 sm:p-10 border-b border-white/10 flex items-center justify-between bg-gradient-to-b from-white/[0.05] to-transparent shrink-0">
+                        <div className="p-6 sm:p-8 border-b border-white/[0.06] flex items-center justify-between bg-gradient-to-b from-white/[0.04] to-transparent shrink-0">
                             <div className="flex-1">
                                 <div className="flex items-center gap-3">
-                                    <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic">Card Exposure Ledger</h2>
+                                    <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic heading-apple">Card Exposure Ledger</h2>
                                     <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
                                         Active CC Swipes
                                     </span>
                                 </div>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[4px] mt-1">Unsettled credit card charges & debt</p>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[4px] mt-1">Unsettled credit card charges & debt</p>
                             </div>
                             <button
-                                onClick={onClose}
-                                className="w-14 h-14 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white transition-all shadow-xl group"
+                                onClick={() => {
+                                    haptics.selection();
+                                    onClose();
+                                }}
+                                className="w-12 h-12 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group touch-manipulation"
                                 aria-label="Close card exposure ledger"
                             >
-                                <ChevronDown size={28} className="group-hover:translate-y-0.5 transition-transform" />
+                                <ChevronDown size={24} className="group-hover:translate-y-0.5 transition-transform" />
                             </button>
                         </div>
 
                         {/* Content Area */}
-                        <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-6 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-6 custom-scrollbar select-text">
                             {/* Card Breakdown Pills/Cards */}
                             {cardBreakdown.length > 0 && (
                                 <div className="space-y-3">

@@ -292,7 +292,7 @@ const Transactions: React.FC = () => {
                                     view === 'year' ? "Year View" :
                                         view === 'pending' ? "Action Center" :
                                             view === 'custom' ? "Filtered" :
-                                                "Activity"}
+                                                "History"}
                         </h1>
                         <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">
                             {view === 'day' ? format(currentMonth, 'EEE, dd MMM yyyy') :
@@ -875,7 +875,7 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
                 <div
                     className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border border-white/[0.08]"
                     style={{
-                        backgroundColor: `${txn.sub_category_color || txn.category_color}15` || 'rgba(255,255,255,0.03)',
+                        backgroundColor: (txn.sub_category_color || txn.category_color) ? `${txn.sub_category_color || txn.category_color}15` : 'rgba(255,255,255,0.03)',
                         color: txn.sub_category_color || txn.category_color || '#fff'
                     }}
                 >

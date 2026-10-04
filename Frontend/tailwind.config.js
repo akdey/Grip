@@ -7,7 +7,7 @@ export default {
     theme: {
         extend: {
             colors: {
-                background: "var(--color-bg-primary)",
+                background: "var(--color-bg-page)",
                 foreground: "var(--color-text-primary)",
             },
             padding: {

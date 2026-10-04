@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Delete, Check } from 'lucide-react';
 import { Drawer } from './Drawer';
+import { haptics } from '../../lib/haptics';
 
 interface CalculatorDrawerProps {
     isOpen: boolean;
@@ -33,6 +34,7 @@ export const CalculatorDrawer: React.FC<CalculatorDrawerProps> = ({ isOpen, onCl
     }, [isOpen, expression]);
 
     const handlePress = (val: string) => {
+        haptics.selection();
         if (expression === '0' && val !== '.') {
             setExpression(val);
         } else {
@@ -40,24 +42,32 @@ export const CalculatorDrawer: React.FC<CalculatorDrawerProps> = ({ isOpen, onCl
         }
     };
 
-    const handleClear = () => setExpression('0');
-    const handleDelete = () => setExpression(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
+    const handleClear = () => {
+        haptics.impact('light');
+        setExpression('0');
+    };
+
+    const handleDelete = () => {
+        haptics.selection();
+        setExpression(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
+    };
 
     const handleCalculate = () => {
+        haptics.impact('light');
         try {
             // Safe eval
             // eslint-disable-next-line
             const result = Function('"use strict";return (' + expression + ')')();
             setExpression(String(Math.round(result * 100) / 100)); // Round to 2 decimals
-        } catch (e) {
+        } catch {
             setExpression('Error');
         }
     };
 
     const handleDone = () => {
+        haptics.notification('success');
         let final = expression;
         try {
-            // check if expression is incomplete (e.g. "5+")
             if (/[\+\-\*\/]$/.test(expression)) {
                 final = expression.slice(0, -1);
             } else {
@@ -65,51 +75,56 @@ export const CalculatorDrawer: React.FC<CalculatorDrawerProps> = ({ isOpen, onCl
                 const result = Function('"use strict";return (' + expression + ')')();
                 final = String(Math.round(result * 100) / 100);
             }
-        } catch (e) {
+        } catch {
             // ignore
         }
         onConfirm(final);
         onClose();
     };
 
+    const btnClass = "rounded-2xl font-bold active:scale-[0.93] transition-transform duration-75 select-none touch-manipulation flex items-center justify-center py-4 border border-border-subtle";
+
     return (
         <Drawer isOpen={isOpen} onClose={onClose} title="Calculator" height="h-[80vh]" noPadding>
-            <div className="flex flex-col h-full bg-[#121214]">
+            <div className="flex flex-col h-full">
                 <div className="flex-1 flex flex-col p-6 min-h-0 overflow-y-auto">
-                    {/* Display */}
-                    <div className="bg-white/5 border border-white/10 p-6 rounded-[24px] mb-6 text-right shadow-inner flex-shrink-0">
-                        <span className="text-4xl font-mono text-white tracking-widest break-all">{expression}</span>
+                    {/* Display with Apple optical sizing */}
+                    <div className="bg-sunken border border-border-subtle p-6 rounded-[24px] mb-6 text-right shadow-inner flex-shrink-0">
+                        <span className="text-4xl font-mono text-text-primary tracking-wider break-all tabular-nums">{expression}</span>
                     </div>
 
-                    {/* Grid */}
+                    {/* Keypad Grid with tactile feedback */}
                     <div className="grid grid-cols-4 gap-3 flex-1">
-                        <button onClick={handleClear} className="col-span-1 bg-red-500/10 text-red-400 rounded-2xl font-bold text-xl hover:bg-red-500/20 transition-colors py-4">C</button>
-                        <button onClick={handleDelete} className="col-span-1 bg-gray-700/50 text-white rounded-2xl flex items-center justify-center hover:bg-gray-700 transition-colors py-4"><Delete size={20} /></button>
-                        <button onClick={() => handlePress('/')} className="bg-indigo-500/10 text-indigo-400 rounded-2xl font-bold text-xl hover:bg-indigo-500/20 transition-colors py-4">÷</button>
-                        <button onClick={() => handlePress('*')} className="bg-indigo-500/10 text-indigo-400 rounded-2xl font-bold text-xl hover:bg-indigo-500/20 transition-colors py-4">×</button>
+                        <button onClick={handleClear} className={`${btnClass} col-span-1 bg-status-danger-bg text-status-danger-text hover:bg-status-danger-solid/25 text-xl`}>C</button>
+                        <button onClick={handleDelete} className={`${btnClass} col-span-1 bg-surface hover:bg-surface-hover text-text-primary`}><Delete size={20} /></button>
+                        <button onClick={() => handlePress('/')} className={`${btnClass} bg-accent-subtle text-accent-text hover:bg-accent-solid/20 text-xl`}>÷</button>
+                        <button onClick={() => handlePress('*')} className={`${btnClass} bg-accent-subtle text-accent-text hover:bg-accent-solid/20 text-xl`}>×</button>
 
-                        <button onClick={() => handlePress('7')} className="bg-white/5 text-white rounded-2xl font-bold text-2xl hover:bg-white/10 transition-colors py-4">7</button>
-                        <button onClick={() => handlePress('8')} className="bg-white/5 text-white rounded-2xl font-bold text-2xl hover:bg-white/10 transition-colors py-4">8</button>
-                        <button onClick={() => handlePress('9')} className="bg-white/5 text-white rounded-2xl font-bold text-2xl hover:bg-white/10 transition-colors py-4">9</button>
-                        <button onClick={() => handlePress('-')} className="bg-indigo-500/10 text-indigo-400 rounded-2xl font-bold text-xl hover:bg-indigo-500/20 transition-colors py-4">-</button>
+                        <button onClick={() => handlePress('7')} className={`${btnClass} bg-surface text-text-primary hover:bg-surface-hover text-2xl`}>7</button>
+                        <button onClick={() => handlePress('8')} className={`${btnClass} bg-surface text-text-primary hover:bg-surface-hover text-2xl`}>8</button>
+                        <button onClick={() => handlePress('9')} className={`${btnClass} bg-surface text-text-primary hover:bg-surface-hover text-2xl`}>9</button>
+                        <button onClick={() => handlePress('-')} className={`${btnClass} bg-accent-subtle text-accent-text hover:bg-accent-solid/20 text-xl`}>−</button>
 
-                        <button onClick={() => handlePress('4')} className="bg-white/5 text-white rounded-2xl font-bold text-2xl hover:bg-white/10 transition-colors py-4">4</button>
-                        <button onClick={() => handlePress('5')} className="bg-white/5 text-white rounded-2xl font-bold text-2xl hover:bg-white/10 transition-colors py-4">5</button>
-                        <button onClick={() => handlePress('6')} className="bg-white/5 text-white rounded-2xl font-bold text-2xl hover:bg-white/10 transition-colors py-4">6</button>
-                        <button onClick={() => handlePress('+')} className="bg-indigo-500/10 text-indigo-400 rounded-2xl font-bold text-xl hover:bg-indigo-500/20 transition-colors py-4">+</button>
+                        <button onClick={() => handlePress('4')} className={`${btnClass} bg-surface text-text-primary hover:bg-surface-hover text-2xl`}>4</button>
+                        <button onClick={() => handlePress('5')} className={`${btnClass} bg-surface text-text-primary hover:bg-surface-hover text-2xl`}>5</button>
+                        <button onClick={() => handlePress('6')} className={`${btnClass} bg-surface text-text-primary hover:bg-surface-hover text-2xl`}>6</button>
+                        <button onClick={() => handlePress('+')} className={`${btnClass} bg-accent-subtle text-accent-text hover:bg-accent-solid/20 text-xl`}>+</button>
 
-                        <button onClick={() => handlePress('1')} className="bg-white/5 text-white rounded-2xl font-bold text-2xl hover:bg-white/10 transition-colors py-4">1</button>
-                        <button onClick={() => handlePress('2')} className="bg-white/5 text-white rounded-2xl font-bold text-2xl hover:bg-white/10 transition-colors py-4">2</button>
-                        <button onClick={() => handlePress('3')} className="bg-white/5 text-white rounded-2xl font-bold text-2xl hover:bg-white/10 transition-colors py-4">3</button>
-                        <button onClick={() => handleCalculate()} className="row-span-2 bg-emerald-500 text-black rounded-2xl font-bold text-2xl hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 transition-colors py-4">=</button>
+                        <button onClick={() => handlePress('1')} className={`${btnClass} bg-surface text-text-primary hover:bg-surface-hover text-2xl`}>1</button>
+                        <button onClick={() => handlePress('2')} className={`${btnClass} bg-surface text-text-primary hover:bg-surface-hover text-2xl`}>2</button>
+                        <button onClick={() => handlePress('3')} className={`${btnClass} bg-surface text-text-primary hover:bg-surface-hover text-2xl`}>3</button>
+                        <button onClick={handleCalculate} className={`${btnClass} row-span-2 bg-status-success-solid text-white text-2xl hover:bg-status-success-solid-hover shadow-lg shadow-emerald-500/20`}>=</button>
 
-                        <button onClick={() => handlePress('0')} className="col-span-2 bg-white/5 text-white rounded-2xl font-bold text-2xl hover:bg-white/10 transition-colors py-4">0</button>
-                        <button onClick={() => handlePress('.')} className="bg-white/5 text-white rounded-2xl font-bold text-2xl hover:bg-white/10 transition-colors py-4">.</button>
+                        <button onClick={() => handlePress('0')} className={`${btnClass} col-span-2 bg-surface text-text-primary hover:bg-surface-hover text-2xl`}>0</button>
+                        <button onClick={() => handlePress('.')} className={`${btnClass} bg-surface text-text-primary hover:bg-surface-hover text-2xl`}>.</button>
                     </div>
                 </div>
 
-                <div className="p-6 pt-2 border-t border-white/5 bg-[#121214]">
-                    <button onClick={handleDone} className="w-full py-4 bg-white text-black rounded-2xl text-lg font-bold flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors active:scale-95 shadow-xl">
+                <div className="p-6 pt-2 border-t border-border-subtle bg-transparent">
+                    <button
+                        onClick={handleDone}
+                        className="w-full py-4 bg-white text-black rounded-2xl text-lg font-bold flex items-center justify-center gap-2 hover:bg-gray-100 active:scale-[0.97] transition-all shadow-xl touch-manipulation select-none"
+                    >
                         <Check size={20} strokeWidth={3} />
                         Confirm Amount
                     </button>

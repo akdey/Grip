@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Save, Search } from 'lucide-react';
 import { api } from '../../lib/api';
+import { haptics } from '../../lib/haptics';
 
 interface AddHoldingModalProps {
     isOpen: boolean;
@@ -100,34 +101,63 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    onClick={onClose}
+                    onClick={() => {
+                        haptics.selection();
+                        onClose();
+                    }}
                     className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
                 />
                 <motion.div
                     initial={{ y: '100%' }}
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
-                    transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto z-[2000]"
+                    transition={{ type: 'spring', damping: 28, stiffness: 340, mass: 0.85 }}
+                    drag="y"
+                    dragConstraints={{ top: 0, bottom: 0 }}
+                    dragElastic={{ top: 0.14, bottom: 0.8 }}
+                    onDragEnd={(_, info) => {
+                        if (info.offset.y > 140 || info.velocity.y > 550) {
+                            haptics.impact('light');
+                            onClose();
+                        } else {
+                            haptics.selection();
+                        }
+                    }}
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[90vh] glass-drawer rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.7)] overflow-hidden pointer-events-auto z-[2000] select-none touch-none"
                 >
+                    {/* Grabber Pill */}
+                    <div
+                        className="flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing"
+                        onClick={() => {
+                            haptics.selection();
+                            onClose();
+                        }}
+                    >
+                        <div className="w-10 h-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95" />
+                    </div>
+
                     {/* Fixed Header */}
-                    <div className="p-6 sm:p-10 border-b border-white/10 flex justify-between items-center bg-gradient-to-b from-white/[0.05] to-transparent shrink-0">
+                    <div className="p-6 sm:p-8 border-b border-white/[0.06] flex justify-between items-center bg-gradient-to-b from-white/[0.04] to-transparent shrink-0">
                         <div>
-                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic">Add New Asset</h3>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[4px] mt-1">Portfolio Expansion Engine</p>
+                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic heading-apple">Add New Asset</h3>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[4px] mt-1">Portfolio Expansion Engine</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <button
-                                onClick={onClose}
-                                className="w-14 h-14 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group"
+                                onClick={() => {
+                                    haptics.selection();
+                                    onClose();
+                                }}
+                                className="w-12 h-12 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group touch-manipulation"
+                                aria-label="Close"
                             >
-                                <ChevronDown size={28} className="group-hover:translate-y-0.5 transition-transform" />
+                                <ChevronDown size={24} className="group-hover:translate-y-0.5 transition-transform" />
                             </button>
                         </div>
                     </div>
 
                     {/* Scrollable Form Content */}
-                    <div className="overflow-y-auto flex-1 custom-scrollbar">
+                    <div className="overflow-y-auto flex-1 custom-scrollbar select-text">
                         <div className="p-6 sm:p-10 space-y-6">
                             <div>
                                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Asset Name</label>
