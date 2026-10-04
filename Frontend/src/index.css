@@ -253,12 +253,27 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: -2;
   background-image:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.025), transparent 70%);
+    radial-gradient(ellipse 90% 60% at 50% -10%, oklch(0.68 var(--brand-chroma) var(--brand-hue) / 0.12), transparent 75%),
+    radial-gradient(ellipse 70% 45% at 95% 30%, oklch(0.60 calc(var(--brand-chroma) * 0.9) calc(var(--brand-hue) + 35) / 0.07), transparent 65%),
+    radial-gradient(ellipse 80% 55% at 5% 80%, oklch(0.55 calc(var(--brand-chroma) * 0.8) calc(var(--brand-hue) - 25) / 0.06), transparent 70%);
   pointer-events: none;
   transform: translateZ(0);
   will-change: transform;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 35%, black 25%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 35%, black 25%, transparent 85%);
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 ::selection {
@@ -304,11 +319,12 @@ body::before {
 
   /* Liquid Glass Card - Apple Style */
   .glass-card {
-    @apply relative overflow-hidden bg-surface border border-border-subtle shadow-2xl;
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    @apply relative overflow-hidden border border-border-subtle shadow-2xl;
+    background: rgba(13, 15, 21, 0.72);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
     border-top: 1px solid var(--color-border-default);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+    box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.5);
     will-change: transform;
     contain: layout;
   }
