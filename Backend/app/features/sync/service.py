@@ -261,17 +261,17 @@ class SyncService:
         BODY:
         \"\"\"{compressed_text[:6000]}\"\"\"
 
-        RETURN ONLY RAW JSON:
+        RETURN ONLY RAW JSON (Ensure all strings are quoted properly):
         {{
-          "is_transaction": bool,
-          "amount": float,
+          "is_transaction": true,
+          "amount": 1000.00,
           "currency": "INR",
-          "merchant_name": string,
-          "category": string,
-          "sub_category": string,
-          "account_type": "SAVINGS" | "CREDIT_CARD",
-          "transaction_type": "DEBIT" | "CREDIT",
-          "extracted_date": "YYYY-MM-DD" | null
+          "merchant_name": "Merchant Name",
+          "category": "Food",
+          "sub_category": "Dining",
+          "account_type": "SAVINGS",
+          "transaction_type": "DEBIT",
+          "extracted_date": "2026-10-04"
         }}
         """
          # Stage 1: Try Local LLM
@@ -344,6 +344,14 @@ class SyncService:
                  merchant = upi_path_match.group(1).strip().title()
              elif upi_id_match:
                  merchant = upi_id_match.group(1).title()
+             elif all_general:
+                 # all_general might have multiple matches, we take the first one
+                 # Exclude common false positives like "Axis Bank" or "HDFC"
+                 for match in all_general:
+                     candidate = match.strip().title()
+                     if "Bank" not in candidate and candidate.upper() not in ["HDFC", "ICICI", "SBI"]:
+                         merchant = candidate
+                         break
                  
              logger.info(f"[Brain:{user_id}] Regex Fallback Extracted: ₹{amount} | Merchant: {merchant} | Type: {txn_type}")
 
