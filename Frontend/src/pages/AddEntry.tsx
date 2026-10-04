@@ -129,7 +129,7 @@ const AddEntry: React.FC = () => {
                 sub_category: subCategory || 'Uncategorized',
                 transaction_date: `${date}T${time}:00`,
                 account_type: accountType === 'ACCOUNT' ? 'SAVINGS' : accountType,
-                credit_card_id: (accountType === 'CREDIT_CARD' && cardId) ? cardId : null,
+                credit_card_id: ((accountType === 'CREDIT_CARD' || subCategory === 'Credit Card Payment') && cardId) ? cardId : null,
                 remarks: remarks?.trim(),
                 tags: tags,
                 is_manual: true,
@@ -466,6 +466,34 @@ const AddEntry: React.FC = () => {
                                 ))}
                             </div>
                         </div>
+
+                        {/* Destination Card for Credit Card Payment */}
+                        {subCategory === 'Credit Card Payment' && creditCards && creditCards.length > 0 && (
+                            <div className="space-y-2">
+                                <label className="text-[8px] text-purple-400 font-black uppercase tracking-[2px] ml-1 opacity-80">
+                                    Target Credit Card (Liability Offset)
+                                </label>
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                    {creditCards.map(card => (
+                                        <button
+                                            key={card.id}
+                                            type="button"
+                                            onClick={() => setCardId(cardId === card.id ? '' : card.id)}
+                                            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border transition-all whitespace-nowrap min-w-[110px] justify-center ${
+                                                cardId === card.id
+                                                    ? 'bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-sm'
+                                                    : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-gray-300'
+                                            }`}
+                                        >
+                                            <CreditCard size={14} />
+                                            <span className="text-[8px] font-black uppercase tracking-widest truncate max-w-[80px]">
+                                                {card.card_name}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Merchant Name */}
                         <div className="space-y-2">

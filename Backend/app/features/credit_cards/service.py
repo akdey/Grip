@@ -201,8 +201,9 @@ class CreditCardService:
         card_group_map = {}
         
         for txn, card in rows:
-            amt = abs(txn.amount or Decimal("0.00"))
-            total_exposure += amt
+            is_payment = (txn.amount or Decimal("0")) > 0 or (txn.sub_category or "").strip().lower() == "credit card payment"
+            raw_amt = txn.amount or Decimal("0.00")
+            amt = abs(raw_amt)
             
             card_id_str = str(card.id) if card else None
             card_name = card.card_name if card else "Credit Card"
@@ -220,7 +221,7 @@ class CreditCardService:
                 last_four_digits=card_last_four,
                 category=txn.category,
                 sub_category=txn.sub_category,
-                status="UNSETTLED"
+                status="PAYMENT" if is_payment and raw_amt > 0 else "UNSETTLED"
             ))
             
             group_key = card_id_str or "unassigned"
@@ -232,20 +233,24 @@ class CreditCardService:
                     "amount": Decimal("0.00"),
                     "count": 0
                 }
-            card_group_map[group_key]["amount"] += amt
-            card_group_map[group_key]["count"] += 1
+            if is_payment and raw_amt > 0:
+                card_group_map[group_key]["amount"] = max(Decimal("0.00"), card_group_map[group_key]["amount"] - amt)
+            else:
+                card_group_map[group_key]["amount"] += amt
+                card_group_map[group_key]["count"] += 1
             
         card_breakdown = [
             CardExposureSummary(
                 card_id=data["card_id"],
                 card_name=data["card_name"],
                 last_four_digits=data["last_four_digits"],
-                amount=data["amount"],
+                amount=max(Decimal("0.00"), data["amount"]),
                 count=data["count"]
             )
             for data in card_group_map.values()
         ]
         card_breakdown.sort(key=lambda x: x.amount, reverse=True)
+        total_exposure = sum(c.amount for c in card_breakdown)
         
         return {
             "total_exposure": total_exposure,

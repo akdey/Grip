@@ -5,11 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from fastapi import HTTPException
 from fastapi import Depends
-from app.features.transactions.models import Transaction, MerchantMapping
-from app.features.transactions import schemas
+from app.features.transactions.models import Transaction, MerchantMapping, AccountType, TransactionStatus
 from app.features.transactions import schemas
 from app.features.categories.models import SubCategory
-from app.features.transactions.models import TransactionStatus
 from app.features.settle_up.models import SettleUpEntry
 from app.core.database import get_db
 from decimal import Decimal
@@ -198,9 +196,11 @@ class TransactionService:
 
         await self.db.commit()
 
-        # Shadow to Settle Up ledger if this is a loan-related category
         if verification.approved:
+            await self._sync_double_entry_credit_card_payment(txn)
             await self._maybe_shadow_to_ledger(txn)
+        else:
+            await self._sync_double_entry_credit_card_payment(txn)
 
         return txn
 
@@ -252,6 +252,9 @@ class TransactionService:
         
         txn = await self.create_transaction(txn_data)
 
+        # Sync double-entry credit offset if this is a Credit Card Payment
+        await self._sync_double_entry_credit_card_payment(txn)
+
         # Shadow to Settle Up ledger if this is a loan-related category
         await self._maybe_shadow_to_ledger(txn)
 
@@ -295,6 +298,7 @@ class TransactionService:
                 txn.is_surety = await self._resolve_surety(txn.sub_category, user_id)
             
         await self.db.commit()
+        await self._sync_double_entry_credit_card_payment(txn)
         txns = await self._attach_icons([txn])
         return txns[0]
 
@@ -369,9 +373,97 @@ class TransactionService:
         
         if not txn:
             raise HTTPException(status_code=404, detail="Transaction not found")
+
+        # Delete corresponding double-entry offset transaction if one exists
+        offset_stmt = select(Transaction).where(
+            Transaction.user_id == user_id,
+            Transaction.raw_content_hash == f"CC-OFFSET-{transaction_id}"
+        )
+        offset_res = await self.db.execute(offset_stmt)
+        offset_txn = offset_res.scalar_one_or_none()
+        if offset_txn:
+            await self.db.delete(offset_txn)
             
         await self.db.delete(txn)
         await self.db.commit()
+
+    async def _sync_double_entry_credit_card_payment(self, txn: Transaction):
+        """
+        Double-Entry tracking constraint:
+        A debit on SAVINGS for "Credit Card Payment" must credit (+Amount) the
+        CREDIT_CARD account to reduce outstanding liability without touching
+        the Period Expense KPI.
+        """
+        # Guard against recursive handling of generated offset transactions
+        if txn.raw_content_hash and txn.raw_content_hash.startswith("CC-OFFSET-"):
+            return
+
+        sub_cat = (txn.sub_category or "").strip().lower()
+        acc_type = (txn.account_type or "").strip().upper()
+        is_debit = (txn.amount or Decimal("0")) < 0
+        is_verified = txn.status == TransactionStatus.VERIFIED
+        
+        is_cc_payment_debit = (
+            sub_cat == "credit card payment" and
+            acc_type in (AccountType.SAVINGS, AccountType.CASH, "ACCOUNT") and
+            is_debit and
+            is_verified
+        )
+        
+        offset_hash = f"CC-OFFSET-{txn.id}"
+        stmt = select(Transaction).where(Transaction.raw_content_hash == offset_hash)
+        res = await self.db.execute(stmt)
+        existing_offset = res.scalar_one_or_none()
+        
+        if is_cc_payment_debit:
+            credit_amount = abs(txn.amount)
+            target_card_id = txn.credit_card_id
+            
+            if not target_card_id:
+                from app.features.credit_cards.models import CreditCard
+                card_stmt = (
+                    select(CreditCard.id)
+                    .where(CreditCard.user_id == txn.user_id, CreditCard.is_active == True)
+                    .order_by(CreditCard.created_at.asc())
+                    .limit(1)
+                )
+                target_card_id = (await self.db.execute(card_stmt)).scalar_one_or_none()
+                
+            t_date = txn.transaction_date or (txn.created_at.date() if txn.created_at else date.today())
+            
+            if existing_offset:
+                existing_offset.amount = credit_amount
+                existing_offset.transaction_date = t_date
+                existing_offset.merchant_name = txn.merchant_name or "Credit Card Payment"
+                existing_offset.credit_card_id = target_card_id or existing_offset.credit_card_id
+                existing_offset.status = TransactionStatus.VERIFIED
+                await self.db.commit()
+                logger.info(f"[DoubleEntry] Updated CC credit offset {existing_offset.id} for txn {txn.id}, Amount: +{credit_amount}")
+            else:
+                offset_txn = Transaction(
+                    user_id=txn.user_id,
+                    raw_content_hash=offset_hash,
+                    amount=credit_amount,
+                    currency=txn.currency or "INR",
+                    merchant_name=txn.merchant_name or "Credit Card Payment",
+                    category=txn.category or "Bill Payment",
+                    sub_category="Credit Card Payment",
+                    status=TransactionStatus.VERIFIED,
+                    account_type=AccountType.CREDIT_CARD,
+                    credit_card_id=target_card_id,
+                    transaction_date=t_date,
+                    is_manual=txn.is_manual,
+                    is_settled=False,
+                    remarks=f"[Double-Entry Offset] Credit leg for transaction {txn.id}"
+                )
+                self.db.add(offset_txn)
+                await self.db.commit()
+                logger.info(f"[DoubleEntry] Created CC credit offset {offset_txn.id} for txn {txn.id}, Amount: +{credit_amount}")
+        else:
+            if existing_offset:
+                await self.db.delete(existing_offset)
+                await self.db.commit()
+                logger.info(f"[DoubleEntry] Removed CC credit offset {existing_offset.id} as txn {txn.id} is no longer a CC payment debit")
 
     async def _maybe_shadow_to_ledger(self, txn: Transaction):
         """If the transaction sub_category matches a Settle Up keyword, shadow it to the Peer Ledger."""

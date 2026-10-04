@@ -6,6 +6,53 @@ from typing import Dict, Optional
 from app.core.config import get_settings
 
 
+from enum import Enum
+
+class TransactionBehavior(str, Enum):
+    DIRECT_EXPENSE = "DIRECT_EXPENSE"       # Outflow from liquid accounts (SAVINGS, CASH) for goods/services
+    CREDIT_EXPENSE = "CREDIT_EXPENSE"       # Outflow from liability accounts (CREDIT_CARD) for goods/services
+    DEBT_TRANSFER = "DEBT_TRANSFER"         # Outflow from liquid account (SAVINGS/CASH) to settle credit card liability
+    INCOME = "INCOME"                       # Inflow to liquid accounts
+    SETTLEMENT_CREDIT = "SETTLEMENT_CREDIT" # Credit to CREDIT_CARD liability account offsetting debt
+    OTHER = "OTHER"
+
+def classify_transaction(
+    account_type: Optional[str],
+    category: Optional[str],
+    sub_category: Optional[str],
+    amount: Decimal
+) -> TransactionBehavior:
+    """
+    Classify transaction into fundamental behavioral accounting types:
+    1. DIRECT_EXPENSE: Outflow from liquid accounts (SAVINGS, CASH) for goods/services.
+    2. CREDIT_EXPENSE: Outflow from liability accounts (CREDIT_CARD) for goods/services.
+    3. DEBT_TRANSFER: Movement from liquid account (SAVINGS) to settle liability (CREDIT_CARD).
+       Identified by: Sub Category = "Credit Card Payment" with Account Type = "SAVINGS".
+    """
+    sub_cat_clean = (sub_category or "").strip().lower()
+    acc_clean = (account_type or "").strip().upper()
+    cat_clean = (category or "").strip().lower()
+
+    is_cc_payment = sub_cat_clean == "credit card payment"
+
+    if is_cc_payment:
+        if acc_clean in ("SAVINGS", "CASH", "ACCOUNT"):
+            return TransactionBehavior.DEBT_TRANSFER
+        elif acc_clean == "CREDIT_CARD":
+            return TransactionBehavior.SETTLEMENT_CREDIT if amount > 0 else TransactionBehavior.CREDIT_EXPENSE
+
+    if cat_clean == "income" or (amount > 0 and acc_clean != "CREDIT_CARD"):
+        return TransactionBehavior.INCOME
+
+    if acc_clean == "CREDIT_CARD":
+        return TransactionBehavior.CREDIT_EXPENSE
+
+    if acc_clean in ("SAVINGS", "CASH", "ACCOUNT"):
+        return TransactionBehavior.DIRECT_EXPENSE
+
+    return TransactionBehavior.OTHER
+
+
 def get_current_date() -> date:
     """Get the current date in the configured timezone."""
     settings = get_settings()

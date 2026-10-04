@@ -41,6 +41,8 @@ async def get_liquidity_dashboard(
     bills_stmt = (
         select(func.sum(Transaction.amount))
         .where(Transaction.user_id == current_user.id)
+        .where(Transaction.account_type.in_(["CASH", "SAVINGS"]))
+        .where(Transaction.amount < 0)
         .where(Transaction.sub_category.in_(["Rent", "Maintenance", "Credit Card Payment"]))
     )
 

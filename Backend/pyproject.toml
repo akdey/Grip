@@ -10,6 +10,7 @@ dependencies = [
     "sqlalchemy[asyncio]",
     "greenlet",
     "asyncpg",
+    "aiosqlite",
     "alembic",
     "python-jose[cryptography]",
     "passlib[argon2]",

@@ -67,6 +67,10 @@ export interface MonthlySummary {
     year: number;
     current_period_expense: number;
     prior_period_settlement: number;
+    direct_expense?: number;
+    credit_expense?: number;
+    cash_outflow?: number;
+    gross_liquid_balance?: number;
 }
 
 export interface InvestmentSummary {

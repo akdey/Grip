@@ -80,6 +80,10 @@ class MonthlySummaryResponse(BaseModel):
     year: int
     current_period_expense: Decimal = Decimal(0)
     prior_period_settlement: Decimal = Decimal(0)
+    direct_expense: Decimal = Decimal(0)
+    credit_expense: Decimal = Decimal(0)
+    cash_outflow: Decimal = Decimal(0)
+    gross_liquid_balance: Decimal = Decimal(0)
 
 class SpendTrendPoint(BaseModel):
     date: date

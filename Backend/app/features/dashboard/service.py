@@ -15,6 +15,8 @@ async def get_daily_expenses(db: AsyncSession, user_id: str, days: int = 90):
         )
         .where(Transaction.user_id == user_id)
         .where(Transaction.category != "Income")
+        .where(func.lower(Transaction.sub_category) != "credit card payment")
+        .where(Transaction.amount < 0)
         .where(Transaction.transaction_date >= start_date)
         .group_by("day")
         .order_by("day")
@@ -43,6 +45,8 @@ async def get_category_expenses_history(db: AsyncSession, user_id: str, days: in
         )
         .where(Transaction.user_id == user_id)
         .where(Transaction.category != "Income")
+        .where(func.lower(Transaction.sub_category) != "credit card payment")
+        .where(Transaction.amount < 0)
         .where(Transaction.transaction_date >= start_date)
         .group_by(Transaction.category)
         .order_by(func.sum(Transaction.amount).asc()) # Expenses are negative, so ASC puts biggest spenders first
@@ -68,6 +72,8 @@ async def get_discretionary_daily_expenses(db: AsyncSession, user_id: str, days:
         )
         .where(Transaction.user_id == user_id)
         .where(Transaction.category.notin_(["Income", "Investment", "Housing", "Bill Payment", "Transfer"]))
+        .where(func.lower(Transaction.sub_category) != "credit card payment")
+        .where(Transaction.amount < 0)
         .where(Transaction.is_surety == False)
         .where(Transaction.transaction_date >= start_date)
         .group_by("day")
@@ -89,11 +95,6 @@ async def get_monthly_category_breakdown(db: AsyncSession, user_id: str, months:
     days = months * 30
     start_date = (datetime.now() - timedelta(days=days)).replace(day=1).date()
     
-    # Extract year and month. For SQLite/Postgres compatibility, we might just fetch date 
-    # and group in python, or use a universally supported truncate/extract.
-    # But for now, let's fetch all transactions (filtered) and group in Python to be safe 
-    # and allow for complex "Sub Category" logic if needed later.
-    
     stmt = (
         select(
             Transaction.transaction_date,
@@ -103,16 +104,14 @@ async def get_monthly_category_breakdown(db: AsyncSession, user_id: str, months:
         )
         .where(Transaction.user_id == user_id)
         .where(Transaction.category != "Income")
+        .where(func.lower(Transaction.sub_category) != "credit card payment")
+        .where(Transaction.amount < 0)
         .where(Transaction.transaction_date >= start_date)
         .order_by(Transaction.transaction_date)
     )
     
     result = await db.execute(stmt)
     rows = result.all()
-    
-    # Process in Python
-    # Structure: { "2023-10": { "Housing": 2000, "Food": 500, "Rent": 2000 } }
-    # Note: collecting SubCategories for "Rent" visibility
     
     breakdown = {}
     
@@ -132,13 +131,9 @@ async def get_monthly_category_breakdown(db: AsyncSession, user_id: str, months:
         breakdown[month_key][cat] = breakdown[month_key].get(cat, 0) + amount
         
         # ALSO explicitly capture likely Fixed Expenses as pseudo-categories for the LLM
-        # This helps 'sanitized' data requirement by not sending every subcategory, 
-        # but prominently featuring "Rent", "EMI", "Insurance"
         if sub and sub in ["Rent", "Maintenance", "EMI", "Insurance", "Education"]:
            breakdown[month_key][f"_{sub}"] = breakdown[month_key].get(f"_{sub}", 0) + amount
 
-    # Convert to list for easier JSON serialization
-    # [ { "month": "2023-10", "breakdown": {...} }, ... ]
     formatted = []
     for m in sorted(breakdown.keys()):
         formatted.append({
@@ -161,6 +156,8 @@ async def get_category_daily_expenses(db: AsyncSession, user_id: str, days: int 
         )
         .where(Transaction.user_id == user_id)
         .where(Transaction.category != "Income")
+        .where(func.lower(Transaction.sub_category) != "credit card payment")
+        .where(Transaction.amount < 0)
         .where(Transaction.transaction_date >= start_date)
         .group_by(Transaction.category, "day")
         .order_by(Transaction.category, "day")
@@ -191,6 +188,8 @@ async def get_raw_transactions_for_forecasting(db: AsyncSession, user_id: str, d
         )
         .where(Transaction.user_id == user_id)
         .where(Transaction.category != "Income")
+        .where(func.lower(Transaction.sub_category) != "credit card payment")
+        .where(Transaction.amount < 0)
         .where(Transaction.transaction_date >= start_date)
         .order_by(Transaction.transaction_date.asc())
     )
