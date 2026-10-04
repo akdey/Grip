@@ -1,6 +1,5 @@
 import React, { memo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { HelpCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface OutflowLedgerProps {
     currentExpense: number;       // Accrual View: SUM(DIRECT_EXPENSE) + SUM(CREDIT_EXPENSE)
@@ -22,67 +21,60 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
     formatCurrency
 }) => {
     const [viewMode, setViewMode] = useState<'ACCRUAL' | 'CASH'>('ACCRUAL');
-    const [showInfo, setShowInfo] = useState(false);
 
     if (isLoading) {
         return (
-            <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] flex flex-col gap-4 animate-pulse">
-                <div className="flex justify-between">
-                    <div className="h-3 w-32 bg-white/[0.05] rounded" />
-                    <div className="h-3 w-20 bg-white/[0.05] rounded" />
+            <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex flex-col gap-4 animate-pulse">
+                <div className="flex justify-between items-center">
+                    <div className="h-3 w-28 bg-white/[0.05] rounded" />
+                    <div className="h-6 w-32 bg-white/[0.05] rounded-xl" />
                 </div>
-                <div className="space-y-6 my-2">
+                <div className="space-y-4 my-1">
                     <div className="space-y-2">
-                        <div className="flex justify-between"><div className="h-2 w-16 bg-white/[0.05] rounded" /><div className="h-2 w-12 bg-white/[0.05] rounded" /></div>
+                        <div className="flex justify-between"><div className="h-2.5 w-24 bg-white/[0.05] rounded" /><div className="h-2.5 w-16 bg-white/[0.05] rounded" /></div>
                         <div className="h-1.5 w-full bg-white/[0.05] rounded-full" />
                     </div>
                     <div className="space-y-2">
-                        <div className="flex justify-between"><div className="h-2 w-16 bg-white/[0.05] rounded" /><div className="h-2 w-12 bg-white/[0.05] rounded" /></div>
+                        <div className="flex justify-between"><div className="h-2.5 w-24 bg-white/[0.05] rounded" /><div className="h-2.5 w-16 bg-white/[0.05] rounded" /></div>
                         <div className="h-1.5 w-full bg-white/[0.05] rounded-full" />
                     </div>
-                </div>
-                <div className="pt-3 border-t border-white/[0.05] flex justify-between items-center">
-                    <div className="h-2 w-20 bg-white/[0.05] rounded" />
-                    <div className="h-4 w-24 bg-white/[0.05] rounded" />
                 </div>
             </div>
         );
     }
 
-    // Resolve direct and credit components
+    // Resolve unified direct expense (Bank & Cash Spends)
     const resolvedDirect = directExpense !== undefined ? directExpense : Math.max(0, currentExpense - (creditExpense || 0));
     const resolvedCredit = creditExpense !== undefined ? creditExpense : Math.max(0, currentExpense - resolvedDirect);
     const resolvedCashDrain = cashOutflow !== undefined ? cashOutflow : (resolvedDirect + priorSettlement);
 
-    const accrualTotal = currentExpense; // SUM(DIRECT_EXPENSE) + SUM(CREDIT_EXPENSE)
-    const cashTotal = resolvedCashDrain; // SUM(DIRECT_EXPENSE) + SUM(DEBT_TRANSFER)
-
     const isAccrual = viewMode === 'ACCRUAL';
-    const activeTotal = isAccrual ? accrualTotal : cashTotal;
+    const activeTotal = isAccrual ? currentExpense : resolvedCashDrain;
     const maxVal = Math.max(activeTotal, 1);
 
+    const calcPct = (val: number) => {
+        if (activeTotal <= 0) return '0%';
+        return `${Math.round((val / maxVal) * 100)}%`;
+    };
+
     return (
-        <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2rem] flex flex-col gap-4 relative overflow-hidden">
-            {/* Header with View Toggle */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[3px]">Outflow Ledger</h2>
-                    <button
-                        onClick={() => setShowInfo(!showInfo)}
-                        className="text-gray-500 hover:text-gray-300 transition-colors"
-                        title="About accounting views"
-                    >
-                        <HelpCircle size={12} />
-                    </button>
+        <div className="bg-white/[0.02] border border-white/[0.05] p-5 sm:p-6 rounded-[2rem] flex flex-col gap-5 relative overflow-hidden transition-all">
+            {/* Header: Title + Perspective Switcher */}
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[2.5px]">Outflow Ledger</h2>
+                    <p className="text-[8px] text-gray-400 font-semibold uppercase tracking-wider mt-0.5">
+                        {isAccrual ? 'Expenses Incurred' : 'Actual Cash Drain'}
+                    </p>
                 </div>
 
-                {/* Perspective Mode Switcher */}
-                <div className="flex items-center bg-white/[0.04] p-0.5 rounded-xl border border-white/[0.08]">
+                {/* Minimal Segmented Toggle */}
+                <div className="flex items-center bg-white/[0.04] p-1 rounded-xl border border-white/[0.06] shrink-0">
                     <button
                         onClick={() => setViewMode('ACCRUAL')}
-                        className={`text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg transition-all ${
+                        className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-lg transition-all ${
                             isAccrual
-                                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-sm'
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
                                 : 'text-gray-400 hover:text-gray-200'
                         }`}
                     >
@@ -90,9 +82,9 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                     </button>
                     <button
                         onClick={() => setViewMode('CASH')}
-                        className={`text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg transition-all ${
+                        className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-lg transition-all ${
                             !isAccrual
-                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-sm'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm'
                                 : 'text-gray-400 hover:text-gray-200'
                         }`}
                     >
@@ -101,32 +93,30 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                 </div>
             </div>
 
-            {/* Info Drawer */}
-            <AnimatePresence>
-                {showInfo && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="bg-white/[0.03] border border-white/[0.08] p-3 rounded-xl text-[9px] text-gray-300 space-y-1.5 leading-relaxed"
-                    >
-                        <p><strong className="text-cyan-400">Accrual View:</strong> Actual goods &amp; services consumed this period (Direct + Card Swipes). Credit Card bill payments are balance sheet debt settlements, so they are excluded to prevent double-counting.</p>
-                        <p><strong className="text-amber-400">Cash Drain:</strong> Real liquid cash that exited bank and cash accounts (Direct + Card Bill Payments). Unsettled card swipes do not pull cash until settled.</p>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* Active Total Display */}
+            <div className="flex items-baseline justify-between pt-1 border-b border-white/[0.04] pb-4">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                    {isAccrual ? 'Total Incurred Spend' : 'Total Liquid Outflow'}
+                </span>
+                <span className="text-xl font-black text-white tracking-tight">
+                    {formatCurrency(activeTotal)}
+                </span>
+            </div>
 
-            {/* Dynamic Breakdown Bars */}
-            <div className="space-y-3.5">
+            {/* Breakdown Bars */}
+            <div className="space-y-4">
                 {isAccrual ? (
                     <>
-                        {/* Accrual: Direct Expenses (Bank/Cash) */}
-                        <div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Liquid Purchases</span>
-                                <span className="text-[9px] font-black text-white">{formatCurrency(resolvedDirect)}</span>
+                        {/* Direct Bank Expenses */}
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between items-center text-[10px]">
+                                <span className="font-bold text-gray-300 tracking-wide">
+                                    Direct Bank Expenses
+                                    <span className="text-[9px] text-gray-400 ml-1.5 font-normal">({calcPct(resolvedDirect)})</span>
+                                </span>
+                                <span className="font-black text-white">{formatCurrency(resolvedDirect)}</span>
                             </div>
-                            <div className="h-1.5 w-full bg-white/[0.03] rounded-full overflow-hidden">
+                            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ scaleX: 0 }}
                                     animate={{ scaleX: Math.min(1, resolvedDirect / maxVal) }}
@@ -134,16 +124,18 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                                     className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full w-full"
                                 />
                             </div>
-                            <p className="text-[8px] text-gray-400 mt-1 font-medium">Outflow from Bank &amp; Cash for goods/services</p>
                         </div>
 
-                        {/* Accrual: Credit Card Incurred */}
-                        <div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">Card Swipes (Liability)</span>
-                                <span className="text-[9px] font-black text-purple-200">{formatCurrency(resolvedCredit)}</span>
+                        {/* Credit Card Incurred */}
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between items-center text-[10px]">
+                                <span className="font-bold text-purple-300 tracking-wide">
+                                    Credit Card Swipes
+                                    <span className="text-[9px] text-purple-400/60 ml-1.5 font-normal">({calcPct(resolvedCredit)})</span>
+                                </span>
+                                <span className="font-black text-purple-200">{formatCurrency(resolvedCredit)}</span>
                             </div>
-                            <div className="h-1.5 w-full bg-white/[0.03] rounded-full overflow-hidden">
+                            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ scaleX: 0 }}
                                     animate={{ scaleX: Math.min(1, resolvedCredit / maxVal) }}
@@ -151,18 +143,20 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                                     className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full w-full"
                                 />
                             </div>
-                            <p className="text-[8px] text-gray-400 mt-1 font-medium">Expenses charged to credit cards this period</p>
                         </div>
                     </>
                 ) : (
                     <>
-                        {/* Cash: Direct Expenses */}
-                        <div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Direct Expenses</span>
-                                <span className="text-[9px] font-black text-white">{formatCurrency(resolvedDirect)}</span>
+                        {/* Direct Bank Expenses */}
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between items-center text-[10px]">
+                                <span className="font-bold text-gray-300 tracking-wide">
+                                    Direct Bank Expenses
+                                    <span className="text-[9px] text-gray-400 ml-1.5 font-normal">({calcPct(resolvedDirect)})</span>
+                                </span>
+                                <span className="font-black text-white">{formatCurrency(resolvedDirect)}</span>
                             </div>
-                            <div className="h-1.5 w-full bg-white/[0.03] rounded-full overflow-hidden">
+                            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ scaleX: 0 }}
                                     animate={{ scaleX: Math.min(1, resolvedDirect / maxVal) }}
@@ -170,16 +164,18 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                                     className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full w-full"
                                 />
                             </div>
-                            <p className="text-[8px] text-gray-400 mt-1 font-medium">Liquid cash spent directly from bank/cash</p>
                         </div>
 
-                        {/* Cash: Prior Settlement (Debt Servicing) */}
-                        <div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest">Prior Settlement (Debt Servicing)</span>
-                                <span className="text-[9px] font-black text-amber-300">{formatCurrency(priorSettlement)}</span>
+                        {/* Prior Debt Settlement */}
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between items-center text-[10px]">
+                                <span className="font-bold text-amber-300 tracking-wide">
+                                    Credit Card Bills Paid
+                                    <span className="text-[9px] text-amber-400/60 ml-1.5 font-normal">({calcPct(priorSettlement)})</span>
+                                </span>
+                                <span className="font-black text-amber-300">{formatCurrency(priorSettlement)}</span>
                             </div>
-                            <div className="h-1.5 w-full bg-white/[0.03] rounded-full overflow-hidden">
+                            <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ scaleX: 0 }}
                                     animate={{ scaleX: Math.min(1, priorSettlement / maxVal) }}
@@ -187,23 +183,9 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                                     className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full w-full"
                                 />
                             </div>
-                            <p className="text-[8px] text-gray-400 mt-1 font-medium">Bank payments to settle credit card bills</p>
                         </div>
                     </>
                 )}
-            </div>
-
-            {/* Footer Total */}
-            <div className="pt-3 border-t border-white/[0.05] flex justify-between items-center">
-                <div>
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">
-                        {isAccrual ? 'Expenses Incurred' : 'Actual Cash Drain'}
-                    </span>
-                    <span className="text-[8px] text-gray-400">
-                        {isAccrual ? 'Accrual Accounting' : 'Cash Accounting Outflow'}
-                    </span>
-                </div>
-                <span className="text-sm font-black text-white">{formatCurrency(activeTotal)}</span>
             </div>
         </div>
     );
