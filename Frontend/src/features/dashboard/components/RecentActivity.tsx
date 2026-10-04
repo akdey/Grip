@@ -29,14 +29,14 @@ const RecentActivityItem = memo(({ t, formatCurrency, onClick }: { t: Transactio
     return (
         <div
             onClick={() => onClick(t.id)}
-            className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/[0.05] rounded-[1.8rem] group active:scale-[0.98] transition-all cursor-pointer hover:bg-white/[0.04]"
+            className="flex items-center justify-between p-4 bg-surface-subtle border border-border-subtle rounded-[1.8rem] group active:scale-[0.98] transition-all cursor-pointer hover:bg-surface-hover"
         >
             <div className="flex items-center gap-4">
                 <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border border-white/[0.08]"
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border border-border-subtle"
                     style={{
                         backgroundColor: `${t.sub_category_color || t.category_color}15` || 'rgba(255,255,255,0.03)',
-                        color: t.sub_category_color || t.category_color || '#fff'
+                        color: t.sub_category_color || t.category_color || 'var(--color-text-primary)'
                     }}
                 >
                     <CategoryIcon
@@ -46,19 +46,19 @@ const RecentActivityItem = memo(({ t, formatCurrency, onClick }: { t: Transactio
                     />
                 </div>
                 <div className="flex flex-col min-w-0">
-                    <p className="font-semibold text-white/90 truncate max-w-[150px] text-sm leading-tight">
+                    <p className="font-semibold text-primary truncate max-w-[150px] text-sm leading-tight">
                         {t.merchant_name || t.category}
                     </p>
-                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">
+                    <p className="text-[9px] text-text-muted font-bold uppercase tracking-widest mt-1">
                         {format(new Date(t.transaction_date || t.created_at || new Date()), 'MMM d, yyyy')}
                     </p>
                 </div>
             </div>
             <div className="text-right shrink-0">
-                <p className="font-black text-white text-base leading-none tracking-tighter">
+                <p className="font-black text-primary text-base leading-none tracking-tighter">
                     {formatCurrency(t.amount)}
                 </p>
-                <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter mt-1.5 inline-block ${t.is_manual ? 'border-amber-500/20 text-amber-500/80' : 'border-white/10 text-white/70 bg-white/[0.04]'
+                <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter mt-1.5 inline-block ${t.is_manual ? 'border-amber-500/20 text-amber-500/80' : 'border-border-subtle text-secondary bg-surface-pill'
                     }`}>
                     {t.is_manual ? 'Manual' : 'System'}
                 </span>
@@ -73,8 +73,8 @@ const RecentActivity: React.FC<RecentActivityProps & { isLoading?: boolean }> = 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between px-2">
-                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Recents</h3>
-                <NavLink to="/transactions" className="text-[10px] font-black text-white/80 uppercase tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 hover:bg-white/10 hover:text-white transition-all">
+                <h3 className="text-[10px] font-black text-text-muted uppercase tracking-[4px]">Recents</h3>
+                <NavLink to="/transactions" className="text-[10px] font-black text-secondary uppercase tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-subtle border border-border-subtle hover:bg-surface-hover hover:text-primary transition-all">
                     All <ChevronRight size={10} />
                 </NavLink>
             </div>

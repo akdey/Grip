@@ -13,19 +13,19 @@ export const Layout: React.FC = () => {
         location.pathname === '/tags';
 
     return (
-        <div className="min-h-screen text-white">
+        <div className="min-h-screen text-primary">
             {!isEntryPage && <Sidebar />}
 
             <main className={`min-h-screen transition-all duration-300 ${!isEntryPage ? 'md:pl-72 pb-32 md:pb-12' : 'pb-0'}`}>
                 {showDesktopWarning && !isEntryPage && (
-                    <div className="hidden md:flex items-center justify-between bg-white/[0.03] border-b border-white/[0.08] px-8 py-3 text-xs font-medium text-white/70 backdrop-blur-md sticky top-0 z-40">
+                    <div className="hidden md:flex items-center justify-between bg-surface-subtle border-b border-border-subtle px-8 py-3 text-xs font-medium text-text-secondary backdrop-blur-md sticky top-0 z-40">
                         <span className="flex items-center gap-2 tracking-wide">
-                            <Smartphone size={14} className="text-white/80" />
+                            <Smartphone size={14} className="text-accent-text" />
                             MOBILE FIRST DESIGN — EXPERIENCE OPTIMIZED FOR SMALLER SCREENS
                         </span>
                         <button
                             onClick={() => setShowDesktopWarning(false)}
-                            className="hover:text-white hover:bg-white/10 p-1 rounded-full transition-colors"
+                            className="hover:text-primary hover:bg-surface-hover p-1 rounded-full transition-colors text-text-muted"
                             aria-label="Close warning"
                         >
                             <X size={14} />

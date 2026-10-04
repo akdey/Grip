@@ -50,7 +50,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                             haptics.selection();
                             onClose();
                         }}
-                        className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
+                        className="absolute inset-0 bg-overlay backdrop-blur-md pointer-events-auto"
                     />
                     <motion.div
                         initial={{ y: '100%' }}
@@ -68,7 +68,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                 haptics.selection();
                             }
                         }}
-                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] glass-drawer rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.7)] overflow-hidden pointer-events-auto z-[2000] select-none touch-none"
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] glass-drawer rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.4)] overflow-hidden pointer-events-auto z-[2000] select-none touch-none"
                     >
                         {/* Grabber Pill */}
                         <div
@@ -78,26 +78,26 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                 onClose();
                             }}
                         >
-                            <div className="w-10 h-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95" />
+                            <div className="w-10 h-1.5 bg-border-strong rounded-full transition-colors active:scale-95" />
                         </div>
 
                         {/* Header */}
-                        <div className="p-6 sm:p-8 border-b border-white/[0.06] flex items-center justify-between bg-white/[0.02] shrink-0">
+                        <div className="p-6 sm:p-8 border-b border-border-subtle flex items-center justify-between bg-surface-subtle shrink-0">
                             <div className="flex-1">
                                 <div className="flex items-center gap-3">
-                                    <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic heading-apple">Card Exposure Ledger</h2>
+                                    <h2 className="text-2xl font-black text-primary tracking-tighter uppercase italic heading-apple">Card Exposure Ledger</h2>
                                     <span className="text-[9px] font-bold text-metric-exposure-text uppercase tracking-widest bg-metric-exposure-bg px-2.5 py-1 rounded-full border border-metric-exposure-border">
                                         Active CC Swipes
                                     </span>
                                 </div>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[4px] mt-1">Unsettled credit card charges & debt</p>
+                                <p className="text-[10px] text-text-muted font-bold uppercase tracking-[4px] mt-1">Unsettled credit card charges & debt</p>
                             </div>
                             <button
                                 onClick={() => {
                                     haptics.selection();
                                     onClose();
                                 }}
-                                className="w-12 h-12 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group touch-manipulation"
+                                className="w-12 h-12 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-sm group touch-manipulation"
                                 aria-label="Close card exposure ledger"
                             >
                                 <ChevronDown size={24} className="group-hover:translate-y-0.5 transition-transform" />
@@ -110,11 +110,11 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                             {cardBreakdown.length > 0 && (
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between px-1">
-                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[3px]">Cards in Exposure</span>
+                                        <span className="text-[10px] font-black text-text-muted uppercase tracking-[3px]">Cards in Exposure</span>
                                         {selectedCardId && (
                                             <button
                                                 onClick={() => setSelectedCardId(null)}
-                                                className="text-[9px] font-bold text-white/70 uppercase tracking-wider hover:text-white transition-colors"
+                                                className="text-[9px] font-bold text-secondary uppercase tracking-wider hover:text-primary transition-colors"
                                             >
                                                 Show All Cards
                                             </button>
@@ -130,7 +130,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                     className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group active:scale-[0.98] ${
                                                         isSelected
                                                             ? 'bg-accent-subtle border-accent-border'
-                                                            : 'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]'
+                                                            : 'bg-surface-subtle border-border-subtle hover:bg-surface-hover'
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-3">
@@ -138,14 +138,14 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                             <CardIcon size={16} />
                                                         </div>
                                                         <div>
-                                                            <p className="text-xs font-black text-white uppercase tracking-tight line-clamp-1">{card.card_name}</p>
-                                                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">
+                                                            <p className="text-xs font-black text-primary uppercase tracking-tight line-clamp-1">{card.card_name}</p>
+                                                            <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">
                                                                 {card.last_four_digits ? `•••• ${card.last_four_digits}` : 'Unassigned'} • {card.count} {card.count === 1 ? 'swipe' : 'swipes'}
                                                             </p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-sm font-black text-white tracking-tighter">
+                                                        <p className="text-sm font-black text-primary tracking-tighter">
                                                             {formatCurrency(card.amount)}
                                                         </p>
                                                     </div>
@@ -158,7 +158,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
 
                             {/* Section Header for Items */}
                             <div className="flex items-center justify-between px-1 pt-2">
-                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[3px]">
+                                <span className="text-[10px] font-black text-text-muted uppercase tracking-[3px]">
                                     {selectedCardId ? 'Filtered Swipes' : 'All Unsettled Swipes'} ({filteredItems.length})
                                 </span>
                                 <button
@@ -187,7 +187,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                     navigate('/credit-cards');
                                                 }
                                             }}
-                                            className="p-4 rounded-3xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between group hover:bg-white/[0.04] transition-all cursor-pointer active:scale-[0.99]"
+                                            className="p-4 rounded-3xl bg-surface-subtle border border-border-subtle flex items-center justify-between group hover:bg-surface-hover transition-all cursor-pointer active:scale-[0.99]"
                                             title="View card in Vault to settle this swipe"
                                         >
                                             <div className="flex items-center gap-4 min-w-0">
@@ -196,7 +196,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                 </div>
 
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-black text-white uppercase tracking-tight truncate">
+                                                    <p className="text-sm font-black text-primary uppercase tracking-tight truncate">
                                                         {item.merchant_name}
                                                     </p>
                                                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">

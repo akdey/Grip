@@ -62,17 +62,17 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
         },
         warning: {
             border: 'border-amber-500/20',
-            text: 'text-amber-400',
-            amountText: 'text-white',
-            shadow: 'shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
-            pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+            text: 'text-amber-500',
+            amountText: 'text-primary',
+            shadow: 'shadow-[0_20px_50px_rgba(0,0,0,0.25)]',
+            pill: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
             dot: 'bg-amber-400'
         },
         success: {
             border: 'border-accent-border',
-            text: 'text-white',
-            amountText: 'text-white',
-            shadow: 'shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
+            text: 'text-primary',
+            amountText: 'text-primary',
+            shadow: 'shadow-[0_20px_50px_rgba(0,0,0,0.25)]',
             pill: 'bg-accent-subtle text-accent-text border-accent-border',
             dot: 'bg-emerald-400'
         }
@@ -82,7 +82,7 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
 
     return (
         <div
-            className={`relative p-8 rounded-[3.5rem] bg-white/[0.02] backdrop-blur-3xl border ${theme.border} overflow-hidden ${theme.shadow} cursor-pointer group transition-all duration-500 hover:border-accent-border/60 active:scale-[0.99]`}
+            className={`relative p-8 rounded-[3.5rem] bg-surface-subtle backdrop-blur-3xl border ${theme.border} overflow-hidden ${theme.shadow} cursor-pointer group transition-all duration-500 hover:border-accent-border/60 active:scale-[0.99]`}
             onClick={onNavigate}
         >
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
@@ -98,12 +98,12 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
                     <span>{formatCurrency(Math.abs(safe))}</span>
                 </h3>
 
-                <p className={`text-[11px] font-medium max-w-[240px] leading-relaxed ${status === 'negative' ? theme.text : 'text-gray-400'}`}>
+                <p className={`text-[11px] font-medium max-w-[240px] leading-relaxed ${status === 'negative' ? theme.text : 'text-text-muted'}`}>
                     {safeToSpend?.recommendation}
                 </p>
 
                 <div className="w-full max-w-[200px] mt-8 space-y-3">
-                    <div className="h-1 w-full bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.05]">
+                    <div className="h-1 w-full bg-surface-pill rounded-full overflow-hidden border border-border-subtle">
                         <motion.div
                             initial={{ scaleX: 0 }}
                             animate={{ scaleX: Math.max(0, Math.min((safe / Math.max(balance, 1)), 1)) }}
@@ -112,25 +112,25 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
                             className="h-full bg-gradient-to-r from-accent to-accent-hover shadow-[0_0_20px_var(--color-accent-subtle)] w-full"
                         />
                     </div>
-                    <div className="flex justify-between text-[7px] font-black uppercase tracking-[2px] text-gray-400">
+                    <div className="flex justify-between text-[7px] font-black uppercase tracking-[2px] text-text-muted">
                         <span>Risk</span>
                         <span>Capacity</span>
                     </div>
                 </div>
 
-                <div className="w-full grid grid-cols-2 gap-8 mt-10 border-t border-white/[0.05] pt-8">
+                <div className="w-full grid grid-cols-2 gap-8 mt-10 border-t border-border-subtle pt-8">
                     <div className="flex flex-col items-center">
                         <div className="flex items-center gap-1.5 mb-1.5 opacity-60">
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gross Liquid</p>
-                            {!showSensitive && <Lock size={8} className="text-gray-400" aria-hidden="true" />}
+                            <p className="text-[9px] font-black text-text-muted uppercase tracking-widest">Gross Liquid</p>
+                            {!showSensitive && <Lock size={8} className="text-text-muted" aria-hidden="true" />}
                         </div>
-                        <p className="text-xl font-black text-white/90">
+                        <p className="text-xl font-black text-primary">
                             {showSensitive ? formatCurrency(balance) : '******'}
                         </p>
                     </div>
                     <div className="flex flex-col items-center">
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 opacity-60">Buffer</p>
-                        <p className="text-xl font-black text-white/70">{formatCurrency(Number(safeToSpend?.buffer_amount || 0))}</p>
+                        <p className="text-[9px] font-black text-text-muted uppercase tracking-widest mb-1.5 opacity-60">Buffer</p>
+                        <p className="text-xl font-black text-secondary">{formatCurrency(Number(safeToSpend?.buffer_amount || 0))}</p>
                     </div>
                 </div>
             </div>
