@@ -287,9 +287,9 @@ const Transactions: React.FC = () => {
                     </button>
                     <div>
                         <h1 className="text-xl font-bold tracking-tight text-primary">
-                            {view === 'day' ? "Today" :
-                                view === 'month' ? "Month View" :
-                                    view === 'year' ? "Year View" :
+                            {view === 'day' ? "Day Ledger" :
+                                view === 'month' ? "Expense Calendar" :
+                                    view === 'year' ? "Year Overview" :
                                         view === 'pending' ? "Action Center" :
                                             view === 'custom' ? "Filtered" :
                                                 "History"}
@@ -304,13 +304,34 @@ const Transactions: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {/* View Switcher: List vs Calendar */}
+                    <button
+                        onClick={() => {
+                            const newParams = new URLSearchParams(searchParams);
+                            if (view === 'month') {
+                                newParams.delete('view');
+                            } else {
+                                newParams.set('view', 'month');
+                            }
+                            setSearchParams(newParams);
+                        }}
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 ${
+                            view === 'month'
+                                ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm'
+                                : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
+                        }`}
+                        title={view === 'month' ? "Switch to List View" : "Expense Calendar View"}
+                    >
+                        {view === 'month' ? <Receipt size={18} /> : <Calendar size={18} />}
+                    </button>
+
                     {/* Sort & Group Button */}
                     <button
                         onClick={() => setIsSortOpen(true)}
-                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 ${
                             sortBy !== 'date_desc' || groupBy !== 'date'
                                 ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm'
-                                : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary'
+                                : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
                         }`}
                         title="Sort & Group Ledger"
                     >
@@ -320,7 +341,7 @@ const Transactions: React.FC = () => {
                     {/* Filter Button - Active State Indication */}
                     <button
                         onClick={() => setFilterOpen(true)}
-                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${hasActiveFilters ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm' : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary'}`}
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 ${hasActiveFilters ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm' : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'}`}
                         title="Filter Discovery"
                     >
                         <Filter size={18} />
@@ -430,23 +451,34 @@ const Transactions: React.FC = () => {
                                     const isCurrentMonth = isSameMonth(day, currentMonth);
 
                                     return (
-                                        <div
+                                        <button
                                             key={i}
+                                            type="button"
+                                            disabled={!isCurrentMonth}
+                                            onClick={() => {
+                                                setCurrentMonth(day);
+                                                const newParams = new URLSearchParams(searchParams);
+                                                newParams.set('view', 'day');
+                                                setSearchParams(newParams);
+                                            }}
                                             className={`
                                                 aspect-[3/4.5] p-1 border border-border-subtle flex flex-col items-center justify-between py-2 rounded-2xl transition-all
-                                                ${!isCurrentMonth ? 'opacity-20' : ''}
-                                                ${isToday(day) ? 'bg-accent-subtle border-accent-border text-accent-text font-black' : 'bg-surface-subtle'}
+                                                ${!isCurrentMonth ? 'opacity-20 cursor-default' : 'cursor-pointer hover:border-accent-border hover:bg-surface-hover active:scale-95'}
+                                                ${isToday(day) ? 'bg-accent-subtle border-accent-border text-accent-text font-black ring-1 ring-accent-border shadow-sm' : 'bg-surface-subtle'}
                                             `}
+                                            title={isCurrentMonth ? `${format(day, 'EEE, dd MMM yyyy')}: ${dailyTotal !== 0 ? (dailyTotal > 0 ? `+₹${dailyTotal}` : `-₹${Math.abs(dailyTotal)}`) : 'No transactions'}` : undefined}
                                         >
-                                            <span className={`text-[10px] font-black ${isCurrentMonth ? 'text-secondary' : 'text-text-disabled'}`}>
+                                            <span className={`text-[10px] font-black ${isCurrentMonth ? (isToday(day) ? 'text-accent-text' : 'text-primary') : 'text-text-disabled'}`}>
                                                 {format(day, 'd')}
                                             </span>
-                                            {dailyTotal !== 0 && (
-                                                <div className={`w-full ${dailyTotal > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/10' : 'bg-red-500/10 text-red-500 border-red-500/10'} px-0 py-1.5 rounded-lg text-[8px] font-black leading-tight border text-center`}>
+                                            {dailyTotal !== 0 ? (
+                                                <div className={`w-full ${dailyTotal > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'} px-0 py-1.5 rounded-lg text-[8px] font-black leading-tight border text-center font-mono`}>
                                                     ₹{Math.abs(dailyTotal) >= 1000 ? `${(Math.abs(dailyTotal) / 1000).toFixed(1)}k` : Math.abs(dailyTotal).toFixed(0)}
                                                 </div>
+                                            ) : (
+                                                <div className="w-1 h-1 rounded-full bg-border-subtle/50 mb-1" />
                                             )}
-                                        </div>
+                                        </button>
                                     );
                                 })}
                             </div>
@@ -701,6 +733,60 @@ const Transactions: React.FC = () => {
                     <p className="text-text-muted text-xs leading-relaxed uppercase font-bold tracking-widest px-1">
                         Organize your financial ledger
                     </p>
+
+                    {/* Display Mode Section */}
+                    <div className="space-y-3">
+                        <label className="text-[9px] text-text-muted font-black uppercase tracking-[3px] ml-1">
+                            Display Mode
+                        </label>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <button
+                                onClick={() => {
+                                    const newParams = new URLSearchParams(searchParams);
+                                    newParams.delete('view');
+                                    setSearchParams(newParams);
+                                    setIsSortOpen(false);
+                                }}
+                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
+                                    view !== 'month'
+                                        ? 'bg-accent-subtle border-accent-border text-primary'
+                                        : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between w-full">
+                                    <Receipt size={18} />
+                                    {view !== 'month' && <Check size={16} className="text-accent-text" />}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-primary">Timeline List</p>
+                                    <p className="text-[9px] text-text-muted mt-0.5">Linear transaction feed</p>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    const newParams = new URLSearchParams(searchParams);
+                                    newParams.set('view', 'month');
+                                    setSearchParams(newParams);
+                                    setIsSortOpen(false);
+                                }}
+                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
+                                    view === 'month'
+                                        ? 'bg-accent-subtle border-accent-border text-primary'
+                                        : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between w-full">
+                                    <Calendar size={18} />
+                                    {view === 'month' && <Check size={16} className="text-accent-text" />}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-primary">Expense Calendar</p>
+                                    <p className="text-[9px] text-text-muted mt-0.5">Daily expense heat grid</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
 
                     {/* Grouping Section */}
                     <div className="space-y-3">

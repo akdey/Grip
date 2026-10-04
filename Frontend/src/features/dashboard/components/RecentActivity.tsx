@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { format } from 'date-fns';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { ChevronRight, Banknote, Receipt } from 'lucide-react';
+import { ChevronRight, Banknote, Receipt, Calendar } from 'lucide-react';
 import { CategoryIcon } from '../../../components/ui/CategoryIcon';
 
 interface Transaction {
@@ -74,9 +74,15 @@ const RecentActivity: React.FC<RecentActivityProps & { isLoading?: boolean }> = 
         <div className="space-y-6">
             <div className="flex items-center justify-between px-2">
                 <h3 className="text-[10px] font-black text-text-muted uppercase tracking-[4px]">Recents</h3>
-                <NavLink to="/transactions" className="text-[10px] font-black text-secondary uppercase tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-subtle border border-border-subtle hover:bg-surface-hover hover:text-primary transition-all">
-                    All <ChevronRight size={10} />
-                </NavLink>
+                <div className="flex items-center gap-1.5">
+                    <NavLink to="/transactions?view=month" className="text-[10px] font-black text-secondary uppercase tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-subtle border border-border-subtle hover:bg-surface-hover hover:text-primary transition-all" title="View Expense Calendar">
+                        <Calendar size={11} />
+                        Calendar
+                    </NavLink>
+                    <NavLink to="/transactions" className="text-[10px] font-black text-secondary uppercase tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-subtle border border-border-subtle hover:bg-surface-hover hover:text-primary transition-all">
+                        All <ChevronRight size={10} />
+                    </NavLink>
+                </div>
             </div>
 
             <div className="space-y-3 min-h-[300px]">

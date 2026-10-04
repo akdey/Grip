@@ -350,7 +350,10 @@ const More: React.FC = () => {
                                     <div className="w-7 h-7 rounded-lg bg-surface-pill text-primary flex items-center justify-center">
                                         <Calendar size={14} />
                                     </div>
-                                    <span className="text-[11px] font-black text-primary uppercase tracking-wider">This Month</span>
+                                    <div>
+                                        <span className="text-[11px] font-black text-primary uppercase tracking-wider block">Calendar</span>
+                                        <span className="text-[8px] text-text-muted font-bold uppercase tracking-wider block">This Month</span>
+                                    </div>
                                 </div>
                                 <ArrowUpRight size={14} className="text-text-muted group-hover:text-primary transition-colors" />
                             </div>
