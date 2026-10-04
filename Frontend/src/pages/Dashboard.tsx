@@ -163,7 +163,7 @@ const Dashboard: React.FC = () => {
                 {/* Summary Grid */}
                 <SummaryGrid
                     totalIncome={summary?.total_income || 0}
-                    totalExpense={summary?.total_expense || 0}
+                    totalExpense={summary?.cash_outflow ?? summary?.total_expense ?? 0}
                     isLoading={isSummaryLoading}
                     showSensitive={showSensitive}
                     formatCurrency={formatCurrency}

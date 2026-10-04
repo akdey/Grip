@@ -68,11 +68,7 @@ class AnalyticsService:
         current_range = get_month_date_range(target_date)
         previous_range = get_previous_month_date_range(target_date)
         
-        investment_filter = (Transaction.category == "Investment") | Transaction.category.in_(
-            select(Category.name).where(Category.type == "INVESTMENT")
-        )
-
-        # Prepare Current month spending query (Accrual expenses: exclude Income, Investment, and Debt Transfer)
+        # Prepare Current month spending query (Accrual expenses: exclude Income and Debt Transfer)
         current_stmt = (
             select(
                 Transaction.category,
@@ -80,7 +76,6 @@ class AnalyticsService:
             )
             .where(Transaction.user_id == user_id)
             .where(Transaction.category != "Income")
-            .where(~investment_filter)
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= current_range["month_start"])
@@ -88,7 +83,7 @@ class AnalyticsService:
             .group_by(Transaction.category)
         )
         
-        # Prepare Previous month spending query (Accrual expenses: exclude Income, Investment, and Debt Transfer)
+        # Prepare Previous month spending query (Accrual expenses: exclude Income and Debt Transfer)
         previous_stmt = (
             select(
                 Transaction.category,
@@ -96,7 +91,6 @@ class AnalyticsService:
             )
             .where(Transaction.user_id == user_id)
             .where(Transaction.category != "Income")
-            .where(~investment_filter)
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= previous_range["month_start"])
@@ -661,10 +655,6 @@ class AnalyticsService:
             date_field = Transaction.transaction_date
             limit_points = days
 
-        investment_filter = (Transaction.category == "Investment") | Transaction.category.in_(
-            select(Category.name).where(Category.type == "INVESTMENT")
-        )
-
         stmt = (
             select(
                 date_field.label("date"),
@@ -672,7 +662,6 @@ class AnalyticsService:
             )
             .where(Transaction.user_id == user_id)
             .where(Transaction.category.notin_(["Income", "Transfer"]))
-            .where(~investment_filter)
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= start_date)

@@ -186,9 +186,9 @@ const Analytics: React.FC = () => {
                                         <TrendingUp size={16} />
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className="text-[8px] font-black text-rose-500/80 uppercase tracking-widest leading-none mb-1">Spending</span>
+                                        <span className="text-[8px] font-black text-rose-500/80 uppercase tracking-widest leading-none mb-1">Outflow</span>
                                         <span className="text-sm font-black text-primary tracking-tighter whitespace-nowrap">
-                                            {formatCurrency(summary?.total_expense || 0)}
+                                            {formatCurrency(summary?.cash_outflow ?? summary?.total_expense ?? 0)}
                                         </span>
                                     </div>
                                 </div>
