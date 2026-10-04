@@ -63,7 +63,16 @@ import {
     Martini,
     PartyPopper,
     Users,
-    Clock
+    Clock,
+    Scale,
+    SlidersHorizontal,
+    Sliders,
+    ArrowLeftRight,
+    RefreshCw,
+    RotateCcw,
+    Calculator,
+    Coins,
+    Equal
 } from 'lucide-react';
 
 export const ICON_MAP: Record<string, LucideIcon> = {
@@ -120,7 +129,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
     'Pill': Pill,
     'Dumbbell': Dumbbell,
 
-    // Finance
+    // Finance & Balance Adjustment
     'Wallet': Wallet,
     'CreditCard': CreditCard,
     'Banknote': Banknote,
@@ -128,6 +137,15 @@ export const ICON_MAP: Record<string, LucideIcon> = {
     'TrendingUp': TrendingUp,
     'PiggyBank': PiggyBank,
     'Clock': Clock,
+    'Scale': Scale,
+    'SlidersHorizontal': SlidersHorizontal,
+    'Sliders': Sliders,
+    'ArrowLeftRight': ArrowLeftRight,
+    'RefreshCw': RefreshCw,
+    'RotateCcw': RotateCcw,
+    'Calculator': Calculator,
+    'Coins': Coins,
+    'Equal': Equal,
 
     // Misc
     'Baby': Baby,
@@ -155,7 +173,7 @@ export const CATEGORIZED_LUCIDE_ICONS = [
     { name: 'Home', icons: ['Home', 'Lamp', 'Zap', 'Droplets', 'Wrench', 'Key', 'Wifi', 'Smartphone'] },
     { name: 'Entertainment', icons: ['Gamepad2', 'Film', 'Music', 'Tv', 'Palmtree'] },
     { name: 'Health', icons: ['Heart', 'Stethoscope', 'Pill', 'Dumbbell'] },
-    { name: 'Finance', icons: ['Wallet', 'CreditCard', 'Banknote', 'Landmark', 'TrendingUp', 'PiggyBank', 'Clock'] },
+    { name: 'Finance', icons: ['Wallet', 'CreditCard', 'Banknote', 'Landmark', 'TrendingUp', 'PiggyBank', 'Scale', 'SlidersHorizontal', 'ArrowLeftRight', 'Calculator', 'Coins', 'RefreshCw', 'Clock'] },
     { name: 'Misc', icons: ['Baby', 'Dog', 'Trees', 'Rocket', 'Shield', 'Lock', 'Bell', 'Book', 'Briefcase', 'ParkingCircle', 'Martini', 'PartyPopper', 'Users'] },
 ];
 
@@ -168,10 +186,30 @@ interface CategoryIconProps {
 }
 
 export const CategoryIcon: React.FC<CategoryIconProps> = ({ name, size = 20, color, className, fallback }) => {
-    if (!name || !ICON_MAP[name]) {
+    if (!name) {
         return <>{fallback || <HelpCircle size={size} className={className} />}</>;
     }
 
-    const Icon = ICON_MAP[name];
+    // Direct match
+    let Icon = ICON_MAP[name];
+
+    // Case-insensitive / formatted alias lookup
+    if (!Icon) {
+        const cleanName = name.toLowerCase().replace(/[-_\s]/g, '');
+        const matchedKey = Object.keys(ICON_MAP).find(
+            (k) => k.toLowerCase().replace(/[-_\s]/g, '') === cleanName
+        );
+        if (matchedKey) {
+            Icon = ICON_MAP[matchedKey];
+        } else if (cleanName.includes('balance') || cleanName.includes('adjust') || cleanName.includes('reconcil')) {
+            // Intelligent fallback for balance adjustment variations
+            Icon = Scale;
+        }
+    }
+
+    if (!Icon) {
+        return <>{fallback || <HelpCircle size={size} className={className} />}</>;
+    }
+
     return <Icon size={size} color={color} className={className} />;
 };
