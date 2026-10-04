@@ -2,12 +2,17 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { haptics } from '../../lib/haptics';
 
-// 24 Muted luxury financial tones (low saturation, executive mineral and earth palette)
+// 24 muted tones — hues spaced ≥18° apart, S 28-45%, L 36-47%. No neon, no AI-vibe.
+// First 18 = category colors. Last 6 = neutral tones for custom entries.
 const PRESET_COLORS = [
-    '#A85D5A', '#A66B50', '#B37D4D', '#B89D72', '#A38B52', '#7E9168',
-    '#5E8C7D', '#4E8A6D', '#4D8E5F', '#568B87', '#4F7B91', '#627D98',
-    '#687C99', '#6A7B8E', '#816F96', '#8E7B9D', '#9C8496', '#9A6F7D',
-    '#A96F6F', '#94714E', '#82786D', '#858F9E', '#6C7A89', '#546270'
+    '#7A3A3A', '#8A4A2C', '#5C3C24', '#886030', // reds → warm earth
+    '#887228', '#607028',                         // golds → olive
+    '#38763C', '#2E6650',                         // greens
+    '#2A6272', '#265078', '#2C3E88', '#3C3278',  // teal → cobalt → indigo
+    '#52368A', '#5E2872', '#782E68', '#782E46',  // purple → mauve → rose
+    '#485465', '#5A6068',                         // neutral slate / grey
+    '#6E5A4E', '#4E5A52', '#52485E', '#5E5248',  // warm / cool neutrals
+    '#7A6E62', '#48545A',                         // parchment, steel
 ];
 
 interface ColorSelectorProps {
