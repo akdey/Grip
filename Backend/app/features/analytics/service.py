@@ -471,7 +471,11 @@ class AnalyticsService:
             target_date = date(year, month, 1)
         
         # Determine date range based on scope
-        if scope == "year":
+        if scope == "day":
+            start_date = target_date
+            end_date = target_date
+            period_label = start_date.strftime("%d %B %Y")
+        elif scope == "year":
             date_range = get_year_date_range(target_date)
             start_date = date_range["year_start"]
             end_date = date_range["year_end"]

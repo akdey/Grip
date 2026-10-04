@@ -1,9 +1,9 @@
 import React, { memo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, CreditCard as CardIcon, CheckCircle2, Circle, Layers } from 'lucide-react';
+import { ChevronDown, CreditCard as CardIcon, ArrowUpRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import type { SafeToSpend, CardExposureItem } from '../hooks';
-import { useToggleSettledStatus } from '../../transactions/hooks';
 
 interface CardExposureDrawerProps {
     isOpen: boolean;
@@ -18,8 +18,8 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
     safeToSpend,
     formatCurrency
 }) => {
+    const navigate = useNavigate();
     const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-    const toggleSettledMutation = useToggleSettledStatus();
 
     const exposureItems = safeToSpend?.frozen_funds?.card_exposure || [];
     const cardBreakdown = safeToSpend?.frozen_funds?.card_breakdown || [];
@@ -132,9 +132,16 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-[3px]">
                                     {selectedCardId ? 'Filtered Swipes' : 'All Unsettled Swipes'} ({filteredItems.length})
                                 </span>
-                                <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">
-                                    Click checkmark to settle
-                                </span>
+                                <button
+                                    onClick={() => {
+                                        onClose();
+                                        navigate('/credit-cards');
+                                    }}
+                                    className="text-[9px] text-amber-400 hover:text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1 transition-colors"
+                                >
+                                    <span>Manage in Vault</span>
+                                    <ArrowUpRight size={12} />
+                                </button>
                             </div>
 
                             {/* Swipes List */}
@@ -143,24 +150,21 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                     filteredItems.map((item: CardExposureItem) => (
                                         <div
                                             key={item.id}
-                                            className="p-4 rounded-3xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between group hover:bg-white/[0.04] transition-all"
+                                            onClick={() => {
+                                                onClose();
+                                                if (item.card_id) {
+                                                    navigate(`/credit-cards/${item.card_id}`);
+                                                } else {
+                                                    navigate('/credit-cards');
+                                                }
+                                            }}
+                                            className="p-4 rounded-3xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between group hover:bg-white/[0.04] transition-all cursor-pointer active:scale-[0.99]"
+                                            title="View card in Vault to settle this swipe"
                                         >
                                             <div className="flex items-center gap-4 min-w-0">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        toggleSettledMutation.mutate(item.id);
-                                                    }}
-                                                    disabled={toggleSettledMutation.isPending}
-                                                    title="Mark this transaction as settled"
-                                                    className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all shrink-0 ${
-                                                        toggleSettledMutation.isPending
-                                                            ? 'opacity-40 cursor-not-allowed bg-white/[0.05]'
-                                                            : 'bg-amber-500/10 text-amber-400 hover:bg-emerald-500/20 hover:text-emerald-400 active:scale-90 cursor-pointer'
-                                                    }`}
-                                                >
-                                                    <Circle size={18} />
-                                                </button>
+                                                <div className="w-9 h-9 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
+                                                    <CardIcon size={16} />
+                                                </div>
 
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-black text-white uppercase tracking-tight truncate">
@@ -181,13 +185,18 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                 </div>
                                             </div>
 
-                                            <div className="text-right shrink-0 ml-4">
-                                                <p className="text-sm font-black text-white tracking-tighter">
-                                                    {formatCurrency(item.amount)}
-                                                </p>
-                                                <p className="text-[7px] text-gray-700 font-bold uppercase tracking-widest mt-0.5">
-                                                    {item.sub_category || item.category || 'General'}
-                                                </p>
+                                            <div className="flex items-center gap-3 shrink-0 ml-4">
+                                                <div className="text-right">
+                                                    <p className="text-sm font-black text-white tracking-tighter">
+                                                        {formatCurrency(item.amount)}
+                                                    </p>
+                                                    <p className="text-[7px] text-gray-700 font-bold uppercase tracking-widest mt-0.5">
+                                                        {item.sub_category || item.category || 'General'}
+                                                    </p>
+                                                </div>
+                                                <div className="w-7 h-7 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-center text-gray-600 group-hover:text-amber-400 group-hover:border-amber-500/20 transition-all">
+                                                    <ArrowUpRight size={14} />
+                                                </div>
                                             </div>
                                         </div>
                                     ))

@@ -17,12 +17,13 @@ import {
     Target,
     Brain,
     Cpu,
-    Activity,
-    ArrowUpRight
+    ArrowUpRight,
+    Layers
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
 import { useSyncTrends } from '../features/sync/hooks';
+import { useMonthlySummary } from '../features/dashboard/hooks';
 import { SyncTrendChart } from '../components/sync/SyncTrendChart';
 import { Card } from '../components/ui/Card';
 
@@ -101,6 +102,17 @@ const More: React.FC = () => {
     const user = useAuthStore((state) => state.user);
     const [isExporting, setIsExporting] = useState(false);
 
+    const { data: daySummary } = useMonthlySummary(undefined, undefined, 'day');
+    const { data: monthSummary } = useMonthlySummary(undefined, undefined, 'month');
+    const { data: yearSummary } = useMonthlySummary(undefined, undefined, 'year');
+
+    const formatCompact = (val: number) => {
+        const abs = Math.abs(val || 0);
+        if (abs >= 100000) return `₹${(abs / 100000).toFixed(1)}L`;
+        if (abs >= 1000) return `₹${(abs / 1000).toFixed(1)}k`;
+        return `₹${Math.round(abs)}`;
+    };
+
     const userName = user?.email?.split('@')[0] || 'Infiltrator';
 
     const handleBackup = async () => {
@@ -175,39 +187,131 @@ const More: React.FC = () => {
                     ))}
                 </div>
 
-                {/* Smart Views Section - Compact List */}
+                {/* Smart Views Section */}
                 <div className="space-y-3">
-                    <h3 className="text-[9px] font-black text-gray-600 uppercase tracking-[3px] ml-1 opacity-80">Views</h3>
-                    <div className="grid grid-cols-3 gap-2.5">
-                        <button
+                    <div className="flex items-center justify-between px-1">
+                        <h3 className="text-[9px] font-black text-gray-500 uppercase tracking-[3px]">
+                            Time Horizons & Activity
+                        </h3>
+                        <span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">
+                            Inflow / Outflow
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                        {/* Day Card */}
+                        <div
                             onClick={() => navigate('/transactions?view=day')}
-                            className="flex flex-col items-center justify-center p-3.5 bg-white/[0.03] rounded-[1.4rem] border border-white/[0.05] active:scale-[0.98] transition-all gap-2"
+                            className="p-3.5 bg-white/[0.03] rounded-2xl border border-white/[0.05] hover:bg-white/[0.06] transition-all cursor-pointer group active:scale-[0.98]"
                         >
-                            <div className="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-400/80 flex items-center justify-center">
-                                <Smartphone size={16} />
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-orange-500/10 text-orange-400 flex items-center justify-center">
+                                        <Smartphone size={14} />
+                                    </div>
+                                    <span className="text-[11px] font-black text-white uppercase tracking-wider">Today</span>
+                                </div>
+                                <ArrowUpRight size={14} className="text-gray-600 group-hover:text-white transition-colors" />
                             </div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Today</span>
-                        </button>
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.04]">
+                                <div>
+                                    <p className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">In</p>
+                                    <p className="text-[11px] font-black text-emerald-400 tracking-tight">
+                                        +{formatCompact(daySummary?.total_income || 0)}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">Out</p>
+                                    <p className="text-[11px] font-black text-rose-400 tracking-tight">
+                                        -{formatCompact(daySummary?.cash_outflow ?? daySummary?.total_expense ?? 0)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
-                        <button
+                        {/* Month Card */}
+                        <div
                             onClick={() => navigate('/transactions?view=month')}
-                            className="flex flex-col items-center justify-center p-3.5 bg-white/[0.03] rounded-[1.4rem] border border-white/[0.05] active:scale-[0.98] transition-all gap-2"
+                            className="p-3.5 bg-white/[0.03] rounded-2xl border border-white/[0.05] hover:bg-white/[0.06] transition-all cursor-pointer group active:scale-[0.98]"
                         >
-                            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400/80 flex items-center justify-center">
-                                <Calendar size={16} />
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
+                                        <Calendar size={14} />
+                                    </div>
+                                    <span className="text-[11px] font-black text-white uppercase tracking-wider">This Month</span>
+                                </div>
+                                <ArrowUpRight size={14} className="text-gray-600 group-hover:text-white transition-colors" />
                             </div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Month</span>
-                        </button>
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.04]">
+                                <div>
+                                    <p className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">In</p>
+                                    <p className="text-[11px] font-black text-emerald-400 tracking-tight">
+                                        +{formatCompact(monthSummary?.total_income || 0)}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">Out</p>
+                                    <p className="text-[11px] font-black text-rose-400 tracking-tight">
+                                        -{formatCompact(monthSummary?.cash_outflow ?? monthSummary?.total_expense ?? 0)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
-                        <button
-                            onClick={() => navigate('/transactions?view=custom')}
-                            className="flex flex-col items-center justify-center p-3.5 bg-white/[0.03] rounded-[1.4rem] border border-white/[0.05] active:scale-[0.98] transition-all gap-2"
+                        {/* Year Card */}
+                        <div
+                            onClick={() => navigate('/transactions?view=year')}
+                            className="p-3.5 bg-white/[0.03] rounded-2xl border border-white/[0.05] hover:bg-white/[0.06] transition-all cursor-pointer group active:scale-[0.98]"
                         >
-                            <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400/80 flex items-center justify-center">
-                                <Filter size={16} />
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                                        <Layers size={14} />
+                                    </div>
+                                    <span className="text-[11px] font-black text-white uppercase tracking-wider">This Year</span>
+                                </div>
+                                <ArrowUpRight size={14} className="text-gray-600 group-hover:text-white transition-colors" />
                             </div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Filter</span>
-                        </button>
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.04]">
+                                <div>
+                                    <p className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">In</p>
+                                    <p className="text-[11px] font-black text-emerald-400 tracking-tight">
+                                        +{formatCompact(yearSummary?.total_income || 0)}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">Out</p>
+                                    <p className="text-[11px] font-black text-rose-400 tracking-tight">
+                                        -{formatCompact(yearSummary?.cash_outflow ?? yearSummary?.total_expense ?? 0)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Filter Card */}
+                        <div
+                            onClick={() => navigate('/transactions?view=custom')}
+                            className="p-3.5 bg-white/[0.03] rounded-2xl border border-white/[0.05] hover:bg-white/[0.06] transition-all cursor-pointer group active:scale-[0.98]"
+                        >
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                                        <Filter size={14} />
+                                    </div>
+                                    <span className="text-[11px] font-black text-white uppercase tracking-wider">Discovery</span>
+                                </div>
+                                <ArrowUpRight size={14} className="text-gray-600 group-hover:text-white transition-colors" />
+                            </div>
+                            <div className="pt-2 border-t border-white/[0.04]">
+                                <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest truncate">
+                                    Custom Range & Scope
+                                </p>
+                                <p className="text-[10px] text-purple-400 font-bold uppercase tracking-tight mt-0.5">
+                                    Filter & Search →
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -23,7 +23,7 @@ async def get_monthly_summary(
     service: Annotated[AnalyticsService, Depends()],
     month: Optional[int] = Query(None, ge=1, le=12),
     year: Optional[int] = Query(None, ge=2000, le=2100),
-    scope: str = Query("month", enum=["month", "year", "all"])
+    scope: str = Query("month", enum=["day", "month", "year", "all"])
 ):
     """
     Get financial summary (Income vs Expense) for a specific scope.

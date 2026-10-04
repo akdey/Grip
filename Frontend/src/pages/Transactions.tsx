@@ -11,6 +11,11 @@ import {
     Filter,
     Check,
     Trash2,
+    ArrowUpDown,
+    TrendingUp,
+    TrendingDown,
+    Layers,
+    Calendar
 } from 'lucide-react';
 import {
     format,
@@ -27,7 +32,13 @@ import {
     isSameYear,
     parseISO,
     startOfToday,
-    differenceInCalendarDays
+    differenceInCalendarDays,
+    startOfYear,
+    endOfYear,
+    addYears,
+    subYears,
+    addDays,
+    subDays
 } from 'date-fns';
 import { CategoryIcon } from '../components/ui/CategoryIcon';
 import { Drawer } from '../components/ui/Drawer';
@@ -45,6 +56,11 @@ const Transactions: React.FC = () => {
     const [limit, setLimit] = useState(200);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [isFilterOpen, setFilterOpen] = useState(false);
+    const [isSortOpen, setIsSortOpen] = useState(false);
+
+    // Sorting & Grouping State
+    const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc' | 'category_asc' | 'merchant_asc'>('date_desc');
+    const [groupBy, setGroupBy] = useState<'date' | 'category'>('date');
 
     // Initialize Drawer State from URL Params
     const [drawerCategory, setDrawerCategory] = useState(searchParams.get('category') || '');
@@ -66,11 +82,14 @@ const Transactions: React.FC = () => {
         const filters: any = { limit };
 
         if (view === 'day') {
-            filters.start_date = format(new Date(), 'yyyy-MM-dd');
-            filters.end_date = format(new Date(), 'yyyy-MM-dd');
+            filters.start_date = format(currentMonth, 'yyyy-MM-dd');
+            filters.end_date = format(currentMonth, 'yyyy-MM-dd');
         } else if (view === 'month') {
             filters.start_date = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
             filters.end_date = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+        } else if (view === 'year') {
+            filters.start_date = format(startOfYear(currentMonth), 'yyyy-MM-dd');
+            filters.end_date = format(endOfYear(currentMonth), 'yyyy-MM-dd');
         } else if (view === 'custom') {
             const start = searchParams.get('start_date');
             const end = searchParams.get('end_date');
@@ -90,6 +109,25 @@ const Transactions: React.FC = () => {
     const { data: transactions, isLoading } = useTransactions(queryFilters);
     const { data: pendingTransactions } = usePendingTransactions();
 
+    // Financial Metrics (Inflow vs Outflow for current horizon)
+    const { totalInflow, totalOutflow, netBalance, verifiedCount } = useMemo(() => {
+        if (!transactions) return { totalInflow: 0, totalOutflow: 0, netBalance: 0, verifiedCount: 0 };
+        let inf = 0;
+        let outf = 0;
+        let count = 0;
+        transactions.forEach(t => {
+            if (t.status === 'PENDING') return;
+            count++;
+            const amt = Number(t.amount || 0);
+            if (amt > 0) {
+                inf += amt;
+            } else {
+                outf += Math.abs(amt);
+            }
+        });
+        return { totalInflow: inf, totalOutflow: outf, netBalance: inf - outf, verifiedCount: count };
+    }, [transactions]);
+
     const applyFilters = () => {
         const params: any = { view: 'custom' };
         if (drawerCategory) params.category = drawerCategory;
@@ -101,29 +139,79 @@ const Transactions: React.FC = () => {
         setFilterOpen(false);
     };
 
-    // Grouping Logic for Display
+    // Grouping & Sorting Logic for Display
     const groupedTransactions = useMemo(() => {
         if (!transactions) return [];
 
-        const groups: { label: string, items: any[] }[] = [];
-        const now = startOfToday();
-
         const parseTxnDate = (t: any) => t.transaction_date ? parseISO(t.transaction_date) : new Date(t.created_at);
-        
-        // Filter out pending transactions from the main list so they don't appear twice
         const verifiedOnly = transactions.filter(txn => txn.status !== 'PENDING');
 
-        verifiedOnly.forEach(txn => {
+        // 1. Sort verified transactions
+        const sorted = [...verifiedOnly].sort((a, b) => {
+            if (sortBy === 'date_desc') {
+                return parseTxnDate(b).getTime() - parseTxnDate(a).getTime();
+            }
+            if (sortBy === 'date_asc') {
+                return parseTxnDate(a).getTime() - parseTxnDate(b).getTime();
+            }
+            if (sortBy === 'amount_desc') {
+                return Math.abs(Number(b.amount || 0)) - Math.abs(Number(a.amount || 0));
+            }
+            if (sortBy === 'amount_asc') {
+                return Math.abs(Number(a.amount || 0)) - Math.abs(Number(b.amount || 0));
+            }
+            if (sortBy === 'category_asc') {
+                return (a.category || '').localeCompare(b.category || '');
+            }
+            if (sortBy === 'merchant_asc') {
+                const mA = (a.merchant_name || a.category || '').trim();
+                const mB = (b.merchant_name || b.category || '').trim();
+                return mA.localeCompare(mB);
+            }
+            return 0;
+        });
+
+        // 2. Group by Category
+        if (groupBy === 'category') {
+            const categoryMap = new Map<string, { label: string, items: any[], total: number, icon?: string, color?: string }>();
+            sorted.forEach(txn => {
+                const catName = txn.category || 'Uncategorized';
+                if (!categoryMap.has(catName)) {
+                    categoryMap.set(catName, {
+                        label: catName,
+                        items: [],
+                        total: 0,
+                        icon: txn.category_icon,
+                        color: txn.category_color
+                    });
+                }
+                const entry = categoryMap.get(catName)!;
+                entry.items.push(txn);
+                entry.total += Number(txn.amount || 0);
+            });
+
+            return Array.from(categoryMap.values()).sort((a, b) => {
+                if (sortBy === 'category_asc') {
+                    return a.label.localeCompare(b.label);
+                }
+                return Math.abs(b.total) - Math.abs(a.total);
+            });
+        }
+
+        // 3. Group by Date
+        const groups: { label: string, items: any[], total?: number, icon?: string, color?: string }[] = [];
+        const now = startOfToday();
+
+        sorted.forEach(txn => {
             const date = parseTxnDate(txn);
             let label = "";
-
             const daysDiff = differenceInCalendarDays(now, date);
 
             if (daysDiff === 0) {
                 label = "Today";
             } else if (daysDiff === 1) {
                 label = "Yesterday";
-            } else if (daysDiff < 7) {
+            } else if (daysDiff < 7 && daysDiff > 0) {
                 label = format(date, 'EEEE');
             } else if (isSameMonth(date, now)) {
                 label = "Earlier this Month";
@@ -142,7 +230,7 @@ const Transactions: React.FC = () => {
         });
 
         return groups;
-    }, [transactions]);
+    }, [transactions, sortBy, groupBy]);
 
     // Calendar Data
     const calendarDays = useMemo(() => {
@@ -178,30 +266,146 @@ const Transactions: React.FC = () => {
                     <div>
                         <h1 className="text-xl font-bold tracking-tight">
                             {view === 'day' ? "Today" :
-                                view === 'month' ? "Calendar" :
-                                    view === 'pending' ? "Action Center" :
-                                        view === 'custom' ? "Filtered" :
-                                            "Activity"}
+                                view === 'month' ? "Month View" :
+                                    view === 'year' ? "Year View" :
+                                        view === 'pending' ? "Action Center" :
+                                            view === 'custom' ? "Filtered" :
+                                                "Activity"}
                         </h1>
                         <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">
-                            {view === 'month' ? format(currentMonth, 'MMMM yyyy') : `${transactions?.length || 0} records`}
+                            {view === 'day' ? format(currentMonth, 'EEE, dd MMM yyyy') :
+                                view === 'month' ? format(currentMonth, 'MMMM yyyy') :
+                                    view === 'year' ? format(currentMonth, 'yyyy') :
+                                        `${verifiedCount} records`}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                    {/* Sort & Group Button */}
+                    <button
+                        onClick={() => setIsSortOpen(true)}
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
+                            sortBy !== 'date_desc' || groupBy !== 'date'
+                                ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+                                : 'bg-white/[0.03] border-white/10 text-gray-400'
+                        }`}
+                        title="Sort & Group Ledger"
+                    >
+                        <ArrowUpDown size={18} />
+                    </button>
+
                     {/* Filter Button - Active State Indication */}
                     <button
-                        onClick={() => {
-                            setFilterOpen(true);
-                            // Do NOT change view or trigger fetch here, just open drawer
-                        }}
+                        onClick={() => setFilterOpen(true)}
                         className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${view === 'custom' ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400' : 'bg-white/[0.03] border-white/10 text-gray-400'}`}
+                        title="Filter Discovery"
                     >
                         <Filter size={18} />
                     </button>
                 </div>
             </header>
+
+            {/* Inflow / Outflow Financial Strip */}
+            {view !== 'pending' && (
+                <div className="mx-4 mt-4 p-4 rounded-3xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.06] shadow-xl">
+                    <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-[2px] text-gray-500 mb-2.5">
+                        <span>
+                            {view === 'day' ? 'Today\'s Cashflow' :
+                             view === 'month' ? `${format(currentMonth, 'MMMM yyyy')} Cashflow` :
+                             view === 'year' ? `${format(currentMonth, 'yyyy')} Annual Cashflow` :
+                             'Horizon Cashflow'}
+                        </span>
+                        <span className="text-gray-400 font-bold">{verifiedCount} Verified</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-emerald-500/[0.06] border border-emerald-500/15 p-2.5 rounded-2xl">
+                            <div className="flex items-center gap-1 text-emerald-400 text-[8px] font-bold uppercase tracking-wider mb-0.5">
+                                <TrendingUp size={11} />
+                                <span>Inflow</span>
+                            </div>
+                            <p className="text-xs sm:text-sm font-black text-white tracking-tight truncate">
+                                +{formatCurrency(totalInflow)}
+                            </p>
+                        </div>
+                        <div className="bg-rose-500/[0.06] border border-rose-500/15 p-2.5 rounded-2xl">
+                            <div className="flex items-center gap-1 text-rose-400 text-[8px] font-bold uppercase tracking-wider mb-0.5">
+                                <TrendingDown size={11} />
+                                <span>Outflow</span>
+                            </div>
+                            <p className="text-xs sm:text-sm font-black text-white tracking-tight truncate">
+                                -{formatCurrency(totalOutflow)}
+                            </p>
+                        </div>
+                        <div className="bg-white/[0.02] border border-white/[0.06] p-2.5 rounded-2xl">
+                            <div className="text-gray-400 text-[8px] font-bold uppercase tracking-wider mb-0.5">
+                                <span>Net Flow</span>
+                            </div>
+                            <p className={`text-xs sm:text-sm font-black tracking-tight truncate ${netBalance >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                {netBalance >= 0 ? '+' : ''}{formatCurrency(netBalance)}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Quick Time Horizon & Grouping Bar */}
+            {view !== 'pending' && (
+                <div className="px-4 mt-3 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-1 p-1 bg-white/[0.02] border border-white/[0.05] rounded-2xl">
+                        {[
+                            { id: 'day', label: 'Day' },
+                            { id: 'month', label: 'Month' },
+                            { id: 'year', label: 'Year' },
+                            { id: 'all', label: 'All' },
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => {
+                                    const params: any = {};
+                                    if (tab.id !== 'all') params.view = tab.id;
+                                    setSearchParams(params);
+                                }}
+                                className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${
+                                    (view === tab.id || (tab.id === 'all' && view === 'all'))
+                                        ? 'bg-white text-black shadow-lg font-black'
+                                        : 'text-gray-500 hover:text-white'
+                                }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                            onClick={() => setGroupBy(prev => prev === 'date' ? 'category' : 'date')}
+                            className={`px-3 py-2 rounded-2xl border text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+                                groupBy === 'category'
+                                    ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+                                    : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-white'
+                            }`}
+                            title="Toggle Group By Category or Date"
+                        >
+                            <Layers size={12} />
+                            <span>{groupBy === 'category' ? 'By Category' : 'By Date'}</span>
+                        </button>
+
+                        <button
+                            onClick={() => setIsSortOpen(true)}
+                            className={`px-3 py-2 rounded-2xl border text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+                                sortBy !== 'date_desc'
+                                    ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+                                    : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white'
+                            }`}
+                            title="Sort options"
+                        >
+                            <ArrowUpDown size={12} />
+                            <span className="hidden sm:inline">Sort</span>
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {pendingTransactions && pendingTransactions.length > 0 && (
                 <div className="px-4 pt-6 pb-2 animate-enter space-y-4">
@@ -224,6 +428,32 @@ const Transactions: React.FC = () => {
             )}
 
             {view !== 'pending' && <div className="px-4 py-6 space-y-6 animate-enter">
+                {/* Day Navigator */}
+                {view === 'day' && (
+                    <div className="flex items-center justify-between bg-white/[0.03] p-2 rounded-[2rem] border border-white/[0.05] mb-6">
+                        <button onClick={() => setCurrentMonth(subDays(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-white/5 text-gray-500">
+                            <ChevronLeft size={20} />
+                        </button>
+                        <span className="font-bold text-sm uppercase tracking-widest">{format(currentMonth, 'EEE, dd MMM yyyy')}</span>
+                        <button onClick={() => setCurrentMonth(addDays(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-white/5 text-gray-500">
+                            <ChevronRight size={20} />
+                        </button>
+                    </div>
+                )}
+
+                {/* Year Navigator */}
+                {view === 'year' && (
+                    <div className="flex items-center justify-between bg-white/[0.03] p-2 rounded-[2rem] border border-white/[0.05] mb-6">
+                        <button onClick={() => setCurrentMonth(subYears(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-white/5 text-gray-500">
+                            <ChevronLeft size={20} />
+                        </button>
+                        <span className="font-bold text-sm uppercase tracking-widest">{format(currentMonth, 'yyyy')}</span>
+                        <button onClick={() => setCurrentMonth(addYears(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-white/5 text-gray-500">
+                            <ChevronRight size={20} />
+                        </button>
+                    </div>
+                )}
+
                 {view === 'month' ? (
                     <div className="space-y-8">
                         {/* Compact Month Selector */}
@@ -276,10 +506,33 @@ const Transactions: React.FC = () => {
                         <div className="space-y-8">
                             {groupedTransactions.map(group => (
                                 <div key={group.label} className="space-y-4">
-                                    <div className="flex items-center gap-4 px-2">
-                                        <h3 className="text-[9px] font-black text-white/30 uppercase tracking-[4px] whitespace-nowrap">{group.label}</h3>
-                                        <div className="h-px w-full bg-white/[0.05]" />
+                                    <div className="flex items-center justify-between px-2">
+                                        <div className="flex items-center gap-2">
+                                            {groupBy === 'category' && (
+                                                <div
+                                                    className="w-6 h-6 rounded-lg flex items-center justify-center text-xs shrink-0"
+                                                    style={{
+                                                        backgroundColor: `${group.color || '#fff'}20`,
+                                                        color: group.color || '#fff'
+                                                    }}
+                                                >
+                                                    <CategoryIcon name={group.icon || 'tag'} size={14} />
+                                                </div>
+                                            )}
+                                            <h3 className="text-[10px] font-black text-white/70 uppercase tracking-[3px] whitespace-nowrap">
+                                                {group.label}
+                                            </h3>
+                                            <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">
+                                                ({group.items.length})
+                                            </span>
+                                        </div>
+                                        {groupBy === 'category' && group.total !== undefined && (
+                                            <span className={`text-xs font-black tracking-tight ${group.total >= 0 ? 'text-emerald-400' : 'text-white'}`}>
+                                                {formatCurrency(group.total)}
+                                            </span>
+                                        )}
                                     </div>
+                                    {groupBy !== 'category' && <div className="h-px w-full bg-white/[0.05]" />}
                                     <div className="space-y-3">
                                         {group.items.map(txn => (
                                             <TransactionItem key={txn.id} txn={txn} formatCurrency={formatCurrency} />
@@ -295,16 +548,39 @@ const Transactions: React.FC = () => {
                             <div className="flex flex-col items-center justify-center py-40 opacity-10 space-y-6">
                                 <Receipt size={80} strokeWidth={1} />
                                 <p className="font-black uppercase tracking-[4px] text-[10px] text-center px-10">
-                                    {view === 'day' ? "No activity today" : "No results found"}
+                                    {view === 'day' ? "No activity on this date" : "No results found"}
                                 </p>
                             </div>
                         ) : (
                             groupedTransactions.map((group) => (
                                 <div key={group.label} className="space-y-4">
-                                    <div className="flex items-center gap-4 px-2">
-                                        <h3 className="text-[9px] font-black text-white/30 uppercase tracking-[4px] whitespace-nowrap">{group.label}</h3>
-                                        <div className="h-px w-full bg-white/[0.05]" />
+                                    <div className="flex items-center justify-between px-2">
+                                        <div className="flex items-center gap-2">
+                                            {groupBy === 'category' && (
+                                                <div
+                                                    className="w-6 h-6 rounded-lg flex items-center justify-center text-xs shrink-0"
+                                                    style={{
+                                                        backgroundColor: `${group.color || '#fff'}20`,
+                                                        color: group.color || '#fff'
+                                                    }}
+                                                >
+                                                    <CategoryIcon name={group.icon || 'tag'} size={14} />
+                                                </div>
+                                            )}
+                                            <h3 className="text-[10px] font-black text-white/70 uppercase tracking-[3px] whitespace-nowrap">
+                                                {group.label}
+                                            </h3>
+                                            <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">
+                                                ({group.items.length})
+                                            </span>
+                                        </div>
+                                        {groupBy === 'category' && group.total !== undefined && (
+                                            <span className={`text-xs font-black tracking-tight ${group.total >= 0 ? 'text-emerald-400' : 'text-white'}`}>
+                                                {formatCurrency(group.total)}
+                                            </span>
+                                        )}
                                     </div>
+                                    {groupBy !== 'category' && <div className="h-px w-full bg-white/[0.05]" />}
                                     <div className="space-y-3">
                                         {group.items.map((txn) => (
                                             <TransactionItem key={txn.id} txn={txn} formatCurrency={formatCurrency} />
@@ -409,6 +685,111 @@ const Transactions: React.FC = () => {
                             className="w-full py-5 rounded-[2rem] bg-white text-black font-black text-lg shadow-2xl active:scale-95 transition-all"
                         >
                             Refine Activity
+                        </button>
+                    </div>
+                </div>
+            </Drawer>
+
+            {/* Sort & Group Drawer */}
+            <Drawer isOpen={isSortOpen} onClose={() => setIsSortOpen(false)} title="Sort & Group">
+                <div className="space-y-8 px-2 pb-10">
+                    <p className="text-gray-500 text-xs leading-relaxed uppercase font-bold tracking-widest px-1">
+                        Organize your financial ledger
+                    </p>
+
+                    {/* Grouping Section */}
+                    <div className="space-y-3">
+                        <label className="text-[9px] text-gray-500 font-black uppercase tracking-[3px] ml-1">
+                            Group Transactions By
+                        </label>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <button
+                                onClick={() => setGroupBy('date')}
+                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
+                                    groupBy === 'date'
+                                        ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400'
+                                        : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between w-full">
+                                    <Calendar size={18} />
+                                    {groupBy === 'date' && <Check size={16} className="text-cyan-400" />}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-white">Daily Timeline</p>
+                                    <p className="text-[9px] text-gray-500 mt-0.5">Chronological day groups</p>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => setGroupBy('category')}
+                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
+                                    groupBy === 'category'
+                                        ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400'
+                                        : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between w-full">
+                                    <Layers size={18} />
+                                    {groupBy === 'category' && <Check size={16} className="text-cyan-400" />}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-white">By Category</p>
+                                    <p className="text-[9px] text-gray-500 mt-0.5">Subtotals & spend by tag</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Sorting Section */}
+                    <div className="space-y-3">
+                        <label className="text-[9px] text-gray-500 font-black uppercase tracking-[3px] ml-1">
+                            Sort Order
+                        </label>
+                        <div className="space-y-2">
+                            {[
+                                { id: 'date_desc', label: 'Date: Newest First', desc: 'Latest activity first' },
+                                { id: 'date_asc', label: 'Date: Oldest First', desc: 'Earliest records first' },
+                                { id: 'amount_desc', label: 'Amount: Highest to Lowest', desc: 'Biggest spends at top' },
+                                { id: 'amount_asc', label: 'Amount: Lowest to Highest', desc: 'Smallest transactions first' },
+                                { id: 'category_asc', label: 'Category: A to Z', desc: 'Alphabetical by category' },
+                                { id: 'merchant_asc', label: 'Merchant: A to Z', desc: 'Alphabetical by merchant' },
+                            ].map((option) => (
+                                <button
+                                    key={option.id}
+                                    onClick={() => setSortBy(option.id as any)}
+                                    className={`w-full p-3.5 rounded-2xl border flex items-center justify-between transition-all ${
+                                        sortBy === option.id
+                                            ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400'
+                                            : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                                    }`}
+                                >
+                                    <div className="text-left">
+                                        <p className="text-xs font-bold text-white">{option.label}</p>
+                                        <p className="text-[9px] text-gray-500">{option.desc}</p>
+                                    </div>
+                                    {sortBy === option.id && <Check size={16} className="text-cyan-400 shrink-0" />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-2 flex items-center gap-3">
+                        <button
+                            onClick={() => {
+                                setSortBy('date_desc');
+                                setGroupBy('date');
+                            }}
+                            className="flex-1 py-4 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] text-gray-400 hover:text-white text-xs font-bold uppercase tracking-wider transition-all"
+                        >
+                            Reset
+                        </button>
+                        <button
+                            onClick={() => setIsSortOpen(false)}
+                            className="flex-1 py-4 rounded-2xl bg-white text-black font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all"
+                        >
+                            Done
                         </button>
                     </div>
                 </div>
