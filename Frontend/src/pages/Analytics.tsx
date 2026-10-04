@@ -280,12 +280,6 @@ const Analytics: React.FC = () => {
                     )}
                 </div>
 
-                {/* Monthly Expense Calendar Matrix */}
-                <MonthlyExpenseCalendar
-                    currentMonth={referenceDate}
-                    showSensitive={showSensitive}
-                />
-
                 {/* Outflow Analysis Section */}
                 <div className="space-y-6">
                     <div className="flex items-center gap-3">
@@ -438,6 +432,12 @@ const Analytics: React.FC = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Monthly Expense Calendar Matrix */}
+                <MonthlyExpenseCalendar
+                    currentMonth={referenceDate}
+                    showSensitive={showSensitive}
+                />
 
                 {/* Macro Timeline Section */}
                 <div className="space-y-6 pt-10 border-t border-border-subtle">
