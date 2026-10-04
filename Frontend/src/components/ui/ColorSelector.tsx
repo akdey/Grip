@@ -2,17 +2,17 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { haptics } from '../../lib/haptics';
 
-// 24 muted tones — hues spaced ≥18° apart, S 28-45%, L 36-47%. No neon, no AI-vibe.
-// First 18 = category colors. Last 6 = neutral tones for custom entries.
+// Surfacing palette for dark glass — L=55-65%, S=48-62%.
+// Grounded hues (not neon), bright enough to pop on dark backgrounds.
 const PRESET_COLORS = [
-    '#7A3A3A', '#8A4A2C', '#5C3C24', '#886030', // reds → warm earth
-    '#887228', '#607028',                         // golds → olive
-    '#38763C', '#2E6650',                         // greens
-    '#2A6272', '#265078', '#2C3E88', '#3C3278',  // teal → cobalt → indigo
-    '#52368A', '#5E2872', '#782E68', '#782E46',  // purple → mauve → rose
-    '#485465', '#5A6068',                         // neutral slate / grey
-    '#6E5A4E', '#4E5A52', '#52485E', '#5E5248',  // warm / cool neutrals
-    '#7A6E62', '#48545A',                         // parchment, steel
+    '#C45252', '#C87048', '#A86E42', '#CC8840', // reds → warm earths
+    '#B89830', '#8EA840',                         // gold → olive
+    '#48A85E', '#3CA87C',                         // sage green → sage teal
+    '#3498B8', '#3878C0', '#4A60C0', '#6058C0',  // steel → ocean → cobalt → periwinkle
+    '#7A4EC0', '#8838A8', '#A83898', '#C0466A',  // purple → violet → mauve → rose
+    '#607890', '#727880',                         // slate / grey
+    '#A08060', '#608060', '#706090', '#906070',  // warm / cool muted extras
+    '#907040', '#506878',                         // amber, steel
 ];
 
 interface ColorSelectorProps {
