@@ -135,13 +135,17 @@ class WealthService:
         # Set initial values if provided
         if total_invested:
             holding.total_invested = total_invested
-        if current_units and holding.api_source in ['MFAPI', 'YFINANCE']:
+        if getattr(data, 'current_value', None) is not None:
+            holding.current_value = data.current_value
+        elif current_units and holding.api_source in ['MFAPI', 'YFINANCE']:
             # Fetch current NAV to calculate current value
             try:
                 current_nav = await self.get_asset_price(holding, date.today())
                 holding.current_value = current_units * current_nav
             except:
                 holding.current_value = total_invested if total_invested else 0
+        elif total_invested and (holding.current_value is None or holding.current_value == 0.0):
+            holding.current_value = total_invested
         
         self.db.add(holding)
         await self.db.commit()
@@ -282,39 +286,43 @@ class WealthService:
 
     # --- Pricing & Sync Logic ---
 
+    _MF_CACHE: dict = {}
+
     async def fetch_nav_mfapi(self, scheme_code: str, target_date: Optional[date] = None) -> float:
-        """Fetch NAV from MFAPI.in. If date provided, find closest NAV. Else latest."""
-        url = f"https://api.mfapi.in/mf/{scheme_code}"
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(url)
-            if resp.status_code != 200:
-                raise ValueError(f"Invalid MFAPI code: {scheme_code}")
-            data = resp.json().get("data", [])
+        """Fetch NAV from MFAPI.in with in-memory caching and weekend fallback."""
+        if scheme_code in WealthService._MF_CACHE:
+            data = WealthService._MF_CACHE[scheme_code]
+        else:
+            url = f"https://api.mfapi.in/mf/{scheme_code}"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url)
+                if resp.status_code != 200:
+                    raise ValueError(f"Invalid MFAPI code: {scheme_code}")
+                data = resp.json().get("data", [])
+                WealthService._MF_CACHE[scheme_code] = data
             
         if not data:
             raise ValueError("No data found for scheme")
 
-        # Data is list of {date: "dd-mm-yyyy", nav: "str"} sorted desc
-        
         if not target_date:
             return float(data[0]["nav"])
         
-        # Find match for date
         target_str = target_date.strftime("%d-%m-%Y")
-        
-        # Linear search (list is usually sorted desc)
         for entry in data:
             if entry["date"] == target_str:
                 return float(entry["nav"])
-            
-            # If we passed the date (data is strictly descending), we might need to take prev or next
-            # Simplified: Exact match or throw/fallback to closest
-            # Since MF NAVs are daily, let's try to match.
-            
-        # If strict match failed, let's try parsing and finding closest
-        # This is expensive? Maybe just error for ecosystem simplicity first.
-        # Fallback: Use latest if today, else error.
-        raise ValueError(f"No NAV found for date {target_str}")
+                
+        # Fallback to closest preceding date (data is sorted desc)
+        for entry in data:
+            try:
+                entry_dt = datetime.strptime(entry["date"], "%d-%m-%Y").date()
+                if entry_dt <= target_date:
+                    return float(entry["nav"])
+            except Exception:
+                continue
+                
+        return float(data[0]["nav"])
+
 
     async def search_mutual_funds(self, query: str) -> List[dict]:
         """Search mutual funds by name using MFAPI.in"""
@@ -360,11 +368,8 @@ class WealthService:
              raise ValueError("No current stock price data")
 
     async def get_asset_price(self, holding: InvestmentHolding, target_date: Optional[date] = None) -> float:
-        if holding.asset_type in [AssetType.FD, AssetType.RD, AssetType.PF, AssetType.GRATUITY]:
-            # Fixed income / Computed logic
-            # For now return 1.0 or user manually handled. 
-            # Actually, PF/Gratuity have specific formulas, but "price per unit" concept applies vaguely
-            # if we treat Unit=1 and Value = computed.
+        if holding.asset_type in [AssetType.FD, AssetType.RD, AssetType.PF, AssetType.GRATUITY, AssetType.PLI, AssetType.APY, AssetType.OTHER]:
+            # Fixed income / Government / Computed logic
             return 1.0 
 
         if not holding.ticker_symbol:
@@ -676,16 +681,64 @@ class WealthService:
             summary_text=summary
         )
 
+    async def update_holding(self, holding_id: uuid.UUID, user_id: uuid.UUID, data: schemas.InvestmentHoldingUpdate) -> InvestmentHolding:
+        holding = await self.db.get(InvestmentHolding, holding_id)
+        if not holding or holding.user_id != user_id:
+            raise ValueError("Holding not found")
+            
+        update_data = data.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(holding, key, value)
+            
+        holding.last_updated_at = datetime.now()
+        await self.db.commit()
+        await self.db.refresh(holding)
+        return holding
+
+    async def delete_holding(self, holding_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        holding = await self.db.get(InvestmentHolding, holding_id)
+        if not holding or holding.user_id != user_id:
+            raise ValueError("Holding not found")
+            
+        # Untag any transactions tagged with holding:{holding_id}
+        tag_str = f"holding:{holding_id}"
+        stmt = select(Transaction).where(
+            and_(
+                Transaction.user_id == user_id,
+                Transaction.tags.any(tag_str)
+            )
+        )
+        res = await self.db.execute(stmt)
+        txns = res.scalars().all()
+        for txn in txns:
+            txn.tags = [t for t in (txn.tags or []) if t != tag_str]
+            self.db.add(txn)
+            
+        await self.db.delete(holding)
+        await self.db.commit()
+        return True
+
     async def map_transaction(self, transaction_id: uuid.UUID, holding_id: uuid.UUID, create_rule: bool) -> bool:
         transaction = await self.db.get(Transaction, transaction_id)
         if not transaction:
             raise ValueError("Transaction not found")
             
+        holding = await self.db.get(InvestmentHolding, holding_id)
+        if not holding:
+            raise ValueError("Holding not found")
+            
         await self.add_transaction_to_holding(transaction, holding_id)
         
-        if create_rule:
+        # Tag transaction
+        tags = list(transaction.tags or [])
+        tag_str = f"holding:{holding_id}"
+        if tag_str not in tags:
+            tags.append(tag_str)
+            transaction.tags = tags
+            self.db.add(transaction)
+        
+        if create_rule and transaction.merchant_name:
             # Create a rule for this merchant
-            # Check if exists
             stmt = select(InvestmentMappingRule).where(
                 and_(
                     InvestmentMappingRule.user_id == transaction.user_id,
@@ -698,12 +751,245 @@ class WealthService:
                     user_id=transaction.user_id,
                     holding_id=holding_id,
                     pattern=transaction.merchant_name,
-                    match_type="CONTAINS" # Safe default
+                    match_type="CONTAINS"
                 )
                 self.db.add(rule)
-                await self.db.commit()
                 
+        await self.db.commit()
         return True
+
+    async def unmap_transaction(self, transaction_id: uuid.UUID) -> bool:
+        transaction = await self.db.get(Transaction, transaction_id)
+        if not transaction:
+            raise ValueError("Transaction not found")
+            
+        holding_id = None
+        new_tags = []
+        for tag in (transaction.tags or []):
+            if tag.startswith("holding:"):
+                try:
+                    holding_id = uuid.UUID(tag.split("holding:")[1])
+                except Exception:
+                    pass
+            else:
+                new_tags.append(tag)
+                
+        transaction.tags = new_tags
+        self.db.add(transaction)
+        
+        if holding_id:
+            txn_date = transaction.transaction_date or date.today()
+            snap_stmt = select(InvestmentSnapshot).where(
+                and_(
+                    InvestmentSnapshot.holding_id == holding_id,
+                    InvestmentSnapshot.captured_at == txn_date
+                )
+            )
+            snap = (await self.db.execute(snap_stmt)).scalar_one_or_none()
+            if snap:
+                invested_delta = float(-transaction.amount)
+                snap.amount_invested_delta -= invested_delta
+                if snap.amount_invested_delta <= 0:
+                    await self.db.delete(snap)
+                    
+            await self.recalculate_holding_history(holding_id)
+            
+        await self.db.commit()
+        return True
+
+    async def get_unassigned_transactions(self, user_id: uuid.UUID) -> List[dict]:
+        holdings = await self.get_holdings(user_id)
+        holdings_by_name = {h.name.lower(): h for h in holdings}
+        holdings_by_type = {}
+        for h in holdings:
+            holdings_by_type.setdefault(h.asset_type, []).append(h)
+            
+        stmt = (
+            select(Transaction)
+            .where(
+                and_(
+                    Transaction.user_id == user_id,
+                    Transaction.category.ilike("%invest%")
+                )
+            )
+            .order_by(desc(Transaction.transaction_date))
+        )
+        txns = (await self.db.execute(stmt)).scalars().all()
+        
+        unassigned = []
+        for t in txns:
+            is_mapped = any(tag.startswith("holding:") for tag in (t.tags or []))
+            if is_mapped:
+                continue
+                
+            suggested_holding_id = None
+            suggested_holding_name = None
+            
+            remarks = (t.remarks or "").lower()
+            merchant = (t.merchant_name or "").lower()
+            subcat = (t.sub_category or "").lower()
+            amt = abs(float(t.amount))
+            
+            is_mf = any(k in merchant for k in ["groww", "iccl", "clearing", "mutual"]) or subcat in ["sip", "mutual funds"]
+
+            for name, h in holdings_by_name.items():
+                if name in remarks or (name in merchant and not is_mf):
+                    suggested_holding_id = h.id
+                    suggested_holding_name = h.name
+                    break
+                    
+            if not suggested_holding_id:
+                if is_mf:
+                    if "parag" in remarks or amt == 7000.0:
+                        targets = [h for h in holdings if "parag" in h.name.lower()]
+                        if targets:
+                            suggested_holding_id = targets[0].id
+                            suggested_holding_name = targets[0].name
+                    elif "gold" in remarks or (amt == 3000.0 and t.transaction_date and t.transaction_date.day == 1):
+                        targets = [h for h in holdings if "gold" in h.name.lower()]
+                        if targets:
+                            suggested_holding_id = targets[0].id
+                            suggested_holding_name = targets[0].name
+                    elif "canara" in remarks or amt == 2000.0:
+                        targets = [h for h in holdings if "canara" in h.name.lower()]
+                        if targets:
+                            suggested_holding_id = targets[0].id
+                            suggested_holding_name = targets[0].name
+                else:
+                    if "apy" in subcat or "apy" in merchant or amt == 409.0:
+                        targets = holdings_by_type.get(AssetType.APY, []) + [h for h in holdings if "apy" in h.name.lower()]
+                        if targets:
+                            suggested_holding_id = targets[0].id
+                            suggested_holding_name = targets[0].name
+                    elif "pli" in subcat or "pli" in merchant or amt in [1880.0, 1900.0, 1964.0]:
+                        targets = holdings_by_type.get(AssetType.PLI, []) + [h for h in holdings if "pli" in h.name.lower()]
+                        if targets:
+                            suggested_holding_id = targets[0].id
+                            suggested_holding_name = targets[0].name
+                    elif "rd" in subcat or "rd" in remarks or "rd" in merchant or amt == 5000.0:
+                        targets = holdings_by_type.get(AssetType.RD, []) + [h for h in holdings if "rd" in h.name.lower()]
+                        if targets:
+                            suggested_holding_id = targets[0].id
+                            suggested_holding_name = targets[0].name
+                    elif "fd" in subcat or "fd" in merchant:
+                        targets = holdings_by_type.get(AssetType.FD, []) + [h for h in holdings if "fd" in h.name.lower()]
+                        if targets:
+                            suggested_holding_id = targets[0].id
+                            suggested_holding_name = targets[0].name
+
+                        
+            unassigned.append({
+                "id": t.id,
+                "transaction_date": t.transaction_date,
+                "merchant_name": t.merchant_name,
+                "amount": float(t.amount),
+                "sub_category": t.sub_category,
+                "remarks": t.remarks,
+                "suggested_holding_id": suggested_holding_id,
+                "suggested_holding_name": suggested_holding_name
+            })
+            
+        return unassigned
+
+    async def auto_detect_portfolio(self, user_id: uuid.UUID) -> dict:
+        """
+        Scans all investment transactions, auto-creates baseline holdings for 
+        identified asset categories (RD, APY, PLI, FD, and distinct SIP schemes),
+        and maps all matching transactions to them.
+        """
+        stmt = (
+            select(Transaction)
+            .where(
+                and_(
+                    Transaction.user_id == user_id,
+                    Transaction.category.ilike("%invest%")
+                )
+            )
+            .order_by(Transaction.transaction_date)
+        )
+        txns = (await self.db.execute(stmt)).scalars().all()
+        
+        existing_holdings = await self.get_holdings(user_id)
+        holdings_map = {h.name.lower(): h for h in existing_holdings}
+        
+        created_count = 0
+        linked_count = 0
+        
+        async def get_or_create(name: str, asset_type: AssetType, ticker: Optional[str] = None, api_source: Optional[str] = None, interest_rate: Optional[float] = None) -> InvestmentHolding:
+            nonlocal created_count
+            key = name.lower()
+            if key in holdings_map:
+                return holdings_map[key]
+            for h in holdings_map.values():
+                if h.asset_type == asset_type and h.asset_type in [AssetType.RD, AssetType.APY, AssetType.PLI]:
+                    return h
+                    
+            holding = InvestmentHolding(
+                user_id=user_id,
+                name=name,
+                asset_type=asset_type,
+                ticker_symbol=ticker,
+                api_source=api_source,
+                interest_rate=interest_rate,
+                total_invested=0.0,
+                current_value=0.0
+            )
+            self.db.add(holding)
+            await self.db.commit()
+            await self.db.refresh(holding)
+            holdings_map[key] = holding
+            created_count += 1
+            return holding
+
+        for t in txns:
+            if any(tag.startswith("holding:") for tag in (t.tags or [])):
+                continue
+                
+            sub = (t.sub_category or "").lower()
+            merch = (t.merchant_name or "").lower()
+            rem = (t.remarks or "").lower()
+            amt = abs(float(t.amount))
+            
+            target_holding = None
+            
+            if "parag parikh" in rem:
+                target_holding = await get_or_create("Parag Parikh Flexi Cap Fund", AssetType.MUTUAL_FUND, ticker="122639", api_source="MFAPI")
+            elif "sbi gold" in rem:
+                target_holding = await get_or_create("SBI Gold Fund", AssetType.MUTUAL_FUND, ticker="119598", api_source="MFAPI")
+            elif "canara robeco" in rem:
+                target_holding = await get_or_create("Canara Robeco Small Cap Fund", AssetType.MUTUAL_FUND, ticker="145552", api_source="MFAPI")
+            elif "rd" in sub or "rd" in rem or merch == "rd":
+                target_holding = await get_or_create("Recurring Deposit (RD)", AssetType.RD, interest_rate=7.1)
+            elif "apy" in sub or "apy" in merch or "apy" in rem or amt == 409.0:
+                target_holding = await get_or_create("Atal Pension Yojana (APY)", AssetType.APY)
+            elif "pli" in sub or "pli" in merch or "pli" in rem or amt in [1880.0, 1900.0, 1964.0]:
+                target_holding = await get_or_create("Postal Life Insurance (PLI)", AssetType.PLI)
+            elif "fd" in sub or "fd" in merch or (amt == 20000.0 and "axis" in merch):
+                target_holding = await get_or_create("Axis Bank Fixed Deposit", AssetType.FD, interest_rate=7.0)
+                
+            if target_holding:
+                await self.add_transaction_to_holding(t, target_holding.id)
+                tags = list(t.tags or [])
+                tags.append(f"holding:{target_holding.id}")
+                t.tags = tags
+                self.db.add(t)
+                linked_count += 1
+                
+        for h in holdings_map.values():
+            await self.recalculate_holding_history(h.id)
+            if h.asset_type in [AssetType.RD, AssetType.APY, AssetType.PLI, AssetType.FD, AssetType.OTHER]:
+                if h.current_value == 0.0 or h.current_value is None:
+                    h.current_value = h.total_invested
+            self.db.add(h)
+            
+        await self.db.commit()
+        all_holdings = await self.get_holdings(user_id)
+        return {
+            "holdings_created": created_count,
+            "transactions_linked": linked_count,
+            "holdings": all_holdings
+        }
+
 
     async def sync_all_holdings_prices(self):
         """

@@ -15,6 +15,8 @@ class AssetType(str, Enum):
     GRATUITY = "GRATUITY"
     GOLD = "GOLD"
     REAL_ESTATE = "REAL_ESTATE"
+    PLI = "PLI"
+    APY = "APY"
     OTHER = "OTHER"
 
 class InvestmentHoldingBase(BaseModel):
@@ -36,11 +38,20 @@ class InvestmentHoldingCreate(InvestmentHoldingBase):
     # For onboarding with existing holdings
     current_units: Optional[float] = None
     total_invested: Optional[float] = None
+    current_value: Optional[float] = None
     investment_start_date: Optional[date] = None
     investment_type: Optional[str] = None  # "SIP" or "LUMPSUM"
 
-class InvestmentHoldingUpdate(InvestmentHoldingBase):
-    pass
+class InvestmentHoldingUpdate(BaseModel):
+    name: Optional[str] = None
+    asset_type: Optional[AssetType] = None
+    ticker_symbol: Optional[str] = None
+    api_source: Optional[str] = None
+    interest_rate: Optional[float] = None
+    maturity_date: Optional[date] = None
+    current_value: Optional[float] = None
+    total_invested: Optional[float] = None
+
 
 class InvestmentHoldingOut(InvestmentHoldingBase):
     id: UUID
@@ -94,6 +105,25 @@ class MapTransactionRequest(BaseModel):
     transaction_id: UUID
     holding_id: UUID
     create_rule: bool = True
+
+class UnmapTransactionRequest(BaseModel):
+    transaction_id: UUID
+
+class UnassignedTransactionOut(BaseModel):
+    id: UUID
+    transaction_date: Optional[date] = None
+    merchant_name: Optional[str] = None
+    amount: float
+    sub_category: Optional[str] = None
+    remarks: Optional[str] = None
+    suggested_holding_id: Optional[UUID] = None
+    suggested_holding_name: Optional[str] = None
+
+class AutoDetectResponse(BaseModel):
+    holdings_created: int
+    transactions_linked: int
+    holdings: List[InvestmentHoldingOut]
+
 
 class ForecastRequest(BaseModel):
     years: int = 10

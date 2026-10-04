@@ -18,7 +18,10 @@ class AssetType(str, Enum):
     GRATUITY = "GRATUITY"
     GOLD = "GOLD"
     REAL_ESTATE = "REAL_ESTATE"
+    PLI = "PLI"
+    APY = "APY"
     OTHER = "OTHER"
+
 
 class InvestmentHolding(Base):
     __tablename__ = "investment_holdings"

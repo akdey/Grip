@@ -34,6 +34,7 @@ import { Card } from '../components/ui/Card';
 import { useTheme } from '../lib/theme';
 
 const FEATURE_CARDS = [
+    { id: 'assets', label: 'Assets', icon: Layers, path: '/wealth', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'sync', label: 'Gmail Sync', icon: Mail, path: '/sync', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'pending', label: 'Action Center', icon: Sparkles, path: '/transactions?view=pending', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'transactions', label: 'History', icon: Receipt, path: '/transactions', color: 'text-primary', bgColor: 'bg-surface-subtle' },

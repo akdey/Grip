@@ -13,6 +13,8 @@ interface Holding {
     total_invested: number;
     xirr: number | null;
     ticker_symbol: string | null;
+    interest_rate?: number | null;
+    maturity_date?: string | null;
 }
 
 interface WealthCategoryCardProps {
@@ -34,7 +36,7 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
     onAnalyze,
     onHoldingClick
 }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(true);
 
     const totalValue = holdings.reduce((sum, h) => sum + h.current_value, 0);
     const totalInvested = holdings.reduce((sum, h) => sum + h.total_invested, 0);
@@ -137,8 +139,10 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                                 >
                                     <div>
                                         <p className="text-sm font-medium text-primary transition-colors">{h.name}</p>
-                                        <div className="flex items-center gap-2">
-                                            {h.xirr && <span className="text-[10px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">XIRR {h.xirr.toFixed(1)}%</span>}
+                                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                            {h.xirr && <span className="text-[10px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono font-bold">XIRR {h.xirr.toFixed(1)}%</span>}
+                                            {h.interest_rate && <span className="text-[10px] text-accent-text bg-accent-subtle px-1.5 py-0.5 rounded font-mono">{h.interest_rate}% p.a.</span>}
+                                            {h.maturity_date && <span className="text-[10px] text-text-muted">Matures {new Date(h.maturity_date).toLocaleDateString([], { month: 'short', year: '2-digit' })}</span>}
                                             <span className="text-[10px] text-text-muted">Inv: {formatCurrency(h.total_invested)}</span>
                                         </div>
                                     </div>

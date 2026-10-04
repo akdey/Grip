@@ -49,6 +49,56 @@ async def get_forecast(
     # For now synchronous
     return await service.generate_forecast(current_user.id, request.years)
 
+@router.patch("/holdings/{holding_id}", response_model=schemas.InvestmentHoldingOut)
+async def update_holding(
+    holding_id: UUID,
+    payload: schemas.InvestmentHoldingUpdate,
+    current_user: User = Depends(get_current_user),
+    service: WealthService = Depends()
+):
+    try:
+        return await service.update_holding(holding_id, current_user.id, payload)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.delete("/holdings/{holding_id}")
+async def delete_holding(
+    holding_id: UUID,
+    current_user: User = Depends(get_current_user),
+    service: WealthService = Depends()
+):
+    try:
+        await service.delete_holding(holding_id, current_user.id)
+        return {"status": "deleted"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.get("/unassigned-transactions", response_model=List[schemas.UnassignedTransactionOut])
+async def get_unassigned_transactions(
+    current_user: User = Depends(get_current_user),
+    service: WealthService = Depends()
+):
+    return await service.get_unassigned_transactions(current_user.id)
+
+@router.post("/auto-detect-portfolio", response_model=schemas.AutoDetectResponse)
+async def auto_detect_portfolio(
+    current_user: User = Depends(get_current_user),
+    service: WealthService = Depends()
+):
+    return await service.auto_detect_portfolio(current_user.id)
+
+@router.post("/unmap-transaction")
+async def unmap_transaction(
+    payload: schemas.UnmapTransactionRequest,
+    current_user: User = Depends(get_current_user),
+    service: WealthService = Depends()
+):
+    try:
+        await service.unmap_transaction(payload.transaction_id)
+        return {"status": "success"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.post("/map-transaction")
 async def map_transaction(
     payload: schemas.MapTransactionRequest,
@@ -60,6 +110,7 @@ async def map_transaction(
         return {"status": "success"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.get("/sync-prices")
 async def trigger_price_sync(

@@ -179,13 +179,15 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                         onChange={e => setFormData({ ...formData, asset_type: e.target.value })}
                                         className="w-full bg-surface-subtle border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default text-primary appearance-none cursor-pointer"
                                     >
-                                        <option value="MUTUAL_FUND" className="bg-surface text-primary">Mutual Fund</option>
+                                        <option value="MUTUAL_FUND" className="bg-surface text-primary">Mutual Fund / SIP</option>
                                         <option value="STOCK" className="bg-surface text-primary">Stock</option>
-                                        <option value="SIP" className="bg-surface text-primary">SIP</option>
-                                        <option value="FD" className="bg-surface text-primary">FD</option>
-                                        <option value="RD" className="bg-surface text-primary">RD</option>
-                                        <option value="PF" className="bg-surface text-primary">Provident Fund</option>
-                                        <option value="GOLD" className="bg-surface text-primary">Gold</option>
+                                        <option value="FD" className="bg-surface text-primary">Fixed Deposit (FD)</option>
+                                        <option value="RD" className="bg-surface text-primary">Recurring Deposit (RD)</option>
+                                        <option value="APY" className="bg-surface text-primary">Atal Pension Yojana (APY)</option>
+                                        <option value="PLI" className="bg-surface text-primary">Postal Life Insurance (PLI)</option>
+                                        <option value="PF" className="bg-surface text-primary">Provident Fund (PF)</option>
+                                        <option value="GOLD" className="bg-surface text-primary">Gold / SGB</option>
+                                        <option value="OTHER" className="bg-surface text-primary">Other Asset</option>
                                     </select>
                                 </div>
                                 <div>

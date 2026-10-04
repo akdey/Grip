@@ -28,36 +28,19 @@ interface WealthLinkerProps {
 
 export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, holdings, onLinkSuccess }) => {
     const [step, setStep] = useState<'SELECT_TXN' | 'SELECT_HOLDING'>('SELECT_TXN');
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [selectedTxn, setSelectedTxn] = useState<any | null>(null);
     const [loading, setLoading] = useState(false);
+    const [autoDetecting, setAutoDetecting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Fetch transactions (we'll filter for Investment category client-side)
     const fetchTransactions = async () => {
         setLoading(true);
         try {
-            // Fetch all recent transactions
-            const res = await api.get('/transactions/', {
-                params: { limit: 100 }
-            });
-            // Filter for Investment category client-side
-            const investmentTxns = res.data.filter((txn: Transaction) =>
-                txn.category?.toLowerCase().includes('invest') ||
-                txn.sub_category?.toLowerCase().includes('invest') ||
-                txn.merchant_name?.toLowerCase().includes('sip') ||
-                txn.merchant_name?.toLowerCase().includes('mutual')
-            );
-            setTransactions(investmentTxns);
+            const res = await api.get('/wealth/unassigned-transactions');
+            setTransactions(res.data || []);
         } catch (error) {
-            console.error("Failed to fetch transactions", error);
-            // Fallback: show all transactions if filtering fails
-            try {
-                const res = await api.get('/transactions');
-                setTransactions(res.data || []);
-            } catch (e) {
-                console.error("Fallback fetch also failed", e);
-            }
+            console.error("Failed to fetch unassigned transactions", error);
         } finally {
             setLoading(false);
         }
@@ -69,19 +52,23 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
         }
     }, [isOpen, step]);
 
-    const handleLink = async (holdingId: string) => {
-        if (!selectedTxn) return;
+    const handleLink = async (holdingId: string, txnId?: string) => {
+        const targetId = txnId || selectedTxn?.id;
+        if (!targetId) return;
         setLoading(true);
         try {
             await api.post('/wealth/map-transaction', {
-                transaction_id: selectedTxn.id,
+                transaction_id: targetId,
                 holding_id: holdingId,
-                create_rule: true
+                create_rule: false
             });
             onLinkSuccess();
-            setStep('SELECT_TXN');
-            setSelectedTxn(null);
-            onClose();
+            // Remove from local list
+            setTransactions(prev => prev.filter(t => t.id !== targetId));
+            if (selectedTxn?.id === targetId) {
+                setStep('SELECT_TXN');
+                setSelectedTxn(null);
+            }
         } catch (error) {
             console.error("Linking failed", error);
             alert("Failed to link transaction");
@@ -90,7 +77,23 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
         }
     };
 
+    const handleAutoDetect = async () => {
+        setAutoDetecting(true);
+        try {
+            const res = await api.post('/wealth/auto-detect-portfolio');
+            alert(`Auto-detected ${res.data.holdings_created} new assets and linked ${res.data.transactions_linked} transactions!`);
+            onLinkSuccess();
+            fetchTransactions();
+        } catch (error) {
+            console.error("Auto detect failed", error);
+            alert("Auto detection encountered an issue");
+        } finally {
+            setAutoDetecting(false);
+        }
+    };
+
     if (!isOpen) return null;
+
 
     return (
         <AnimatePresence>
@@ -133,35 +136,84 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
 
                         {step === 'SELECT_TXN' ? (
                             <>
-                                <p className="text-text-muted text-sm mb-4">
-                                    Select an investment transaction to map to your portfolio.
-                                </p>
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                                    <div>
+                                        <p className="text-text-muted text-sm">
+                                            {transactions.length} unassigned investment contribution{transactions.length === 1 ? '' : 's'}
+                                        </p>
+                                        <p className="text-[11px] text-text-muted opacity-70">
+                                            Debits from Groww, RD, APY, PLI, Bank to map to your portfolio assets.
+                                        </p>
+                                    </div>
+                                    {transactions.length > 0 && (
+                                        <button
+                                            onClick={handleAutoDetect}
+                                            disabled={autoDetecting}
+                                            className="px-3.5 py-2 rounded-xl bg-accent text-black font-semibold text-xs hover:bg-accent-hover transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                                        >
+                                            {autoDetecting ? "Detecting..." : "⚡ Auto-Detect & Map All"}
+                                        </button>
+                                    )}
+                                </div>
 
                                 {loading && transactions.length === 0 ? (
                                     <div className="flex-1 flex items-center justify-center">
                                         <div className="animate-spin w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full"></div>
                                     </div>
                                 ) : (
-                                    <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+                                    <div className="flex-1 overflow-y-auto space-y-2.5 custom-scrollbar pr-2">
                                         {transactions.map(txn => (
                                             <div
                                                 key={txn.id}
-                                                onClick={() => { setSelectedTxn(txn); setStep('SELECT_HOLDING'); }}
-                                                className="p-3 rounded-xl border border-border-subtle bg-surface-subtle hover:bg-surface-hover cursor-pointer transition-colors flex justify-between items-center group"
+                                                className="p-3.5 rounded-xl border border-border-subtle bg-surface-subtle hover:bg-surface-hover transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 group"
                                             >
-                                                <div>
-                                                    <p className="font-medium text-primary">{txn.merchant_name}</p>
-                                                    <p className="text-xs text-text-muted">{new Date(txn.transaction_date).toLocaleDateString()}</p>
+                                                <div 
+                                                    onClick={() => { setSelectedTxn(txn); setStep('SELECT_HOLDING'); }}
+                                                    className="cursor-pointer flex-1"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-semibold text-primary text-sm">{txn.merchant_name || "Investment"}</p>
+                                                        {txn.sub_category && (
+                                                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface border border-border-subtle text-text-muted">
+                                                                {txn.sub_category}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <p className="text-xs text-text-muted">{txn.transaction_date ? new Date(txn.transaction_date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : ""}</p>
+                                                        {txn.remarks && (
+                                                            <span className="text-xs text-text-secondary italic">
+                                                                • "{txn.remarks}"
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="text-primary font-mono font-medium">₹{Math.abs(txn.amount)}</p>
-                                                    <p className="text-xs text-text-muted opacity-0 group-hover:opacity-100 transition-opacity">Select →</p>
+
+                                                <div className="flex items-center gap-3 self-end sm:self-center">
+                                                    <p className="text-primary font-mono font-bold text-sm">₹{Math.abs(txn.amount).toLocaleString('en-IN')}</p>
+                                                    
+                                                    {txn.suggested_holding_id && (
+                                                        <button
+                                                            onClick={() => handleLink(txn.suggested_holding_id, txn.id)}
+                                                            className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-all flex items-center gap-1 active:scale-95"
+                                                        >
+                                                            <Check size={12} /> Map: {txn.suggested_holding_name}
+                                                        </button>
+                                                    )}
+
+                                                    <button
+                                                        onClick={() => { setSelectedTxn(txn); setStep('SELECT_HOLDING'); }}
+                                                        className="px-2.5 py-1.5 rounded-lg bg-surface hover:bg-surface-hover border border-border-subtle text-xs text-text-muted hover:text-primary transition-colors"
+                                                    >
+                                                        Choose Asset →
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
                                         {transactions.length === 0 && (
-                                            <div className="text-center text-text-muted mt-10">
-                                                No 'Investment' transactions found.
+                                            <div className="text-center text-text-muted mt-12 py-8 bg-surface-subtle rounded-2xl border border-dashed border-border-subtle">
+                                                <p className="font-medium text-sm text-primary">All caught up!</p>
+                                                <p className="text-xs text-text-muted mt-1">No unassigned investment contributions found.</p>
                                             </div>
                                         )}
                                     </div>
