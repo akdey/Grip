@@ -90,6 +90,8 @@
   --color-bg-page: #050505;
   --color-bg-surface: #0d0f15;
   --color-bg-surface-hover: #141721;
+  --color-bg-surface-subtle: rgba(255, 255, 255, 0.03);
+  --color-bg-surface-pill: rgba(255, 255, 255, 0.06);
   --color-bg-raised: #050505;
   --color-bg-sunken: #050505;
   --color-bg-overlay: rgba(5, 5, 5, 0.85);
@@ -98,9 +100,16 @@
   --color-page: #050505;
   --color-surface: #0d0f15;
   --color-surface-hover: #141721;
+  --color-surface-subtle: rgba(255, 255, 255, 0.03);
+  --color-surface-pill: rgba(255, 255, 255, 0.06);
   --color-raised: #050505;
   --color-sunken: #050505;
   --color-overlay: rgba(5, 5, 5, 0.85);
+
+  /* Neutral Badges & Glass Tokens */
+  --color-badge-neutral-bg: rgba(255, 255, 255, 0.06);
+  --color-badge-neutral-border: rgba(255, 255, 255, 0.12);
+  --color-badge-neutral-text: #f8fafc;
 
   /* Text */
   --color-text-primary: #f8fafc;

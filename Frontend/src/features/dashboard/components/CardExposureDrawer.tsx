@@ -200,14 +200,14 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                         {item.merchant_name}
                                                     </p>
                                                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-white/[0.05] text-white/80 border border-white/10">
+                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-badge-neutral-bg text-badge-neutral-text border border-badge-neutral-border">
                                                             {item.card_name}
                                                             {item.last_four_digits ? ` •••• ${item.last_four_digits}` : ''}
                                                         </span>
-                                                        <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">
+                                                        <span className="text-[8px] text-text-muted font-bold uppercase tracking-wider">
                                                             {format(parseDateSafe(item.transaction_date), 'MMM dd')}
                                                         </span>
-                                                        <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">
+                                                        <span className="text-[8px] text-text-muted font-bold uppercase tracking-wider">
                                                             • {item.status}
                                                         </span>
                                                     </div>
@@ -216,14 +216,14 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
 
                                             <div className="flex items-center gap-3 shrink-0 ml-4">
                                                 <div className="text-right">
-                                                    <p className="text-sm font-black text-white tracking-tighter">
+                                                    <p className="text-sm font-black text-text-primary tracking-tighter">
                                                         {formatCurrency(item.amount)}
                                                     </p>
-                                                    <p className="text-[7px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">
+                                                    <p className="text-[7px] text-text-muted font-bold uppercase tracking-widest mt-0.5">
                                                         {item.sub_category || item.category || 'General'}
                                                     </p>
                                                 </div>
-                                                <div className="w-7 h-7 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-center text-gray-600 group-hover:text-white group-hover:border-white/20 transition-all">
+                                                <div className="w-7 h-7 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted group-hover:text-text-primary group-hover:border-border-default transition-all">
                                                     <ArrowUpRight size={14} />
                                                 </div>
                                             </div>
@@ -231,24 +231,24 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                     ))
                                 ) : (
                                     <div className="py-20 text-center">
-                                        <CardIcon size={36} className="mx-auto text-gray-800 mb-4 opacity-20" />
-                                        <p className="text-gray-600 font-black uppercase tracking-[4px] text-xs">No card exposure identified</p>
-                                        <p className="text-gray-700 text-[10px] font-medium mt-1">All credit card swipes are fully settled</p>
+                                        <CardIcon size={36} className="mx-auto text-text-disabled mb-4 opacity-20" />
+                                        <p className="text-text-muted font-black uppercase tracking-[4px] text-xs">No card exposure identified</p>
+                                        <p className="text-text-disabled text-[10px] font-medium mt-1">All credit card swipes are fully settled</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
                         {/* Footer Total */}
-                        <div className="p-8 sm:p-12 bg-white/[0.02] border-t border-white/[0.05] shrink-0">
+                        <div className="p-8 sm:p-12 bg-surface-subtle border-t border-border-subtle shrink-0">
                             <div className="flex items-center justify-between">
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Total Card Exposure</span>
-                                    <span className="text-[9px] text-gray-700 font-bold uppercase tracking-widest">
+                                    <span className="text-[10px] font-black text-text-muted uppercase tracking-[4px]">Total Card Exposure</span>
+                                    <span className="text-[9px] text-text-disabled font-bold uppercase tracking-widest">
                                         Sum of all unsettled swipes
                                     </span>
                                 </div>
-                                <span className="text-2xl font-black text-white tracking-tighter">
+                                <span className="text-2xl font-black text-text-primary tracking-tighter">
                                     {formatCurrency(totalExposure)}
                                 </span>
                             </div>
