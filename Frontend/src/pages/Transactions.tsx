@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 // Transactions Page
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTransactions, usePendingTransactions, useVerifyTransaction, useDeleteTransaction } from '../features/transactions/hooks';
@@ -62,12 +62,32 @@ const Transactions: React.FC = () => {
     const [groupBy, setGroupBy] = useState<'date' | 'category'>('date');
 
     // Initialize Drawer State from URL Params
-    const [drawerCategory, setDrawerCategory] = useState(searchParams.get('category') || '');
+    const [drawerCategories, setDrawerCategories] = useState<string[]>(() => {
+        const cat = searchParams.get('category');
+        return cat ? cat.split(',').filter(Boolean) : [];
+    });
     const [drawerSubCategory, setDrawerSubCategory] = useState(searchParams.get('sub_category') || '');
     const [drawerDateRange, setDrawerDateRange] = useState<{ start: string; end: string }>({
         start: searchParams.get('start_date') || '',
         end: searchParams.get('end_date') || ''
     });
+
+    // Synchronize drawer fields whenever searchParams or filter modal open changes
+    useEffect(() => {
+        const cat = searchParams.get('category');
+        setDrawerCategories(cat ? cat.split(',').filter(Boolean) : []);
+        setDrawerSubCategory(searchParams.get('sub_category') || '');
+        setDrawerDateRange({
+            start: searchParams.get('start_date') || '',
+            end: searchParams.get('end_date') || ''
+        });
+    }, [searchParams, isFilterOpen]);
+
+    const toggleCategory = (catName: string) => {
+        setDrawerCategories(prev =>
+            prev.includes(catName) ? prev.filter(c => c !== catName) : [...prev, catName]
+        );
+    };
 
     const formatCurrency = (amount: number) =>
         new Intl.NumberFormat('en-IN', {
@@ -124,7 +144,7 @@ const Transactions: React.FC = () => {
 
     const clearFilters = () => {
         setSearchParams({});
-        setDrawerCategory('');
+        setDrawerCategories([]);
         setDrawerSubCategory('');
         setDrawerDateRange({ start: '', end: '' });
         setFilterOpen(false);
@@ -132,7 +152,7 @@ const Transactions: React.FC = () => {
 
     const applyFilters = () => {
         const params: any = { view: 'custom' };
-        if (drawerCategory) params.category = drawerCategory;
+        if (drawerCategories.length > 0) params.category = drawerCategories.join(',');
         if (drawerSubCategory) params.sub_category = drawerSubCategory;
         if (drawerDateRange.start) params.start_date = drawerDateRange.start;
         if (drawerDateRange.end) params.end_date = drawerDateRange.end;
@@ -248,12 +268,12 @@ const Transactions: React.FC = () => {
             .reduce((sum, t) => sum + Number(t.amount), 0);
     };
 
-    // Helper to get subcategories for selected category in drawer
+    // Helper to get subcategories for selected categories in drawer
     const availableSubCategories = useMemo(() => {
-        if (!drawerCategory || !categories) return [];
-        const cat = categories.find(c => c.name === drawerCategory);
-        return cat ? cat.sub_categories : [];
-    }, [drawerCategory, categories]);
+        if (drawerCategories.length === 0 || !categories) return [];
+        const selectedCats = categories.filter(c => drawerCategories.includes(c.name));
+        return selectedCats.flatMap(c => c.sub_categories || []);
+    }, [drawerCategories, categories]);
 
     if (isLoading && limit === 200) return <Loader fullPage text="Retrieving History" />;
 
@@ -318,7 +338,11 @@ const Transactions: React.FC = () => {
                              view === 'month' ? `Month: ${format(currentMonth, 'MMMM yyyy')}` :
                              view === 'year' ? `Year: ${format(currentMonth, 'yyyy')}` :
                              view === 'pending' ? 'Action Center' :
-                             drawerCategory ? `Category: ${drawerCategory}` :
+                             searchParams.get('category') ? (
+                                 searchParams.get('category')!.includes(',')
+                                     ? `${searchParams.get('category')!.split(',').length} Categories`
+                                     : `Category: ${searchParams.get('category')}`
+                             ) :
                              'Filtered Activity'}
                         </span>
                     </div>
@@ -566,24 +590,73 @@ const Transactions: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Category Selector */}
-                        <div className="flex flex-col gap-2">
-                            <label className="text-[9px] text-gray-600 font-bold uppercase tracking-[3px] ml-1">Category</label>
-                            <select
-                                value={drawerCategory}
-                                onChange={(e) => {
-                                    setDrawerCategory(e.target.value);
-                                    setDrawerSubCategory(''); // Reset subcategory when category changes
-                                }}
-                                className="w-full bg-[#1A1A1A] border border-white/[0.05] rounded-3xl px-6 py-4 text-xs font-bold text-white focus:outline-none focus:border-cyan-500/50 appearance-none"
-                            >
-                                <option value="">All Categories</option>
-                                {categories?.map((cat) => (
-                                    <option key={cat.id} value={cat.name}>
-                                        {cat.name}
-                                    </option>
-                                ))}
-                            </select>
+                        {/* Category Checkbox Multi-Selector */}
+                        <div className="flex flex-col gap-2.5">
+                            <div className="flex items-center justify-between ml-1">
+                                <label className="text-[9px] text-gray-400 font-bold uppercase tracking-[3px]">
+                                    Categories {drawerCategories.length > 0 && `(${drawerCategories.length} selected)`}
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDrawerCategories(categories ? categories.map(c => c.name) : [])}
+                                        className="text-[9px] text-cyan-400 hover:text-cyan-300 font-bold uppercase tracking-wider transition-colors"
+                                    >
+                                        Select All
+                                    </button>
+                                    <span className="text-gray-600 text-[9px]">•</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDrawerCategories([])}
+                                        className="text-[9px] text-gray-500 hover:text-white font-bold uppercase tracking-wider transition-colors"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="max-h-60 overflow-y-auto no-scrollbar space-y-1.5 p-1 bg-white/[0.01] rounded-3xl border border-white/[0.05]">
+                                {categories?.map((cat) => {
+                                    const isSelected = drawerCategories.includes(cat.name);
+                                    return (
+                                        <div
+                                            key={cat.id}
+                                            onClick={() => toggleCategory(cat.name)}
+                                            className={`p-3 rounded-2xl border flex items-center justify-between transition-all cursor-pointer select-none active:scale-[0.99] ${
+                                                isSelected
+                                                    ? 'bg-cyan-500/10 border-cyan-500/30'
+                                                    : 'bg-white/[0.02] border-white/[0.04] hover:bg-white/[0.04] text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div
+                                                    className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                                                    style={{
+                                                        backgroundColor: `${cat.color || '#fff'}20`,
+                                                        color: cat.color || '#fff'
+                                                    }}
+                                                >
+                                                    <CategoryIcon name={cat.icon || 'tag'} size={16} />
+                                                </div>
+                                                <span className={`text-xs font-bold truncate ${isSelected ? 'text-white' : 'text-gray-300'}`}>
+                                                    {cat.name}
+                                                </span>
+                                            </div>
+
+                                            {/* Checkbox */}
+                                            <div
+                                                className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
+                                                    isSelected
+                                                        ? 'bg-cyan-500 border-cyan-400 text-black shadow-sm'
+                                                        : 'border-white/20 bg-white/[0.03]'
+                                                }`}
+                                            >
+                                                {isSelected && <Check size={13} strokeWidth={3} />}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
 
                         {/* Sub-Category Selector */}
@@ -592,8 +665,8 @@ const Transactions: React.FC = () => {
                             <select
                                 value={drawerSubCategory}
                                 onChange={(e) => setDrawerSubCategory(e.target.value)}
-                                disabled={!drawerCategory}
-                                className={`w-full bg-[#1A1A1A] border border-white/[0.05] rounded-3xl px-6 py-4 text-xs font-bold text-white focus:outline-none focus:border-cyan-500/50 appearance-none ${!drawerCategory ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                disabled={drawerCategories.length === 0}
+                                className={`w-full bg-[#1A1A1A] border border-white/[0.05] rounded-3xl px-6 py-4 text-xs font-bold text-white focus:outline-none focus:border-cyan-500/50 appearance-none ${drawerCategories.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <option value="">All Sub-Categories</option>
                                 {availableSubCategories.map((sub) => (

@@ -84,6 +84,7 @@ class MonthlySummaryResponse(BaseModel):
     credit_expense: Decimal = Decimal(0)
     cash_outflow: Decimal = Decimal(0)
     gross_liquid_balance: Decimal = Decimal(0)
+    cumulative_liquid_balance: Decimal = Decimal(0)
 
 class SpendTrendPoint(BaseModel):
     date: date

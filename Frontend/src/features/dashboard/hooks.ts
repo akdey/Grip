@@ -71,6 +71,7 @@ export interface MonthlySummary {
     credit_expense?: number;
     cash_outflow?: number;
     gross_liquid_balance?: number;
+    cumulative_liquid_balance?: number;
 }
 
 export interface InvestmentSummary {

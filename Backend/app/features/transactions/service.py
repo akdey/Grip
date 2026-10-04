@@ -118,7 +118,11 @@ class TransactionService:
                 stmt = stmt.where(Transaction.transaction_date <= end_date)
             
             if category:
-                stmt = stmt.where(Transaction.category.ilike(category))
+                cat_list = [c.strip() for c in category.split(",") if c.strip()]
+                if len(cat_list) == 1:
+                    stmt = stmt.where(Transaction.category.ilike(cat_list[0]))
+                elif len(cat_list) > 1:
+                    stmt = stmt.where(or_(*[Transaction.category.ilike(c) for c in cat_list]))
             if sub_category:
                 stmt = stmt.where(Transaction.sub_category.ilike(sub_category))
                 

@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { TrendingUp, Target, Layers, ChevronLeft, ChevronRight, TrendingDown, Eye, EyeOff, Lock } from 'lucide-react';
+import { TrendingUp, Target, Layers, ChevronLeft, ChevronRight, TrendingDown, Eye, EyeOff, Lock, Wallet, ArrowUpRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { useVariance, useInvestments, useMonthlySummary, useSpendTrends } from '../features/dashboard/hooks';
+import { useVariance, useInvestments, useMonthlySummary, useSpendTrends, useSafeToSpend } from '../features/dashboard/hooks';
 import { SpendTrendChart } from '../components/analytics/SpendTrendChart';
 import { Card } from '../components/ui/Card';
 
@@ -41,6 +41,9 @@ const Analytics: React.FC = () => {
         referenceDate.getFullYear()
     );
     const { data: spendTrends, isLoading: isTrendsLoading } = useSpendTrends(30, trendFreq);
+    const { data: safeToSpend } = useSafeToSpend();
+
+    const effectiveLiquidBalance = summary?.cumulative_liquid_balance ?? safeToSpend?.current_balance ?? 0;
 
     const categoryData = useMemo(() => {
         if (!variance?.category_breakdown) return [];
@@ -174,27 +177,79 @@ const Analytics: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Monthly Balance Pill */}
-                    <div className="flex justify-center">
-                        {isSummaryLoading ? (
-                            <div className="bg-white/[0.02] border border-white/[0.08] px-8 py-3 rounded-full flex items-center gap-3 animate-pulse">
-                                <div className="h-2 w-16 bg-white/[0.05] rounded" />
-                                <div className="h-4 w-24 bg-white/[0.05] rounded" />
+                    {/* Dual Balance Display: Period Net Flow & Gross Liquid Balance */}
+                    {isSummaryLoading ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-3xl flex items-center gap-3 animate-pulse">
+                                <div className="w-9 h-9 rounded-2xl bg-white/[0.05]" />
+                                <div className="space-y-1.5 flex-1">
+                                    <div className="h-2.5 w-20 bg-white/[0.05] rounded" />
+                                    <div className="h-4 w-24 bg-white/[0.05] rounded" />
+                                </div>
                             </div>
-                        ) : (
-                            <div className="bg-white/[0.03] border border-white/[0.08] px-8 py-3 rounded-full flex items-center gap-3">
-                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Balance</span>
-                                {!showSensitive && <Lock size={10} className="text-gray-600" />}
-                                <span className={`text-sm font-black tracking-tighter ${Number(summary?.balance) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                    {showSensitive ? (
-                                        <>
-                                            {Number(summary?.balance) < 0 ? '-' : ''}{formatCurrency(Math.abs(summary?.balance || 0))}
-                                        </>
-                                    ) : '******'}
-                                </span>
+                            <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-3xl flex items-center gap-3 animate-pulse">
+                                <div className="w-9 h-9 rounded-2xl bg-white/[0.05]" />
+                                <div className="space-y-1.5 flex-1">
+                                    <div className="h-2.5 w-20 bg-white/[0.05] rounded" />
+                                    <div className="h-4 w-24 bg-white/[0.05] rounded" />
+                                </div>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            {/* 1. Period Net Flow (Surplus / Deficit) */}
+                            <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-3xl flex items-center justify-between">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${Number(summary?.balance || 0) >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                                        {Number(summary?.balance || 0) >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest truncate">Period Net Flow</p>
+                                        <p className="text-[8px] text-gray-600 font-bold uppercase tracking-wider">Monthly Cash Surplus</p>
+                                    </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <p className={`text-base font-black tracking-tight ${Number(summary?.balance || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        {showSensitive ? (
+                                            <>
+                                                {Number(summary?.balance || 0) < 0 ? '-' : '+'}{formatCurrency(Math.abs(summary?.balance || 0))}
+                                            </>
+                                        ) : '******'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* 2. Total Liquid Account Balance */}
+                            <div className="bg-gradient-to-br from-cyan-500/[0.04] to-blue-500/[0.02] border border-cyan-500/15 p-4 rounded-3xl flex items-center justify-between group hover:border-cyan-500/30 transition-all">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-9 h-9 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-500/20">
+                                        <Wallet size={16} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                            <p className="text-[9px] font-black text-cyan-400/90 uppercase tracking-widest truncate">Liquid Balance</p>
+                                            {!showSensitive && <Lock size={9} className="text-cyan-400/60" />}
+                                        </div>
+                                        <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">Bank & Cash Total</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2.5 shrink-0">
+                                    <div className="text-right">
+                                        <p className="text-base font-black text-white tracking-tight">
+                                            {showSensitive ? formatCurrency(effectiveLiquidBalance) : '******'}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => navigate('/add')}
+                                        className="w-8 h-8 rounded-xl bg-white/[0.03] hover:bg-cyan-500/20 border border-white/[0.06] hover:border-cyan-500/30 text-gray-400 hover:text-cyan-300 flex items-center justify-center transition-all active:scale-95"
+                                        title="Adjust Balance / Add Entry"
+                                    >
+                                        <ArrowUpRight size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Outflow Analysis Section */}

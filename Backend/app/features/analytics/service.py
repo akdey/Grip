@@ -559,6 +559,16 @@ class AnalyticsService:
         # Formula: (Inflows to SAVINGS/CASH) - (DIRECT_EXPENSE + DEBT_TRANSFER)
         gross_liquid_balance = total_income - cash_outflow
         
+        # E. Cumulative Liquid Account Balance (Bank + Cash) up to end of this period:
+        cum_stmt = (
+            select(func.coalesce(func.sum(Transaction.amount), Decimal("0")))
+            .where(Transaction.user_id == user_id)
+            .where(Transaction.account_type.in_([AccountType.CASH, AccountType.SAVINGS]))
+            .where(Transaction.transaction_date <= end_date)
+        )
+        cum_res = await db.scalar(cum_stmt)
+        cumulative_liquid_balance = cum_res or Decimal("0")
+        
         return MonthlySummaryResponse(
             total_income=total_income,
             total_expense=accrual_expense,
@@ -570,7 +580,8 @@ class AnalyticsService:
             direct_expense=direct_expense,
             credit_expense=credit_expense,
             cash_outflow=cash_outflow,
-            gross_liquid_balance=gross_liquid_balance
+            gross_liquid_balance=gross_liquid_balance,
+            cumulative_liquid_balance=cumulative_liquid_balance
         )
 
     async def get_spend_trends(
