@@ -101,7 +101,7 @@ const SettleUp: React.FC = () => {
                 </div>
                 <button
                     onClick={() => setShowAddForm(true)}
-                    className="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 active:scale-90 transition-all"
+                    className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-all shadow-md"
                 >
                     <Plus size={20} />
                 </button>
@@ -171,10 +171,10 @@ const SettleUp: React.FC = () => {
             >
                 <div className="space-y-6 px-2 pb-10">
                     {/* Info Note */}
-                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/10">
-                        <Info size={16} className="text-cyan-400 mt-0.5 shrink-0" />
+                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
+                        <Info size={16} className="text-white/70 mt-0.5 shrink-0" />
                         <p className="text-[10px] text-gray-400 leading-relaxed">
-                            Manual entries added here only update peer balances and <strong className="text-cyan-400/80">will not affect your main expense tracking</strong>.
+                            Manual entries added here only update peer balances and <strong className="text-white">will not affect your main expense tracking</strong>.
                         </p>
                     </div>
 
@@ -208,7 +208,7 @@ const SettleUp: React.FC = () => {
                             value={newPeerName}
                             onChange={(e) => setNewPeerName(e.target.value)}
                             placeholder="e.g. John Doe"
-                            className="w-full bg-[#1A1A1A] border border-white/[0.05] rounded-2xl px-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-cyan-500/50 placeholder-gray-700"
+                            className="w-full bg-[#1A1A1A] border border-white/[0.05] rounded-2xl px-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-white/30 placeholder-gray-700"
                         />
                     </div>
 
@@ -222,7 +222,7 @@ const SettleUp: React.FC = () => {
                                 value={newAmount}
                                 onChange={(e) => setNewAmount(e.target.value)}
                                 placeholder="0"
-                                className="w-full bg-[#1A1A1A] border border-white/[0.05] rounded-2xl pl-10 pr-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-cyan-500/50 placeholder-gray-700"
+                                className="w-full bg-[#1A1A1A] border border-white/[0.05] rounded-2xl pl-10 pr-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-white/30 placeholder-gray-700"
                             />
                         </div>
                     </div>
@@ -235,7 +235,7 @@ const SettleUp: React.FC = () => {
                             value={newRemarks}
                             onChange={(e) => setNewRemarks(e.target.value)}
                             placeholder="e.g. Dinner split"
-                            className="w-full bg-[#1A1A1A] border border-white/[0.05] rounded-2xl px-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-cyan-500/50 placeholder-gray-700"
+                            className="w-full bg-[#1A1A1A] border border-white/[0.05] rounded-2xl px-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-white/30 placeholder-gray-700"
                         />
                     </div>
 
@@ -314,7 +314,7 @@ const PeerHistoryDrawer = ({
                                         <div className="text-right">
                                             <div className="flex items-center justify-end gap-1 mb-0.5">
                                                 {entry.transaction_id && (
-                                                    <span className="text-[6px] px-1 py-0 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-black uppercase tracking-tighter">
+                                                    <span className="text-[6px] px-1 py-0 rounded bg-white/5 border border-white/10 text-white/70 font-black uppercase tracking-tighter">
                                                         Synced
                                                     </span>
                                                 )}

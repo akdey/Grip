@@ -30,7 +30,7 @@ export const Sidebar: React.FC = () => {
     return (
         <aside className="hidden md:flex flex-col w-72 h-screen fixed left-0 top-0 border-r border-border-subtle bg-surface/85 backdrop-blur-2xl z-40">
             <div className="p-8 space-y-2">
-                <h1 className="text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600 heading-apple">
+                <h1 className="text-3xl font-black tracking-tight text-white heading-apple">
                     {import.meta.env.VITE_APP_NAME || 'GRIP'}
                 </h1>
                 <p className="text-[10px] text-text-muted uppercase tracking-widest font-black opacity-60">
@@ -47,8 +47,8 @@ export const Sidebar: React.FC = () => {
                         className={({ isActive }) => `
                             flex items-center space-x-4 px-5 py-3.5 rounded-2xl transition-all duration-150 group active:scale-[0.98] touch-manipulation select-none
                             ${isActive
-                                ? 'bg-gradient-to-r from-cyan-500/15 to-indigo-500/10 text-accent-text border border-accent-border shadow-lg shadow-cyan-950/40'
-                                : 'text-text-muted hover:bg-surface-hover hover:text-text-primary border border-transparent'
+                                ? 'bg-white/10 text-white border border-white/10 shadow-sm font-semibold'
+                                : 'text-text-muted hover:bg-white/[0.04] hover:text-white border border-transparent'
                             }
                         `}
                     >
@@ -57,9 +57,9 @@ export const Sidebar: React.FC = () => {
                                 <item.icon
                                     size={19}
                                     strokeWidth={isActive ? 2.5 : 2}
-                                    className={isActive ? 'text-accent-text' : 'text-text-disabled group-hover:text-text-secondary'}
+                                    className={isActive ? 'text-white' : 'text-text-muted group-hover:text-text-primary'}
                                 />
-                                <span className={`text-[13px] tracking-wide ${isActive ? 'font-semibold text-text-primary' : 'font-medium'}`}>{item.label}</span>
+                                <span className={`text-[13px] tracking-wide ${isActive ? 'font-semibold text-white' : 'font-medium'}`}>{item.label}</span>
                             </>
                         )}
                     </NavLink>

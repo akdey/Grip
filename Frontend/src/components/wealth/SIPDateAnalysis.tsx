@@ -87,10 +87,10 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-2xl p-6">
+            <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-indigo-500/20 rounded-xl">
-                        <Calendar size={24} className="text-indigo-400" />
+                    <div className="p-3 bg-white/[0.06] rounded-xl text-white">
+                        <Calendar size={24} />
                     </div>
                     <div className="flex-1">
                         <h3 className="text-lg font-bold mb-1">Your SIP Date Performance</h3>
@@ -128,7 +128,7 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
                     </div>
                     <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                         <p className="text-xs text-gray-500 mb-1">XIRR</p>
-                        <p className="text-lg font-bold text-purple-400">
+                        <p className="text-lg font-bold text-white">
                             {analysis.user_performance.xirr ? `${analysis.user_performance.xirr.toFixed(2)}%` : 'N/A'}
                         </p>
                     </div>
@@ -138,8 +138,8 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
             {/* Alternative Dates Comparison */}
             <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <BarChart3 size={18} className="text-blue-500" />
-                    <h4 className="font-semibold">What if you had chosen different dates?</h4>
+                    <BarChart3 size={18} className="text-white/60" />
+                    <h4 className="font-semibold text-white">What if you had chosen different dates?</h4>
                 </div>
 
                 <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
@@ -153,10 +153,10 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
 
                         // Determine styling
                         let bgClass = "bg-white/5 border-transparent text-gray-500";
-                        if (isBestDate) bgClass = "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-[0_0_15px_-5px_rgba(16,185,129,0.3)]";
-                        else if (isUserDate) bgClass = "bg-blue-500/20 border-blue-500/50 text-blue-400 shadow-[0_0_15px_-5px_rgba(59,130,246,0.3)]";
-                        else if (diff > 0) bgClass = "bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10 text-gray-300";
-                        else if (diff < 0) bgClass = "bg-red-500/5 border-red-500/10 hover:bg-red-500/10 text-gray-300";
+                        if (isBestDate) bgClass = "bg-emerald-500/15 border-emerald-500/30 text-emerald-400";
+                        else if (isUserDate) bgClass = "bg-white/10 border-white/30 text-white shadow-[0_0_15px_-5px_rgba(255,255,255,0.1)]";
+                        else if (diff > 0) bgClass = "bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-gray-300";
+                        else if (diff < 0) bgClass = "bg-white/[0.02] border-white/5 hover:bg-white/[0.05] text-gray-400";
 
                         return (
                             <motion.div
@@ -201,13 +201,13 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
             </div>
 
             {/* AI Insight */}
-            <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-6">
+            <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-purple-500/20 rounded-xl flex-shrink-0">
-                        <Lightbulb size={24} className="text-purple-400" />
+                    <div className="p-3 bg-white/[0.06] rounded-xl flex-shrink-0 text-white">
+                        <Lightbulb size={24} />
                     </div>
                     <div>
-                        <h4 className="font-semibold mb-2 text-purple-300">💡 Insight</h4>
+                        <h4 className="font-semibold mb-2 text-white">💡 Insight</h4>
                         <p className="text-sm text-gray-300 leading-relaxed">{analysis.insight}</p>
 
                         {analysis.historical_pattern && (
@@ -224,8 +224,8 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
 
             {/* Best Alternative Highlight */}
             {analysis.user_sip_date !== analysis.best_alternative.date && analysis.best_alternative.improvement > 1000 && (
-                <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-6">
-                    <h4 className="font-semibold mb-3 text-emerald-300">📈 Optimization Opportunity</h4>
+                <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6">
+                    <h4 className="font-semibold mb-3 text-white">📈 Optimization Opportunity</h4>
                     <p className="text-sm text-gray-300 mb-4">
                         Switching to {analysis.best_alternative.date}th date SIPs could improve your returns:
                     </p>

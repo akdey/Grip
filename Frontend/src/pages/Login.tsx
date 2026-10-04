@@ -131,14 +131,14 @@ const Login: React.FC = () => {
     }
 
     return (
-        <div className="h-screen w-full flex flex-col items-center justify-center p-4 text-white selection:bg-cyan-500/30 overflow-hidden">
+        <div className="h-screen w-full flex flex-col items-center justify-center p-4 text-white overflow-hidden">
             <div className="w-full max-w-md space-y-8 animate-enter flex flex-col items-stretch">
                 <div className="text-center space-y-4">
                     <div className="flex justify-center">
                         <Logo size={64} />
                     </div>
                     <div className="flex flex-col gap-1">
-                        <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
+                        <h1 className="text-4xl font-black tracking-tighter text-white heading-apple">
                             {import.meta.env.VITE_APP_NAME || 'Grip'}
                         </h1>
                         <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px]">{import.meta.env.VITE_APP_TAGLINE}</p>
@@ -151,20 +151,20 @@ const Login: React.FC = () => {
                             <div className="flex space-x-8 text-[9px] font-black uppercase tracking-widest">
                                 <button
                                     onClick={() => { setMode('LOGIN'); setError(''); }}
-                                    className={`pb-1 transition-all ${mode === 'LOGIN' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-600 hover:text-gray-400'}`}
+                                    className={`pb-1 transition-all ${mode === 'LOGIN' ? 'text-white border-b-2 border-white' : 'text-gray-600 hover:text-gray-400'}`}
                                 >
                                     Login
                                 </button>
                                 <button
                                     onClick={() => { setMode('REGISTER'); setError(''); }}
-                                    className={`pb-1 transition-all ${mode === 'REGISTER' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-600 hover:text-gray-400'}`}
+                                    className={`pb-1 transition-all ${mode === 'REGISTER' ? 'text-white border-b-2 border-white' : 'text-gray-600 hover:text-gray-400'}`}
                                 >
                                     Enlist
                                 </button>
                             </div>
                         )}
                         {mode === 'OTP' && (
-                            <span className="text-cyan-400 font-black text-[9px] uppercase tracking-widest">Command Verification</span>
+                            <span className="text-white font-black text-[9px] uppercase tracking-widest">Command Verification</span>
                         )}
                     </div>
 
@@ -231,7 +231,7 @@ const Login: React.FC = () => {
 
                         {mode === 'OTP' && (
                             <div className="text-center">
-                                <button type="button" onClick={() => setMode('REGISTER')} className="text-[9px] font-black uppercase tracking-widest text-gray-600 hover:text-cyan-400 transition-colors">
+                                <button type="button" onClick={() => setMode('REGISTER')} className="text-[9px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors">
                                     Return to Registration
                                 </button>
                             </div>
@@ -261,7 +261,7 @@ const Login: React.FC = () => {
                             href="https://portfolio.akdey.vercel.app"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[8px] font-black text-white hover:text-cyan-400 transition-all uppercase tracking-widest"
+                            className="text-[8px] font-black text-white hover:text-white/80 transition-all uppercase tracking-widest"
                         >
                             AMIT KUMAR DEY
                         </a>

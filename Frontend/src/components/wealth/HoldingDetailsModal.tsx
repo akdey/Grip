@@ -80,11 +80,11 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                         {/* Header */}
                         <div className="p-6 sm:p-8 border-b border-white/[0.06] flex justify-between items-start bg-gradient-to-b from-white/[0.04] to-transparent shrink-0">
                             <div>
-                                <h2 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-emerald-400 to-cyan-500 bg-clip-text text-transparent line-clamp-1 tracking-tighter uppercase italic heading-apple">
+                                <h2 className="text-2xl sm:text-3xl font-black text-white line-clamp-1 tracking-tighter uppercase italic heading-apple">
                                     {holding.name}
                                 </h2>
                                 <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 font-bold uppercase tracking-widest">
-                                    <span className="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/10">{holding.asset_type}</span>
+                                    <span className="bg-white/[0.06] text-white/90 px-3 py-1 rounded-full border border-white/10">{holding.asset_type}</span>
                                     {holding.ticker_symbol && <span>• {holding.ticker_symbol}</span>}
                                 </div>
                             </div>
@@ -144,7 +144,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                             </div>
                                             <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                                                 <p className="text-xs text-gray-500">XIRR</p>
-                                                <p className="text-xl font-bold mt-1 text-purple-400">
+                                                <p className="text-xl font-bold mt-1 text-white">
                                                     {holding.xirr ? `${holding.xirr.toFixed(1)}%` : "N/A"}
                                                 </p>
                                             </div>

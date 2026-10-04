@@ -80,7 +80,7 @@ const Analytics: React.FC = () => {
         <div className="min-h-screen text-white p-6 pb-24 overflow-x-hidden relative">
             <header className="flex items-center justify-between mb-8 relative z-50">
                 <div className="flex flex-col">
-                    <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
+                    <h1 className="text-4xl font-black tracking-tighter text-white heading-apple">
                         Analytics
                     </h1>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">Financial Intelligence</p>
@@ -90,7 +90,7 @@ const Analytics: React.FC = () => {
                     <button
                         onClick={togglePrivacy}
                         className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all shadow-2xl ${showSensitive
-                            ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
+                            ? 'bg-white/10 border-white/20 text-white'
                             : 'bg-white/[0.03] border-white/[0.08] text-gray-400'
                             }`}
                         aria-label={showSensitive ? "Hide sensitive data" : "Show sensitive data"}
@@ -220,15 +220,15 @@ const Analytics: React.FC = () => {
                             </div>
 
                             {/* 2. Total Liquid Account Balance */}
-                            <div className="bg-gradient-to-br from-cyan-500/[0.04] to-blue-500/[0.02] border border-cyan-500/15 p-4 rounded-3xl flex items-center justify-between group hover:border-cyan-500/30 transition-all">
+                            <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-3xl flex items-center justify-between group hover:border-white/20 transition-all">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-9 h-9 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-500/20">
+                                    <div className="w-9 h-9 rounded-2xl bg-white/[0.06] text-white/90 flex items-center justify-center shrink-0 border border-white/10">
                                         <Wallet size={16} />
                                     </div>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-1.5">
-                                            <p className="text-[9px] font-black text-cyan-400/90 uppercase tracking-widest truncate">Liquid Balance</p>
-                                            {!showSensitive && <Lock size={9} className="text-cyan-400/60" />}
+                                            <p className="text-[9px] font-black text-white/90 uppercase tracking-widest truncate">Liquid Balance</p>
+                                            {!showSensitive && <Lock size={9} className="text-gray-400" />}
                                         </div>
                                         <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">Bank & Cash Total</p>
                                     </div>
@@ -241,7 +241,7 @@ const Analytics: React.FC = () => {
                                     </div>
                                     <button
                                         onClick={() => navigate('/add')}
-                                        className="w-8 h-8 rounded-xl bg-white/[0.03] hover:bg-cyan-500/20 border border-white/[0.06] hover:border-cyan-500/30 text-gray-400 hover:text-cyan-300 flex items-center justify-center transition-all active:scale-95"
+                                        className="w-8 h-8 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] hover:border-white/20 text-gray-400 hover:text-white flex items-center justify-center transition-all active:scale-95"
                                         title="Adjust Balance / Add Entry"
                                     >
                                         <ArrowUpRight size={14} />
@@ -352,14 +352,14 @@ const Analytics: React.FC = () => {
                 {/* Investment Matrix Section */}
                 <div className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-white/[0.06] text-white flex items-center justify-center">
                             <Target size={16} />
                         </div>
                         <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white/60">Capital Matrix</h2>
                     </div>
 
                     {isInvestLoading ? (
-                        <div className="glass-card rounded-[2.5rem] p-8 bg-gradient-to-br from-emerald-600/10 to-transparent border-emerald-500/10 animate-pulse">
+                        <div className="glass-card rounded-[2.5rem] p-8 animate-pulse">
                             <div className="h-3 w-24 bg-white/[0.05] rounded mb-1" />
                             <div className="h-10 w-48 bg-white/[0.05] rounded mb-8" />
                             <div className="space-y-4">
@@ -375,8 +375,8 @@ const Analytics: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="glass-card rounded-[2.5rem] p-8 bg-gradient-to-br from-emerald-600/10 to-transparent border-emerald-500/10">
-                            <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1 opacity-60">Total Deployed</p>
+                        <div className="glass-card rounded-[2.5rem] p-8">
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-60">Total Deployed</p>
                             <h3 className="text-4xl font-black text-white tracking-tighter mb-8">
                                 {formatCurrency(Math.abs(investments?.total_investments || 0))}
                             </h3>
@@ -392,7 +392,7 @@ const Analytics: React.FC = () => {
                                             </div>
                                             <div className="w-full h-1 bg-white/[0.03] rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-emerald-500 transition-all duration-1000"
+                                                    className="h-full bg-white transition-all duration-1000"
                                                     style={{ width: `${percentage}%` }}
                                                 />
                                             </div>
@@ -408,7 +408,7 @@ const Analytics: React.FC = () => {
                 <div className="space-y-6 pt-10 border-t border-white/[0.05]">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-lg bg-white/[0.06] text-white flex items-center justify-center">
                                 <TrendingUp size={16} />
                             </div>
                             <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white/60">Burn Timeline</h2>
@@ -416,20 +416,20 @@ const Analytics: React.FC = () => {
                         <div className="flex bg-white/[0.03] p-1 rounded-xl border border-white/[0.05]">
                             <button
                                 onClick={() => setTrendFreq('weekly')}
-                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'weekly' ? 'bg-rose-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'weekly' ? 'bg-white/15 text-white border border-white/20 font-semibold shadow-sm' : 'text-gray-500 hover:text-white'}`}
                             >
                                 Weekly
                             </button>
                             <button
                                 onClick={() => setTrendFreq('monthly')}
-                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'monthly' ? 'bg-rose-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'monthly' ? 'bg-white/15 text-white border border-white/20 font-semibold shadow-sm' : 'text-gray-500 hover:text-white'}`}
                             >
                                 Monthly
                             </button>
                         </div>
                     </div>
 
-                    <Card className="p-8 bg-gradient-to-br from-rose-600/[0.03] via-transparent to-transparent border-white/[0.05] rounded-[2.5rem]">
+                    <Card className="p-8 bg-white/[0.02] border-white/[0.05] rounded-[2.5rem]">
                         <div className="mb-6">
                             <h4 className="text-xl font-black text-white tracking-tighter uppercase whitespace-nowrap">Macro Spending Trend</h4>
                             <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">

@@ -146,7 +146,7 @@ const Categories: React.FC = () => {
                                                     </div>
                                                     <div>
                                                         <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{cat?.name}</h2>
-                                                        <p className="text-[10px] text-cyan-500 font-black uppercase tracking-[3px] mt-2">{cat?.sub_categories.length} Nodes assigned</p>
+                                                        <p className="text-[10px] text-white/60 font-black uppercase tracking-[3px] mt-2">{cat?.sub_categories.length} Nodes assigned</p>
                                                     </div>
                                                 </div>
 
@@ -230,7 +230,7 @@ const Categories: React.FC = () => {
                                                             setEditorMode('CREATE_SUB');
                                                             setNewColor(cat.color || '#6366f1');
                                                         }}
-                                                        className="p-3 text-cyan-500 hover:bg-cyan-500/10 rounded-xl transition-all active:scale-90"
+                                                        className="p-3 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all active:scale-90"
                                                     >
                                                         <FolderPlus size={18} />
                                                     </button>
@@ -312,7 +312,7 @@ const Categories: React.FC = () => {
                                         autoFocus
                                     />
                                     {(editorMode === 'CREATE_SUB' || editorMode === 'EDIT_SUB') && (
-                                        <p className="text-[10px] text-cyan-500 font-black uppercase tracking-[5px] mt-2">
+                                        <p className="text-[10px] text-white/60 font-black uppercase tracking-[5px] mt-2">
                                             Parent: {categories?.find(c => c.id === viewingCategoryId || c.id === selectedParentId)?.name}
                                         </p>
                                     )}
@@ -325,24 +325,24 @@ const Categories: React.FC = () => {
                                     <button
                                         onClick={() => setNewIsSurety(!newIsSurety)}
                                         className={`w-full flex items-center justify-between p-4 rounded-[1.5rem] border transition-all active:scale-[0.98] ${newIsSurety
-                                            ? 'bg-amber-500/10 border-amber-500/20'
+                                            ? 'bg-white/[0.04] border-white/20'
                                             : 'bg-white/[0.02] border-white/[0.05]'
                                             }`}
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${newIsSurety
-                                                ? 'bg-amber-500/20 border-amber-500/30 text-amber-500'
+                                                ? 'bg-white/[0.08] border-white/20 text-white'
                                                 : 'bg-white/[0.03] border-white/[0.08] text-gray-500'
                                                 }`}>
                                                 <Save size={18} />
                                             </div>
                                             <div className="text-left">
-                                                <h4 className={`text-sm font-black uppercase tracking-tight ${newIsSurety ? 'text-amber-500' : 'text-gray-500'}`}>Recurring Surety</h4>
+                                                <h4 className={`text-sm font-black uppercase tracking-tight ${newIsSurety ? 'text-white' : 'text-gray-500'}`}>Recurring Surety</h4>
                                                 <p className="text-[9px] font-bold uppercase tracking-widest opacity-60">Fixed Monthly Obligation</p>
                                             </div>
                                         </div>
-                                        <div className={`w-12 h-6 rounded-full p-1 transition-colors ${newIsSurety ? 'bg-amber-500' : 'bg-white/10'}`}>
-                                            <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${newIsSurety ? 'translate-x-6' : 'translate-x-0'}`} />
+                                        <div className={`w-12 h-6 rounded-full p-1 transition-colors ${newIsSurety ? 'bg-white' : 'bg-white/10'}`}>
+                                            <div className={`w-4 h-4 rounded-full shadow-sm transition-transform ${newIsSurety ? 'bg-black translate-x-6' : 'bg-white translate-x-0'}`} />
                                         </div>
                                     </button>
                                 )}

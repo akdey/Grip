@@ -19,7 +19,7 @@ const Privacy: React.FC = () => {
             <div className="px-5 py-12 max-w-2xl mx-auto space-y-12 animate-enter">
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-1 text-cyan-500 h-6 bg-cyan-500" />
+                        <div className="w-1 h-5 rounded-full bg-white/40" />
                         <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">01. Data Governance & Collection</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
@@ -34,7 +34,7 @@ const Privacy: React.FC = () => {
 
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-1 text-orange-500 h-6 bg-orange-500" />
+                        <div className="w-1 h-5 rounded-full bg-white/40" />
                         <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">02. Google User Data Usage</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
@@ -52,7 +52,7 @@ const Privacy: React.FC = () => {
                             <li><strong>No Decisions:</strong> AI does not handle your financial calculations or money management logic.</li>
                         </ul>
                         <p>
-                            <strong>Restricted Scope Compliance:</strong> Our use and transfer of information received from Google APIs to any other app will adhere to <a href="https://developers.google.com/terms/api-services-user-data-policy" className="text-orange-400 underline">Google API Services User Data Policy</a>, including the Limited Use requirements.
+                            <strong>Restricted Scope Compliance:</strong> Our use and transfer of information received from Google APIs to any other app will adhere to <a href="https://developers.google.com/terms/api-services-user-data-policy" className="text-white underline underline-offset-4 decoration-white/30 hover:decoration-white">Google API Services User Data Policy</a>, including the Limited Use requirements.
                         </p>
                         <p>
                             <strong>Data Sharing:</strong> We <u>do not</u> share, sell, or trade your Google user data with third-party marketing tools, advertisers, or any external entities.
@@ -62,7 +62,7 @@ const Privacy: React.FC = () => {
 
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-1 text-purple-500 h-6 bg-purple-500" />
+                        <div className="w-1 h-5 rounded-full bg-white/40" />
                         <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">03. Data Storage & Security</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
@@ -80,7 +80,7 @@ const Privacy: React.FC = () => {
 
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-1 text-emerald-500 h-6 bg-emerald-500" />
+                        <div className="w-1 h-5 rounded-full bg-white/40" />
                         <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">04. Privacy Shield & Sanitization</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
@@ -104,7 +104,7 @@ const Privacy: React.FC = () => {
 
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-1 text-blue-500 h-6 bg-blue-500" />
+                        <div className="w-1 h-5 rounded-full bg-white/40" />
                         <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">05. User Control & Deletion</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
@@ -121,7 +121,7 @@ const Privacy: React.FC = () => {
                             href="https://portfolio.akdey.vercel.app"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs font-black text-white hover:text-cyan-400 transition-all duration-300 border-b border-white/10 pb-1"
+                            className="text-xs font-black text-white hover:text-white/80 transition-all duration-300 border-b border-white/10 pb-1"
                         >
                             AMIT KUMAR DEY
                         </a>

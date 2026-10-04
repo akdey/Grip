@@ -82,11 +82,11 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                         </div>
 
                         {/* Header */}
-                        <div className="p-6 sm:p-8 border-b border-white/[0.06] flex items-center justify-between bg-gradient-to-b from-white/[0.04] to-transparent shrink-0">
+                        <div className="p-6 sm:p-8 border-b border-white/[0.06] flex items-center justify-between bg-white/[0.02] shrink-0">
                             <div className="flex-1">
                                 <div className="flex items-center gap-3">
                                     <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic heading-apple">Card Exposure Ledger</h2>
-                                    <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                                    <span className="text-[9px] font-bold text-white/90 uppercase tracking-widest bg-white/[0.06] px-2.5 py-1 rounded-full border border-white/10">
                                         Active CC Swipes
                                     </span>
                                 </div>
@@ -114,7 +114,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                         {selectedCardId && (
                                             <button
                                                 onClick={() => setSelectedCardId(null)}
-                                                className="text-[9px] font-bold text-amber-400 uppercase tracking-wider hover:underline"
+                                                className="text-[9px] font-bold text-white/70 uppercase tracking-wider hover:text-white transition-colors"
                                             >
                                                 Show All Cards
                                             </button>
@@ -129,12 +129,12 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                     onClick={() => setSelectedCardId(isSelected ? null : (card.card_id || 'unassigned'))}
                                                     className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group active:scale-[0.98] ${
                                                         isSelected
-                                                            ? 'bg-amber-500/10 border-amber-500/30'
+                                                            ? 'bg-white/10 border-white/30'
                                                             : 'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]'
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                                                        <div className="w-9 h-9 rounded-xl bg-white/[0.06] text-white flex items-center justify-center shrink-0">
                                                             <CardIcon size={16} />
                                                         </div>
                                                         <div>
@@ -145,7 +145,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-sm font-black text-amber-400 tracking-tighter">
+                                                        <p className="text-sm font-black text-white tracking-tighter">
                                                             {formatCurrency(card.amount)}
                                                         </p>
                                                     </div>
@@ -166,7 +166,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                         onClose();
                                         navigate('/credit-cards');
                                     }}
-                                    className="text-[9px] text-amber-400 hover:text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1 transition-colors"
+                                    className="text-[9px] text-white/70 hover:text-white font-bold uppercase tracking-wider flex items-center gap-1 transition-colors"
                                 >
                                     <span>Manage in Vault</span>
                                     <ArrowUpRight size={12} />
@@ -191,7 +191,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                             title="View card in Vault to settle this swipe"
                                         >
                                             <div className="flex items-center gap-4 min-w-0">
-                                                <div className="w-9 h-9 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
+                                                <div className="w-9 h-9 rounded-2xl bg-white/[0.04] text-white flex items-center justify-center shrink-0 border border-white/10">
                                                     <CardIcon size={16} />
                                                 </div>
 
@@ -200,14 +200,14 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                         {item.merchant_name}
                                                     </p>
                                                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-white/[0.04] text-white/80 border border-white/10">
                                                             {item.card_name}
                                                             {item.last_four_digits ? ` •••• ${item.last_four_digits}` : ''}
                                                         </span>
-                                                        <span className="text-[8px] text-gray-600 font-bold uppercase tracking-wider">
+                                                        <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">
                                                             {format(parseDateSafe(item.transaction_date), 'MMM dd')}
                                                         </span>
-                                                        <span className="text-[8px] text-amber-400/70 font-black uppercase tracking-wider">
+                                                        <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">
                                                             • {item.status}
                                                         </span>
                                                     </div>
@@ -219,11 +219,11 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                     <p className="text-sm font-black text-white tracking-tighter">
                                                         {formatCurrency(item.amount)}
                                                     </p>
-                                                    <p className="text-[7px] text-gray-700 font-bold uppercase tracking-widest mt-0.5">
+                                                    <p className="text-[7px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">
                                                         {item.sub_category || item.category || 'General'}
                                                     </p>
                                                 </div>
-                                                <div className="w-7 h-7 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-center text-gray-600 group-hover:text-amber-400 group-hover:border-amber-500/20 transition-all">
+                                                <div className="w-7 h-7 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-center text-gray-600 group-hover:text-white group-hover:border-white/20 transition-all">
                                                     <ArrowUpRight size={14} />
                                                 </div>
                                             </div>
@@ -248,7 +248,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                         Sum of all unsettled swipes
                                     </span>
                                 </div>
-                                <span className="text-2xl font-black text-amber-400 tracking-tighter">
+                                <span className="text-2xl font-black text-white tracking-tighter">
                                     {formatCurrency(totalExposure)}
                                 </span>
                             </div>

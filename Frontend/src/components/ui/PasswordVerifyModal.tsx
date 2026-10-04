@@ -87,8 +87,8 @@ export const PasswordVerifyModal: React.FC<PasswordVerifyModalProps> = ({ isOpen
                         {/* Header */}
                         <div className="p-6 sm:p-8 border-b border-border-subtle flex justify-between items-center bg-gradient-to-b from-white/[0.04] to-transparent shrink-0">
                             <div className="flex items-center gap-4">
-                                <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-border-subtle shadow-inner">
-                                    <Lock size={24} className="text-cyan-300" />
+                                <div className="w-12 h-12 rounded-2xl bg-white/[0.06] flex items-center justify-center border border-white/10 shadow-inner text-white">
+                                    <Lock size={22} />
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-bold text-text-primary tracking-tight heading-apple">Security Access</h3>

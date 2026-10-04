@@ -110,10 +110,10 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                     className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
                 >
                     {/* Header */}
-                    <div className="p-6 sm:p-10 border-b border-white/10 flex justify-between items-center bg-gradient-to-b from-white/[0.05] to-transparent shrink-0">
+                    <div className="p-6 sm:p-10 border-b border-white/10 flex justify-between items-center bg-white/[0.02] shrink-0">
                         <div>
                             <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic flex items-center gap-3">
-                                <LinkIcon className="text-emerald-500" size={28} />
+                                <LinkIcon className="text-white" size={28} />
                                 Neural Linker
                             </h3>
                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[4px] mt-1">Transaction-to-Asset Mapping Engine</p>
@@ -139,7 +139,7 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
 
                                 {loading && transactions.length === 0 ? (
                                     <div className="flex-1 flex items-center justify-center">
-                                        <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full"></div>
+                                        <div className="animate-spin w-6 h-6 border-2 border-white/30 border-t-white rounded-full"></div>
                                     </div>
                                 ) : (
                                     <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
@@ -154,8 +154,8 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                                     <p className="text-xs text-gray-500">{new Date(txn.transaction_date).toLocaleDateString()}</p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-emerald-400 font-mono font-medium">₹{Math.abs(txn.amount)}</p>
-                                                    <p className="text-xs text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">Select →</p>
+                                                    <p className="text-white font-mono font-medium">₹{Math.abs(txn.amount)}</p>
+                                                    <p className="text-xs text-white/70 opacity-0 group-hover:opacity-100 transition-opacity">Select →</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -176,8 +176,8 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                     >
                                         ← Back to Transactions
                                     </button>
-                                    <div className="px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-                                        <span className="text-xs text-emerald-500">
+                                    <div className="px-3 py-1 bg-white/[0.06] rounded-full border border-white/10">
+                                        <span className="text-xs text-white/90">
                                             Linking: {selectedTxn?.merchant_name} (₹{Math.abs(selectedTxn?.amount || 0)})
                                         </span>
                                     </div>
@@ -190,7 +190,7 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                         placeholder="Search holdings..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full bg-[#151515] border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-emerald-500/50"
+                                        className="w-full bg-[#151515] border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-white/30"
                                     />
                                 </div>
 
@@ -203,16 +203,16 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                             <div
                                                 key={h.id}
                                                 onClick={() => handleLink(h.id)}
-                                                className="p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-emerald-500/10 hover:border-emerald-500/30 cursor-pointer transition-colors flex justify-between items-center"
+                                                className="p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 cursor-pointer transition-colors flex justify-between items-center"
                                             >
                                                 <div>
                                                     <p className="font-medium text-gray-200">{h.name}</p>
                                                     <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-gray-400">{h.asset_type}</span>
                                                 </div>
                                                 {loading ? (
-                                                    <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full"></div>
+                                                    <div className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></div>
                                                 ) : (
-                                                    <Check size={16} className="text-emerald-500 opacity-0 hover:opacity-100" />
+                                                    <Check size={16} className="text-white opacity-0 hover:opacity-100" />
                                                 )}
                                             </div>
                                         ))}

@@ -58,7 +58,7 @@ const RecentActivityItem = memo(({ t, formatCurrency, onClick }: { t: Transactio
                 <p className="font-black text-white text-base leading-none tracking-tighter">
                     {formatCurrency(t.amount)}
                 </p>
-                <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter mt-1.5 inline-block ${t.is_manual ? 'border-amber-500/20 text-amber-500/80' : 'border-cyan-500/20 text-cyan-500/80'
+                <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter mt-1.5 inline-block ${t.is_manual ? 'border-amber-500/20 text-amber-500/80' : 'border-white/10 text-white/70 bg-white/[0.04]'
                     }`}>
                     {t.is_manual ? 'Manual' : 'System'}
                 </span>
@@ -74,7 +74,7 @@ const RecentActivity: React.FC<RecentActivityProps & { isLoading?: boolean }> = 
         <div className="space-y-6">
             <div className="flex items-center justify-between px-2">
                 <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Recents</h3>
-                <NavLink to="/transactions" className="text-[10px] font-black text-cyan-400 uppercase tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/10">
+                <NavLink to="/transactions" className="text-[10px] font-black text-white/80 uppercase tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 hover:bg-white/10 hover:text-white transition-all">
                     All <ChevronRight size={10} />
                 </NavLink>
             </div>

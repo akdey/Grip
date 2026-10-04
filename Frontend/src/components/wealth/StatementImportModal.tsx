@@ -457,30 +457,30 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                     <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 flex items-center justify-between">
                                         <div>
                                             <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Assets Integrated</p>
-                                            <p className="text-3xl font-black text-emerald-400 tracking-tighter">{importResult.holdings_created || 0}</p>
+                                            <p className="text-3xl font-black text-white tracking-tighter">{importResult.holdings_created || 0}</p>
                                         </div>
-                                        <RefreshCw size={24} className="text-emerald-500/20" />
+                                        <RefreshCw size={24} className="text-white/20" />
                                     </div>
                                     <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 flex items-center justify-between">
                                         <div>
                                             <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">State Syncs</p>
-                                            <p className="text-3xl font-black text-blue-400 tracking-tighter">{importResult.holdings_updated || 0}</p>
+                                            <p className="text-3xl font-black text-white tracking-tighter">{importResult.holdings_updated || 0}</p>
                                         </div>
-                                        <RefreshCw size={24} className="text-blue-500/20" />
+                                        <RefreshCw size={24} className="text-white/20" />
                                     </div>
                                     <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 flex items-center justify-between">
                                         <div>
                                             <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Records Processed</p>
-                                            <p className="text-3xl font-black text-purple-400 tracking-tighter">{importResult.transactions_processed || 0}</p>
+                                            <p className="text-3xl font-black text-white tracking-tighter">{importResult.transactions_processed || 0}</p>
                                         </div>
-                                        <FileText size={24} className="text-purple-500/20" />
+                                        <FileText size={24} className="text-white/20" />
                                     </div>
                                     <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 flex items-center justify-between">
                                         <div>
                                             <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">SIP Signals</p>
-                                            <p className="text-3xl font-black text-amber-400 tracking-tighter">{importResult.sip_patterns_detected || 0}</p>
+                                            <p className="text-3xl font-black text-white tracking-tighter">{importResult.sip_patterns_detected || 0}</p>
                                         </div>
-                                        <RefreshCw size={24} className="text-amber-500/20" />
+                                        <RefreshCw size={24} className="text-white/20" />
                                     </div>
                                 </div>
                             </div>
@@ -500,11 +500,11 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                 <button
                                     onClick={handleImport}
                                     disabled={loading || transactions.length === 0}
-                                    className="flex-[2] py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-2xl shadow-emerald-900/20 disabled:opacity-50"
+                                    className="flex-[2] py-5 rounded-2xl bg-white hover:bg-neutral-200 text-black font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-md disabled:opacity-50"
                                 >
                                     {loading ? (
                                         <>
-                                            <div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></div>
+                                            <div className="animate-spin w-5 h-5 border-2 border-black/30 border-t-black rounded-full"></div>
                                             Processing...
                                         </>
                                     ) : (
@@ -518,7 +518,7 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                         ) : (
                             <button
                                 onClick={handleClose}
-                                className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs transition-all active:scale-[0.98]"
+                                className="w-full py-5 rounded-2xl bg-white hover:bg-neutral-200 text-black font-black uppercase tracking-widest text-xs transition-all active:scale-[0.98] shadow-sm"
                             >
                                 Re-enter Portfolio
                             </button>

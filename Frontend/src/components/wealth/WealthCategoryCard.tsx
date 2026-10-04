@@ -82,7 +82,7 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                         {onSimulate && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onSimulate(); }}
-                                className="flex-1 py-2 px-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors border border-indigo-500/20"
+                                className="flex-1 py-2 px-3 bg-white/[0.04] hover:bg-white/[0.08] text-white/90 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-colors border border-white/10 hover:border-white/20"
                             >
                                 <Calculator size={14} />
                                 What-If Simulator
@@ -91,7 +91,7 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                         {onAnalyze && type === 'MUTUAL_FUND' && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onAnalyze(); }}
-                                className="flex-1 py-2 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors border border-emerald-500/20"
+                                className="flex-1 py-2 px-3 bg-white/[0.04] hover:bg-white/[0.08] text-white/90 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-colors border border-white/10 hover:border-white/20"
                             >
                                 <CalendarClock size={14} />
                                 SIP Analysis

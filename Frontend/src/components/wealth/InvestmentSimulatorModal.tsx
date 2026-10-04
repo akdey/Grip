@@ -132,13 +132,13 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                     </div>
 
                     {/* Header */}
-                    <div className="p-6 sm:p-8 border-b border-white/[0.06] flex justify-between items-center bg-gradient-to-r from-indigo-900/15 to-purple-900/15 shrink-0">
+                    <div className="p-6 sm:p-8 border-b border-white/[0.06] flex justify-between items-center bg-white/[0.02] shrink-0">
                         <div>
-                            <h2 className="text-2xl font-black italic tracking-tighter flex items-center gap-2 heading-apple">
-                                <Calculator className="text-indigo-400" size={26} />
+                            <h2 className="text-2xl font-black italic tracking-tighter flex items-center gap-2 heading-apple text-white">
+                                <Calculator className="text-white" size={26} />
                                 TIME MACHINE
                             </h2>
-                            <p className="text-[10px] text-indigo-300/70 uppercase tracking-[4px] font-bold">Mutual Fund Intelligence Simulator</p>
+                            <p className="text-[10px] text-text-muted uppercase tracking-[4px] font-semibold">Mutual Fund Intelligence Simulator</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <button
@@ -169,9 +169,9 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                             onChange={e => { setSearchTerm(e.target.value); setShowDropdown(true); }}
                                             onFocus={() => setShowDropdown(true)}
                                             placeholder="Search e.g. Parag Parikh Flexi Cap..."
-                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm font-medium focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-gray-600"
+                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm font-medium focus:outline-none focus:border-white/30 transition-all placeholder:text-gray-600"
                                         />
-                                        {isSchemesLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full" />}
+                                        {isSchemesLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full" />}
 
                                         {showDropdown && searchTerm.length > 1 && (
                                             <div className="absolute z-50 w-full mt-2 bg-[#1A1A1A] border border-white/10 rounded-2xl max-h-60 overflow-y-auto shadow-2xl custom-scrollbar">
@@ -191,7 +191,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                                 ))}
                                             </div>
                                         )}
-                                        {formData.schemeCode && <p className="text-[10px] text-indigo-400 mt-2 font-mono">Picked: {formData.schemeCode}</p>}
+                                        {formData.schemeCode && <p className="text-[10px] text-white/70 mt-2 font-mono">Picked: {formData.schemeCode}</p>}
                                     </div>
                                 </div>
 
@@ -201,7 +201,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                         <button
                                             key={t}
                                             onClick={() => setFormData({ ...formData, investmentType: t })}
-                                            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${formData.investmentType === t ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                                            className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${formData.investmentType === t ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-white'}`}
                                         >
                                             {t}
                                         </button>
@@ -221,7 +221,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                             value={formData.amount}
                                             onChange={e => setFormData({ ...formData, amount: e.target.value })}
                                             placeholder="5000"
-                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl pl-10 pr-4 py-4 text-sm font-medium focus:outline-none focus:border-indigo-500/50 transition-all font-mono"
+                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl pl-10 pr-4 py-4 text-sm font-medium focus:outline-none focus:border-white/30 transition-all font-mono"
                                         />
                                     </div>
                                 </div>
@@ -235,7 +235,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                             value={formData.date}
                                             max={new Date().toISOString().split('T')[0]}
                                             onChange={e => setFormData({ ...formData, date: e.target.value })}
-                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl px-4 py-4 text-sm font-medium focus:outline-none focus:border-indigo-500/50 transition-all [color-scheme:dark]"
+                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl px-4 py-4 text-sm font-medium focus:outline-none focus:border-white/30 transition-all [color-scheme:dark]"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -247,7 +247,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                             max={new Date().toISOString().split('T')[0]}
                                             onChange={e => setFormData({ ...formData, endDate: e.target.value })}
                                             placeholder="Today"
-                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl px-4 py-4 text-sm font-medium focus:outline-none focus:border-indigo-500/50 transition-all [color-scheme:dark]"
+                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl px-4 py-4 text-sm font-medium focus:outline-none focus:border-white/30 transition-all [color-scheme:dark]"
                                         />
                                         <p className="text-[9px] text-gray-600 ml-1">Leave empty for today</p>
                                     </div>
@@ -257,7 +257,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                 <button
                                     onClick={handleSimulate}
                                     disabled={!formData.schemeCode || !formData.date || !formData.amount}
-                                    className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold tracking-wide shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
+                                    className="w-full py-4 rounded-2xl bg-white hover:bg-neutral-200 text-black font-semibold tracking-wide shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
                                 >
                                     Activate Simulation
                                     <ArrowRight size={18} />
@@ -267,8 +267,8 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
 
                         {step === 2 && (
                             <div className="flex flex-col items-center justify-center h-64 space-y-4">
-                                <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-                                <p className="text-indigo-400 font-mono text-xs animate-pulse">Running {formData.investmentType} Analysis...</p>
+                                <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                <p className="text-white/80 font-mono text-xs animate-pulse">Running {formData.investmentType} Analysis...</p>
                             </div>
                         )}
 
@@ -279,13 +279,13 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                     <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Snapshot</p>
                                     <h3 className="text-sm font-medium text-gray-300 max-w-[90%] mx-auto leading-relaxed">
                                         {formData.investmentType} of <span className="text-white font-bold">₹{parseFloat(formData.amount).toLocaleString()}</span> in <br />
-                                        <span className="text-indigo-400">{formData.schemeName.substring(0, 35)}...</span><br />
+                                        <span className="text-white font-medium">{formData.schemeName.substring(0, 35)}...</span><br />
                                         <span className="text-gray-500 text-xs">from {new Date(result.invested_date).toLocaleDateString()} to {result.end_date ? new Date(result.end_date).toLocaleDateString() : 'Today'}</span>
                                     </h3>
                                 </div>
 
                                 <div className="bg-[#151515] border border-white/5 rounded-3xl p-6 relative overflow-hidden">
-                                    <div className={`absolute top-0 left-0 w-full h-1 ${result.return_percentage >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                    <div className={`absolute top-0 left-0 w-full h-1 ${result.return_percentage >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
 
                                     <div className="relative z-10">
                                         <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Total Value</p>
@@ -293,16 +293,13 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                             ₹{Math.round(result.current_value).toLocaleString()}
                                         </h1>
 
-                                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${result.return_percentage >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${result.return_percentage >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
                                             {result.return_percentage >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
                                             <span className="font-bold font-mono text-sm">
                                                 {result.return_percentage >= 0 ? '+' : ''}{result.return_percentage.toFixed(2)}%
                                             </span>
                                         </div>
                                     </div>
-
-                                    {/* Background decoration */}
-                                    <div className={`absolute -bottom-10 -right-10 w-32 h-32 rounded-full blur-[60px] opacity-20 ${result.return_percentage >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
                                 </div>
 
                                 <div className="bg-white/[0.03] rounded-2xl p-4 grid grid-cols-2 gap-4 text-left">

@@ -453,7 +453,7 @@ const AddEntry: React.FC = () => {
                                             {category || 'Select Category'}
                                         </span>
                                         {subCategory && subCategory !== 'Uncategorized' && (
-                                            <span className="text-[7px] text-cyan-500 font-black uppercase tracking-widest mt-0.5 opacity-80">{subCategory}</span>
+                                            <span className="text-[7px] text-white/70 font-black uppercase tracking-widest mt-0.5 opacity-80">{subCategory}</span>
                                         )}
                                     </div>
                                 </div>
@@ -517,8 +517,8 @@ const AddEntry: React.FC = () => {
                                 <button
                                     onClick={() => { setAccountType('ACCOUNT'); setCardId(''); }}
                                     className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all whitespace-nowrap min-w-[90px] justify-center ${accountType === 'ACCOUNT'
-                                        ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
-                                        : 'bg-white/[0.02] border-white/[0.05] text-gray-600'
+                                        ? 'bg-white/15 border-white/30 text-white font-bold shadow-sm'
+                                        : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-white'
                                         }`}
                                 >
                                     <Landmark size={14} />
@@ -527,8 +527,8 @@ const AddEntry: React.FC = () => {
                                 <button
                                     onClick={() => { setAccountType('CASH'); setCardId(''); }}
                                     className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all whitespace-nowrap min-w-[90px] justify-center ${accountType === 'CASH'
-                                        ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400'
-                                        : 'bg-white/[0.02] border-white/[0.05] text-gray-600'
+                                        ? 'bg-white/15 border-white/30 text-white font-bold shadow-sm'
+                                        : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-white'
                                         }`}
                                 >
                                     <Banknote size={14} />
@@ -539,8 +539,8 @@ const AddEntry: React.FC = () => {
                                         key={card.id}
                                         onClick={() => { setAccountType('CREDIT_CARD'); setCardId(card.id); }}
                                         className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all whitespace-nowrap min-w-[110px] justify-center ${accountType === 'CREDIT_CARD' && cardId === card.id
-                                            ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
-                                            : 'bg-white/[0.02] border-white/[0.05] text-gray-600'
+                                            ? 'bg-white/15 border-white/30 text-white font-bold shadow-sm'
+                                            : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-white'
                                             }`}
                                     >
                                         <CreditCard size={14} />
@@ -553,7 +553,7 @@ const AddEntry: React.FC = () => {
                         {/* Destination Card for Credit Card Payment */}
                         {subCategory === 'Credit Card Payment' && creditCards && creditCards.length > 0 && (
                             <div className="space-y-2">
-                                <label className="text-[8px] text-purple-400 font-black uppercase tracking-[2px] ml-1 opacity-80">
+                                <label className="text-[8px] text-white/80 font-black uppercase tracking-[2px] ml-1 opacity-80">
                                     Target Credit Card (Liability Offset)
                                 </label>
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -564,7 +564,7 @@ const AddEntry: React.FC = () => {
                                             onClick={() => setCardId(cardId === card.id ? '' : card.id)}
                                             className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border transition-all whitespace-nowrap min-w-[110px] justify-center ${
                                                 cardId === card.id
-                                                    ? 'bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-sm'
+                                                    ? 'bg-white/15 border-white/30 text-white shadow-sm font-bold'
                                                     : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-gray-300'
                                             }`}
                                         >
@@ -601,7 +601,7 @@ const AddEntry: React.FC = () => {
                             <div className="p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.05] space-y-3">
                                 <div className="flex flex-wrap gap-2">
                                     {tags.map(tag => (
-                                        <span key={tag} className="flex items-center gap-1.5 px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-lg text-cyan-400 text-[9px] font-black uppercase tracking-wider">
+                                        <span key={tag} className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-[9px] font-black uppercase tracking-wider">
                                             {tag}
                                             <button onClick={() => removeTag(tag)} className="hover:text-white transition-colors">
                                                 <X size={10} />
@@ -651,7 +651,7 @@ const AddEntry: React.FC = () => {
 
                             <div className="flex items-center justify-between p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.05]">
                                 <div className="flex items-center gap-3.5">
-                                    <div className={`w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center transition-colors ${isSurety ? 'text-amber-500' : 'text-gray-800'}`}>
+                                    <div className={`w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center transition-colors ${isSurety ? 'text-white' : 'text-gray-700'}`}>
                                         <ToggleLeft size={16} />
                                     </div>
                                     <div className="flex flex-col">
@@ -669,9 +669,9 @@ const AddEntry: React.FC = () => {
                                     disabled={!!getSelectedSubCategory()?.is_surety}
                                 >
                                     {isSurety ? (
-                                        <ToggleRight size={32} className="text-amber-500 opacity-80" />
+                                        <ToggleRight size={32} className="text-white opacity-90" />
                                     ) : (
-                                        <ToggleLeft size={32} className="text-gray-900" />
+                                        <ToggleLeft size={32} className="text-gray-700" />
                                     )}
                                 </button>
                             </div>
@@ -712,7 +712,7 @@ const AddEntry: React.FC = () => {
                                 onClick={handleSave}
                                 disabled={mutation.isPending || !amount || !category}
                                 className={`
-                                    w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-2xl shadow-indigo-500/20 active:scale-95 transition-all
+                                    w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-2xl shadow-white/10 active:scale-95 transition-all
                                     ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6'}
                                 `}
                             >
@@ -737,7 +737,7 @@ const AddEntry: React.FC = () => {
                                         {view === 'SUBCATEGORIES' && (
                                             <button
                                                 onClick={() => setView('CATEGORIES')}
-                                                className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-cyan-500 active:scale-90 transition-all"
+                                                className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-white active:scale-90 transition-all"
                                             >
                                                 <ChevronLeft size={20} />
                                             </button>
@@ -801,7 +801,7 @@ const AddEntry: React.FC = () => {
                                                     <div
                                                         key={sub.id}
                                                         onClick={() => handleSubCategorySelect(sub)}
-                                                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-[0.98] ${subCategory === sub.name ? 'bg-cyan-500/10 border-cyan-500/20' : 'bg-white/[0.02] border-white/[0.05]'}`}
+                                                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-[0.98] ${subCategory === sub.name ? 'bg-white/10 border-white/20' : 'bg-white/[0.02] border-white/[0.05]'}`}
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             <div
@@ -810,10 +810,10 @@ const AddEntry: React.FC = () => {
                                                             >
                                                                 <CategoryIcon name={sub.icon} size={14} fallback={<CategoryIcon name={tempCategory?.icon} size={14} />} />
                                                             </div>
-                                                            <span className={`text-sm font-bold uppercase tracking-tight ${subCategory === sub.name ? 'text-cyan-400' : 'text-gray-400'}`}>{sub.name}</span>
+                                                            <span className={`text-sm font-bold uppercase tracking-tight ${subCategory === sub.name ? 'text-white' : 'text-gray-400'}`}>{sub.name}</span>
                                                         </div>
                                                         {subCategory === sub.name && (
-                                                            <Check size={14} className="text-cyan-500" />
+                                                            <Check size={14} className="text-white" />
                                                         )}
                                                     </div>
                                                 ))}

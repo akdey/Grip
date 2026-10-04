@@ -40,9 +40,9 @@ const BillsPage: React.FC = () => {
 
     const getIcon = (cat: string) => {
         switch (cat.toLowerCase()) {
-            case 'utilities': return <Zap size={18} className="text-yellow-400" />;
-            case 'housing': return <Home size={18} className="text-sky-400" />;
-            default: return <Smartphone size={18} className="text-indigo-400" />;
+            case 'utilities': return <Zap size={18} className="text-white/80" />;
+            case 'housing': return <Home size={18} className="text-white/80" />;
+            default: return <Smartphone size={18} className="text-white/80" />;
         }
     };
 
@@ -83,10 +83,10 @@ const BillsPage: React.FC = () => {
             <div className="p-6 space-y-10 animate-enter">
                 {/* Visual Summary */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-rose-500/20 to-rose-900/20 border border-rose-500/20 p-6 rounded-[2.5rem] relative overflow-hidden">
-                        <ShieldAlert className="absolute -right-4 -bottom-4 text-rose-500/10" size={80} />
+                    <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2.5rem] relative overflow-hidden">
+                        <ShieldAlert className="absolute -right-4 -bottom-4 text-white/5" size={80} />
                         <div>
-                            <p className="text-[8px] font-black text-rose-500 uppercase tracking-widest mb-1">Overdue</p>
+                            <p className="text-[8px] font-black text-rose-400 uppercase tracking-widest mb-1">Overdue</p>
                             <p className="text-2xl font-black text-white leading-none">₹{stats.overdue >= 1000 ? `${(stats.overdue / 1000).toFixed(1)}k` : stats.overdue}</p>
                         </div>
                     </div>
@@ -175,7 +175,7 @@ const BillsPage: React.FC = () => {
                                         <div className="text-right shrink-0">
                                             <p className="text-lg font-black tracking-tighter text-white">₹{Number(bill.amount).toLocaleString()}</p>
                                             <button
-                                                className="mt-2 text-[8px] font-black uppercase tracking-widest py-1.5 px-3 rounded-full bg-emerald-500/10 text-emerald-500/80 border border-emerald-500/20 active:scale-90 transition-all"
+                                                className="mt-2 text-[8px] font-black uppercase tracking-widest py-1.5 px-3 rounded-full bg-white/[0.06] text-white/90 border border-white/10 hover:bg-white/10 active:scale-90 transition-all"
                                                 onClick={() => markPaid.mutate({ id: bill.id, paid: true })}
                                                 disabled={markPaid.isPending}
                                             >

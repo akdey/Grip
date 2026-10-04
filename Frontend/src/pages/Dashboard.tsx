@@ -93,7 +93,7 @@ const Dashboard: React.FC = () => {
             {/* Header */}
             <header className="flex items-center justify-between mb-8 relative z-50">
                 <div className="flex flex-col">
-                    <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600 pb-1">
+                    <h1 className="text-4xl font-black tracking-tighter text-white pb-1 heading-apple">
                         {import.meta.env.VITE_APP_NAME || 'GRIP'}
                     </h1>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">
@@ -142,7 +142,7 @@ const Dashboard: React.FC = () => {
                     <button
                         onClick={togglePrivacy}
                         className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all shadow-2xl ${showSensitive
-                            ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
+                            ? 'bg-white/10 border-white/20 text-white'
                             : 'bg-white/[0.03] border-white/[0.08] text-gray-400'
                             }`}
                         aria-label={showSensitive ? "Hide sensitive data" : "Show sensitive data"}
@@ -269,12 +269,12 @@ const Dashboard: React.FC = () => {
 
                             <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-8 custom-scrollbar select-text">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="bg-cyan-500/5 border border-cyan-500/10 p-6 rounded-3xl sm:col-span-2">
+                                    <div className="bg-white/[0.03] border border-white/[0.08] p-6 rounded-3xl sm:col-span-2">
                                         <div className="flex items-center gap-3 mb-3">
-                                            <Sparkles size={16} className="text-cyan-400" />
-                                            <span className="text-xs font-black text-cyan-400 uppercase tracking-widest">AI Context & Reasoning</span>
+                                            <Sparkles size={16} className="text-white/80" />
+                                            <span className="text-xs font-black text-white/80 uppercase tracking-widest">AI Context & Reasoning</span>
                                         </div>
-                                        <p className="text-sm font-medium text-cyan-100/90 leading-relaxed italic">
+                                        <p className="text-sm font-medium text-white/90 leading-relaxed italic">
                                             "{forecast?.description || "Analysis provided by predictive models looking at historical burn rates and cyclical patterns."}"
                                         </p>
                                     </div>
@@ -303,7 +303,7 @@ const Dashboard: React.FC = () => {
                                         {forecast?.breakdown && Array.isArray(forecast.breakdown) && forecast.breakdown.length > 0 ? (
                                             forecast.breakdown.map((item: any, idx: number) => (
                                                 <div key={idx} className="flex items-start gap-5 p-5 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-all group">
-                                                    <div className="w-12 h-12 rounded-2xl bg-white/[0.05] flex items-center justify-center text-gray-500 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 transition-colors shrink-0">
+                                                    <div className="w-12 h-12 rounded-2xl bg-white/[0.05] flex items-center justify-center text-gray-400 group-hover:text-white group-hover:bg-white/[0.08] transition-colors shrink-0">
                                                         <span className="text-xs font-black">{idx + 1}</span>
                                                     </div>
                                                     <div className="flex-1 min-w-0 py-1">
@@ -311,12 +311,12 @@ const Dashboard: React.FC = () => {
                                                             <div className="flex items-center gap-2 flex-wrap">
                                                                 <span className="text-sm font-black text-white uppercase tracking-tight">{item.category}</span>
                                                                 {item.sub_category && (
-                                                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-white/[0.06] text-cyan-300 border border-white/10 uppercase tracking-wider">
+                                                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-white/[0.06] text-white/80 border border-white/10 uppercase tracking-wider">
                                                                         {item.sub_category}
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <span className="text-base font-black text-cyan-400 tracking-tighter">{formatCurrency(item.predicted_amount)}</span>
+                                                            <span className="text-base font-black text-white tracking-tighter">{formatCurrency(item.predicted_amount)}</span>
                                                         </div>
                                                         <p className="text-[11px] text-gray-500 font-medium leading-relaxed max-w-[90%]">{item.reason}</p>
                                                     </div>
@@ -339,7 +339,7 @@ const Dashboard: React.FC = () => {
                                     </div>
                                     <div className="text-right">
                                         <span className="text-sm font-black text-white tracking-tighter">{formatCurrency(forecast?.predicted_burden_30d || 0)}</span>
-                                        <p className="text-[8px] text-cyan-500 font-black uppercase tracking-widest">Projected Limit</p>
+                                        <p className="text-[8px] text-text-muted font-black uppercase tracking-widest">Projected Limit</p>
                                     </div>
                                 </div>
                             </div>
@@ -427,18 +427,15 @@ const Dashboard: React.FC = () => {
                                             className="p-4 rounded-3xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between group hover:bg-white/[0.04] transition-all"
                                         >
                                             <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${obl.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-500' :
-                                                    obl.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500' : 'bg-cyan-500/10 text-cyan-400'
+                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${obl.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400' :
+                                                    obl.status === 'PENDING' ? 'bg-amber-500/10 text-amber-400' : 'bg-white/[0.06] text-white'
                                                     }`}>
                                                     <Calendar size={18} />
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-black text-white uppercase tracking-tight">{obl.title}</p>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${obl.type === 'BILL' ? 'bg-blue-500/10 text-blue-400' :
-                                                            obl.type === 'SIP' ? 'bg-emerald-500/10 text-emerald-400' :
-                                                                obl.type === 'GOAL' ? 'bg-purple-500/10 text-purple-400' : 'bg-gray-500/10 text-gray-400'
-                                                            }`}>
+                                                        <span className="text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-white/[0.05] text-white/70 border border-white/10">
                                                             {obl.type}
                                                         </span>
                                                         <span className="text-[8px] text-gray-600 font-bold uppercase tracking-wider">

@@ -71,19 +71,19 @@ const Goals: React.FC = () => {
             {/* Header */}
             <header className="px-4 py-6 flex items-center justify-between border-b border-white/[0.05]">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border border-purple-500/20">
-                        <Target size={20} className="text-purple-400" />
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center border border-white/10 text-white">
+                        <Target size={20} />
                     </div>
                     <div>
-                        <h1 className="text-lg font-black uppercase tracking-tight">Goals</h1>
-                        <p className="text-[9px] text-gray-600 uppercase tracking-widest font-bold">Financial Targets</p>
+                        <h1 className="text-lg font-black uppercase tracking-tight text-white heading-apple">Goals</h1>
+                        <p className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Financial Targets</p>
                     </div>
                 </div>
                 <button
                     onClick={() => setShowForm(!showForm)}
-                    className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center hover:bg-purple-500/20 transition-all"
+                    className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/10 flex items-center justify-center hover:bg-white/10 text-white transition-all"
                 >
-                    <Plus size={18} className="text-purple-400" />
+                    <Plus size={18} />
                 </button>
             </header>
 
@@ -105,7 +105,7 @@ const Goals: React.FC = () => {
                                     placeholder="Goal name (e.g., Trip to Goa)"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
+                                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-white/30"
                                 />
 
                                 <input
@@ -113,14 +113,14 @@ const Goals: React.FC = () => {
                                     placeholder="Target amount (₹)"
                                     value={formData.target_amount}
                                     onChange={(e) => setFormData({ ...formData, target_amount: e.target.value })}
-                                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
+                                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-white/30"
                                 />
 
                                 <input
                                     type="date"
                                     value={formData.target_date}
                                     onChange={(e) => setFormData({ ...formData, target_date: e.target.value })}
-                                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30"
                                 />
 
                                 {/* Feasibility Check */}
@@ -167,7 +167,7 @@ const Goals: React.FC = () => {
                                     <button
                                         onClick={handleCreateGoal}
                                         disabled={!feasibility?.is_feasible}
-                                        className="flex-1 py-3 rounded-xl bg-purple-500/20 border border-purple-500/30 text-xs font-bold text-purple-300 uppercase tracking-wide hover:bg-purple-500/30 transition-all disabled:opacity-50"
+                                        className="flex-1 py-3 rounded-xl bg-white text-black hover:bg-neutral-200 border border-white text-xs font-bold uppercase tracking-wide transition-all disabled:opacity-50"
                                     >
                                         Create Goal
                                     </button>
@@ -205,12 +205,12 @@ const Goals: React.FC = () => {
 
                                 <div className="grid grid-cols-2 gap-3 mb-3">
                                     <div className="bg-white/[0.02] rounded-xl p-3 border border-white/[0.05]">
-                                        <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-1">Target</p>
+                                        <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Target</p>
                                         <p className="text-base font-black text-white">{formatCurrency(goal.target_amount)}</p>
                                     </div>
-                                    <div className="bg-purple-500/10 rounded-xl p-3 border border-purple-500/20">
-                                        <p className="text-[9px] text-purple-400 uppercase tracking-widest mb-1">Monthly</p>
-                                        <p className="text-base font-black text-purple-300">{formatCurrency(goal.monthly_contribution)}</p>
+                                    <div className="bg-white/[0.04] rounded-xl p-3 border border-white/[0.06]">
+                                        <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-1">Monthly</p>
+                                        <p className="text-base font-black text-white">{formatCurrency(goal.monthly_contribution)}</p>
                                     </div>
                                 </div>
 
@@ -220,7 +220,7 @@ const Goals: React.FC = () => {
                                         initial={{ width: 0 }}
                                         animate={{ width: `${(goal.current_saved / goal.target_amount) * 100}%` }}
                                         transition={{ duration: 1, ease: 'easeOut' }}
-                                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
+                                        className="absolute inset-y-0 left-0 bg-white rounded-full"
                                     />
                                 </div>
                                 <p className="text-[9px] text-gray-600 mt-2 text-right">
@@ -231,8 +231,8 @@ const Goals: React.FC = () => {
                     </div>
                 ) : (
                     <div className="text-center py-16">
-                        <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-4">
-                            <Target size={28} className="text-purple-400" />
+                        <div className="w-16 h-16 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center mx-auto mb-4 text-white">
+                            <Target size={28} />
                         </div>
                         <p className="text-sm text-gray-500">No goals yet</p>
                         <p className="text-xs text-gray-700 mt-1">Create your first financial goal</p>

@@ -32,7 +32,7 @@ const Tags: React.FC = () => {
             <div className="p-4 space-y-4">
                 {isLoading ? (
                     <div className="flex justify-center p-12">
-                        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                        <Loader2 className="w-8 h-8 text-white/50 animate-spin" />
                     </div>
                 ) : !tags || tags.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-40 opacity-20 space-y-4">
@@ -48,7 +48,7 @@ const Tags: React.FC = () => {
                                 className="bg-[#111] border border-white/5 rounded-2xl p-4 flex items-center justify-between cursor-default hover:bg-[#1a1a1a] transition-all"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                                    <div className="w-12 h-12 rounded-full bg-white/[0.06] text-white flex items-center justify-center">
                                         <Hash size={20} />
                                     </div>
                                     <div>

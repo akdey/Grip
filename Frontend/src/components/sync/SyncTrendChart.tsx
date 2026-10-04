@@ -67,8 +67,8 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                 <div className="flex flex-col">
                     <span className="text-[10px] font-black uppercase tracking-[2px] text-white/40">Automation Yield</span>
                     <div className="flex items-center gap-2 mt-1">
-                        <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                        <span className="text-lg font-black text-indigo-400 leading-none">
+                        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        <span className="text-lg font-black text-white leading-none">
                             {processedData[processedData.length - 1]?.yield || 0}%
                         </span>
                     </div>
@@ -96,8 +96,8 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                         >
                             <defs>
                                 <linearGradient id="colorYield" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.5} />
-                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                    <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
                                 </linearGradient>
                                 <linearGradient id="colorFriction" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2} />
@@ -132,7 +132,7 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                                                 <div className="space-y-2">
                                                     <div className="flex flex-col">
                                                         <div className="flex justify-between items-center mb-0.5">
-                                                            <span className="text-[10px] font-black text-indigo-400">AUTOMATION</span>
+                                                            <span className="text-[10px] font-black text-white/80">AUTOMATION</span>
                                                             <span className="text-[10px] font-black">{item.yield}%</span>
                                                         </div>
                                                         <span className="text-[9px] font-bold text-gray-500 uppercase">{item.system} Auto Entries</span>
@@ -158,8 +158,8 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                             <Area
                                 type="monotone"
                                 dataKey="yield"
-                                stroke="#6366f1"
-                                strokeWidth={4}
+                                stroke="#ffffff"
+                                strokeWidth={3}
                                 fillOpacity={1}
                                 fill="url(#colorYield)"
                                 name="Auto Entry"
@@ -184,7 +184,7 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
 
             <div className="mt-6 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                    <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center text-white">
                         <span className="text-xs font-black">AI</span>
                     </div>
                     <div>

@@ -167,7 +167,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="e.g. Axis Bluechip Fund"
-                                    className="w-full bg-white/[0.02] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-emerald-500/50 transition-all placeholder:text-gray-600"
+                                    className="w-full bg-white/[0.02] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-white/30 transition-all placeholder:text-gray-600"
                                 />
                             </div>
 
@@ -177,7 +177,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                     <select
                                         value={formData.asset_type}
                                         onChange={e => setFormData({ ...formData, asset_type: e.target.value })}
-                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 appearance-none cursor-pointer"
+                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 appearance-none cursor-pointer"
                                     >
                                         <option value="MUTUAL_FUND">Mutual Fund</option>
                                         <option value="STOCK">Stock</option>
@@ -193,7 +193,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                     <select
                                         value={formData.api_source}
                                         onChange={e => setFormData({ ...formData, api_source: e.target.value })}
-                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 appearance-none cursor-pointer"
+                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 appearance-none cursor-pointer"
                                     >
                                         <option value="MFAPI">MF API (India)</option>
                                         <option value="YFINANCE">Yahoo Finance</option>
@@ -218,10 +218,10 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                     onChange={e => { setSearchTerm(e.target.value); setShowDropdown(true); }}
                                                     onFocus={() => setShowDropdown(true)}
                                                     placeholder="Search e.g. Axis Bluechip..."
-                                                    className="w-full bg-[#151515] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                                                    className="w-full bg-[#151515] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
                                                 />
                                                 {isSchemesLoading && (
-                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full"></div>
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full"></div>
                                                 )}
                                             </div>
 
@@ -246,7 +246,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                                 }}
                                                                 className="w-full text-left px-4 py-3 hover:bg-white/5 border-b border-white/5 last:border-0 text-xs transition-colors group"
                                                             >
-                                                                <p className="font-bold text-gray-200 group-hover:text-emerald-400">{s.schemeName}</p>
+                                                                <p className="font-bold text-gray-200 group-hover:text-white">{s.schemeName}</p>
                                                                 <p className="text-[10px] text-gray-500 mt-0.5">Code: {s.schemeCode}</p>
                                                             </button>
                                                         ))}
@@ -256,7 +256,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 </div>
                                             )}
                                             {formData.ticker_symbol && (
-                                                <p className="text-[10px] text-emerald-500 mt-1 font-mono">
+                                                <p className="text-[10px] text-white/70 mt-1 font-mono">
                                                     ✓ Code: {formData.ticker_symbol}
                                                 </p>
                                             )}
@@ -269,7 +269,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 value={formData.ticker_symbol}
                                                 onChange={e => setFormData({ ...formData, ticker_symbol: e.target.value })}
                                                 placeholder="e.g. RELIANCE.NS"
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors font-mono"
+                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors font-mono"
                                             />
                                             <p className="text-[10px] text-gray-600 mt-1">
                                                 Use Ticker Symbol (e.g., RELIANCE.NS for NSE)
@@ -281,8 +281,8 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
 
                             {/* Manual Entry Fields */}
                             {formData.api_source === 'MANUAL' && (
-                                <div className="space-y-4 p-4 bg-blue-500/5 rounded-xl border border-blue-500/20">
-                                    <p className="text-xs text-blue-400 font-medium">📝 Manual Entry</p>
+                                <div className="space-y-4 p-4 bg-white/[0.03] rounded-xl border border-white/10">
+                                    <p className="text-xs text-white/80 font-medium">📝 Manual Entry</p>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -295,7 +295,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 value={formData.current_units}
                                                 onChange={e => setFormData({ ...formData, current_units: e.target.value })}
                                                 placeholder="e.g. 2500"
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
                                             />
                                         </div>
                                         <div>
@@ -309,7 +309,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 value={formData.total_invested}
                                                 onChange={e => setFormData({ ...formData, total_invested: e.target.value })}
                                                 placeholder="e.g. 100000"
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
                                             />
                                         </div>
                                     </div>
@@ -318,8 +318,8 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
 
                             {/* FD/RD Specific Fields */}
                             {(formData.asset_type === 'FD' || formData.asset_type === 'RD') && (
-                                <div className="space-y-4 p-4 bg-purple-500/5 rounded-xl border border-purple-500/20">
-                                    <p className="text-xs text-purple-400 font-medium">
+                                <div className="space-y-4 p-4 bg-white/[0.03] rounded-xl border border-white/10">
+                                    <p className="text-xs text-white/80 font-medium">
                                         💰 {formData.asset_type === 'FD' ? 'Fixed Deposit' : 'Recurring Deposit'} Details
                                     </p>
 
@@ -335,7 +335,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 value={formData.total_invested}
                                                 onChange={e => setFormData({ ...formData, total_invested: e.target.value })}
                                                 placeholder={formData.asset_type === 'FD' ? "e.g. 100000" : "e.g. 5000 (monthly)"}
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
                                             />
                                             <p className="text-[10px] text-gray-600 mt-1">
                                                 {formData.asset_type === 'FD' ? 'One-time deposit' : 'Monthly deposit amount'}
@@ -352,7 +352,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 value={formData.interest_rate}
                                                 onChange={e => setFormData({ ...formData, interest_rate: e.target.value })}
                                                 placeholder="e.g. 7.5"
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
                                             />
                                         </div>
                                     </div>
@@ -367,7 +367,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 required
                                                 value={formData.investment_start_date}
                                                 onChange={e => setFormData({ ...formData, investment_start_date: e.target.value })}
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
                                             />
                                         </div>
                                         <div>
@@ -379,7 +379,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 required
                                                 value={formData.maturity_date}
                                                 onChange={e => setFormData({ ...formData, maturity_date: e.target.value })}
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
                                             />
                                         </div>
                                     </div>
@@ -396,7 +396,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                     <button
                                         type="button"
                                         onClick={() => setShowExistingFields(!showExistingFields)}
-                                        className="w-full text-left text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors flex items-center justify-between p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/20 hover:border-emerald-500/40"
+                                        className="w-full text-left text-sm font-medium text-white/80 hover:text-white transition-colors flex items-center justify-between p-3 bg-white/[0.03] rounded-xl border border-white/10 hover:border-white/20"
                                     >
                                         <span>📊 Already own this asset? Add existing holdings</span>
                                         <span className="text-lg font-bold">{showExistingFields ? '−' : '+'}</span>
@@ -423,7 +423,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                         value={formData.current_units}
                                                         onChange={e => setFormData({ ...formData, current_units: e.target.value })}
                                                         placeholder="e.g. 2500"
-                                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
                                                     />
                                                 </div>
                                                 <div>
@@ -436,7 +436,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                         value={formData.total_invested}
                                                         onChange={e => setFormData({ ...formData, total_invested: e.target.value })}
                                                         placeholder="e.g. 100000"
-                                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
                                                     />
                                                 </div>
                                             </div>
@@ -449,7 +449,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                     type="date"
                                                     value={formData.investment_start_date}
                                                     onChange={e => setFormData({ ...formData, investment_start_date: e.target.value })}
-                                                    className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                                                    className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
                                                 />
                                                 <p className="text-[10px] text-gray-600 mt-1">
                                                     Helps calculate accurate XIRR
@@ -463,7 +463,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 <select
                                                     value={formData.investment_type}
                                                     onChange={e => setFormData({ ...formData, investment_type: e.target.value })}
-                                                    className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 appearance-none cursor-pointer"
+                                                    className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 appearance-none cursor-pointer"
                                                 >
                                                     <option value="SIP">SIP (Monthly)</option>
                                                     <option value="LUMPSUM">Lump Sum</option>
@@ -480,14 +480,14 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                     </div>
 
                     {/* Fixed Footer with Submit Button */}
-                    <div className="p-8 sm:p-12 border-t border-white/5 bg-white/[0.01] flex-shrink-0">
+                    <div className="p-6 border-t border-white/5 bg-white/[0.01] flex-shrink-0">
                         <button
                             type="submit"
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/20 disabled:opacity-50"
+                            className="w-full py-4 rounded-xl bg-white hover:bg-neutral-200 text-black font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm disabled:opacity-50"
                         >
-                            {loading ? <div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></div> : <><Save size={20} /> Deploy Asset to Portfolio</>}
+                            {loading ? <div className="animate-spin w-5 h-5 border-2 border-black/30 border-t-black rounded-full"></div> : <><Save size={18} /> Deploy Asset to Portfolio</>}
                         </button>
                     </div>
                 </motion.div>

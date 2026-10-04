@@ -36,9 +36,6 @@ export const CycleInfoCard: React.FC<Props> = ({ cardId, initialData, onEdit }) 
             onClick={() => navigate(`/credit-cards/${cardId}`)}
             className="glass-card p-6 rounded-[2.5rem] relative overflow-hidden group border border-white/[0.05] active:scale-[0.99] transition-all cursor-pointer"
         >
-            {/* Background Gradient Pulse */}
-            <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-700" />
-
             <div className="relative z-10 space-y-6">
                 <div className="flex justify-between items-start">
                     <div className="flex items-center gap-4">

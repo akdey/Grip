@@ -59,7 +59,7 @@ const Sync: React.FC = () => {
         <div className="text-white pb-24 space-y-6">
             {/* Header */}
             <header className="px-5 pt-10 pb-4">
-                <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600 mb-2">
+                <h1 className="text-3xl font-black tracking-tighter text-white mb-2 heading-apple">
                     Gmail Sync
                 </h1>
                 {/* <p className="text-sm text-gray-400">
@@ -70,12 +70,10 @@ const Sync: React.FC = () => {
             <div className="px-5 space-y-6">
                 {/* Connection Status Card */}
                 {!status?.connected ? (
-                    <Card className="p-10 space-y-10 bg-gradient-to-br from-indigo-500/5 via-cyan-500/5 to-transparent border-indigo-500/10 relative overflow-hidden">
-                        <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl opacity-50" />
-
+                    <Card className="p-10 space-y-10 bg-white/[0.02] border-white/[0.08] relative overflow-hidden">
                         <div className="relative z-10 text-center space-y-8">
-                            <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2.5rem] bg-indigo-500/10 text-indigo-400 border border-indigo-500/10 shadow-inner group">
-                                <Mail size={42} strokeWidth={1.5} className="group-hover:scale-110 transition-transform duration-500" />
+                            <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2.5rem] bg-white/[0.06] text-white border border-white/10 shadow-inner group">
+                                <Mail size={42} strokeWidth={1.5} className="group-hover:scale-105 transition-transform duration-500" />
                             </div>
 
                             <div>
@@ -133,10 +131,10 @@ const Sync: React.FC = () => {
                 ) : (
                     <>
                         {/* Connected Status */}
-                        <Card className="p-6 bg-gradient-to-br from-green-500/5 to-emerald-500/5 border-green-500/20">
+                        <Card className="p-6 bg-white/[0.02] border-white/[0.08]">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-400">
+                                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
                                         <CheckCircle size={24} />
                                     </div>
                                     <div>
@@ -259,9 +257,9 @@ const Sync: React.FC = () => {
                                                                 </div>
                                                                 <div className="flex items-center gap-4">
                                                                     {item.wealth_mapped && (
-                                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20">
-                                                                            <TrendingUp size={10} className="text-cyan-400" />
-                                                                            <span className="text-[8px] font-black uppercase text-cyan-400 tracking-wider">Wealth Sync</span>
+                                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/10">
+                                                                            <TrendingUp size={10} className="text-white/70" />
+                                                                            <span className="text-[8px] font-black uppercase text-white/70 tracking-wider">Wealth Sync</span>
                                                                         </div>
                                                                     )}
                                                                     <p className={`text-xs font-black ${item.amount < 0 ? 'text-white' : 'text-green-400'}`}>

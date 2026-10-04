@@ -209,12 +209,15 @@ body::before {
   inset: 0;
   z-index: -1;
   background-image:
-    radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.04), transparent 40%),
-    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.04), transparent 40%),
-    radial-gradient(circle at 50% 10%, rgba(6, 182, 212, 0.03), transparent 60%);
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.025), transparent 70%);
   pointer-events: none;
   transform: translateZ(0);
   will-change: transform;
+}
+
+::selection {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 @layer utilities {
@@ -311,7 +314,7 @@ body::before {
   }
 
   .glass-button {
-    @apply relative overflow-hidden px-8 py-4.5 rounded-[1.5rem] bg-accent-solid text-text-on-accent font-black uppercase text-[11px] tracking-widest shadow-xl border border-accent-border hover:bg-accent-solid-hover transition-transform duration-100 ease-out;
+    @apply relative overflow-hidden px-8 py-4.5 rounded-[1.5rem] bg-white text-black font-semibold uppercase text-[11px] tracking-widest shadow-xl border border-white hover:bg-neutral-200 transition-transform duration-100 ease-out;
     touch-action: manipulation;
   }
   .glass-button:active {
@@ -319,7 +322,11 @@ body::before {
   }
 
   .glass-button.secondary {
-    @apply bg-surface border border-border-subtle text-text-secondary hover:bg-surface-hover hover:text-text-primary;
+    @apply bg-white/[0.05] border border-white/10 text-white hover:bg-white/10 hover:text-white;
+  }
+
+  .glass-button.accent {
+    @apply bg-accent-solid text-text-on-accent border border-accent-border hover:bg-accent-solid-hover;
   }
 
   /* Interactive tactile cell */

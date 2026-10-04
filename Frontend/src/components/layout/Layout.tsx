@@ -13,14 +13,14 @@ export const Layout: React.FC = () => {
         location.pathname === '/tags';
 
     return (
-        <div className="min-h-screen text-white selection:bg-cyan-500/30">
+        <div className="min-h-screen text-white">
             {!isEntryPage && <Sidebar />}
 
             <main className={`min-h-screen transition-all duration-300 ${!isEntryPage ? 'md:pl-72 pb-32 md:pb-12' : 'pb-0'}`}>
                 {showDesktopWarning && !isEntryPage && (
-                    <div className="hidden md:flex items-center justify-between bg-indigo-500/10 border-b border-indigo-500/10 px-8 py-3 text-xs font-medium text-indigo-300/80 backdrop-blur-sm sticky top-0 z-40">
+                    <div className="hidden md:flex items-center justify-between bg-white/[0.03] border-b border-white/[0.08] px-8 py-3 text-xs font-medium text-white/70 backdrop-blur-md sticky top-0 z-40">
                         <span className="flex items-center gap-2 tracking-wide">
-                            <Smartphone size={14} className="text-indigo-400" />
+                            <Smartphone size={14} className="text-white/80" />
                             MOBILE FIRST DESIGN — EXPERIENCE OPTIMIZED FOR SMALLER SCREENS
                         </span>
                         <button

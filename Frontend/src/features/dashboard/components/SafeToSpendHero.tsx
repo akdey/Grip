@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import type { SafeToSpend } from '../hooks';
 
 interface SafeToSpendHeroProps {
@@ -45,40 +45,36 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
 
     const themes = {
         negative: {
-            glow: 'bg-red-600/30',
-            border: 'border-red-600/30',
-            text: 'text-red-500',
-            amountText: 'text-red-500',
-            shadow: 'shadow-[0_40px_80px_-15px_rgba(220,38,38,0.25)]',
-            pill: 'bg-red-600/20 text-red-400 border-red-600/30',
-            bgIntensity: 'bg-red-600/10'
+            border: 'border-red-500/30',
+            text: 'text-red-400',
+            amountText: 'text-red-400',
+            shadow: 'shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
+            pill: 'bg-red-500/10 text-red-400 border-red-500/20',
+            dot: 'bg-red-400'
         },
         critical: {
-            glow: 'bg-rose-500/20',
-            border: 'border-rose-500/20',
+            border: 'border-rose-500/30',
             text: 'text-rose-400',
-            amountText: 'text-rose-500',
-            shadow: 'shadow-[0_40px_80px_-15px_rgba(225,29,72,0.15)]',
+            amountText: 'text-rose-400',
+            shadow: 'shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
             pill: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-            bgIntensity: 'bg-rose-500/5'
+            dot: 'bg-rose-400'
         },
         warning: {
-            glow: 'bg-amber-500/20',
             border: 'border-amber-500/20',
             text: 'text-amber-400',
             amountText: 'text-white',
-            shadow: 'shadow-[0_40px_80px_-15px_rgba(245,158,11,0.15)]',
+            shadow: 'shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
             pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-            bgIntensity: 'bg-amber-500/5'
+            dot: 'bg-amber-400'
         },
         success: {
-            glow: 'bg-indigo-500/20',
             border: 'border-white/[0.08]',
-            text: 'text-indigo-400',
+            text: 'text-white',
             amountText: 'text-white',
-            shadow: 'shadow-[0_40px_80px_-15px_rgba(79,70,229,0.2)]',
-            pill: 'bg-white/[0.05] text-indigo-300 border-white/[0.05]',
-            bgIntensity: 'bg-white/[0.01]'
+            shadow: 'shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
+            pill: 'bg-white/[0.06] text-white/90 border-white/10',
+            dot: 'bg-emerald-400'
         }
     };
 
@@ -86,16 +82,14 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
 
     return (
         <div
-            className={`relative p-8 rounded-[3.5rem] bg-white/[0.01] backdrop-blur-3xl border ${theme.border} overflow-hidden ${theme.shadow} cursor-pointer group transition-all duration-700 hover:scale-[1.01] active:scale-[0.99]`}
+            className={`relative p-8 rounded-[3.5rem] bg-white/[0.02] backdrop-blur-3xl border ${theme.border} overflow-hidden ${theme.shadow} cursor-pointer group transition-all duration-500 hover:border-white/20 active:scale-[0.99]`}
             onClick={onNavigate}
         >
-            <div className={`absolute -right-20 -top-20 w-80 h-80 ${theme.glow} rounded-full blur-[100px] opacity-50 group-hover:opacity-80 transition-all duration-700`} />
-            <div className={`absolute -left-20 -bottom-20 w-64 h-64 ${theme.glow} rounded-full blur-[80px] opacity-30`} />
-            <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
 
             <div className="relative z-10 flex flex-col items-center text-center">
                 <div className={`flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full border ${theme.pill} backdrop-blur-md`}>
-                    <Sparkles size={12} aria-hidden="true" />
+                    <span className={`w-1.5 h-1.5 rounded-full ${theme.dot}`} />
                     <h2 className="text-[10px] font-black uppercase tracking-[3px]">Safe Liquid</h2>
                 </div>
 

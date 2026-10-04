@@ -29,16 +29,16 @@ import { SyncTrendChart } from '../components/sync/SyncTrendChart';
 import { Card } from '../components/ui/Card';
 
 const FEATURE_CARDS = [
-    { id: 'sync', label: 'Gmail Sync', icon: Mail, path: '/sync', color: 'text-green-400', bgColor: 'bg-green-500/10' },
-    { id: 'pending', label: 'Action Center', icon: Sparkles, path: '/transactions?view=pending', color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
-    { id: 'transactions', label: 'History', icon: Receipt, path: '/transactions', color: 'text-blue-400', bgColor: 'bg-blue-500/10' },
-    { id: 'sureties', label: 'Sureties', icon: CalendarClock, path: '/sureties', color: 'text-teal-400', bgColor: 'bg-teal-500/10' },
-    { id: 'goals', label: 'Goals', icon: Wallet, path: '/goals', color: 'text-rose-400', bgColor: 'bg-rose-500/10' },
-    { id: 'categories', label: 'Categories', icon: LayoutGrid, action: 'OPEN_CATEGORIES', color: 'text-cyan-400', bgColor: 'bg-cyan-500/10' },
-    { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-indigo-400', bgColor: 'bg-indigo-500/10' },
-    { id: 'backup', label: 'Backup Data', icon: Download, action: 'BACKUP_DATA', color: 'text-amber-400', bgColor: 'bg-amber-500/10' },
-    { id: 'vault', label: 'Vault', icon: Target, path: '/credit-cards', color: 'text-purple-400', bgColor: 'bg-purple-500/10' },
-    { id: 'settle-up', label: 'Settle Up', icon: ArrowUpRight, path: '/settle-up', color: 'text-orange-400', bgColor: 'bg-orange-500/10' },
+    { id: 'sync', label: 'Gmail Sync', icon: Mail, path: '/sync', color: 'text-white/90', bgColor: 'bg-white/[0.06]' },
+    { id: 'pending', label: 'Action Center', icon: Sparkles, path: '/transactions?view=pending', color: 'text-white/90', bgColor: 'bg-white/[0.06]' },
+    { id: 'transactions', label: 'History', icon: Receipt, path: '/transactions', color: 'text-white/90', bgColor: 'bg-white/[0.06]' },
+    { id: 'sureties', label: 'Sureties', icon: CalendarClock, path: '/sureties', color: 'text-white/90', bgColor: 'bg-white/[0.06]' },
+    { id: 'goals', label: 'Goals', icon: Wallet, path: '/goals', color: 'text-white/90', bgColor: 'bg-white/[0.06]' },
+    { id: 'categories', label: 'Categories', icon: LayoutGrid, action: 'OPEN_CATEGORIES', color: 'text-white/90', bgColor: 'bg-white/[0.06]' },
+    { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-white/90', bgColor: 'bg-white/[0.06]' },
+    { id: 'backup', label: 'Backup Data', icon: Download, action: 'BACKUP_DATA', color: 'text-white/90', bgColor: 'bg-white/[0.06]' },
+    { id: 'vault', label: 'Vault', icon: Target, path: '/credit-cards', color: 'text-white/90', bgColor: 'bg-white/[0.06]' },
+    { id: 'settle-up', label: 'Settle Up', icon: ArrowUpRight, path: '/settle-up', color: 'text-white/90', bgColor: 'bg-white/[0.06]' },
 ];
 
 const SystemIntelligence: React.FC = () => {
@@ -58,11 +58,11 @@ const SystemIntelligence: React.FC = () => {
 
             <div className="flex items-center justify-between mb-8 relative z-10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center animate-pulse">
+                    <div className="w-10 h-10 rounded-2xl bg-white/[0.06] text-white flex items-center justify-center">
                         <Brain size={22} />
                     </div>
                     <div>
-                        <h3 className="text-[10px] font-black uppercase tracking-[4px] text-indigo-400">System Autopilot</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-[4px] text-gray-400">System Autopilot</h3>
                         <h4 className="text-xl font-black text-white tracking-tighter">Decision Efficiency</h4>
                     </div>
                 </div>
@@ -87,9 +87,9 @@ const SystemIntelligence: React.FC = () => {
                 <div className="flex items-center gap-3 justify-end text-right">
                     <div>
                         <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">AI Handled</p>
-                        <p className="text-lg font-black text-indigo-400">{systemTxns}</p>
+                        <p className="text-lg font-black text-white/90">{systemTxns}</p>
                     </div>
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500/5 flex items-center justify-center text-indigo-400">
+                    <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center text-white/80">
                         <Sparkles size={14} />
                     </div>
                 </div>
@@ -207,7 +207,7 @@ const More: React.FC = () => {
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-lg bg-orange-500/10 text-orange-400 flex items-center justify-center">
+                                    <div className="w-7 h-7 rounded-lg bg-white/[0.06] text-white/90 flex items-center justify-center">
                                         <Smartphone size={14} />
                                     </div>
                                     <span className="text-[11px] font-black text-white uppercase tracking-wider">Today</span>
@@ -237,7 +237,7 @@ const More: React.FC = () => {
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
+                                    <div className="w-7 h-7 rounded-lg bg-white/[0.06] text-white/90 flex items-center justify-center">
                                         <Calendar size={14} />
                                     </div>
                                     <span className="text-[11px] font-black text-white uppercase tracking-wider">This Month</span>
@@ -267,7 +267,7 @@ const More: React.FC = () => {
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                                    <div className="w-7 h-7 rounded-lg bg-white/[0.06] text-white/90 flex items-center justify-center">
                                         <Layers size={14} />
                                     </div>
                                     <span className="text-[11px] font-black text-white uppercase tracking-wider">This Year</span>
@@ -297,7 +297,7 @@ const More: React.FC = () => {
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                                    <div className="w-7 h-7 rounded-lg bg-white/[0.06] text-white/90 flex items-center justify-center">
                                         <Filter size={14} />
                                     </div>
                                     <span className="text-[11px] font-black text-white uppercase tracking-wider">Discovery</span>
@@ -308,7 +308,7 @@ const More: React.FC = () => {
                                 <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest truncate">
                                     Custom Range & Scope
                                 </p>
-                                <p className="text-[10px] text-purple-400 font-bold uppercase tracking-tight mt-0.5">
+                                <p className="text-[10px] text-gray-400 group-hover:text-white font-bold uppercase tracking-tight mt-0.5 transition-colors">
                                     Filter & Search →
                                 </p>
                             </div>

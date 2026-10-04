@@ -19,7 +19,7 @@ const Terms: React.FC = () => {
             <div className="px-5 py-12 max-w-2xl mx-auto space-y-12 animate-enter">
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-1 text-blue-500 h-6 bg-blue-500" />
+                        <div className="w-1 h-5 rounded-full bg-white/40" />
                         <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">01. Service Provision</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
@@ -31,7 +31,7 @@ const Terms: React.FC = () => {
 
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-1 text-cyan-400 h-6 bg-cyan-400" />
+                        <div className="w-1 h-5 rounded-full bg-white/40" />
                         <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">02. Synchronization Consent</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
@@ -46,7 +46,7 @@ const Terms: React.FC = () => {
 
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-1 text-rose-500 h-6 bg-rose-500" />
+                        <div className="w-1 h-5 rounded-full bg-white/40" />
                         <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">03. Liability Limitation</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
@@ -61,7 +61,7 @@ const Terms: React.FC = () => {
 
                 <section className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-1 text-amber-500 h-6 bg-amber-500" />
+                        <div className="w-1 h-5 rounded-full bg-white/40" />
                         <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white">04. Account Integrity</h2>
                     </div>
                     <div className="space-y-4 text-sm text-gray-400 leading-relaxed font-medium">
@@ -78,7 +78,7 @@ const Terms: React.FC = () => {
                             href="https://portfolio.akdey.vercel.app"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs font-black text-white hover:text-cyan-400 transition-all duration-300 border-b border-white/10 pb-1"
+                            className="text-xs font-black text-white hover:text-white/80 transition-all duration-300 border-b border-white/10 pb-1"
                         >
                             AMIT KUMAR DEY
                         </a>

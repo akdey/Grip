@@ -309,7 +309,7 @@ const Transactions: React.FC = () => {
                         onClick={() => setIsSortOpen(true)}
                         className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
                             sortBy !== 'date_desc' || groupBy !== 'date'
-                                ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+                                ? 'bg-white/15 border-white/30 text-white shadow-sm'
                                 : 'bg-white/[0.03] border-white/10 text-gray-400'
                         }`}
                         title="Sort & Group Ledger"
@@ -320,7 +320,7 @@ const Transactions: React.FC = () => {
                     {/* Filter Button - Active State Indication */}
                     <button
                         onClick={() => setFilterOpen(true)}
-                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${hasActiveFilters ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400' : 'bg-white/[0.03] border-white/10 text-gray-400'}`}
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${hasActiveFilters ? 'bg-white/15 border-white/30 text-white shadow-sm' : 'bg-white/[0.03] border-white/10 text-gray-400'}`}
                         title="Filter Discovery"
                     >
                         <Filter size={18} />
@@ -332,7 +332,7 @@ const Transactions: React.FC = () => {
             {hasActiveFilters && (
                 <div className="mx-4 mt-3 px-4 py-2.5 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between animate-enter">
                     <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
                         <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider truncate">
                             {view === 'day' ? `Day: ${format(currentMonth, 'dd MMM yyyy')}` :
                              view === 'month' ? `Month: ${format(currentMonth, 'MMMM yyyy')}` :
@@ -600,7 +600,7 @@ const Transactions: React.FC = () => {
                                     <button
                                         type="button"
                                         onClick={() => setDrawerCategories(categories ? categories.map(c => c.name) : [])}
-                                        className="text-[9px] text-cyan-400 hover:text-cyan-300 font-bold uppercase tracking-wider transition-colors"
+                                        className="text-[9px] text-white hover:text-gray-300 font-bold uppercase tracking-wider transition-colors"
                                     >
                                         Select All
                                     </button>
@@ -624,7 +624,7 @@ const Transactions: React.FC = () => {
                                             onClick={() => toggleCategory(cat.name)}
                                             className={`p-3 rounded-2xl border flex items-center justify-between transition-all cursor-pointer select-none active:scale-[0.99] ${
                                                 isSelected
-                                                    ? 'bg-cyan-500/10 border-cyan-500/30'
+                                                    ? 'bg-white/10 border-white/20'
                                                     : 'bg-white/[0.02] border-white/[0.04] hover:bg-white/[0.04] text-gray-400 hover:text-white'
                                             }`}
                                         >
@@ -647,7 +647,7 @@ const Transactions: React.FC = () => {
                                             <div
                                                 className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
                                                     isSelected
-                                                        ? 'bg-cyan-500 border-cyan-400 text-black shadow-sm'
+                                                        ? 'bg-white border-white text-black shadow-sm'
                                                         : 'border-white/20 bg-white/[0.03]'
                                                 }`}
                                             >
@@ -666,7 +666,7 @@ const Transactions: React.FC = () => {
                                 value={drawerSubCategory}
                                 onChange={(e) => setDrawerSubCategory(e.target.value)}
                                 disabled={drawerCategories.length === 0}
-                                className={`w-full bg-[#1A1A1A] border border-white/[0.05] rounded-3xl px-6 py-4 text-xs font-bold text-white focus:outline-none focus:border-cyan-500/50 appearance-none ${drawerCategories.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`w-full bg-[#1A1A1A] border border-white/[0.05] rounded-3xl px-6 py-4 text-xs font-bold text-white focus:outline-none focus:border-white/30 appearance-none ${drawerCategories.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <option value="">All Sub-Categories</option>
                                 {availableSubCategories.map((sub) => (
@@ -712,13 +712,13 @@ const Transactions: React.FC = () => {
                                 onClick={() => setGroupBy('date')}
                                 className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
                                     groupBy === 'date'
-                                        ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400'
+                                        ? 'bg-white/10 border-white/20 text-white'
                                         : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white'
                                 }`}
                             >
                                 <div className="flex items-center justify-between w-full">
                                     <Calendar size={18} />
-                                    {groupBy === 'date' && <Check size={16} className="text-cyan-400" />}
+                                    {groupBy === 'date' && <Check size={16} className="text-white" />}
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-white">Daily Timeline</p>
@@ -730,13 +730,13 @@ const Transactions: React.FC = () => {
                                 onClick={() => setGroupBy('category')}
                                 className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
                                     groupBy === 'category'
-                                        ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400'
+                                        ? 'bg-white/10 border-white/20 text-white'
                                         : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white'
                                 }`}
                             >
                                 <div className="flex items-center justify-between w-full">
                                     <Layers size={18} />
-                                    {groupBy === 'category' && <Check size={16} className="text-cyan-400" />}
+                                    {groupBy === 'category' && <Check size={16} className="text-white" />}
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-white">By Category</p>
@@ -765,7 +765,7 @@ const Transactions: React.FC = () => {
                                     onClick={() => setSortBy(option.id as any)}
                                     className={`w-full p-3.5 rounded-2xl border flex items-center justify-between transition-all ${
                                         sortBy === option.id
-                                            ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400'
+                                            ? 'bg-white/10 border-white/20 text-white'
                                             : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white hover:bg-white/[0.04]'
                                     }`}
                                 >
@@ -773,7 +773,7 @@ const Transactions: React.FC = () => {
                                         <p className="text-xs font-bold text-white">{option.label}</p>
                                         <p className="text-[9px] text-gray-500">{option.desc}</p>
                                     </div>
-                                    {sortBy === option.id && <Check size={16} className="text-cyan-400 shrink-0" />}
+                                    {sortBy === option.id && <Check size={16} className="text-white shrink-0" />}
                                 </button>
                             ))}
                         </div>
@@ -916,16 +916,15 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
                             Review
                         </span>
                     ) : (
-                        <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter ${txn.is_manual ? 'border-amber-500/20 text-amber-500/80' : 'border-cyan-500/20 text-cyan-500/80'
+                        <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter ${txn.is_manual ? 'border-amber-500/20 text-amber-500/80' : 'border-white/10 text-white/70 bg-white/[0.04]'
                             }`}>
                             {txn.is_manual ? 'Manual' : 'Sync'}
                         </span>
                     )}
                     {txn.sub_category === 'Credit Card Payment' && (
-                        <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-purple-500/20 text-purple-400 bg-purple-500/10 uppercase tracking-tighter">
+                        <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-white/10 text-white/70 bg-white/[0.04] uppercase tracking-tighter">
                             Offset
                         </span>
-
                     )}
                     {txn.status === 'PENDING' && (
                         <div className="flex items-center gap-1 ml-2">

@@ -165,7 +165,7 @@ const Wealth: React.FC = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div className="flex flex-col">
-                    <h1 className="text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-600">
+                    <h1 className="text-4xl font-black tracking-tighter text-white heading-apple">
                         Wealth
                     </h1>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">Your Financial Core</p>
@@ -173,30 +173,30 @@ const Wealth: React.FC = () => {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsLinkerOpen(true)}
-                        className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium border border-white/5 transition-colors flex items-center gap-2"
+                        className="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/10 text-white text-xs font-semibold border border-white/10 transition-colors flex items-center gap-1.5"
                     >
                         <LinkIcon size={14} /> Link Transaction
                     </button>
                     <button
                         onClick={() => setIsStatementImportOpen(true)}
-                        className="p-2 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 transition-colors border border-purple-500/20"
+                        className="w-9 h-9 rounded-xl bg-white/[0.05] hover:bg-white/10 text-white transition-colors border border-white/10 flex items-center justify-center"
                         aria-label="Import Statement (CAMS/KFin/MFCentral)"
                     >
-                        <Upload size={20} />
+                        <Upload size={16} />
                     </button>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="p-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors border border-emerald-500/20"
+                        className="w-9 h-9 rounded-xl bg-white/[0.05] hover:bg-white/10 text-white transition-colors border border-white/10 flex items-center justify-center"
                         aria-label="Add Asset Manually"
                     >
-                        <Plus size={20} />
+                        <Plus size={16} />
                     </button>
                     <button
                         onClick={fetchData}
-                        className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                        className="w-9 h-9 rounded-xl bg-white/[0.05] hover:bg-white/10 text-white transition-colors border border-white/10 flex items-center justify-center"
                         aria-label="Refresh wealth data"
                     >
-                        <RefreshCw size={20} className={holdingsLoading || forecastLoading ? "animate-spin" : ""} />
+                        <RefreshCw size={16} className={holdingsLoading || forecastLoading ? "animate-spin" : ""} />
                     </button>
                 </div>
             </div>
@@ -250,7 +250,7 @@ const Wealth: React.FC = () => {
 
                 <motion.div
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 bg-gradient-to-br from-indigo-900/10 to-purple-900/10"
+                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6"
                 >
                     {forecastLoading ? (
                         <div className="animate-pulse space-y-3">
@@ -260,7 +260,7 @@ const Wealth: React.FC = () => {
                     ) : (
                         <>
                             <p className="text-gray-500 text-sm font-medium">Projected (10Y)</p>
-                            <h2 className="text-3xl font-bold mt-2 text-indigo-400">
+                            <h2 className="text-3xl font-bold mt-2 text-white">
                                 {forecastData?.forecast.length ? formatCurrency(forecastData.forecast[forecastData.forecast.length - 1].yhat) : "..."}
                             </h2>
                             <p className="text-xs text-gray-500 mt-2 line-clamp-1">{forecastData?.summary_text}</p>
@@ -274,14 +274,14 @@ const Wealth: React.FC = () => {
                 {/* Financial Time Machine Card */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-                    className="lg:col-span-1 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden group cursor-pointer"
+                    className="lg:col-span-1 bg-[#0A0A0A] border border-white/5 hover:border-white/20 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden group cursor-pointer transition-all"
                     onClick={() => setIsSimulatorOpen(true)}
                 >
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Calculator size={80} />
                     </div>
                     <div>
-                        <div className="p-2 bg-indigo-500/20 rounded-lg w-fit mb-3 text-indigo-400">
+                        <div className="p-2 bg-white/[0.06] rounded-lg w-fit mb-3 text-white">
                             <BrainCircuit size={24} />
                         </div>
                         <h3 className="text-xl font-bold text-white mb-1">Time Machine</h3>
@@ -289,7 +289,7 @@ const Wealth: React.FC = () => {
                             Simulate "What-If" scenarios. See how your investments would have performed if you timed them differently.
                         </p>
                     </div>
-                    <button className="mt-4 w-full py-2.5 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 rounded-xl text-xs font-bold text-indigo-300 uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+                    <button className="mt-4 w-full py-2.5 bg-white text-black hover:bg-neutral-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2">
                         Run Simulator <Calculator size={14} />
                     </button>
                 </motion.div>
@@ -303,14 +303,14 @@ const Wealth: React.FC = () => {
                         <div className="flex space-x-4">
                             <button
                                 onClick={() => setActiveMainTab('trajectory')}
-                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'trajectory' ? 'text-indigo-400' : 'text-gray-600'}`}
+                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'trajectory' ? 'text-white' : 'text-gray-600 hover:text-gray-400'}`}
                             >
                                 <LineChart size={16} />
                                 Future Predictions
                             </button>
                             <button
                                 onClick={() => setActiveMainTab('intelligence')}
-                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'intelligence' ? 'text-emerald-400' : 'text-gray-600'}`}
+                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'intelligence' ? 'text-white' : 'text-gray-600 hover:text-gray-400'}`}
                             >
                                 <BrainCircuit size={16} />
                                 Intelligence
@@ -325,13 +325,13 @@ const Wealth: React.FC = () => {
                                         type="number"
                                         value={monthlySIP}
                                         onChange={(e) => setMonthlySIP(Number(e.target.value))}
-                                        className="w-16 bg-transparent outline-none text-right font-mono text-sm"
+                                        className="w-16 bg-transparent outline-none text-right font-mono text-sm text-white"
                                     />
                                 </div>
                                 <button
                                     onClick={runSimulation}
                                     disabled={simulating}
-                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white text-xs font-bold disabled:opacity-50 transition-colors"
+                                    className="px-3 py-1.5 bg-white hover:bg-neutral-200 rounded-lg text-black text-xs font-semibold disabled:opacity-50 transition-colors shadow-sm"
                                 >
                                     {simulating ? "..." : "Update"}
                                 </button>
@@ -420,9 +420,9 @@ const Wealth: React.FC = () => {
                                 title={type === 'MUTUAL_FUND' ? 'Mutual Funds' : type === 'STOCK' ? 'Stocks' : type}
                                 type={type}
                                 icon={
-                                    type === 'MUTUAL_FUND' ? <PieChart size={20} className="text-emerald-400" /> :
-                                        type === 'STOCK' ? <Activity size={20} className="text-blue-400" /> :
-                                            <Wallet size={20} className="text-purple-400" />
+                                    type === 'MUTUAL_FUND' ? <PieChart size={20} className="text-white/80" /> :
+                                        type === 'STOCK' ? <Activity size={20} className="text-white/80" /> :
+                                            <Wallet size={20} className="text-white/80" />
                                 }
                                 holdings={typeHoldings}
                                 onHoldingClick={fetchHoldingDetails}
@@ -436,7 +436,7 @@ const Wealth: React.FC = () => {
                                 <p className="text-gray-500">No investments found.</p>
                                 <button
                                     onClick={() => setIsAddModalOpen(true)}
-                                    className="mt-4 px-6 py-2 bg-emerald-600 rounded-xl text-sm font-bold hover:bg-emerald-500 transition-colors"
+                                    className="mt-4 px-6 py-2.5 bg-white text-black rounded-xl text-sm font-semibold hover:bg-neutral-200 transition-colors shadow-sm"
                                 >
                                     Add your first investment
                                 </button>

@@ -59,7 +59,7 @@ const Sureties: React.FC = () => {
                     <ArrowLeft size={18} />
                 </button>
                 <div>
-                    <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">Manage sureties</h1>
+                    <h1 className="text-xl font-bold tracking-tight text-white heading-apple">Manage sureties</h1>
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Auto-detected Obligations</p>
                 </div>
             </header>
@@ -75,15 +75,15 @@ const Sureties: React.FC = () => {
                 )}
 
                 {sureties?.map((surety) => (
-                    <div key={surety.id} className="p-5 rounded-[1.5rem] bg-gradient-to-br from-white/[0.05] to-transparent border border-white/[0.08] relative overflow-hidden group hover:border-white/20 transition-all duration-300">
+                    <div key={surety.id} className="p-5 rounded-[1.5rem] bg-white/[0.02] border border-white/[0.08] relative overflow-hidden group hover:border-white/20 transition-all duration-300">
                         {/* Status Badge */}
                         <div className="absolute top-4 right-4">
-                            <div className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border
-                                    ${surety.status === 'OVERDUE' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                    surety.status === 'PAID' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                        surety.status === 'SKIPPED' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                                            surety.status === 'COVERED' ? 'bg-gray-500/10 text-gray-400 border-gray-500/20' :
-                                                'bg-sky-500/10 text-sky-400 border-sky-500/20'}`}>
+                            <div className={`text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest border
+                                    ${surety.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                                    surety.status === 'PAID' ? 'bg-white/10 text-white border-white/20' :
+                                        surety.status === 'SKIPPED' ? 'bg-white/[0.04] text-white/50 border-white/10' :
+                                            surety.status === 'COVERED' ? 'bg-white/[0.04] text-white/60 border-white/10' :
+                                                'bg-white/[0.06] text-white/90 border-white/10'}`}>
                                 {surety.status}
                             </div>
                         </div>
@@ -101,7 +101,7 @@ const Sureties: React.FC = () => {
                             {surety.source_id && (
                                 <button
                                     onClick={() => navigate(`/transactions?highlight=${surety.source_id}`)}
-                                    className="text-xs text-cyan-400/80 hover:text-cyan-400 flex items-center gap-1.5 hover:underline decoration-cyan-400/30 underline-offset-4 transition-all"
+                                    className="text-xs text-white/70 hover:text-white flex items-center gap-1.5 hover:underline decoration-white/30 underline-offset-4 transition-all"
                                 >
                                     Source <ExternalLink size={12} />
                                 </button>
