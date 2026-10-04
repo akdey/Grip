@@ -18,7 +18,8 @@ import {
     Brain,
     Cpu,
     ArrowUpRight,
-    Layers
+    Layers,
+    Activity
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
