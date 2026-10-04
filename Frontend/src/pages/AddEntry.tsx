@@ -729,7 +729,7 @@ const AddEntry: React.FC = () => {
                     noPadding
                     title={isAddMode !== 'NONE' ? `New ${isAddMode === 'CATEGORY' ? 'Entity' : 'Node'}` : (view === 'CATEGORIES' ? "Categories" : "Sub-Nodes")}
                 >
-                    <div className="flex-1 flex flex-col bg-[#121214] overflow-hidden">
+                    <div className="flex-1 flex flex-col bg-[#050505] overflow-hidden">
                         {isAddMode === 'NONE' ? (
                             <div className="flex-1 flex flex-col min-h-0 relative">
                                 <div className="p-6 pb-0">

@@ -159,8 +159,8 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                 <AreaChart data={chartData}>
                                                     <defs>
                                                         <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="var(--color-status-success-solid, #52a37f)" stopOpacity={0.2} />
-                                                            <stop offset="95%" stopColor="var(--color-status-success-solid, #52a37f)" stopOpacity={0} />
+                                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                                         </linearGradient>
                                                     </defs>
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
@@ -173,7 +173,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                     <Area
                                                         type="monotone"
                                                         dataKey="value"
-                                                        stroke="var(--color-status-success-solid, #52a37f)"
+                                                        stroke="#10b981"
                                                         strokeWidth={2}
                                                         fillOpacity={1}
                                                         fill="url(#colorVal)"

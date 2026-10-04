@@ -200,7 +200,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                         {item.merchant_name}
                                                     </p>
                                                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-status-warning-bg text-status-warning-text border border-status-warning-border">
+                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-white/[0.05] text-white/80 border border-white/10">
                                                             {item.card_name}
                                                             {item.last_four_digits ? ` •••• ${item.last_four_digits}` : ''}
                                                         </span>
@@ -248,7 +248,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                         Sum of all unsettled swipes
                                     </span>
                                 </div>
-                                <span className="text-2xl font-black text-status-warning-text tracking-tighter">
+                                <span className="text-2xl font-black text-white tracking-tighter">
                                     {formatCurrency(totalExposure)}
                                 </span>
                             </div>

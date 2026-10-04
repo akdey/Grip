@@ -427,8 +427,8 @@ const Dashboard: React.FC = () => {
                                             className="p-4 rounded-3xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between group hover:bg-white/[0.04] transition-all"
                                         >
                                             <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${obl.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400' :
-                                                    obl.status === 'PENDING' ? 'bg-amber-500/10 text-amber-400' : 'bg-white/[0.06] text-white'
+                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${obl.status === 'OVERDUE' ? 'bg-status-danger-bg text-status-danger-text border-status-danger-border' :
+                                                    'bg-white/[0.04] text-white/80 border-white/10'
                                                     }`}>
                                                     <Calendar size={18} />
                                                 </div>
@@ -464,7 +464,7 @@ const Dashboard: React.FC = () => {
                                         <span className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Total Active Burden</span>
                                         <span className="text-[9px] text-gray-700 font-bold uppercase tracking-widest">Calculated across all streams</span>
                                     </div>
-                                    <span className="text-2xl font-black text-rose-400 tracking-tighter">
+                                    <span className="text-2xl font-black text-white tracking-tighter">
                                         {formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills || 0) + Number(safeToSpend?.frozen_funds?.projected_surety || 0))}
                                     </span>
                                 </div>
