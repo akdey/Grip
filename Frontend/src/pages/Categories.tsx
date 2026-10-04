@@ -37,7 +37,7 @@ const Categories: React.FC = () => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [newName, setNewName] = useState('');
     const [newIcon, setNewIcon] = useState('Store');
-    const [newColor, setNewColor] = useState('#6366f1');
+    const [newColor, setNewColor] = useState('#38bdf8');
     const [newType, setNewType] = useState<TransactionType>('EXPENSE');
     const [newIsSurety, setNewIsSurety] = useState(false);
 
@@ -75,7 +75,7 @@ const Categories: React.FC = () => {
     const resetForm = () => {
         setNewName('');
         setNewIcon('Store');
-        setNewColor('#6366f1');
+        setNewColor('#38bdf8');
         setNewType('EXPENSE');
         setNewIsSurety(false);
     };
@@ -168,7 +168,7 @@ const Categories: React.FC = () => {
                                                                         onClick={() => {
                                                                             setNewName(sub.name);
                                                                             setNewIcon(sub.icon || 'Store');
-                                                                            setNewColor(sub.color || cat?.color || '#6366f1');
+                                                                            setNewColor(cat?.color || sub.color || '#38bdf8');
                                                                             setNewType(sub.type);
                                                                             setNewIsSurety(sub.is_surety || false);
                                                                             setEditingId(sub.id);
@@ -228,7 +228,7 @@ const Categories: React.FC = () => {
                                                             e.stopPropagation();
                                                             setSelectedParentId(cat.id);
                                                             setEditorMode('CREATE_SUB');
-                                                            setNewColor(cat.color || '#6366f1');
+                                                            setNewColor(cat.color || '#38bdf8');
                                                         }}
                                                         className="p-3 text-accent-text hover:bg-accent-subtle rounded-xl transition-all active:scale-90"
                                                     >
@@ -241,7 +241,7 @@ const Categories: React.FC = () => {
                                                                     e.stopPropagation();
                                                                     setNewName(cat.name);
                                                                     setNewIcon(cat.icon || 'Store');
-                                                                    setNewColor(cat.color || '#6366f1');
+                                                                    setNewColor(cat.color || '#38bdf8');
                                                                     setNewType(cat.type);
                                                                     setEditingId(cat.id);
                                                                     setEditorMode('EDIT_CAT');
@@ -373,10 +373,20 @@ const Categories: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="space-y-5">
-                                <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Aesthetic Color</h4>
-                                <ColorSelector selectedColor={newColor} onSelect={setNewColor} />
-                            </div>
+                            {!editorMode.includes('SUB') ? (
+                                <div className="space-y-5">
+                                    <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Aesthetic Color</h4>
+                                    <ColorSelector selectedColor={newColor} onSelect={setNewColor} />
+                                </div>
+                            ) : (
+                                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between">
+                                    <div>
+                                        <h4 className="text-xs font-black uppercase tracking-tight text-gray-400">Synchronized Color</h4>
+                                        <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">Inherited from parent category</p>
+                                    </div>
+                                    <div className="w-7 h-7 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: newColor }} />
+                                </div>
+                            )}
 
                             <div className="space-y-5">
                                 <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Symbolic Glyph</h4>

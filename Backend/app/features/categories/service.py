@@ -65,12 +65,11 @@ class CategoryService:
         return category
 
     async def create_sub_category(self, user_id: UUID, data: schemas.SubCategoryCreate) -> SubCategory:
-        # Auto-inherit color from parent category if not provided
-        color = data.color
-        if not color:
-            stmt = select(Category.color).where(Category.id == data.category_id)
-            result = await self.db.execute(stmt)
-            color = result.scalar()
+        # Always inherit color from parent category to maintain 1:1 color consistency
+        stmt = select(Category.color).where(Category.id == data.category_id)
+        result = await self.db.execute(stmt)
+        parent_color = result.scalar()
+        color = parent_color or data.color
 
         sub_category = SubCategory(
             name=data.name,
@@ -120,6 +119,11 @@ class CategoryService:
         update_data = data.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(category, key, value)
+            
+        # If category color changed, propagate to all subcategories
+        if "color" in update_data and category.sub_categories:
+            for sub in category.sub_categories:
+                sub.color = update_data["color"]
             
         await self.db.commit()
         await self.db.refresh(category, ["sub_categories"])

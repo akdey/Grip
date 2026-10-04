@@ -4,12 +4,24 @@ import { TrendingUp, Target, Layers, ChevronLeft, ChevronRight, TrendingDown, Ey
 import { useNavigate } from 'react-router-dom';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { useVariance, useInvestments, useMonthlySummary, useSpendTrends, useSafeToSpend } from '../features/dashboard/hooks';
+import { useCategories } from '../features/transactions/categoryHooks';
 import { SpendTrendChart } from '../components/analytics/SpendTrendChart';
 import { Card } from '../components/ui/Card';
 
 const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
 
-const COLORS = ['#00f2ea', '#ff0050', '#6366f1', '#fbbf24', '#34d399', '#c084fc'];
+const DEFAULT_CHART_PALETTE = [
+    '#38bdf8', // Sky Azure
+    '#f59e0b', // Warm Ochre
+    '#e879f9', // Soft Mauve
+    '#34d399', // Emerald Jade
+    '#fb7185', // Coral Rose
+    '#c084fc', // Orchid Violet
+    '#60a5fa', // Soft Indigo
+    '#fbbf24', // Amber Sand
+    '#fb923c', // Peach Tangerine
+    '#94a3b8', // Slate Silver
+];
 
 import { Logo } from '../components/ui/Logo';
 
@@ -28,6 +40,7 @@ const Analytics: React.FC = () => {
         }
     };
 
+    const { data: categories } = useCategories();
     const { data: variance, isLoading: isVarianceLoading } = useVariance(
         referenceDate.getMonth() + 1,
         referenceDate.getFullYear()
@@ -44,6 +57,21 @@ const Analytics: React.FC = () => {
     const { data: safeToSpend } = useSafeToSpend();
 
     const effectiveLiquidBalance = summary?.cumulative_liquid_balance ?? safeToSpend?.current_balance ?? 0;
+
+    const categoryColorMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        categories?.forEach(c => {
+            if (c.name && c.color) {
+                map[c.name.trim().toLowerCase()] = c.color;
+            }
+        });
+        return map;
+    }, [categories]);
+
+    const getCategoryColor = (name: string, index: number) => {
+        const normalized = (name || '').trim().toLowerCase();
+        return categoryColorMap[normalized] || DEFAULT_CHART_PALETTE[index % DEFAULT_CHART_PALETTE.length];
+    };
 
     const categoryData = useMemo(() => {
         if (!variance?.category_breakdown) return [];
@@ -278,11 +306,11 @@ const Analytics: React.FC = () => {
                                         onClick={(data) => handleCategoryClick(data.name)}
                                         className="cursor-pointer focus:outline-none"
                                     >
-                                        {categoryData.map((_, index) => (
+                                        {categoryData.map((entry, index) => (
                                             <Cell
                                                 key={`cell-${index}`}
-                                                fill={COLORS[index % COLORS.length]}
-                                                style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.1))' }}
+                                                fill={getCategoryColor(entry.name, index)}
+                                                style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.06))' }}
                                             />
                                         ))}
                                     </Pie>
@@ -330,7 +358,7 @@ const Analytics: React.FC = () => {
                                     className="flex items-center justify-between p-4 rounded-[1.8rem] bg-white/[0.02] border border-white/[0.05] cursor-pointer hover:bg-white/[0.04] transition-colors active:scale-[0.98]"
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                                        <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: getCategoryColor(cat.name, idx) }} />
                                         <div>
                                             <p className="font-black text-white/90 text-sm uppercase tracking-tight">{cat.name}</p>
                                             <p className="text-[9px] text-gray-600 font-bold mt-0.5 uppercase tracking-widest">Growth: {cat.variance_percentage > 0 ? '+' : ''}{cat.variance_percentage.toFixed(0)}%</p>
