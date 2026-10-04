@@ -1,21 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { HoldingDetailsModal } from '../components/wealth/HoldingDetailsModal';
 import { WealthLinker } from '../components/wealth/WealthLinker';
 import { AddHoldingModal } from '../components/wealth/AddHoldingModal';
-import { InvestmentSimulatorModal } from '../components/wealth/InvestmentSimulatorModal';
-import { StatementImportModal } from '../components/wealth/StatementImportModal';
 import { WealthCategoryCard } from '../components/wealth/WealthCategoryCard';
-import WealthIntelligence from '../components/wealth/WealthIntelligence';
 import { motion } from 'framer-motion';
 import {
-    TrendingUp, Wallet, Plus, RefreshCw, Link as LinkIcon,
-    Activity, PieChart, Upload, Calculator, BrainCircuit,
-    Layers, LineChart, Sparkles, Landmark, Repeat, ShieldCheck,
-    Coins, ArrowUpRight
+    Wallet, Plus, RefreshCw, Link as LinkIcon,
+    PieChart, Sparkles, Landmark, Repeat, ShieldCheck,
+    Coins, ArrowRight, BrainCircuit
 } from 'lucide-react';
-import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
-} from 'recharts';
 
 import { api } from '../lib/api';
 
@@ -32,45 +26,19 @@ interface Holding {
     maturity_date?: string | null;
 }
 
-interface ForecastPoint {
-    date: string;
-    yhat: number;
-    yhat_lower: number;
-    yhat_upper: number;
-}
-
-interface ForecastResponse {
-    history: ForecastPoint[];
-    forecast: ForecastPoint[];
-    summary_text: string;
-}
-
 const Wealth: React.FC = () => {
-    // Mode: 'portfolio' (clean asset ledger) vs 'lab' (techy forecasting/ML/simulations)
-    const [viewMode, setViewMode] = useState<'portfolio' | 'lab'>('portfolio');
+    const navigate = useNavigate();
 
     // Data States
     const [holdings, setHoldings] = useState<Holding[]>([]);
     const [unassignedTxns, setUnassignedTxns] = useState<any[]>([]);
-    const [forecastData, setForecastData] = useState<ForecastResponse | null>(null);
-    const [holdingsLoading, setHoldingsLoading] = useState(true);
-    const [forecastLoading, setForecastLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [autoDetecting, setAutoDetecting] = useState(false);
-    const [simulating, setSimulating] = useState(false);
-
-    // Lab Sub Tabs
-    const [activeLabTab, setActiveLabTab] = useState<'trajectory' | 'intelligence'>('trajectory');
 
     // Modal States
     const [isLinkerOpen, setIsLinkerOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
-    const [isStatementImportOpen, setIsStatementImportOpen] = useState(false);
     const [selectedHolding, setSelectedHolding] = useState<any | null>(null);
-
-    // Simulation State (Quick Forecast params)
-    const [monthlySIP, setMonthlySIP] = useState(5000);
-    const [years, setYears] = useState(10);
 
     const fetchHoldingDetails = async (id: string) => {
         try {
@@ -82,7 +50,7 @@ const Wealth: React.FC = () => {
     };
 
     const fetchHoldingsAndUnassigned = async () => {
-        setHoldingsLoading(true);
+        setLoading(true);
         try {
             const [holdingsRes, unassignedRes] = await Promise.all([
                 api.get('/wealth/holdings'),
@@ -93,20 +61,7 @@ const Wealth: React.FC = () => {
         } catch (err) {
             console.error("Failed to fetch wealth assets", err);
         } finally {
-            setHoldingsLoading(false);
-        }
-    };
-
-    const fetchForecast = async () => {
-        if (forecastData) return;
-        setForecastLoading(true);
-        try {
-            const res = await api.post('/wealth/forecast', { years: 10, monthly_investment: 0 });
-            setForecastData(res.data);
-        } catch (err) {
-            console.error("Failed to fetch forecast", err);
-        } finally {
-            setForecastLoading(false);
+            setLoading(false);
         }
     };
 
@@ -121,18 +76,6 @@ const Wealth: React.FC = () => {
             alert("Auto detection encountered an issue");
         } finally {
             setAutoDetecting(false);
-        }
-    };
-
-    const runSimulation = async () => {
-        setSimulating(true);
-        try {
-            const res = await api.post('/wealth/forecast', { years, monthly_investment: monthlySIP });
-            setForecastData(res.data);
-        } catch (error) {
-            console.error("Simulation failed", error);
-        } finally {
-            setSimulating(false);
         }
     };
 
@@ -166,100 +109,45 @@ const Wealth: React.FC = () => {
     // Active Monthly Commitments calculation
     const monthlyCommitment = useMemo(() => {
         let total = 0;
-        // Add monthly RD (typically ₹5,000)
-        groupedHoldings.recurringDeposits.forEach(rd => {
+        groupedHoldings.recurringDeposits.forEach(() => {
             total += 5000;
         });
-        // Add APY (₹409) and PLI (₹1,880)
         groupedHoldings.govtPensions.forEach(gp => {
             if (gp.name.toLowerCase().includes('apy') || gp.asset_type === 'APY') total += 409;
             else if (gp.name.toLowerCase().includes('pli') || gp.asset_type === 'PLI') total += 1880;
         });
-        // Add SIPs
-        groupedHoldings.mutualFunds.forEach(mf => {
-            // estimate or average
+        groupedHoldings.mutualFunds.forEach(() => {
             total += 3000;
         });
         return total;
     }, [groupedHoldings]);
-
-    // Chart Data Preparation for Lab
-    const chartData = useMemo(() => {
-        if (!forecastData) return [];
-
-        const historyPoints = forecastData.history.map(p => ({
-            date: new Date(p.date).toLocaleDateString([], { month: 'short', year: '2-digit' }),
-            value: p.yhat,
-            forecast: null,
-            fullDate: p.date
-        }));
-
-        const lastHistory = historyPoints[historyPoints.length - 1];
-
-        const forecastPoints = forecastData.forecast.map(p => ({
-            date: new Date(p.date).toLocaleDateString([], { month: 'short', year: '2-digit' }),
-            value: null,
-            forecast: p.yhat,
-            fullDate: p.date
-        }));
-
-        if (lastHistory && forecastPoints.length > 0) {
-            forecastPoints.unshift({
-                ...lastHistory,
-                forecast: lastHistory.value,
-                value: null
-            });
-        }
-
-        return [...historyPoints, ...forecastPoints];
-    }, [forecastData]);
 
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
     return (
         <div className="min-h-screen text-primary p-6 pb-24 overflow-x-hidden">
-            {/* Header */}
+            {/* Clean Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div className="flex flex-col">
                     <h1 className="text-4xl font-black tracking-tighter text-primary heading-apple">
-                        {viewMode === 'portfolio' ? 'Assets & Portfolio' : 'Wealth Lab'}
+                        Wealth
                     </h1>
                     <p className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">
-                        {viewMode === 'portfolio' ? 'Holdings, Commitments & Verification' : 'ML Forecasts, What-If & Analytics'}
+                        Your Assets & Holdings
                     </p>
                 </div>
 
-                {/* Navigation and Top Actions */}
+                {/* Primary Actions */}
                 <div className="flex flex-wrap items-center gap-2">
-                    {/* View Switcher Pill */}
-                    <div className="flex items-center bg-surface p-1 rounded-2xl border border-border-subtle">
-                        <button
-                            onClick={() => setViewMode('portfolio')}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                                viewMode === 'portfolio'
-                                    ? 'bg-accent text-black shadow-sm'
-                                    : 'text-text-muted hover:text-primary'
-                            }`}
-                        >
-                            <Layers size={13} />
-                            Portfolio
-                        </button>
-                        <button
-                            onClick={() => {
-                                setViewMode('lab');
-                                if (!forecastData) fetchForecast();
-                            }}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                                viewMode === 'lab'
-                                    ? 'bg-accent text-black shadow-sm'
-                                    : 'text-text-muted hover:text-primary'
-                            }`}
-                        >
-                            <BrainCircuit size={13} />
-                            Wealth Lab ↗
-                        </button>
-                    </div>
+                    {/* Direct Link to Wealth Lab */}
+                    <button
+                        onClick={() => navigate('/wealth/lab')}
+                        className="px-3.5 py-2 rounded-xl bg-accent-subtle hover:bg-accent-hover/20 text-accent-text text-xs font-bold border border-accent/20 transition-all flex items-center gap-1.5 active:scale-95"
+                    >
+                        <BrainCircuit size={14} />
+                        Wealth Lab ↗
+                    </button>
 
                     {/* Quick Linker Button */}
                     <button
@@ -290,7 +178,7 @@ const Wealth: React.FC = () => {
                         className="w-9 h-9 rounded-xl bg-surface-subtle hover:bg-surface-hover text-primary transition-colors border border-border-subtle flex items-center justify-center"
                         aria-label="Refresh wealth data"
                     >
-                        <RefreshCw size={16} className={holdingsLoading ? "animate-spin" : ""} />
+                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
                     </button>
                 </div>
             </div>
@@ -304,7 +192,7 @@ const Wealth: React.FC = () => {
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <Wallet size={64} />
                     </div>
-                    {holdingsLoading ? (
+                    {loading ? (
                         <div className="animate-pulse space-y-3">
                             <div className="h-4 w-20 bg-surface-hover rounded" />
                             <div className="h-8 w-32 bg-surface-hover rounded" />
@@ -326,14 +214,14 @@ const Wealth: React.FC = () => {
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                     className="bg-surface-subtle border border-border-subtle rounded-2xl p-6"
                 >
-                    {holdingsLoading ? (
+                    {loading ? (
                         <div className="animate-pulse space-y-3">
                             <div className="h-4 w-20 bg-surface-hover rounded" />
                             <div className="h-8 w-32 bg-surface-hover rounded" />
                         </div>
                     ) : (
                         <>
-                            <p className="text-text-muted text-xs font-semibold uppercase tracking-wider">Total Invested Capital</p>
+                            <p className="text-text-muted text-xs font-semibold uppercase tracking-wider">Total Invested</p>
                             <h2 className="text-3xl font-black mt-2 text-primary">
                                 {formatCurrency(totalInvested)}
                             </h2>
@@ -346,14 +234,14 @@ const Wealth: React.FC = () => {
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
                     className="bg-surface-subtle border border-border-subtle rounded-2xl p-6"
                 >
-                    {holdingsLoading ? (
+                    {loading ? (
                         <div className="animate-pulse space-y-3">
                             <div className="h-4 w-20 bg-surface-hover rounded" />
                             <div className="h-8 w-32 bg-surface-hover rounded" />
                         </div>
                     ) : (
                         <>
-                            <p className="text-text-muted text-xs font-semibold uppercase tracking-wider">Active Monthly Run-rate</p>
+                            <p className="text-text-muted text-xs font-semibold uppercase tracking-wider">Active Monthly Outflow</p>
                             <h2 className="text-3xl font-black mt-2 text-accent-text">
                                 ~{formatCurrency(monthlyCommitment)}
                             </h2>
@@ -366,7 +254,7 @@ const Wealth: React.FC = () => {
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                     className="bg-surface-subtle border border-border-subtle rounded-2xl p-6"
                 >
-                    {holdingsLoading ? (
+                    {loading ? (
                         <div className="animate-pulse space-y-3">
                             <div className="h-4 w-20 bg-surface-hover rounded" />
                             <div className="h-8 w-32 bg-surface-hover rounded" />
@@ -378,14 +266,14 @@ const Wealth: React.FC = () => {
                                 {holdings.length}
                             </h2>
                             <p className="text-xs text-text-muted mt-2 font-medium">
-                                Across {Object.values(groupedHoldings).filter(list => list.length > 0).length} asset classes
+                                Across {Object.values(groupedHoldings).filter(list => list.length > 0).length} asset categories
                             </p>
                         </>
                     )}
                 </motion.div>
             </div>
 
-            {/* Unassigned Contributions Banner (Visible in both views if unassigned exist) */}
+            {/* Unassigned Contributions Banner (When unassigned transactions exist) */}
             {unassignedTxns.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
@@ -401,7 +289,7 @@ const Wealth: React.FC = () => {
                                 {unassignedTxns.length} Unassigned Investment Contributions Detected
                             </h3>
                             <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
-                                Incoming debits from Groww, Recurring Deposits, APY, and PLI require manual or auto verification to update your portfolio.
+                                Incoming debits from Groww, Recurring Deposits, APY, and PLI can be verified and mapped to your portfolio.
                             </p>
                         </div>
                     </div>
@@ -425,241 +313,120 @@ const Wealth: React.FC = () => {
                 </motion.div>
             )}
 
-            {/* MAIN CONTENT VIEW SWITCHER */}
-            {viewMode === 'portfolio' ? (
-                /* =================== VIEW 1: CLEAN ASSETS PORTFOLIO =================== */
-                <div className="space-y-8">
-                    {/* Empty State */}
-                    {holdings.length === 0 && !holdingsLoading && (
-                        <div className="py-16 text-center border-2 border-dashed border-border-subtle rounded-3xl bg-surface-subtle p-8 max-w-xl mx-auto">
-                            <div className="w-16 h-16 rounded-2xl bg-accent-subtle text-accent-text flex items-center justify-center mx-auto mb-4">
-                                <Wallet size={32} />
-                            </div>
-                            <h3 className="text-xl font-bold text-primary mb-2">No Assets in Portfolio Yet</h3>
-                            <p className="text-xs text-text-muted leading-relaxed mb-6">
-                                We found {unassignedTxns.length} investment transactions in your history. You can auto-organize them into assets or add assets manually.
-                            </p>
-                            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                                {unassignedTxns.length > 0 && (
-                                    <button
-                                        onClick={handleAutoDetect}
-                                        disabled={autoDetecting}
-                                        className="w-full sm:w-auto px-6 py-3 bg-accent text-black rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-accent-hover transition-all shadow-sm flex items-center justify-center gap-2"
-                                    >
-                                        <Sparkles size={14} /> Auto-Detect From Bank History
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => setIsAddModalOpen(true)}
-                                    className="w-full sm:w-auto px-6 py-3 bg-surface hover:bg-surface-hover text-primary border border-border-subtle rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <Plus size={14} /> Add Asset Manually
-                                </button>
-                            </div>
+            {/* Asset Portfolios Grid */}
+            <div className="space-y-6">
+                {/* Empty State */}
+                {holdings.length === 0 && !loading && (
+                    <div className="py-16 text-center border-2 border-dashed border-border-subtle rounded-3xl bg-surface-subtle p-8 max-w-xl mx-auto">
+                        <div className="w-16 h-16 rounded-2xl bg-accent-subtle text-accent-text flex items-center justify-center mx-auto mb-4">
+                            <Wallet size={32} />
                         </div>
+                        <h3 className="text-xl font-bold text-primary mb-2">No Assets in Portfolio Yet</h3>
+                        <p className="text-xs text-text-muted leading-relaxed mb-6">
+                            We found {unassignedTxns.length} investment transactions in your history. You can auto-organize them into assets or add assets manually.
+                        </p>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                            {unassignedTxns.length > 0 && (
+                                <button
+                                    onClick={handleAutoDetect}
+                                    disabled={autoDetecting}
+                                    className="w-full sm:w-auto px-6 py-3 bg-accent text-black rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-accent-hover transition-all shadow-sm flex items-center justify-center gap-2"
+                                >
+                                    <Sparkles size={14} /> Auto-Detect From Bank History
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setIsAddModalOpen(true)}
+                                className="w-full sm:w-auto px-6 py-3 bg-surface hover:bg-surface-hover text-primary border border-border-subtle rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Plus size={14} /> Add Asset Manually
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Categorized Holdings Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {/* 1. Mutual Funds & SIPs */}
+                    {groupedHoldings.mutualFunds.length > 0 && (
+                        <WealthCategoryCard
+                            title="Mutual Funds & SIPs"
+                            type="MUTUAL_FUND"
+                            icon={<PieChart size={20} className="text-primary" />}
+                            holdings={groupedHoldings.mutualFunds}
+                            onHoldingClick={fetchHoldingDetails}
+                        />
                     )}
 
-                    {/* Categorized Holdings Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {/* 1. Mutual Funds & SIPs */}
-                        {groupedHoldings.mutualFunds.length > 0 && (
-                            <WealthCategoryCard
-                                title="Mutual Funds & SIPs"
-                                type="MUTUAL_FUND"
-                                icon={<PieChart size={20} className="text-primary" />}
-                                holdings={groupedHoldings.mutualFunds}
-                                onHoldingClick={fetchHoldingDetails}
-                                onSimulate={() => setIsSimulatorOpen(true)}
-                                onAnalyze={() => { setViewMode('lab'); setActiveLabTab('intelligence'); }}
-                            />
-                        )}
+                    {/* 2. Recurring Deposits (RD) */}
+                    {groupedHoldings.recurringDeposits.length > 0 && (
+                        <WealthCategoryCard
+                            title="Recurring Deposits (RD)"
+                            type="RD"
+                            icon={<Repeat size={20} className="text-primary" />}
+                            holdings={groupedHoldings.recurringDeposits}
+                            onHoldingClick={fetchHoldingDetails}
+                        />
+                    )}
 
-                        {/* 2. Recurring Deposits (RD) */}
-                        {groupedHoldings.recurringDeposits.length > 0 && (
-                            <WealthCategoryCard
-                                title="Recurring Deposits (RD)"
-                                type="RD"
-                                icon={<Repeat size={20} className="text-primary" />}
-                                holdings={groupedHoldings.recurringDeposits}
-                                onHoldingClick={fetchHoldingDetails}
-                            />
-                        )}
+                    {/* 3. Fixed Deposits (FD) */}
+                    {groupedHoldings.fixedDeposits.length > 0 && (
+                        <WealthCategoryCard
+                            title="Fixed Deposits (FD)"
+                            type="FD"
+                            icon={<Landmark size={20} className="text-primary" />}
+                            holdings={groupedHoldings.fixedDeposits}
+                            onHoldingClick={fetchHoldingDetails}
+                        />
+                    )}
 
-                        {/* 3. Fixed Deposits (FD) */}
-                        {groupedHoldings.fixedDeposits.length > 0 && (
-                            <WealthCategoryCard
-                                title="Fixed Deposits (FD)"
-                                type="FD"
-                                icon={<Landmark size={20} className="text-primary" />}
-                                holdings={groupedHoldings.fixedDeposits}
-                                onHoldingClick={fetchHoldingDetails}
-                            />
-                        )}
+                    {/* 4. Government & Pensions (APY / PLI / PF) */}
+                    {groupedHoldings.govtPensions.length > 0 && (
+                        <WealthCategoryCard
+                            title="Govt Schemes & Pension"
+                            type="GOVT"
+                            icon={<ShieldCheck size={20} className="text-primary" />}
+                            holdings={groupedHoldings.govtPensions}
+                            onHoldingClick={fetchHoldingDetails}
+                        />
+                    )}
 
-                        {/* 4. Government & Pensions (APY / PLI / PF) */}
-                        {groupedHoldings.govtPensions.length > 0 && (
-                            <WealthCategoryCard
-                                title="Govt Schemes & Pension"
-                                type="GOVT"
-                                icon={<ShieldCheck size={20} className="text-primary" />}
-                                holdings={groupedHoldings.govtPensions}
-                                onHoldingClick={fetchHoldingDetails}
-                            />
-                        )}
-
-                        {/* 5. Gold & Other Assets */}
-                        {groupedHoldings.goldAndOther.length > 0 && (
-                            <WealthCategoryCard
-                                title="Gold & Other Assets"
-                                type="GOLD"
-                                icon={<Coins size={20} className="text-primary" />}
-                                holdings={groupedHoldings.goldAndOther}
-                                onHoldingClick={fetchHoldingDetails}
-                            />
-                        )}
-                    </div>
+                    {/* 5. Gold & Other Assets */}
+                    {groupedHoldings.goldAndOther.length > 0 && (
+                        <WealthCategoryCard
+                            title="Gold & Other Assets"
+                            type="GOLD"
+                            icon={<Coins size={20} className="text-primary" />}
+                            holdings={groupedHoldings.goldAndOther}
+                            onHoldingClick={fetchHoldingDetails}
+                        />
+                    )}
                 </div>
-            ) : (
-                /* =================== VIEW 2: WEALTH LAB & ML =================== */
-                <div className="space-y-8">
-                    {/* Simulations & Intelligence Banner */}
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        {/* Financial Time Machine Card */}
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-                            className="lg:col-span-1 bg-surface-subtle border border-border-subtle hover:border-border-default rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden group cursor-pointer transition-all"
-                            onClick={() => setIsSimulatorOpen(true)}
-                        >
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Calculator size={80} />
-                            </div>
-                            <div>
-                                <div className="p-2.5 bg-accent-subtle rounded-xl w-fit mb-3 text-primary">
-                                    <BrainCircuit size={24} />
-                                </div>
-                                <h3 className="text-xl font-bold text-primary mb-1">Time Machine</h3>
-                                <p className="text-xs text-text-muted leading-relaxed">
-                                    Simulate "What-If" scenarios. See how your investments would have performed if you timed them differently.
-                                </p>
-                            </div>
-                            <div className="space-y-2 mt-4">
-                                <button className="w-full py-2.5 bg-primary text-background hover:opacity-90 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2">
-                                    Run Simulator <Calculator size={14} />
-                                </button>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); setIsStatementImportOpen(true); }}
-                                    className="w-full py-2 bg-surface hover:bg-surface-hover text-text-muted hover:text-primary rounded-xl text-xs font-medium border border-border-subtle transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Upload size={13} /> Import CAMS / KFin CAS
-                                </button>
-                            </div>
-                        </motion.div>
 
-                        {/* Main Predictions Chart */}
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-                            className="lg:col-span-3 bg-surface-subtle border border-border-subtle rounded-2xl p-6 min-h-[350px]"
-                        >
-                            <div className="flex justify-between items-center mb-6">
-                                <div className="flex space-x-4">
-                                    <button
-                                        onClick={() => setActiveLabTab('trajectory')}
-                                        className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeLabTab === 'trajectory' ? 'text-accent-text border-b-2 border-accent pb-1' : 'text-text-muted hover:text-primary pb-1'}`}
-                                    >
-                                        <LineChart size={15} />
-                                        Prophet Trajectory Forecast
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveLabTab('intelligence')}
-                                        className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeLabTab === 'intelligence' ? 'text-accent-text border-b-2 border-accent pb-1' : 'text-text-muted hover:text-primary pb-1'}`}
-                                    >
-                                        <BrainCircuit size={15} />
-                                        Portfolio Intelligence
-                                    </button>
-                                </div>
-
-                                {activeLabTab === 'trajectory' && (
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-2 bg-surface px-3 py-1.5 rounded-lg border border-border-subtle">
-                                            <span className="text-[10px] text-text-muted uppercase font-bold">Monthly SIP</span>
-                                            <input
-                                                type="number"
-                                                value={monthlySIP}
-                                                onChange={(e) => setMonthlySIP(Number(e.target.value))}
-                                                className="w-16 bg-transparent outline-none text-right font-mono text-xs text-primary"
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={runSimulation}
-                                            disabled={simulating}
-                                            className="px-3 py-1.5 bg-accent hover:bg-accent-hover rounded-lg text-black text-xs font-semibold disabled:opacity-50 transition-colors shadow-sm"
-                                        >
-                                            {simulating ? "..." : "Update"}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className={`w-full ${activeLabTab === 'trajectory' ? 'h-[280px]' : ''}`}>
-                                {activeLabTab === 'trajectory' ? (
-                                    forecastLoading ? (
-                                        <div className="w-full h-full flex items-center justify-center animate-pulse bg-surface rounded-xl">
-                                            <div className="text-text-muted text-xs">Generating Prediction Model...</div>
-                                        </div>
-                                    ) : (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={chartData}>
-                                                <defs>
-                                                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                                    </linearGradient>
-                                                    <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="var(--color-accent-solid, #22d3ee)" stopOpacity={0.3} />
-                                                        <stop offset="95%" stopColor="var(--color-accent-solid, #22d3ee)" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle, #333)" vertical={false} />
-                                                <XAxis dataKey="date" stroke="var(--color-text-muted, #888)" tick={{ fontSize: 10 }} minTickGap={30} />
-                                                <YAxis
-                                                    stroke="var(--color-text-muted, #888)"
-                                                    tick={{ fontSize: 10 }}
-                                                    tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
-                                                />
-                                                <Tooltip
-                                                    contentStyle={{ backgroundColor: 'var(--color-bg-surface, #121212)', borderColor: 'var(--color-border-subtle, #333)', color: 'var(--color-text-primary, #fff)', borderRadius: '8px', fontSize: '12px' }}
-                                                    formatter={(val: number) => formatCurrency(val)}
-                                                />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="value"
-                                                    stroke="#10b981"
-                                                    strokeWidth={2}
-                                                    fillOpacity={1}
-                                                    fill="url(#colorValue)"
-                                                    name="Historical"
-                                                />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="forecast"
-                                                    stroke="var(--color-accent-solid, #22d3ee)"
-                                                    strokeDasharray="5 5"
-                                                    strokeWidth={2}
-                                                    fillOpacity={1}
-                                                    fill="url(#colorForecast)"
-                                                    name="Forecast"
-                                                />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    )
-                                ) : (
-                                    <WealthIntelligence holdings={holdings} />
-                                )}
-                            </div>
-                        </motion.div>
+                {/* Wealth Lab Shortcut Banner at Bottom */}
+                <div 
+                    onClick={() => navigate('/wealth/lab')}
+                    className="mt-12 p-6 rounded-3xl bg-surface-subtle border border-border-subtle hover:border-border-default transition-all cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-2xl bg-accent-subtle text-accent-text group-hover:scale-105 transition-transform">
+                            <BrainCircuit size={28} />
+                        </div>
+                        <div>
+                            <h4 className="text-base font-bold text-primary group-hover:text-accent-text transition-colors flex items-center gap-2">
+                                Wealth Lab & Predictions
+                                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                            </h4>
+                            <p className="text-xs text-text-muted mt-0.5">
+                                Explore 10-year Prophet ML trajectory forecasts, historical What-If simulations, and CAMS statement imports.
+                            </p>
+                        </div>
                     </div>
+                    <button className="px-4 py-2 rounded-xl bg-surface group-hover:bg-accent group-hover:text-black border border-border-subtle text-xs font-semibold text-primary transition-all shrink-0">
+                        Launch Lab →
+                    </button>
                 </div>
-            )}
+            </div>
 
             {/* Modals */}
             <WealthLinker
@@ -680,30 +447,6 @@ const Wealth: React.FC = () => {
                 onClose={() => setSelectedHolding(null)}
                 holding={selectedHolding}
             />
-
-            <StatementImportModal
-                isOpen={isStatementImportOpen}
-                onClose={() => setIsStatementImportOpen(false)}
-                onSuccess={fetchHoldingsAndUnassigned}
-            />
-
-            <InvestmentSimulatorModal
-                isOpen={isSimulatorOpen}
-                onClose={() => setIsSimulatorOpen(false)}
-            />
-
-            <style>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 4px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: var(--color-border-subtle, #333);
-                    border-radius: 4px;
-                }
-            `}</style>
         </div>
     );
 };
