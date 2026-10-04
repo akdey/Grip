@@ -21,7 +21,8 @@ import {
     Layers,
     Activity,
     Sun,
-    Moon
+    Moon,
+    LogOut
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
@@ -104,6 +105,7 @@ const SystemIntelligence: React.FC = () => {
 const More: React.FC = () => {
     const navigate = useNavigate();
     const user = useAuthStore((state) => state.user);
+    const logout = useAuthStore((state) => state.logout);
     const { toggleTheme, isDark } = useTheme();
     const [isExporting, setIsExporting] = useState(false);
 
@@ -141,7 +143,12 @@ const More: React.FC = () => {
     };
 
     const handleFeatureClick = (card: any) => {
-        if (card.action === 'OPEN_CATEGORIES') {
+        if (card.action === 'TOGGLE_THEME') {
+            toggleTheme();
+        } else if (card.action === 'SIGN_OUT') {
+            logout();
+            navigate('/login');
+        } else if (card.action === 'OPEN_CATEGORIES') {
             navigate('/settings/categories');
         } else if (card.action === 'BACKUP_DATA') {
             handleBackup();
@@ -149,6 +156,28 @@ const More: React.FC = () => {
             navigate(card.path);
         }
     };
+
+    const featureCards = [
+        {
+            id: 'theme',
+            label: isDark ? 'Light Mode' : 'Dark Mode',
+            icon: isDark ? Sun : Moon,
+            action: 'TOGGLE_THEME',
+            color: 'text-primary',
+            bgColor: 'bg-surface-subtle',
+            iconColor: isDark ? 'text-amber-400' : 'text-cyan-400'
+        },
+        ...FEATURE_CARDS,
+        {
+            id: 'signout',
+            label: 'Sign Out',
+            icon: LogOut,
+            action: 'SIGN_OUT',
+            color: 'text-rose-400',
+            bgColor: 'bg-surface-subtle',
+            iconColor: 'text-rose-400'
+        }
+    ];
 
     return (
         <div className="min-h-screen text-primary flex flex-col pb-20 overflow-x-hidden">
@@ -166,30 +195,74 @@ const More: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Theme Toggle Button */}
+                {/* Theme Toggle Button in Header */}
                 <button
                     onClick={toggleTheme}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-subtle border border-border-subtle hover:bg-surface-hover transition-all text-xs font-semibold text-secondary active:scale-95 shadow-sm"
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-surface hover:bg-surface-hover border border-border-default transition-all text-xs font-bold text-primary active:scale-95 shadow-sm"
                     aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
                 >
                     {isDark ? (
                         <>
                             <Sun size={15} className="text-amber-400" />
-                            <span className="text-[11px] font-bold">Light</span>
+                            <span className="text-[11px] font-black uppercase tracking-wider">Light</span>
                         </>
                     ) : (
                         <>
                             <Moon size={15} className="text-cyan-500" />
-                            <span className="text-[11px] font-bold">Dark</span>
+                            <span className="text-[11px] font-black uppercase tracking-wider">Dark</span>
                         </>
                     )}
                 </button>
             </header>
 
-            <div className="px-3 space-y-8 animate-enter pb-10">
-                {/* Feature Grid - Compact */}
+            <div className="px-3 space-y-6 animate-enter pb-10">
+                {/* Dedicated Appearance Switcher Card */}
+                <div className="p-4 rounded-3xl bg-surface-subtle border border-border-subtle flex items-center justify-between gap-3 shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-surface-pill border border-border-subtle flex items-center justify-center text-primary shrink-0">
+                            {isDark ? <Moon size={18} className="text-cyan-400" /> : <Sun size={18} className="text-amber-500" />}
+                        </div>
+                        <div>
+                            <h3 className="text-xs font-black uppercase tracking-wider text-primary">Appearance</h3>
+                            <p className="text-[9px] text-text-muted font-bold tracking-wide mt-0.5">
+                                {isDark ? 'Dark (Liquid Void)' : 'Light (Opal Crisp)'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center p-1 rounded-2xl bg-surface-pill border border-border-subtle shrink-0">
+                        <button
+                            onClick={() => {
+                                if (!isDark) toggleTheme();
+                            }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                                isDark
+                                    ? 'bg-surface text-primary shadow-sm border border-border-subtle'
+                                    : 'text-text-muted hover:text-primary'
+                            }`}
+                        >
+                            <Moon size={12} className={isDark ? 'text-cyan-400' : ''} />
+                            <span>Dark</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (isDark) toggleTheme();
+                            }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                                !isDark
+                                    ? 'bg-surface text-primary shadow-sm border border-border-subtle'
+                                    : 'text-text-muted hover:text-primary'
+                            }`}
+                        >
+                            <Sun size={12} className={!isDark ? 'text-amber-500' : ''} />
+                            <span>Light</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Feature Grid - Compact (12 items) */}
                 <div className="grid grid-cols-2 gap-2">
-                    {FEATURE_CARDS.map((card) => (
+                    {featureCards.map((card) => (
                         <motion.button
                             key={card.id}
                             whileTap={{ scale: 0.98 }}
@@ -201,7 +274,7 @@ const More: React.FC = () => {
                                 {card.id === 'backup' && isExporting ? (
                                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
                                 ) : (
-                                    <card.icon size={15} />
+                                    <card.icon size={15} className={card.iconColor || ''} />
                                 )}
                             </div>
                             <span className="text-[11px] font-bold text-secondary group-hover:text-primary tracking-wide uppercase whitespace-nowrap transition-colors">
