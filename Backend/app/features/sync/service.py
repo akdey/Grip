@@ -222,6 +222,8 @@ class SyncService:
         You are a high-precision financial intelligence engine. 
         TASK: Extract transaction details from the bank notification below.
 
+        CRITICAL EVALUATION: First, carefully read the email to determine if a real transaction ACTUALLY took place. Did money successfully leave or enter the account? Do not assume it is a transaction just because an amount is mentioned.
+
         1. is_transaction: (boolean) 
            - Set to TRUE ONLY for actual successful DEBIT, CREDIT, or SPEND events that result in money moving and changing a balance.
            - Set to FALSE for all other transaction-related or generic emails, specifically:
