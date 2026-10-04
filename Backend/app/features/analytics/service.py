@@ -30,7 +30,8 @@ from app.utils.finance_utils import (
     get_trend_indicator,
     get_month_date_range,
     get_previous_month_date_range,
-    get_year_date_range
+    get_year_date_range,
+    get_investment_sql_condition
 )
 
 from datetime import datetime, date, timedelta
@@ -74,8 +75,8 @@ class AnalyticsService:
                 func.sum(func.abs(Transaction.amount)).label("total")
             )
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category.notin_(["Income", "Investment"]))
-            .where(~func.lower(Transaction.category).like("%invest%"))
+            .where(Transaction.category != "Income")
+            .where(~get_investment_sql_condition())
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= current_range["month_start"])
@@ -90,8 +91,8 @@ class AnalyticsService:
                 func.sum(func.abs(Transaction.amount)).label("total")
             )
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category.notin_(["Income", "Investment"]))
-            .where(~func.lower(Transaction.category).like("%invest%"))
+            .where(Transaction.category != "Income")
+            .where(~get_investment_sql_condition())
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= previous_range["month_start"])
@@ -508,7 +509,7 @@ class AnalyticsService:
         is_liquid = Transaction.account_type.in_([AccountType.SAVINGS, AccountType.CASH])
         is_cc = Transaction.account_type == AccountType.CREDIT_CARD
         is_cc_payment = func.lower(Transaction.sub_category) == "credit card payment"
-        is_investment = func.lower(Transaction.category).like("%invest%")
+        is_investment = get_investment_sql_condition()
         is_outflow = Transaction.amount < 0
         is_inflow = (Transaction.category == "Income") | (Transaction.amount > 0)
 
@@ -660,8 +661,8 @@ class AnalyticsService:
                 func.sum(func.abs(Transaction.amount)).label("amount")
             )
             .where(Transaction.user_id == user_id)
-            .where(Transaction.category.notin_(["Income", "Transfer", "Investment"]))
-            .where(~func.lower(Transaction.category).like("%invest%"))
+            .where(Transaction.category.notin_(["Income", "Transfer"]))
+            .where(~get_investment_sql_condition())
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= start_date)
