@@ -86,7 +86,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                             <div className="flex-1">
                                 <div className="flex items-center gap-3">
                                     <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic heading-apple">Card Exposure Ledger</h2>
-                                    <span className="text-[9px] font-bold text-white/90 uppercase tracking-widest bg-white/[0.06] px-2.5 py-1 rounded-full border border-white/10">
+                                    <span className="text-[9px] font-bold text-metric-exposure-text uppercase tracking-widest bg-metric-exposure-bg px-2.5 py-1 rounded-full border border-metric-exposure-border">
                                         Active CC Swipes
                                     </span>
                                 </div>
@@ -134,7 +134,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-accent text-black font-bold' : 'bg-white/[0.06] text-white'}`}>
+                                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-accent text-black font-bold' : 'bg-metric-exposure-bg text-metric-exposure-text border border-metric-exposure-border'}`}>
                                                             <CardIcon size={16} />
                                                         </div>
                                                         <div>
@@ -191,7 +191,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                             title="View card in Vault to settle this swipe"
                                         >
                                             <div className="flex items-center gap-4 min-w-0">
-                                                <div className="w-9 h-9 rounded-2xl bg-white/[0.04] text-white flex items-center justify-center shrink-0 border border-white/10">
+                                                <div className="w-9 h-9 rounded-2xl bg-metric-exposure-bg text-metric-exposure-text flex items-center justify-center shrink-0 border border-metric-exposure-border">
                                                     <CardIcon size={16} />
                                                 </div>
 
@@ -200,7 +200,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                         {item.merchant_name}
                                                     </p>
                                                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-badge-neutral-bg text-badge-neutral-text border border-badge-neutral-border">
+                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-metric-exposure-bg text-metric-exposure-text border border-metric-exposure-border">
                                                             {item.card_name}
                                                             {item.last_four_digits ? ` •••• ${item.last_four_digits}` : ''}
                                                         </span>
