@@ -760,7 +760,7 @@ const AddEntry: React.FC = () => {
                                                 ? (c.type === 'EXPENSE' || c.type === 'INVESTMENT')
                                                 : c.type === type;
                                             return matchesType && c.name.toLowerCase().includes(searchQuery.toLowerCase());
-                                        }).map(cat => (
+                                        }).sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
                                             <div
                                                 key={cat.id}
                                                 onClick={() => handleCategorySelect(cat)}
@@ -797,7 +797,10 @@ const AddEntry: React.FC = () => {
                                             </div>
 
                                             <div className="grid grid-cols-1 gap-2">
-                                                {tempCategory?.sub_categories.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((sub: any) => (
+                                                {tempCategory?.sub_categories
+                                                    .filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                                                    .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                                                    .map((sub: any) => (
                                                     <div
                                                         key={sub.id}
                                                         onClick={() => handleSubCategorySelect(sub)}

@@ -11,16 +11,16 @@ import { Card } from '../components/ui/Card';
 const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
 
 const DEFAULT_CHART_PALETTE = [
-    '#38bdf8', // Sky Azure
-    '#f59e0b', // Warm Ochre
-    '#e879f9', // Soft Mauve
-    '#34d399', // Emerald Jade
-    '#fb7185', // Coral Rose
-    '#c084fc', // Orchid Violet
-    '#60a5fa', // Soft Indigo
-    '#fbbf24', // Amber Sand
-    '#fb923c', // Peach Tangerine
-    '#94a3b8', // Slate Silver
+    '#B89D72', // Muted Sandstone Gold
+    '#B37D4D', // Warm Muted Clay / Ochre
+    '#5E8C7D', // Muted Pine Sage
+    '#687C99', // Muted Slate Navy
+    '#A96F6F', // Dusty Cedar Rose
+    '#816F96', // Dusty Violet
+    '#4E8A6D', // Deep Muted Emerald
+    '#A38B52', // Antique Gold
+    '#627D98', // Steel Slate Blue
+    '#858F9E', // Slate Graphite
 ];
 
 import { Logo } from '../components/ui/Logo';
@@ -76,14 +76,19 @@ const Analytics: React.FC = () => {
     const categoryData = useMemo(() => {
         if (!variance?.category_breakdown) return [];
         return Object.entries(variance.category_breakdown)
-            .map(([name, data]: any) => ({
-                name,
-                value: Math.abs(data.current || 0),
-                ...data
-            }))
+            .map(([name, data]: any, index) => {
+                const normalized = (name || '').trim().toLowerCase();
+                const color = categoryColorMap[normalized] || DEFAULT_CHART_PALETTE[index % DEFAULT_CHART_PALETTE.length];
+                return {
+                    name,
+                    value: Math.abs(data.current || 0),
+                    color,
+                    ...data
+                };
+            })
             .filter(item => item.value > 0)
             .sort((a, b) => b.value - a.value);
-    }, [variance]);
+    }, [variance, categoryColorMap]);
 
     const investmentData = useMemo(() => {
         if (!investments?.breakdown) return [];
@@ -306,11 +311,11 @@ const Analytics: React.FC = () => {
                                         onClick={(data) => handleCategoryClick(data.name)}
                                         className="cursor-pointer focus:outline-none"
                                     >
-                                        {categoryData.map((entry, index) => (
+                                        {categoryData.map((entry) => (
                                             <Cell
-                                                key={`cell-${index}`}
-                                                fill={getCategoryColor(entry.name, index)}
-                                                style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.06))' }}
+                                                key={entry.name}
+                                                fill={entry.color}
+                                                style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.04))' }}
                                             />
                                         ))}
                                     </Pie>
@@ -351,14 +356,14 @@ const Analytics: React.FC = () => {
                                 </div>
                             ))
                         ) : (
-                            categoryData.map((cat, idx) => (
+                            categoryData.map((cat) => (
                                 <div
                                     key={cat.name}
                                     onClick={() => handleCategoryClick(cat.name)}
                                     className="flex items-center justify-between p-4 rounded-[1.8rem] bg-white/[0.02] border border-white/[0.05] cursor-pointer hover:bg-white/[0.04] transition-colors active:scale-[0.98]"
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: getCategoryColor(cat.name, idx) }} />
+                                        <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: cat.color }} />
                                         <div>
                                             <p className="font-black text-white/90 text-sm uppercase tracking-tight">{cat.name}</p>
                                             <p className="text-[9px] text-gray-600 font-bold mt-0.5 uppercase tracking-widest">Growth: {cat.variance_percentage > 0 ? '+' : ''}{cat.variance_percentage.toFixed(0)}%</p>

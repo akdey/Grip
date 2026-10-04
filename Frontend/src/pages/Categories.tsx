@@ -132,9 +132,9 @@ const Categories: React.FC = () => {
                                     // Sub-category View
                                     (() => {
                                         const cat = categories?.find(c => c.id === viewingCategoryId);
-                                        const filteredSubs = cat?.sub_categories.filter(s =>
-                                            s.name.toLowerCase().includes(searchQuery.toLowerCase())
-                                        );
+                                        const filteredSubs = cat?.sub_categories
+                                            .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                                            .sort((a, b) => a.name.localeCompare(b.name));
                                         return (
                                             <div className="space-y-6 animate-enter">
                                                 <div className="flex items-center gap-5 p-6 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] shadow-2xl">
@@ -204,7 +204,9 @@ const Categories: React.FC = () => {
                                 ) : (
                                     // Categories List
                                     <div className="grid grid-cols-1 gap-2.5">
-                                        {categories?.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).map((cat: Category) => (
+                                        {categories?.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                                            .sort((a, b) => a.name.localeCompare(b.name))
+                                            .map((cat: Category) => (
                                             <div
                                                 key={cat.id}
                                                 onClick={() => setViewingCategoryId(cat.id)}

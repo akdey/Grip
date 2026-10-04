@@ -2,12 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { haptics } from '../../lib/haptics';
 
-// 24 Perceptually-balanced, constant-chroma color swatches
+// 24 Muted luxury financial tones (low saturation, executive mineral and earth palette)
 const PRESET_COLORS = [
-    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
-    '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
-    '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#fb7185',
-    '#2dd4bf', '#38bdf8', '#818cf8', '#c084fc', '#94a3b8', '#64748b'
+    '#A85D5A', '#A66B50', '#B37D4D', '#B89D72', '#A38B52', '#7E9168',
+    '#5E8C7D', '#4E8A6D', '#4D8E5F', '#568B87', '#4F7B91', '#627D98',
+    '#687C99', '#6A7B8E', '#816F96', '#8E7B9D', '#9C8496', '#9A6F7D',
+    '#A96F6F', '#94714E', '#82786D', '#858F9E', '#6C7A89', '#546270'
 ];
 
 interface ColorSelectorProps {
