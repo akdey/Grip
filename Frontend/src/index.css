@@ -227,6 +227,144 @@
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", 'Outfit', sans-serif;
 }
 
+/* ==========================================================================
+   LIGHT THEME — All semantic tokens overridden via data-theme="light" on <html>
+   ========================================================================== */
+html[data-theme="light"] {
+  /* Surfaces */
+  --color-bg-page:           #F2F4F8;
+  --color-bg-surface:        #FFFFFF;
+  --color-bg-surface-hover:  #F8F9FB;
+  --color-bg-surface-subtle: rgba(0, 0, 0, 0.025);
+  --color-bg-surface-pill:   rgba(0, 0, 0, 0.05);
+  --color-bg-raised:         #FFFFFF;
+  --color-bg-sunken:         #E8EBF0;
+  --color-bg-overlay:        rgba(242, 244, 248, 0.94);
+
+  /* Shorthand utility tokens */
+  --color-page:           #F2F4F8;
+  --color-surface:        #FFFFFF;
+  --color-surface-hover:  #F8F9FB;
+  --color-surface-subtle: rgba(0, 0, 0, 0.025);
+  --color-surface-pill:   rgba(0, 0, 0, 0.05);
+  --color-raised:         #FFFFFF;
+  --color-sunken:         #E8EBF0;
+  --color-overlay:        rgba(242, 244, 248, 0.94);
+
+  /* Neutral Badges */
+  --color-badge-neutral-bg:     rgba(0, 0, 0, 0.05);
+  --color-badge-neutral-border: rgba(0, 0, 0, 0.1);
+  --color-badge-neutral-text:   #0F1014;
+
+  /* Text */
+  --color-text-primary:  #0F1014;
+  --color-text-secondary: #3C4148;
+  --color-text-muted:    #6B7280;
+  --color-text-disabled: #9CA3AF;
+  --color-text-inverse:  #FFFFFF;
+  --color-text-on-accent: #FFFFFF;
+
+  /* Text shorthands */
+  --color-primary:   #0F1014;
+  --color-secondary: #3C4148;
+  --color-muted:     #6B7280;
+  --color-disabled:  #9CA3AF;
+
+  /* Borders */
+  --color-border-subtle:    rgba(0, 0, 0, 0.08);
+  --color-border-default:   rgba(0, 0, 0, 0.13);
+  --color-border-strong:    rgba(0, 0, 0, 0.24);
+  --color-border-focus:     #0891b2;
+  --color-border-separator: rgba(0, 0, 0, 0.06);
+
+  /* Border shorthands */
+  --color-subtle:    rgba(0, 0, 0, 0.08);
+  --color-separator: rgba(0, 0, 0, 0.06);
+
+  /* Status text — darken for readability on light bg */
+  --color-status-danger-bg:           rgba(185, 28, 28, 0.08);
+  --color-status-danger-border:       rgba(185, 28, 28, 0.22);
+  --color-status-danger-solid:        #B91C1C;
+  --color-status-danger-solid-hover:  #DC2626;
+  --color-status-danger-text:         #B91C1C;
+
+  --color-status-success-bg:          rgba(6, 95, 70, 0.08);
+  --color-status-success-border:      rgba(6, 95, 70, 0.2);
+  --color-status-success-solid:       #065F46;
+  --color-status-success-solid-hover: #047857;
+  --color-status-success-text:        #065F46;
+
+  --color-status-warning-bg:          rgba(146, 64, 14, 0.08);
+  --color-status-warning-border:      rgba(146, 64, 14, 0.2);
+  --color-status-warning-solid:       #92400E;
+  --color-status-warning-solid-hover: #B45309;
+  --color-status-warning-text:        #92400E;
+
+  --color-status-info-bg:             rgba(29, 78, 216, 0.08);
+  --color-status-info-border:         rgba(29, 78, 216, 0.2);
+  --color-status-info-solid:          #1D4ED8;
+  --color-status-info-solid-hover:    #2563EB;
+  --color-status-info-text:           #1D4ED8;
+
+  /* Metric tokens */
+  --color-metric-obligations-bg:     rgba(185, 28, 28, 0.08);
+  --color-metric-obligations-border: rgba(185, 28, 28, 0.2);
+  --color-metric-obligations-text:   #B91C1C;
+  --color-metric-obligations-hover:  rgba(185, 28, 28, 0.14);
+
+  --color-metric-exposure-bg:     rgba(109, 40, 217, 0.08);
+  --color-metric-exposure-border: rgba(109, 40, 217, 0.2);
+  --color-metric-exposure-text:   #6D28D9;
+  --color-metric-exposure-hover:  rgba(109, 40, 217, 0.14);
+
+  /* Glass & bg shortcuts */
+  --glass-bg:     rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(0, 0, 0, 0.08);
+
+  /* Body gradient */
+  --color-bg-gradient: linear-gradient(135deg in oklab, #ECEEF4 0%, #F2F4F8 50%, #ECEEF4 100%);
+
+  /* Scrollbar */
+  color-scheme: light;
+}
+
+/* Light theme body radial gradients — lighter brand wash */
+html[data-theme="light"] body::before {
+  background-image:
+    radial-gradient(ellipse 90% 65% at 50% -12%, oklch(0.68 var(--brand-chroma) var(--brand-hue) / 0.1), transparent 75%),
+    radial-gradient(ellipse 75% 50% at 95% 30%, oklch(0.60 calc(var(--brand-chroma) * 0.85) calc(var(--brand-hue) + 35) / 0.06), transparent 65%),
+    radial-gradient(ellipse 85% 60% at 5% 85%, oklch(0.55 calc(var(--brand-chroma) * 0.75) calc(var(--brand-hue) - 25) / 0.05), transparent 70%);
+}
+
+/* Light glass card — frosted white panel */
+html[data-theme="light"] .glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="light"] .glass-card::before {
+  background: linear-gradient(135deg in oklab, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.2));
+}
+
+/* Light glass drawer — light sheet */
+html[data-theme="light"] .glass-drawer {
+  background: #F2F4F8;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.1);
+}
+
+/* Light scrollbars */
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--color-bg-gradient);
