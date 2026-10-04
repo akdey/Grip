@@ -134,7 +134,7 @@ const Sync: React.FC = () => {
                         <Card className="p-6 bg-white/[0.02] border-white/[0.08]">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                    <div className="w-12 h-12 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-white">
                                         <CheckCircle size={24} />
                                     </div>
                                     <div>

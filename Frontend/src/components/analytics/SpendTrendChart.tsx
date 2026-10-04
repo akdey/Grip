@@ -66,7 +66,7 @@ export const SpendTrendChart: React.FC<SpendTrendChartProps> = ({ data, frequenc
                         content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
                                 return (
-                                    <div className="bg-[#050505] border border-white/10 p-4 rounded-2xl shadow-2xl backdrop-blur-xl border-l-rose-500 border-l-4">
+                                    <div className="bg-[#050505] border border-white/10 p-4 rounded-2xl shadow-2xl backdrop-blur-xl">
                                         <p className="text-[10px] font-black text-gray-500 uppercase mb-2 tracking-widest">
                                             {frequency === 'monthly' ? `${label} Spend` : label}
                                         </p>
@@ -87,8 +87,8 @@ export const SpendTrendChart: React.FC<SpendTrendChartProps> = ({ data, frequenc
                         {processedData.map((_, index) => (
                             <Cell
                                 key={`cell-${index}`}
-                                fill={index === processedData.length - 1 ? '#f43f5e' : 'rgba(244, 63, 94, 0.3)'}
-                                className="transition-all duration-500 hover:fill-rose-500 hover:opacity-100"
+                                fill={index === processedData.length - 1 ? '#ffffff' : 'rgba(255, 255, 255, 0.2)'}
+                                className="transition-all duration-300 hover:fill-white/80"
                             />
                         ))}
                     </Bar>

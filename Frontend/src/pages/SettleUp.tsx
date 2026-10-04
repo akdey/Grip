@@ -179,21 +179,21 @@ const SettleUp: React.FC = () => {
                     </div>
 
                     {/* Type Toggle */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2 p-1.5 bg-white/[0.02] border border-white/[0.08] rounded-2xl">
                         <button
                             onClick={() => setNewType('expense')}
-                            className={`py-4 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all ${newType === 'expense'
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                                : 'bg-white/[0.02] border-white/[0.05] text-gray-500'
+                            className={`py-3.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${newType === 'expense'
+                                ? 'bg-white text-black shadow-sm'
+                                : 'text-gray-400 hover:text-white'
                                 }`}
                         >
                             I Lent
                         </button>
                         <button
                             onClick={() => setNewType('income')}
-                            className={`py-4 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all ${newType === 'income'
-                                ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                                : 'bg-white/[0.02] border-white/[0.05] text-gray-500'
+                            className={`py-3.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${newType === 'income'
+                                ? 'bg-white text-black shadow-sm'
+                                : 'text-gray-400 hover:text-white'
                                 }`}
                         >
                             I Borrowed

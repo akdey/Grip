@@ -30,9 +30,8 @@ export const Logo: React.FC<LogoProps> = ({ className = '', size = 40 }) => {
         >
             <defs>
                 <linearGradient id="grip-logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="var(--color-emerald-500, #10b981)" />
-                    <stop offset="50%" stopColor="var(--color-cyan-500, #06b6d4)" />
-                    <stop offset="100%" stopColor="var(--color-blue-500, #3b82f6)" />
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="100%" stopColor="rgba(255, 255, 255, 0.65)" />
                 </linearGradient>
             </defs>
 

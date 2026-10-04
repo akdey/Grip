@@ -401,7 +401,7 @@ const Wealth: React.FC = () => {
             {/* Investment Categories */}
             <div className="space-y-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <Layers className="text-emerald-500" size={20} />
+                    <Layers className="text-white/80" size={20} />
                     <h2 className="text-xl font-bold text-gray-200">Portfolio Breakdown</h2>
                 </div>
 

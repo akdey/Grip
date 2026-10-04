@@ -112,10 +112,10 @@ const Sureties: React.FC = () => {
                             <button
                                 onClick={() => surety.source_id && handleMarkPaid(surety.id, surety.source_id)}
                                 disabled={['SKIPPED', 'PAID', 'COVERED', 'TERMINATED'].includes(surety.status) || createExclusion.isPending}
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.03] text-green-400/80 text-xs font-bold hover:bg-green-500/10 hover:text-green-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-transparent hover:border-green-500/20"
+                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black text-xs font-semibold hover:bg-neutral-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
                             >
                                 {actionLoading?.id === surety.id && actionLoading?.action === 'PAID' ? (
-                                    <Loader2 size={14} className="animate-spin" />
+                                    <Loader2 size={14} className="animate-spin text-black" />
                                 ) : (
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                 )}
@@ -124,7 +124,7 @@ const Sureties: React.FC = () => {
                             <button
                                 onClick={() => surety.source_id && handleSkip(surety.id, surety.source_id)}
                                 disabled={['SKIPPED', 'PAID', 'COVERED', 'TERMINATED'].includes(surety.status) || createExclusion.isPending}
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.03] text-orange-400/80 text-xs font-bold hover:bg-orange-500/10 hover:text-orange-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-transparent hover:border-orange-500/20"
+                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.04] text-white/70 text-xs font-medium hover:bg-white/[0.08] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-white/10 hover:border-white/20"
                             >
                                 {actionLoading?.id === surety.id && actionLoading?.action === 'SKIP' ? (
                                     <Loader2 size={14} className="animate-spin" />
@@ -136,7 +136,7 @@ const Sureties: React.FC = () => {
                             <button
                                 onClick={() => handleTerminate(surety.id, surety.title, surety.sub_category)}
                                 disabled={['TERMINATED', 'COVERED'].includes(surety.status) || createExclusion.isPending}
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.03] text-red-400/80 text-xs font-bold hover:bg-red-500/10 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-transparent hover:border-red-500/20"
+                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.04] text-rose-400/80 text-xs font-medium hover:bg-rose-500/10 hover:text-rose-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-white/10 hover:border-rose-500/20"
                             >
                                 {actionLoading?.id === surety.id && actionLoading?.action === 'STOP' ? (
                                     <Loader2 size={14} className="animate-spin" />
