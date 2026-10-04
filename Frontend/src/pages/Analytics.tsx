@@ -222,12 +222,12 @@ const Analytics: React.FC = () => {
                             {/* 2. Total Liquid Account Balance */}
                             <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-3xl flex items-center justify-between group hover:border-white/20 transition-all">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-9 h-9 rounded-2xl bg-white/[0.06] text-white/90 flex items-center justify-center shrink-0 border border-white/10">
+                                    <div className="w-9 h-9 rounded-2xl bg-accent-subtle text-accent-text flex items-center justify-center shrink-0 border border-accent-border">
                                         <Wallet size={16} />
                                     </div>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-1.5">
-                                            <p className="text-[9px] font-black text-white/90 uppercase tracking-widest truncate">Liquid Balance</p>
+                                            <p className="text-[9px] font-black text-accent-text uppercase tracking-widest truncate">Liquid Balance</p>
                                             {!showSensitive && <Lock size={9} className="text-gray-400" />}
                                         </div>
                                         <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">Bank & Cash Total</p>
@@ -416,13 +416,13 @@ const Analytics: React.FC = () => {
                         <div className="flex bg-white/[0.03] p-1 rounded-xl border border-white/[0.05]">
                             <button
                                 onClick={() => setTrendFreq('weekly')}
-                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'weekly' ? 'bg-white/15 text-white border border-white/20 font-semibold shadow-sm' : 'text-gray-500 hover:text-white'}`}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'weekly' ? 'bg-accent-subtle text-accent-text border border-accent-border font-semibold shadow-sm' : 'text-gray-500 hover:text-white'}`}
                             >
                                 Weekly
                             </button>
                             <button
                                 onClick={() => setTrendFreq('monthly')}
-                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'monthly' ? 'bg-white/15 text-white border border-white/20 font-semibold shadow-sm' : 'text-gray-500 hover:text-white'}`}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'monthly' ? 'bg-accent-subtle text-accent-text border border-accent-border font-semibold shadow-sm' : 'text-gray-500 hover:text-white'}`}
                             >
                                 Monthly
                             </button>

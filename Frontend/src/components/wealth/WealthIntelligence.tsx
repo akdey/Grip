@@ -222,7 +222,7 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
                                     {chartData.map((entry, index) => (
                                         <Cell
                                             key={`cell-${index}`}
-                                            fill={entry.isUserDate ? '#ffffff' : entry.isBest ? '#10b981' : '#262626'}
+                                            fill={entry.isUserDate ? 'var(--color-accent-solid, #ffffff)' : entry.isBest ? '#10b981' : '#262626'}
                                             fillOpacity={entry.isUserDate || entry.isBest ? 1 : 0.5}
                                         />
                                     ))}
@@ -231,7 +231,7 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
                             </BarChart>
                         </ResponsiveContainer>
                         <div className="flex justify-center gap-4 text-[10px] text-gray-500 mt-2">
-                            <div className="flex items-center gap-1"><div className="w-2 h-2 bg-white rounded-full"></div> Your Day</div>
+                            <div className="flex items-center gap-1"><div className="w-2 h-2 bg-accent rounded-full"></div> Your Day</div>
                             <div className="flex items-center gap-1"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> Best Day</div>
                             <div className="flex items-center gap-1"><div className="w-2 h-2 bg-neutral-700 rounded-full"></div> Others</div>
                         </div>
@@ -324,13 +324,13 @@ const InvestmentSimulator: React.FC = () => {
                 <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
                     <button
                         onClick={() => setInvestmentType('LUMPSUM')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${investmentType === 'LUMPSUM' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-white'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${investmentType === 'LUMPSUM' ? 'bg-accent-subtle text-accent-text border border-accent-border shadow-sm' : 'text-gray-500 hover:text-white'}`}
                     >
                         Lumpsum
                     </button>
                     <button
                         onClick={() => setInvestmentType('SIP')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${investmentType === 'SIP' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-white'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${investmentType === 'SIP' ? 'bg-accent-subtle text-accent-text border border-accent-border shadow-sm' : 'text-gray-500 hover:text-white'}`}
                     >
                         Monthly SIP
                     </button>
@@ -340,7 +340,7 @@ const InvestmentSimulator: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2 relative">
                     <label className="text-xs text-gray-500 uppercase">Search Mutual Fund</label>
-                    <div className={`bg-white/5 border rounded-lg flex items-center px-3 py-2 transition-colors ${showDropdown ? 'border-white/30' : 'border-white/10'}`}>
+                    <div className={`bg-white/5 border rounded-lg flex items-center px-3 py-2 transition-colors ${showDropdown ? 'border-accent-border' : 'border-white/10'}`}>
                         <Search size={16} className="text-gray-500 mr-2" />
                         <input
                             type="text"
@@ -413,7 +413,7 @@ const InvestmentSimulator: React.FC = () => {
             <button
                 onClick={handleSimulate}
                 disabled={loading}
-                className="w-full py-3 bg-white hover:bg-neutral-200 text-black rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+                className="w-full py-3 bg-accent hover:bg-accent-hover text-black rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
             >
                 {loading ? <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : "Calculate Returns"}
             </button>

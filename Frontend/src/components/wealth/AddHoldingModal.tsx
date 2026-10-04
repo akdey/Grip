@@ -396,7 +396,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                     <button
                                         type="button"
                                         onClick={() => setShowExistingFields(!showExistingFields)}
-                                        className="w-full text-left text-sm font-medium text-white/80 hover:text-white transition-colors flex items-center justify-between p-3 bg-white/[0.03] rounded-xl border border-white/10 hover:border-white/20"
+                                        className="w-full text-left text-sm font-medium text-accent-text hover:text-accent-solid-hover transition-colors flex items-center justify-between p-3 bg-accent-subtle rounded-xl border border-accent-border hover:border-accent-border/60"
                                     >
                                         <span>📊 Already own this asset? Add existing holdings</span>
                                         <span className="text-lg font-bold">{showExistingFields ? '−' : '+'}</span>
@@ -485,7 +485,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                             type="submit"
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="w-full py-4 rounded-xl bg-white hover:bg-neutral-200 text-black font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm disabled:opacity-50"
+                            className="w-full py-4 rounded-xl bg-accent hover:bg-accent-hover text-black font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm disabled:opacity-50"
                         >
                             {loading ? <div className="animate-spin w-5 h-5 border-2 border-black/30 border-t-black rounded-full"></div> : <><Save size={18} /> Deploy Asset to Portfolio</>}
                         </button>

@@ -74,7 +74,7 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                         onClick={() => setViewMode('ACCRUAL')}
                         className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-lg transition-all ${
                             isAccrual
-                                ? 'bg-white/15 text-white border border-white/20 shadow-sm'
+                                ? 'bg-accent-subtle text-accent-text border border-accent-border font-semibold shadow-sm'
                                 : 'text-gray-400 hover:text-white'
                         }`}
                     >
@@ -84,7 +84,7 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                         onClick={() => setViewMode('CASH')}
                         className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-lg transition-all ${
                             !isAccrual
-                                ? 'bg-white/15 text-white border border-white/20 shadow-sm'
+                                ? 'bg-accent-subtle text-accent-text border border-accent-border font-semibold shadow-sm'
                                 : 'text-gray-400 hover:text-white'
                         }`}
                     >
@@ -121,7 +121,7 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                                     initial={{ scaleX: 0 }}
                                     animate={{ scaleX: Math.min(1, resolvedDirect / maxVal) }}
                                     style={{ transformOrigin: 'left' }}
-                                    className="h-full bg-white rounded-full w-full"
+                                    className="h-full bg-accent rounded-full w-full"
                                 />
                             </div>
                         </div>
@@ -161,7 +161,7 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                                     initial={{ scaleX: 0 }}
                                     animate={{ scaleX: Math.min(1, resolvedDirect / maxVal) }}
                                     style={{ transformOrigin: 'left' }}
-                                    className="h-full bg-white rounded-full w-full"
+                                    className="h-full bg-accent rounded-full w-full"
                                 />
                             </div>
                         </div>

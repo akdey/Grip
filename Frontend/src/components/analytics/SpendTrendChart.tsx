@@ -87,8 +87,8 @@ export const SpendTrendChart: React.FC<SpendTrendChartProps> = ({ data, frequenc
                         {processedData.map((_, index) => (
                             <Cell
                                 key={`cell-${index}`}
-                                fill={index === processedData.length - 1 ? '#ffffff' : 'rgba(255, 255, 255, 0.2)'}
-                                className="transition-all duration-300 hover:fill-white/80"
+                                fill={index === processedData.length - 1 ? 'var(--color-accent-solid, #ffffff)' : 'rgba(255, 255, 255, 0.18)'}
+                                className="transition-all duration-300 hover:fill-accent-hover"
                             />
                         ))}
                     </Bar>

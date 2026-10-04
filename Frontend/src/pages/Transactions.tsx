@@ -309,7 +309,7 @@ const Transactions: React.FC = () => {
                         onClick={() => setIsSortOpen(true)}
                         className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
                             sortBy !== 'date_desc' || groupBy !== 'date'
-                                ? 'bg-white/15 border-white/30 text-white shadow-sm'
+                                ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm'
                                 : 'bg-white/[0.03] border-white/10 text-gray-400'
                         }`}
                         title="Sort & Group Ledger"
@@ -320,7 +320,7 @@ const Transactions: React.FC = () => {
                     {/* Filter Button - Active State Indication */}
                     <button
                         onClick={() => setFilterOpen(true)}
-                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${hasActiveFilters ? 'bg-white/15 border-white/30 text-white shadow-sm' : 'bg-white/[0.03] border-white/10 text-gray-400'}`}
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${hasActiveFilters ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm' : 'bg-white/[0.03] border-white/10 text-gray-400'}`}
                         title="Filter Discovery"
                     >
                         <Filter size={18} />
@@ -330,10 +330,10 @@ const Transactions: React.FC = () => {
 
             {/* Active Filter Banner with 1-click Clear Filter */}
             {hasActiveFilters && (
-                <div className="mx-4 mt-3 px-4 py-2.5 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between animate-enter">
+                <div className="mx-4 mt-3 px-4 py-2.5 rounded-2xl bg-accent-subtle border border-accent-border flex items-center justify-between animate-enter">
                     <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
-                        <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+                        <span className="text-[10px] font-bold text-accent-text uppercase tracking-wider truncate">
                             {view === 'day' ? `Day: ${format(currentMonth, 'dd MMM yyyy')}` :
                              view === 'month' ? `Month: ${format(currentMonth, 'MMMM yyyy')}` :
                              view === 'year' ? `Year: ${format(currentMonth, 'yyyy')}` :
@@ -435,7 +435,7 @@ const Transactions: React.FC = () => {
                                             className={`
                                                 aspect-[3/4.5] p-1 border border-white/[0.02] flex flex-col items-center justify-between py-2 rounded-2xl transition-all
                                                 ${!isCurrentMonth ? 'opacity-10' : ''}
-                                                ${isToday(day) ? 'bg-white/10 border-white/20' : 'bg-white/[0.01]'}
+                                                ${isToday(day) ? 'bg-accent-subtle border-accent-border text-accent-text font-black' : 'bg-white/[0.01]'}
                                             `}
                                         >
                                             <span className={`text-[10px] font-black ${isCurrentMonth ? 'text-gray-400' : 'text-gray-700'}`}>

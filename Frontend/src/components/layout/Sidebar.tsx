@@ -47,7 +47,7 @@ export const Sidebar: React.FC = () => {
                         className={({ isActive }) => `
                             flex items-center space-x-4 px-5 py-3.5 rounded-2xl transition-all duration-150 group active:scale-[0.98] touch-manipulation select-none
                             ${isActive
-                                ? 'bg-white/10 text-white border border-white/10 shadow-sm font-semibold'
+                                ? 'bg-accent-subtle text-accent-text border border-accent-border shadow-sm font-semibold'
                                 : 'text-text-muted hover:bg-white/[0.04] hover:text-white border border-transparent'
                             }
                         `}
@@ -57,9 +57,9 @@ export const Sidebar: React.FC = () => {
                                 <item.icon
                                     size={19}
                                     strokeWidth={isActive ? 2.5 : 2}
-                                    className={isActive ? 'text-white' : 'text-text-muted group-hover:text-text-primary'}
+                                    className={isActive ? 'text-accent-text' : 'text-text-muted group-hover:text-text-primary'}
                                 />
-                                <span className={`text-[13px] tracking-wide ${isActive ? 'font-semibold text-white' : 'font-medium'}`}>{item.label}</span>
+                                <span className={`text-[13px] tracking-wide ${isActive ? 'font-semibold text-accent-text' : 'font-medium'}`}>{item.label}</span>
                             </>
                         )}
                     </NavLink>

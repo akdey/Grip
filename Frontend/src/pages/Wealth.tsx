@@ -303,14 +303,14 @@ const Wealth: React.FC = () => {
                         <div className="flex space-x-4">
                             <button
                                 onClick={() => setActiveMainTab('trajectory')}
-                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'trajectory' ? 'text-white' : 'text-gray-600 hover:text-gray-400'}`}
+                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'trajectory' ? 'text-accent-text border-b-2 border-accent pb-1' : 'text-gray-600 hover:text-gray-400 pb-1'}`}
                             >
                                 <LineChart size={16} />
                                 Future Predictions
                             </button>
                             <button
                                 onClick={() => setActiveMainTab('intelligence')}
-                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'intelligence' ? 'text-white' : 'text-gray-600 hover:text-gray-400'}`}
+                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'intelligence' ? 'text-accent-text border-b-2 border-accent pb-1' : 'text-gray-600 hover:text-gray-400 pb-1'}`}
                             >
                                 <BrainCircuit size={16} />
                                 Intelligence
@@ -331,7 +331,7 @@ const Wealth: React.FC = () => {
                                 <button
                                     onClick={runSimulation}
                                     disabled={simulating}
-                                    className="px-3 py-1.5 bg-white hover:bg-neutral-200 rounded-lg text-black text-xs font-semibold disabled:opacity-50 transition-colors shadow-sm"
+                                    className="px-3 py-1.5 bg-accent hover:bg-accent-hover rounded-lg text-black text-xs font-semibold disabled:opacity-50 transition-colors shadow-sm"
                                 >
                                     {simulating ? "..." : "Update"}
                                 </button>
@@ -354,8 +354,8 @@ const Wealth: React.FC = () => {
                                                 <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                             </linearGradient>
                                             <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                                <stop offset="5%" stopColor="var(--color-accent-solid, #22d3ee)" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="var(--color-accent-solid, #22d3ee)" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
@@ -381,7 +381,7 @@ const Wealth: React.FC = () => {
                                         <Area
                                             type="monotone"
                                             dataKey="forecast"
-                                            stroke="#6366f1"
+                                            stroke="var(--color-accent-solid, #22d3ee)"
                                             strokeDasharray="5 5"
                                             strokeWidth={2}
                                             fillOpacity={1}

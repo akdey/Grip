@@ -67,8 +67,8 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                 <div className="flex flex-col">
                     <span className="text-[10px] font-black uppercase tracking-[2px] text-white/40">Automation Yield</span>
                     <div className="flex items-center gap-2 mt-1">
-                        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                        <span className="text-lg font-black text-white leading-none">
+                        <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                        <span className="text-lg font-black text-accent-text leading-none">
                             {processedData[processedData.length - 1]?.yield || 0}%
                         </span>
                     </div>
@@ -96,8 +96,8 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                         >
                             <defs>
                                 <linearGradient id="colorYield" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
+                                    <stop offset="5%" stopColor="var(--color-accent-solid, #ffffff)" stopOpacity={0.35} />
+                                    <stop offset="95%" stopColor="var(--color-accent-solid, #ffffff)" stopOpacity={0} />
                                 </linearGradient>
                                 <linearGradient id="colorFriction" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2} />
@@ -158,7 +158,7 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                             <Area
                                 type="monotone"
                                 dataKey="yield"
-                                stroke="#ffffff"
+                                stroke="var(--color-accent-solid, #ffffff)"
                                 strokeWidth={3}
                                 fillOpacity={1}
                                 fill="url(#colorYield)"

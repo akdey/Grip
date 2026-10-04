@@ -33,19 +33,19 @@ export const AIForecast: React.FC<AIForecastProps> = memo(({
     return (
         <div
             onClick={onShowDetails}
-            className="bg-white/[0.02] border border-white/[0.05] hover:border-white/20 p-6 rounded-[2.5rem] relative overflow-hidden group cursor-pointer active:scale-95 transition-all"
+            className="bg-white/[0.02] border border-white/[0.05] hover:border-accent-border p-6 rounded-[2.5rem] relative overflow-hidden group cursor-pointer active:scale-95 transition-all"
         >
-            <div className="absolute right-6 top-6 text-white/[0.04]">
+            <div className="absolute right-6 top-6 text-accent-text/10">
                 <Sparkles size={40} />
             </div>
             <div className="relative z-10 flex flex-col gap-4">
                 <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-white/[0.06] text-white/90 flex items-center justify-center">
+                    <div className="w-6 h-6 rounded-full bg-accent-subtle text-accent-text flex items-center justify-center">
                         <Activity size={14} />
                     </div>
-                    <h2 className="text-[9px] font-black uppercase tracking-[3px] text-white/40">Next Month Forecast</h2>
+                    <h2 className="text-[9px] font-black uppercase tracking-[3px] text-white/50">Next Month Forecast</h2>
                     {forecast?.confidence === 'low' && (
-                        <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-status-warning-bg text-status-warning-text border border-status-warning-border">
                             ⚠ Low Data
                         </span>
                     )}
@@ -58,8 +58,8 @@ export const AIForecast: React.FC<AIForecastProps> = memo(({
                     </p>
                 </div>
                 <div className="flex items-center gap-2 mt-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                    <span className="text-[8px] font-bold text-gray-400 group-hover:text-white uppercase tracking-widest transition-colors">Tap for breakdown</span>
-                    <ArrowUpRight size={10} className="text-gray-400 group-hover:text-white transition-colors" />
+                    <span className="text-[8px] font-bold text-gray-400 group-hover:text-accent-text uppercase tracking-widest transition-colors">Tap for breakdown</span>
+                    <ArrowUpRight size={10} className="text-gray-400 group-hover:text-accent-text transition-colors" />
                 </div>
             </div>
         </div>

@@ -58,7 +58,7 @@ const SystemIntelligence: React.FC = () => {
 
             <div className="flex items-center justify-between mb-8 relative z-10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-white/[0.06] text-white flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-2xl bg-accent-subtle text-accent-text border border-accent-border flex items-center justify-center">
                         <Brain size={22} />
                     </div>
                     <div>
@@ -89,7 +89,7 @@ const SystemIntelligence: React.FC = () => {
                         <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">AI Handled</p>
                         <p className="text-lg font-black text-white/90">{systemTxns}</p>
                     </div>
-                    <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center text-white/80">
+                    <div className="w-8 h-8 rounded-lg bg-accent-subtle border border-accent-border flex items-center justify-center text-accent-text">
                         <Sparkles size={14} />
                     </div>
                 </div>
@@ -172,16 +172,16 @@ const More: React.FC = () => {
                             whileTap={{ scale: 0.98 }}
                             onClick={() => handleFeatureClick(card)}
                             disabled={card.id === 'backup' && isExporting}
-                            className={`flex items-center gap-2.5 p-3 rounded-[1.2rem] bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.06] transition-all text-left group ${card.id === 'backup' && isExporting ? 'opacity-50' : ''}`}
+                            className={`flex items-center gap-2.5 p-3 rounded-[1.2rem] bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.06] hover:border-accent-border/40 transition-all text-left group ${card.id === 'backup' && isExporting ? 'opacity-50' : ''}`}
                         >
-                            <div className={`w-8 h-8 rounded-lg ${card.bgColor} ${card.color} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0`}>
+                            <div className="w-8 h-8 rounded-lg bg-white/[0.06] text-white/90 group-hover:bg-accent-subtle group-hover:text-accent-text group-hover:border group-hover:border-accent-border transition-colors flex items-center justify-center shadow-sm group-hover:scale-105 shrink-0">
                                 {card.id === 'backup' && isExporting ? (
                                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
                                 ) : (
                                     <card.icon size={15} />
                                 )}
                             </div>
-                            <span className="text-[11px] font-bold text-gray-300 tracking-wide uppercase whitespace-nowrap">
+                            <span className="text-[11px] font-bold text-gray-300 group-hover:text-white tracking-wide uppercase whitespace-nowrap transition-colors">
                                 {card.id === 'backup' && isExporting ? 'Exporting...' : card.label}
                             </span>
                         </motion.button>

@@ -69,11 +69,11 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
             dot: 'bg-amber-400'
         },
         success: {
-            border: 'border-white/[0.08]',
+            border: 'border-accent-border',
             text: 'text-white',
             amountText: 'text-white',
             shadow: 'shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
-            pill: 'bg-white/[0.06] text-white/90 border-white/10',
+            pill: 'bg-accent-subtle text-accent-text border-accent-border',
             dot: 'bg-emerald-400'
         }
     };
@@ -82,7 +82,7 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
 
     return (
         <div
-            className={`relative p-8 rounded-[3.5rem] bg-white/[0.02] backdrop-blur-3xl border ${theme.border} overflow-hidden ${theme.shadow} cursor-pointer group transition-all duration-500 hover:border-white/20 active:scale-[0.99]`}
+            className={`relative p-8 rounded-[3.5rem] bg-white/[0.02] backdrop-blur-3xl border ${theme.border} overflow-hidden ${theme.shadow} cursor-pointer group transition-all duration-500 hover:border-accent-border/60 active:scale-[0.99]`}
             onClick={onNavigate}
         >
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
@@ -109,7 +109,7 @@ export const SafeToSpendHero: React.FC<SafeToSpendHeroProps> = memo(({
                             animate={{ scaleX: Math.max(0, Math.min((safe / Math.max(balance, 1)), 1)) }}
                             style={{ transformOrigin: 'left' }}
                             transition={{ duration: 1.5, ease: [0.34, 1.56, 0.64, 1] }}
-                            className="h-full bg-gradient-to-r from-white to-white/60 shadow-[0_0_20px_rgba(255,255,255,0.3)] w-full"
+                            className="h-full bg-gradient-to-r from-accent to-accent-hover shadow-[0_0_20px_var(--color-accent-subtle)] w-full"
                         />
                     </div>
                     <div className="flex justify-between text-[7px] font-black uppercase tracking-[2px] text-gray-400">

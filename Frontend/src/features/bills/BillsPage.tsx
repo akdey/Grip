@@ -93,8 +93,8 @@ const BillsPage: React.FC = () => {
                     <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2.5rem] relative overflow-hidden">
                         <TrendingDown className="absolute -right-4 -bottom-4 text-white/5" size={80} />
                         <div>
-                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-1">Due 7d</p>
-                            <p className="text-2xl font-black text-white/80 leading-none">₹{stats.dueSoon >= 1000 ? `${(stats.dueSoon / 1000).toFixed(1)}k` : stats.dueSoon}</p>
+                            <p className="text-[8px] font-black text-accent-text uppercase tracking-widest mb-1">Due 7d</p>
+                            <p className="text-2xl font-black text-white/90 leading-none">₹{stats.dueSoon >= 1000 ? `${(stats.dueSoon / 1000).toFixed(1)}k` : stats.dueSoon}</p>
                         </div>
                     </div>
                 </div>
@@ -175,7 +175,7 @@ const BillsPage: React.FC = () => {
                                         <div className="text-right shrink-0">
                                             <p className="text-lg font-black tracking-tighter text-white">₹{Number(bill.amount).toLocaleString()}</p>
                                             <button
-                                                className="mt-2 text-[8px] font-black uppercase tracking-widest py-1.5 px-3 rounded-full bg-white/[0.06] text-white/90 border border-white/10 hover:bg-white/10 active:scale-90 transition-all"
+                                                className="mt-2 text-[8px] font-black uppercase tracking-widest py-1.5 px-3 rounded-full bg-status-success-bg text-status-success-text border border-status-success-border hover:bg-emerald-500/20 active:scale-90 transition-all"
                                                 onClick={() => markPaid.mutate({ id: bill.id, paid: true })}
                                                 disabled={markPaid.isPending}
                                             >

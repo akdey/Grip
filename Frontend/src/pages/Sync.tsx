@@ -72,7 +72,7 @@ const Sync: React.FC = () => {
                 {!status?.connected ? (
                     <Card className="p-10 space-y-10 bg-white/[0.02] border-white/[0.08] relative overflow-hidden">
                         <div className="relative z-10 text-center space-y-8">
-                            <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2.5rem] bg-white/[0.06] text-white border border-white/10 shadow-inner group">
+                            <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2.5rem] bg-accent-subtle text-accent-text border border-accent-border shadow-inner group">
                                 <Mail size={42} strokeWidth={1.5} className="group-hover:scale-105 transition-transform duration-500" />
                             </div>
 
@@ -134,7 +134,7 @@ const Sync: React.FC = () => {
                         <Card className="p-6 bg-white/[0.02] border-white/[0.08]">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-white">
+                                    <div className="w-12 h-12 rounded-2xl bg-status-success-bg border border-status-success-border flex items-center justify-center text-status-success-text">
                                         <CheckCircle size={24} />
                                     </div>
                                     <div>
@@ -257,9 +257,9 @@ const Sync: React.FC = () => {
                                                                 </div>
                                                                 <div className="flex items-center gap-4">
                                                                     {item.wealth_mapped && (
-                                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/10">
-                                                                            <TrendingUp size={10} className="text-white/70" />
-                                                                            <span className="text-[8px] font-black uppercase text-white/70 tracking-wider">Wealth Sync</span>
+                                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent-subtle border border-accent-border">
+                                                                            <TrendingUp size={10} className="text-accent-text" />
+                                                                            <span className="text-[8px] font-black uppercase text-accent-text tracking-wider">Wealth Sync</span>
                                                                         </div>
                                                                     )}
                                                                     <p className={`text-xs font-black ${item.amount < 0 ? 'text-white' : 'text-green-400'}`}>

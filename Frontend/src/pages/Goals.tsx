@@ -71,7 +71,7 @@ const Goals: React.FC = () => {
             {/* Header */}
             <header className="px-4 py-6 flex items-center justify-between border-b border-white/[0.05]">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center border border-white/10 text-white">
+                    <div className="w-10 h-10 rounded-xl bg-accent-subtle flex items-center justify-center border border-accent-border text-accent-text">
                         <Target size={20} />
                     </div>
                     <div>
@@ -208,8 +208,8 @@ const Goals: React.FC = () => {
                                         <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Target</p>
                                         <p className="text-base font-black text-white">{formatCurrency(goal.target_amount)}</p>
                                     </div>
-                                    <div className="bg-white/[0.04] rounded-xl p-3 border border-white/[0.06]">
-                                        <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-1">Monthly</p>
+                                    <div className="bg-accent-subtle rounded-xl p-3 border border-accent-border">
+                                        <p className="text-[9px] text-accent-text uppercase tracking-widest mb-1 font-bold">Monthly</p>
                                         <p className="text-base font-black text-white">{formatCurrency(goal.monthly_contribution)}</p>
                                     </div>
                                 </div>
@@ -220,7 +220,7 @@ const Goals: React.FC = () => {
                                         initial={{ width: 0 }}
                                         animate={{ width: `${(goal.current_saved / goal.target_amount) * 100}%` }}
                                         transition={{ duration: 1, ease: 'easeOut' }}
-                                        className="absolute inset-y-0 left-0 bg-white rounded-full"
+                                        className="absolute inset-y-0 left-0 bg-accent rounded-full"
                                     />
                                 </div>
                                 <p className="text-[9px] text-gray-600 mt-2 text-right">
@@ -231,7 +231,7 @@ const Goals: React.FC = () => {
                     </div>
                 ) : (
                     <div className="text-center py-16">
-                        <div className="w-16 h-16 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center mx-auto mb-4 text-white">
+                        <div className="w-16 h-16 rounded-2xl bg-accent-subtle border border-accent-border flex items-center justify-center mx-auto mb-4 text-accent-text">
                             <Target size={28} />
                         </div>
                         <p className="text-sm text-gray-500">No goals yet</p>

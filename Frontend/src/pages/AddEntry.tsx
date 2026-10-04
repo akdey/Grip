@@ -564,7 +564,7 @@ const AddEntry: React.FC = () => {
                                             onClick={() => setCardId(cardId === card.id ? '' : card.id)}
                                             className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border transition-all whitespace-nowrap min-w-[110px] justify-center ${
                                                 cardId === card.id
-                                                    ? 'bg-white/15 border-white/30 text-white shadow-sm font-bold'
+                                                    ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm font-bold'
                                                     : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-gray-300'
                                             }`}
                                         >
@@ -601,7 +601,7 @@ const AddEntry: React.FC = () => {
                             <div className="p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.05] space-y-3">
                                 <div className="flex flex-wrap gap-2">
                                     {tags.map(tag => (
-                                        <span key={tag} className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-[9px] font-black uppercase tracking-wider">
+                                        <span key={tag} className="flex items-center gap-1.5 px-2.5 py-1 bg-accent-subtle border border-accent-border rounded-lg text-accent-text text-[9px] font-black uppercase tracking-wider">
                                             {tag}
                                             <button onClick={() => removeTag(tag)} className="hover:text-white transition-colors">
                                                 <X size={10} />
@@ -623,7 +623,7 @@ const AddEntry: React.FC = () => {
                                     </div>
                                     <button
                                         onClick={addTag}
-                                        className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center active:scale-90 transition-all"
+                                        className="w-10 h-10 rounded-xl bg-accent hover:bg-accent-hover text-black flex items-center justify-center active:scale-90 transition-all font-bold"
                                     >
                                         <Plus size={16} />
                                     </button>
@@ -651,7 +651,7 @@ const AddEntry: React.FC = () => {
 
                             <div className="flex items-center justify-between p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.05]">
                                 <div className="flex items-center gap-3.5">
-                                    <div className={`w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center transition-colors ${isSurety ? 'text-white' : 'text-gray-700'}`}>
+                                    <div className={`w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center transition-colors ${isSurety ? 'text-status-warning-text' : 'text-gray-700'}`}>
                                         <ToggleLeft size={16} />
                                     </div>
                                     <div className="flex flex-col">
@@ -669,7 +669,7 @@ const AddEntry: React.FC = () => {
                                     disabled={!!getSelectedSubCategory()?.is_surety}
                                 >
                                     {isSurety ? (
-                                        <ToggleRight size={32} className="text-white opacity-90" />
+                                        <ToggleRight size={32} className="text-status-warning-text opacity-90" />
                                     ) : (
                                         <ToggleLeft size={32} className="text-gray-700" />
                                     )}
@@ -686,7 +686,7 @@ const AddEntry: React.FC = () => {
                             onClick={handleApprove}
                             disabled={verifyMutation.isPending || !amount || !category}
                             className={`
-                                h-14 px-8 rounded-full bg-white text-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all
+                                h-14 px-8 rounded-full bg-status-success-bg border border-status-success-border text-status-success-text flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all
                                 ${verifyMutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed' : 'hover:scale-105'}
                             `}
                         >
@@ -700,8 +700,8 @@ const AddEntry: React.FC = () => {
                                     onClick={handleSaveAndNew}
                                     disabled={mutation.isPending || !amount || !category}
                                     className={`
-                                        w-14 h-14 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/10 active:scale-95 transition-all
-                                        ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white/20'}
+                                        w-14 h-14 rounded-full bg-accent-subtle text-accent-text flex items-center justify-center border border-accent-border active:scale-95 transition-all
+                                        ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed' : 'hover:bg-accent/20'}
                                     `}
                                     title="Save & Add Another"
                                 >
@@ -712,8 +712,8 @@ const AddEntry: React.FC = () => {
                                 onClick={handleSave}
                                 disabled={mutation.isPending || !amount || !category}
                                 className={`
-                                    w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-2xl shadow-white/10 active:scale-95 transition-all
-                                    ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6'}
+                                    w-14 h-14 rounded-full bg-accent text-black flex items-center justify-center shadow-2xl shadow-accent/20 active:scale-95 transition-all
+                                    ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6 hover:bg-accent-hover'}
                                 `}
                             >
                                 <Save size={24} strokeWidth={2.5} />
@@ -801,7 +801,7 @@ const AddEntry: React.FC = () => {
                                                     <div
                                                         key={sub.id}
                                                         onClick={() => handleSubCategorySelect(sub)}
-                                                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-[0.98] ${subCategory === sub.name ? 'bg-white/10 border-white/20' : 'bg-white/[0.02] border-white/[0.05]'}`}
+                                                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-[0.98] ${subCategory === sub.name ? 'bg-accent-subtle border-accent-border text-accent-text' : 'bg-white/[0.02] border-white/[0.05]'}`}
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             <div
@@ -810,10 +810,10 @@ const AddEntry: React.FC = () => {
                                                             >
                                                                 <CategoryIcon name={sub.icon} size={14} fallback={<CategoryIcon name={tempCategory?.icon} size={14} />} />
                                                             </div>
-                                                            <span className={`text-sm font-bold uppercase tracking-tight ${subCategory === sub.name ? 'text-white' : 'text-gray-400'}`}>{sub.name}</span>
+                                                            <span className={`text-sm font-bold uppercase tracking-tight ${subCategory === sub.name ? 'text-accent-text font-black' : 'text-gray-400'}`}>{sub.name}</span>
                                                         </div>
                                                         {subCategory === sub.name && (
-                                                            <Check size={14} className="text-white" />
+                                                            <Check size={14} className="text-accent-text" />
                                                         )}
                                                     </div>
                                                 ))}

@@ -125,10 +125,10 @@ const Dashboard: React.FC = () => {
                                         <button
                                             key={s.id}
                                             onClick={() => { setScope(s.id); setShowScopeMenu(false); }}
-                                            className={`w-full text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-white/[0.05] transition-all flex items-center justify-between ${scope === s.id ? 'text-white bg-white/[0.05]' : 'text-gray-500'}`}
+                                            className={`w-full text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-white/[0.05] transition-all flex items-center justify-between ${scope === s.id ? 'text-accent-text bg-accent-subtle font-semibold' : 'text-gray-500'}`}
                                         >
                                             {s.label}
-                                            {scope === s.id && <Check size={12} className="text-white" />}
+                                            {scope === s.id && <Check size={12} className="text-accent-text" />}
                                         </button>
                                     ))}
                                 </motion.div>
@@ -142,7 +142,7 @@ const Dashboard: React.FC = () => {
                     <button
                         onClick={togglePrivacy}
                         className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all shadow-2xl ${showSensitive
-                            ? 'bg-white/10 border-white/20 text-white'
+                            ? 'bg-accent-subtle border-accent-border text-accent-text'
                             : 'bg-white/[0.03] border-white/[0.08] text-gray-400'
                             }`}
                         aria-label={showSensitive ? "Hide sensitive data" : "Show sensitive data"}
@@ -269,10 +269,10 @@ const Dashboard: React.FC = () => {
 
                             <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-8 custom-scrollbar select-text">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="bg-white/[0.03] border border-white/[0.08] p-6 rounded-3xl sm:col-span-2">
+                                    <div className="bg-accent-subtle border border-accent-border p-6 rounded-3xl sm:col-span-2">
                                         <div className="flex items-center gap-3 mb-3">
-                                            <Sparkles size={16} className="text-white/80" />
-                                            <span className="text-xs font-black text-white/80 uppercase tracking-widest">AI Context & Reasoning</span>
+                                            <Sparkles size={16} className="text-accent-text" />
+                                            <span className="text-xs font-black text-accent-text uppercase tracking-widest">AI Context & Reasoning</span>
                                         </div>
                                         <p className="text-sm font-medium text-white/90 leading-relaxed italic">
                                             "{forecast?.description || "Analysis provided by predictive models looking at historical burn rates and cyclical patterns."}"
@@ -339,7 +339,7 @@ const Dashboard: React.FC = () => {
                                     </div>
                                     <div className="text-right">
                                         <span className="text-sm font-black text-white tracking-tighter">{formatCurrency(forecast?.predicted_burden_30d || 0)}</span>
-                                        <p className="text-[8px] text-text-muted font-black uppercase tracking-widest">Projected Limit</p>
+                                        <p className="text-[8px] text-accent-text font-black uppercase tracking-widest">Projected Limit</p>
                                     </div>
                                 </div>
                             </div>

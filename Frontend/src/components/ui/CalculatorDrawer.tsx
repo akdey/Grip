@@ -95,25 +95,25 @@ export const CalculatorDrawer: React.FC<CalculatorDrawerProps> = ({ isOpen, onCl
 
                     {/* Keypad Grid with tactile feedback */}
                     <div className="grid grid-cols-4 gap-3 flex-1">
-                        <button onClick={handleClear} className={`${btnClass} col-span-1 bg-white/[0.08] text-white hover:bg-white/[0.12] text-xl`}>C</button>
+                        <button onClick={handleClear} className={`${btnClass} col-span-1 bg-status-danger-bg text-status-danger-text border-status-danger-border hover:bg-red-500/20 text-xl`}>C</button>
                         <button onClick={handleDelete} className={`${btnClass} col-span-1 bg-white/[0.04] hover:bg-white/[0.08] text-white`}><Delete size={20} /></button>
-                        <button onClick={() => handlePress('/')} className={`${btnClass} bg-white/[0.08] text-white hover:bg-white/[0.12] text-xl`}>÷</button>
-                        <button onClick={() => handlePress('*')} className={`${btnClass} bg-white/[0.08] text-white hover:bg-white/[0.12] text-xl`}>×</button>
+                        <button onClick={() => handlePress('/')} className={`${btnClass} bg-accent-subtle text-accent-text border-accent-border hover:bg-accent/20 text-xl`}>÷</button>
+                        <button onClick={() => handlePress('*')} className={`${btnClass} bg-accent-subtle text-accent-text border-accent-border hover:bg-accent/20 text-xl`}>×</button>
 
                         <button onClick={() => handlePress('7')} className={`${btnClass} bg-white/[0.03] text-white hover:bg-white/[0.06] text-2xl`}>7</button>
                         <button onClick={() => handlePress('8')} className={`${btnClass} bg-white/[0.03] text-white hover:bg-white/[0.06] text-2xl`}>8</button>
                         <button onClick={() => handlePress('9')} className={`${btnClass} bg-white/[0.03] text-white hover:bg-white/[0.06] text-2xl`}>9</button>
-                        <button onClick={() => handlePress('-')} className={`${btnClass} bg-white/[0.08] text-white hover:bg-white/[0.12] text-xl`}>−</button>
+                        <button onClick={() => handlePress('-')} className={`${btnClass} bg-accent-subtle text-accent-text border-accent-border hover:bg-accent/20 text-xl`}>−</button>
 
                         <button onClick={() => handlePress('4')} className={`${btnClass} bg-white/[0.03] text-white hover:bg-white/[0.06] text-2xl`}>4</button>
                         <button onClick={() => handlePress('5')} className={`${btnClass} bg-white/[0.03] text-white hover:bg-white/[0.06] text-2xl`}>5</button>
                         <button onClick={() => handlePress('6')} className={`${btnClass} bg-white/[0.03] text-white hover:bg-white/[0.06] text-2xl`}>6</button>
-                        <button onClick={() => handlePress('+')} className={`${btnClass} bg-white/[0.08] text-white hover:bg-white/[0.12] text-xl`}>+</button>
+                        <button onClick={() => handlePress('+')} className={`${btnClass} bg-accent-subtle text-accent-text border-accent-border hover:bg-accent/20 text-xl`}>+</button>
 
                         <button onClick={() => handlePress('1')} className={`${btnClass} bg-white/[0.03] text-white hover:bg-white/[0.06] text-2xl`}>1</button>
                         <button onClick={() => handlePress('2')} className={`${btnClass} bg-white/[0.03] text-white hover:bg-white/[0.06] text-2xl`}>2</button>
                         <button onClick={() => handlePress('3')} className={`${btnClass} bg-white/[0.03] text-white hover:bg-white/[0.06] text-2xl`}>3</button>
-                        <button onClick={handleCalculate} className={`${btnClass} row-span-2 bg-white text-black text-2xl hover:bg-neutral-200 shadow-sm font-black`}>=</button>
+                        <button onClick={handleCalculate} className={`${btnClass} row-span-2 bg-accent hover:bg-accent-hover text-black text-2xl shadow-sm font-black`}>=</button>
 
                         <button onClick={() => handlePress('0')} className={`${btnClass} col-span-2 bg-white/[0.03] text-white hover:bg-white/[0.06] text-2xl`}>0</button>
                         <button onClick={() => handlePress('.')} className={`${btnClass} bg-white/[0.03] text-white hover:bg-white/[0.06] text-2xl`}>.</button>
@@ -123,7 +123,7 @@ export const CalculatorDrawer: React.FC<CalculatorDrawerProps> = ({ isOpen, onCl
                 <div className="p-6 pt-2 border-t border-border-subtle bg-transparent">
                     <button
                         onClick={handleDone}
-                        className="w-full py-4 bg-white text-black rounded-2xl text-lg font-bold flex items-center justify-center gap-2 hover:bg-gray-100 active:scale-[0.97] transition-all shadow-xl touch-manipulation select-none"
+                        className="w-full py-4 bg-accent hover:bg-accent-hover text-black rounded-2xl text-lg font-bold flex items-center justify-center gap-2 active:scale-[0.97] transition-all shadow-xl touch-manipulation select-none"
                     >
                         <Check size={20} strokeWidth={3} />
                         Confirm Amount

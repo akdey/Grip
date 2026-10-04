@@ -79,11 +79,11 @@ const Sureties: React.FC = () => {
                         {/* Status Badge */}
                         <div className="absolute top-4 right-4">
                             <div className={`text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest border
-                                    ${surety.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
-                                    surety.status === 'PAID' ? 'bg-white/10 text-white border-white/20' :
-                                        surety.status === 'SKIPPED' ? 'bg-white/[0.04] text-white/50 border-white/10' :
+                                    ${surety.status === 'OVERDUE' ? 'bg-status-danger-bg text-status-danger-text border-status-danger-border' :
+                                    surety.status === 'PAID' ? 'bg-status-success-bg text-status-success-text border-status-success-border' :
+                                        surety.status === 'SKIPPED' ? 'bg-status-warning-bg text-status-warning-text border-status-warning-border' :
                                             surety.status === 'COVERED' ? 'bg-white/[0.04] text-white/60 border-white/10' :
-                                                'bg-white/[0.06] text-white/90 border-white/10'}`}>
+                                                'bg-accent-subtle text-accent-text border-accent-border'}`}>
                                 {surety.status}
                             </div>
                         </div>
@@ -101,7 +101,7 @@ const Sureties: React.FC = () => {
                             {surety.source_id && (
                                 <button
                                     onClick={() => navigate(`/transactions?highlight=${surety.source_id}`)}
-                                    className="text-xs text-white/70 hover:text-white flex items-center gap-1.5 hover:underline decoration-white/30 underline-offset-4 transition-all"
+                                    className="text-xs text-accent-text hover:underline decoration-accent-border underline-offset-4 transition-all flex items-center gap-1.5"
                                 >
                                     Source <ExternalLink size={12} />
                                 </button>

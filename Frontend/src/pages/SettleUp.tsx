@@ -171,10 +171,10 @@ const SettleUp: React.FC = () => {
             >
                 <div className="space-y-6 px-2 pb-10">
                     {/* Info Note */}
-                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
-                        <Info size={16} className="text-white/70 mt-0.5 shrink-0" />
+                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-accent-subtle border border-accent-border">
+                        <Info size={16} className="text-accent-text mt-0.5 shrink-0" />
                         <p className="text-[10px] text-gray-400 leading-relaxed">
-                            Manual entries added here only update peer balances and <strong className="text-white">will not affect your main expense tracking</strong>.
+                            Manual entries added here only update peer balances and <strong className="text-accent-text">will not affect your main expense tracking</strong>.
                         </p>
                     </div>
 
@@ -183,7 +183,7 @@ const SettleUp: React.FC = () => {
                         <button
                             onClick={() => setNewType('expense')}
                             className={`py-3.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${newType === 'expense'
-                                ? 'bg-white text-black shadow-sm'
+                                ? 'bg-status-success-bg text-status-success-text border border-status-success-border shadow-sm'
                                 : 'text-gray-400 hover:text-white'
                                 }`}
                         >
@@ -192,7 +192,7 @@ const SettleUp: React.FC = () => {
                         <button
                             onClick={() => setNewType('income')}
                             className={`py-3.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${newType === 'income'
-                                ? 'bg-white text-black shadow-sm'
+                                ? 'bg-status-danger-bg text-status-danger-text border border-status-danger-border shadow-sm'
                                 : 'text-gray-400 hover:text-white'
                                 }`}
                         >
@@ -314,7 +314,7 @@ const PeerHistoryDrawer = ({
                                         <div className="text-right">
                                             <div className="flex items-center justify-end gap-1 mb-0.5">
                                                 {entry.transaction_id && (
-                                                    <span className="text-[6px] px-1 py-0 rounded bg-white/5 border border-white/10 text-white/70 font-black uppercase tracking-tighter">
+                                                    <span className="text-[6px] px-1 py-0 rounded bg-accent-subtle border border-accent-border text-accent-text font-black uppercase tracking-tighter">
                                                         Synced
                                                     </span>
                                                 )}

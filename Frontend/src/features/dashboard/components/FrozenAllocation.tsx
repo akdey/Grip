@@ -36,7 +36,7 @@ export const FrozenAllocation: React.FC<FrozenAllocationProps> = memo(({
         <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between px-2">
                 <h2 className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Frozen Allocation</h2>
-                <span className="text-[10px] font-black text-white/90 uppercase tracking-widest bg-white/[0.06] px-3 py-1 rounded-full border border-white/10">
+                <span className="text-[10px] font-black text-status-warning-text uppercase tracking-widest bg-status-warning-bg px-3 py-1 rounded-full border border-status-warning-border">
                     {formatCurrency(Number(safeToSpend?.frozen_funds?.total_frozen) || 0)}
                 </span>
             </div>
@@ -47,7 +47,7 @@ export const FrozenAllocation: React.FC<FrozenAllocationProps> = memo(({
                     className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all cursor-pointer group active:scale-[0.98]"
                 >
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-white/[0.06] text-white/90 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                        <div className="w-10 h-10 rounded-2xl bg-status-danger-bg text-status-danger-text border border-status-danger-border flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
                             <Receipt size={18} />
                         </div>
                         <div>
@@ -62,7 +62,7 @@ export const FrozenAllocation: React.FC<FrozenAllocationProps> = memo(({
                             </p>
                             <p className="text-[7px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">Unpaid: {formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills) || 0)}</p>
                         </div>
-                        <ArrowRight size={14} className="text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                        <ArrowRight size={14} className="text-gray-500 group-hover:text-status-danger-text group-hover:translate-x-1 transition-all" />
                     </div>
                 </div>
 
@@ -71,7 +71,7 @@ export const FrozenAllocation: React.FC<FrozenAllocationProps> = memo(({
                     className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-[2rem] flex items-center justify-between hover:bg-white/[0.04] transition-all cursor-pointer group active:scale-[0.98]"
                 >
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-white/[0.06] text-white/90 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                        <div className="w-10 h-10 rounded-2xl bg-status-warning-bg text-status-warning-text border border-status-warning-border flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
                             <Lock size={18} />
                         </div>
                         <div>

@@ -257,7 +257,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                 <button
                                     onClick={handleSimulate}
                                     disabled={!formData.schemeCode || !formData.date || !formData.amount}
-                                    className="w-full py-4 rounded-2xl bg-white hover:bg-neutral-200 text-black font-semibold tracking-wide shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
+                                    className="w-full py-4 rounded-2xl bg-accent hover:bg-accent-hover text-black font-semibold tracking-wide shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
                                 >
                                     Activate Simulation
                                     <ArrowRight size={18} />
@@ -267,8 +267,8 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
 
                         {step === 2 && (
                             <div className="flex flex-col items-center justify-center h-64 space-y-4">
-                                <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                                <p className="text-white/80 font-mono text-xs animate-pulse">Running {formData.investmentType} Analysis...</p>
+                                <div className="w-16 h-16 border-4 border-accent-border border-t-accent rounded-full animate-spin" />
+                                <p className="text-accent-text font-mono text-xs animate-pulse">Running {formData.investmentType} Analysis...</p>
                             </div>
                         )}
 
@@ -279,7 +279,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                     <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Snapshot</p>
                                     <h3 className="text-sm font-medium text-gray-300 max-w-[90%] mx-auto leading-relaxed">
                                         {formData.investmentType} of <span className="text-white font-bold">₹{parseFloat(formData.amount).toLocaleString()}</span> in <br />
-                                        <span className="text-white font-medium">{formData.schemeName.substring(0, 35)}...</span><br />
+                                        <span className="text-accent-text font-semibold">{formData.schemeName.substring(0, 35)}...</span><br />
                                         <span className="text-gray-500 text-xs">from {new Date(result.invested_date).toLocaleDateString()} to {result.end_date ? new Date(result.end_date).toLocaleDateString() : 'Today'}</span>
                                     </h3>
                                 </div>

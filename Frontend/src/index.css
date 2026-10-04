@@ -127,12 +127,14 @@
   --color-subtle: rgba(255, 255, 255, 0.08);
   --color-separator: rgba(255, 255, 255, 0.08);
 
-  /* Accent (Cyan - Grip Brand) */
-  --color-accent-subtle: rgba(6, 182, 212, 0.12);
-  --color-accent-border: rgba(6, 182, 212, 0.3);
-  --color-accent-solid: #0891b2;
-  --color-accent-solid-hover: #06b6d4;
-  --color-accent-text: #22d3ee;
+  /* Accent (Dynamic Single-Source Brand Accent) */
+  --color-accent: var(--brand-accent);
+  --color-accent-hover: var(--brand-accent-hover);
+  --color-accent-solid: var(--brand-accent);
+  --color-accent-solid-hover: var(--brand-accent-hover);
+  --color-accent-subtle: var(--brand-accent-subtle);
+  --color-accent-border: var(--brand-accent-border);
+  --color-accent-text: var(--brand-accent-text);
 
   /* Status: Danger */
   --color-status-danger-bg: rgba(239, 68, 68, 0.14);
@@ -164,6 +166,26 @@
 }
 
 :root {
+  /* ==========================================================================
+     GLOBAL THEME CONTROLS ("Somewhere Between" - Single Source of Truth)
+     Change --brand-hue here to instantly re-theme the entire application!
+     Examples:
+       196 = Electric Cyan / Azure (Grip Signature)
+       215 = Apple iOS Cobalt Blue
+       160 = Mint Emerald
+       270 = Royal Violet
+       38  = Amber Gold
+     ========================================================================== */
+  --brand-hue: 196;
+  --brand-chroma: 0.14;
+
+  --brand-accent: oklch(0.68 var(--brand-chroma) var(--brand-hue));
+  --brand-accent-hover: oklch(0.74 var(--brand-chroma) var(--brand-hue));
+  --brand-accent-subtle: oklch(0.68 var(--brand-chroma) var(--brand-hue) / 0.12);
+  --brand-accent-border: oklch(0.68 var(--brand-chroma) var(--brand-hue) / 0.28);
+  --brand-accent-text: oklch(0.85 calc(var(--brand-chroma) * 0.9) var(--brand-hue));
+  --brand-accent-glow: oklch(0.68 var(--brand-chroma) var(--brand-hue) / 0.25);
+
   /* Backwards compatibility & CSS custom property seam */
   --color-bg-primary: var(--color-bg-page);
   --color-bg-secondary: var(--color-bg-surface);
@@ -171,7 +193,7 @@
 
   /* Brand Accents */
   --color-accent-emerald: var(--color-emerald-500);
-  --color-accent-cyan: var(--color-cyan-500);
+  --color-accent-cyan: var(--brand-accent);
   --color-accent-blue: var(--color-blue-500);
 
   --glass-bg: rgba(255, 255, 255, 0.03);
@@ -390,9 +412,9 @@ body::before {
 /* Display P3 Enhancement with sRGB Fallback */
 @media (color-gamut: p3) {
   :root {
-    --color-accent-solid: oklch(0.62 0.22 215);
-    --color-accent-solid-hover: oklch(0.72 0.20 215);
-    --color-accent-text: oklch(0.82 0.18 215);
+    --color-accent-solid: oklch(0.68 calc(var(--brand-chroma) * 1.15) var(--brand-hue));
+    --color-accent-solid-hover: oklch(0.74 calc(var(--brand-chroma) * 1.15) var(--brand-hue));
+    --color-accent-text: oklch(0.86 calc(var(--brand-chroma) * 1.05) var(--brand-hue));
   }
 }
 

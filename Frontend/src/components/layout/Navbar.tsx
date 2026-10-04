@@ -50,7 +50,7 @@ export const Navbar: React.FC = () => {
                             onPointerDown={() => haptics.selection()}
                             className={({ isActive }) => `
                                 flex flex-col items-center justify-center w-1/5 space-y-1.5 transition-all duration-150 touch-manipulation select-none active:scale-95
-                                ${isActive ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary'}
+                                ${isActive ? 'text-accent-text' : 'text-text-muted hover:text-text-secondary'}
                             `}
                         >
                             {({ isActive }) => (
@@ -62,10 +62,10 @@ export const Navbar: React.FC = () => {
                                         <item.icon
                                             size={20}
                                             strokeWidth={isActive ? 2.5 : 2}
-                                            className={isActive ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.35)]' : ''}
+                                            className={isActive ? 'text-accent-text drop-shadow-[0_0_10px_var(--color-accent-subtle)]' : ''}
                                         />
                                     </motion.div>
-                                    <span className="text-[8px] font-black uppercase tracking-[1.2px]">{item.label}</span>
+                                    <span className={`text-[8px] font-black uppercase tracking-[1.2px] ${isActive ? 'text-accent-text font-black' : ''}`}>{item.label}</span>
                                 </>
                             )}
                         </NavLink>
