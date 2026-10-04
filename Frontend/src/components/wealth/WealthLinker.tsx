@@ -107,21 +107,21 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
                     transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] bg-[#050505] border-t border-white/10 rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] bg-page border-t border-border-subtle rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
                 >
                     {/* Header */}
-                    <div className="p-6 sm:p-10 border-b border-white/10 flex justify-between items-center bg-white/[0.02] shrink-0">
+                    <div className="p-6 sm:p-10 border-b border-border-subtle flex justify-between items-center bg-surface-subtle shrink-0">
                         <div>
-                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic flex items-center gap-3">
-                                <LinkIcon className="text-white" size={28} />
+                            <h3 className="text-2xl font-black text-primary tracking-tighter uppercase italic flex items-center gap-3">
+                                <LinkIcon className="text-primary" size={28} />
                                 Neural Linker
                             </h3>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[4px] mt-1">Transaction-to-Asset Mapping Engine</p>
+                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-[4px] mt-1">Transaction-to-Asset Mapping Engine</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={onClose}
-                                className="w-14 h-14 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group"
+                                className="w-14 h-14 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-xl group"
                             >
                                 <ChevronDown size={28} className="group-hover:translate-y-0.5 transition-transform" />
                             </button>
@@ -133,13 +133,13 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
 
                         {step === 'SELECT_TXN' ? (
                             <>
-                                <p className="text-gray-400 text-sm mb-4">
+                                <p className="text-text-muted text-sm mb-4">
                                     Select an investment transaction to map to your portfolio.
                                 </p>
 
                                 {loading && transactions.length === 0 ? (
                                     <div className="flex-1 flex items-center justify-center">
-                                        <div className="animate-spin w-6 h-6 border-2 border-white/30 border-t-white rounded-full"></div>
+                                        <div className="animate-spin w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full"></div>
                                     </div>
                                 ) : (
                                     <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
@@ -147,20 +147,20 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                             <div
                                                 key={txn.id}
                                                 onClick={() => { setSelectedTxn(txn); setStep('SELECT_HOLDING'); }}
-                                                className="p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] cursor-pointer transition-colors flex justify-between items-center group"
+                                                className="p-3 rounded-xl border border-border-subtle bg-surface-subtle hover:bg-surface-hover cursor-pointer transition-colors flex justify-between items-center group"
                                             >
                                                 <div>
-                                                    <p className="font-medium text-gray-200">{txn.merchant_name}</p>
-                                                    <p className="text-xs text-gray-500">{new Date(txn.transaction_date).toLocaleDateString()}</p>
+                                                    <p className="font-medium text-primary">{txn.merchant_name}</p>
+                                                    <p className="text-xs text-text-muted">{new Date(txn.transaction_date).toLocaleDateString()}</p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-white font-mono font-medium">₹{Math.abs(txn.amount)}</p>
-                                                    <p className="text-xs text-white/70 opacity-0 group-hover:opacity-100 transition-opacity">Select →</p>
+                                                    <p className="text-primary font-mono font-medium">₹{Math.abs(txn.amount)}</p>
+                                                    <p className="text-xs text-text-muted opacity-0 group-hover:opacity-100 transition-opacity">Select →</p>
                                                 </div>
                                             </div>
                                         ))}
                                         {transactions.length === 0 && (
-                                            <div className="text-center text-gray-600 mt-10">
+                                            <div className="text-center text-text-muted mt-10">
                                                 No 'Investment' transactions found.
                                             </div>
                                         )}
@@ -172,29 +172,29 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                 <div className="flex items-center justify-between mb-4">
                                     <button
                                         onClick={() => setStep('SELECT_TXN')}
-                                        className="text-xs text-gray-500 hover:text-white transition-colors"
+                                        className="text-xs text-text-muted hover:text-primary transition-colors"
                                     >
                                         ← Back to Transactions
                                     </button>
-                                    <div className="px-3 py-1 bg-white/[0.06] rounded-full border border-white/10">
-                                        <span className="text-xs text-white/90">
+                                    <div className="px-3 py-1 bg-accent-subtle rounded-full border border-border-subtle">
+                                        <span className="text-xs text-primary font-medium">
                                             Linking: {selectedTxn?.merchant_name} (₹{Math.abs(selectedTxn?.amount || 0)})
                                         </span>
                                     </div>
                                 </div>
 
                                 <div className="relative mb-4">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
                                     <input
                                         type="text"
                                         placeholder="Search holdings..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full bg-[#151515] border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-white/30"
+                                        className="w-full bg-surface-subtle border border-border-subtle text-primary rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-border-default placeholder:text-text-muted"
                                     />
                                 </div>
 
-                                <p className="text-gray-400 text-xs mb-2">Select the Asset to link to:</p>
+                                <p className="text-text-muted text-xs mb-2">Select the Asset to link to:</p>
 
                                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                                     {holdings
@@ -203,16 +203,16 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                             <div
                                                 key={h.id}
                                                 onClick={() => handleLink(h.id)}
-                                                className="p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 cursor-pointer transition-colors flex justify-between items-center"
+                                                className="p-3 rounded-xl border border-border-subtle bg-surface-subtle hover:bg-surface-hover cursor-pointer transition-colors flex justify-between items-center"
                                             >
                                                 <div>
-                                                    <p className="font-medium text-gray-200">{h.name}</p>
-                                                    <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-gray-400">{h.asset_type}</span>
+                                                    <p className="font-medium text-primary">{h.name}</p>
+                                                    <span className="text-xs px-1.5 py-0.5 rounded bg-surface text-text-muted">{h.asset_type}</span>
                                                 </div>
                                                 {loading ? (
-                                                    <div className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></div>
+                                                    <div className="animate-spin w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full"></div>
                                                 ) : (
-                                                    <Check size={16} className="text-white opacity-0 hover:opacity-100" />
+                                                    <Check size={16} className="text-primary opacity-0 hover:opacity-100" />
                                                 )}
                                             </div>
                                         ))}

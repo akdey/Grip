@@ -48,29 +48,29 @@ export const SpendTrendChart: React.FC<SpendTrendChartProps> = ({ data, frequenc
                     data={processedData}
                     margin={{ top: 20, right: 0, left: -25, bottom: 0 }}
                 >
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" vertical={false} />
                     <XAxis
                         dataKey="formattedDate"
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: '#4b5563', fontSize: 10, fontWeight: '900' }}
+                        tick={{ fill: 'var(--color-text-muted)', fontSize: 10, fontWeight: '900' }}
                         dy={10}
                     />
                     <YAxis
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: '#4b5563', fontSize: 10, fontWeight: '900' }}
+                        tick={{ fill: 'var(--color-text-muted)', fontSize: 10, fontWeight: '900' }}
                     />
                     <Tooltip
-                        cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                        cursor={{ fill: 'var(--color-bg-surface-subtle)' }}
                         content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
                                 return (
-                                    <div className="bg-[#050505] border border-white/10 p-4 rounded-2xl shadow-2xl backdrop-blur-xl">
-                                        <p className="text-[10px] font-black text-gray-500 uppercase mb-2 tracking-widest">
+                                    <div className="bg-surface border border-border-subtle p-4 rounded-2xl shadow-2xl backdrop-blur-xl">
+                                        <p className="text-[10px] font-black text-text-muted uppercase mb-2 tracking-widest">
                                             {frequency === 'monthly' ? `${label} Spend` : label}
                                         </p>
-                                        <p className="text-xl font-black text-white tracking-tighter">
+                                        <p className="text-xl font-black text-primary tracking-tighter">
                                             {formatCurrency(Number(payload[0].value))}
                                         </p>
                                     </div>
@@ -87,7 +87,7 @@ export const SpendTrendChart: React.FC<SpendTrendChartProps> = ({ data, frequenc
                         {processedData.map((_, index) => (
                             <Cell
                                 key={`cell-${index}`}
-                                fill={index === processedData.length - 1 ? 'var(--color-accent-solid, #ffffff)' : 'rgba(255, 255, 255, 0.18)'}
+                                fill={index === processedData.length - 1 ? 'var(--color-accent-solid, #22d3ee)' : 'var(--color-border-strong, rgba(255, 255, 255, 0.18))'}
                                 className="transition-all duration-300 hover:fill-accent-hover"
                             />
                         ))}

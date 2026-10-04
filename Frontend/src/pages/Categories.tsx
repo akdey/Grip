@@ -83,23 +83,23 @@ const Categories: React.FC = () => {
     if (isLoading) return <Loader fullPage text="Decrypting Entities" />;
 
     return (
-        <div className="min-h-screen text-white flex flex-col pb-24 overflow-x-hidden">
+        <div className="min-h-screen text-primary flex flex-col pb-24 overflow-x-hidden">
             {/* Full Screen Header */}
-            <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-[#050505]/60 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
+            <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-page/80 backdrop-blur-3xl z-30 border-b border-border-subtle">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => editorMode !== 'NONE' ? setEditorMode('NONE') : viewingCategoryId ? setViewingCategoryId(null) : navigate(-1)}
-                        className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all"
+                        className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all"
                     >
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">
+                        <h1 className="text-xl font-bold tracking-tight text-primary">
                             {editorMode !== 'NONE' ?
                                 (editorMode.includes('EDIT') ? 'Edit Mode' : `Create ${editorMode === 'CREATE_CAT' ? 'Entity' : 'Node'}`)
                                 : viewingCategoryId ? "Sub-Nodes" : "Intelligence Hub"}
                         </h1>
-                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">
+                        <p className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">
                             {editorMode !== 'NONE' ? 'Node Deployment' : 'Category Management'}
                         </p>
                     </div>
@@ -118,12 +118,12 @@ const Categories: React.FC = () => {
                         >
                             {/* Search bar */}
                             <div className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-700" size={14} />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={14} />
                                 <input
                                     placeholder="Filter system nodes..."
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
-                                    className="w-full bg-white/[0.03] rounded-2xl py-4 pl-12 pr-6 text-white placeholder-gray-800 focus:outline-none border border-white/[0.05] focus:border-white/[0.1] transition-all font-black uppercase text-[10px] tracking-widest"
+                                    className="w-full bg-surface-subtle rounded-2xl py-4 pl-12 pr-6 text-primary placeholder-text-muted/50 focus:outline-none border border-border-subtle focus:border-border-default transition-all font-black uppercase text-[10px] tracking-widest"
                                 />
                             </div>
 
@@ -137,30 +137,30 @@ const Categories: React.FC = () => {
                                             .sort((a, b) => a.name.localeCompare(b.name));
                                         return (
                                             <div className="space-y-6 animate-enter">
-                                                <div className="flex items-center gap-5 p-6 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] shadow-2xl">
+                                                <div className="flex items-center gap-5 p-6 rounded-[2rem] bg-surface-subtle border border-border-subtle shadow-sm">
                                                     <div
-                                                        className="w-20 h-20 rounded-3xl flex items-center justify-center text-3xl border border-white/10 shadow-inner"
+                                                        className="w-20 h-20 rounded-3xl flex items-center justify-center text-3xl border border-border-subtle shadow-inner"
                                                         style={{ backgroundColor: `${cat?.color}15`, color: cat?.color }}
                                                     >
                                                         <CategoryIcon name={cat?.icon} size={40} />
                                                     </div>
                                                     <div>
-                                                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{cat?.name}</h2>
+                                                        <h2 className="text-2xl font-black text-primary uppercase tracking-tighter leading-none">{cat?.name}</h2>
                                                         <p className="text-[10px] text-accent-text font-black uppercase tracking-[3px] mt-2">{cat?.sub_categories.length} Nodes assigned</p>
                                                     </div>
                                                 </div>
 
                                                 <div className="grid grid-cols-1 gap-2.5">
                                                     {filteredSubs?.map((sub: SubCategory) => (
-                                                        <div key={sub.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] group/sub hover:bg-white/[0.04] transition-all">
+                                                        <div key={sub.id} className="flex items-center justify-between p-4 rounded-2xl bg-surface-subtle border border-border-subtle group/sub hover:bg-surface-hover transition-all">
                                                             <div className="flex items-center gap-4">
                                                                 <div
-                                                                    className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/5"
+                                                                    className="w-10 h-10 rounded-xl flex items-center justify-center border border-border-subtle"
                                                                     style={{ backgroundColor: `${sub.color || cat?.color}10`, color: sub.color || cat?.color }}
                                                                 >
                                                                     <CategoryIcon name={sub.icon} size={18} />
                                                                 </div>
-                                                                <span className="text-sm text-gray-300 font-bold uppercase tracking-tight">{sub.name}</span>
+                                                                <span className="text-sm text-primary font-bold uppercase tracking-tight">{sub.name}</span>
                                                             </div>
                                                             {sub.user_id && (
                                                                 <div className="flex items-center gap-1 opacity-0 group-hover/sub:opacity-100 transition-all">
@@ -175,13 +175,13 @@ const Categories: React.FC = () => {
                                                                             setEditorMode('EDIT_SUB');
                                                                             setSelectedParentId(cat?.id || null);
                                                                         }}
-                                                                        className="p-2 text-gray-400 hover:text-white transition-all active:scale-90"
+                                                                        className="p-2 text-text-muted hover:text-primary transition-all active:scale-90"
                                                                     >
                                                                         <Pencil size={16} />
                                                                     </button>
                                                                     <button
                                                                         onClick={() => deleteSubCategoryMutation.mutate(sub.id)}
-                                                                        className="p-2 text-gray-800 hover:text-red-500 transition-all active:scale-90"
+                                                                        className="p-2 text-text-muted hover:text-red-500 transition-all active:scale-90"
                                                                     >
                                                                         <Trash2 size={16} />
                                                                     </button>
@@ -191,7 +191,7 @@ const Categories: React.FC = () => {
                                                     ))}
                                                     {filteredSubs?.length === 0 && (
                                                         <div className="py-20 text-center flex flex-col items-center gap-4 opacity-30">
-                                                            <div className="w-12 h-12 rounded-full border border-dashed border-gray-600 flex items-center justify-center">
+                                                            <div className="w-12 h-12 rounded-full border border-dashed border-border-subtle flex items-center justify-center">
                                                                 <Search size={20} />
                                                             </div>
                                                             <span className="font-black uppercase text-[10px] tracking-[4px]">No nodes found</span>
@@ -210,18 +210,18 @@ const Categories: React.FC = () => {
                                             <div
                                                 key={cat.id}
                                                 onClick={() => setViewingCategoryId(cat.id)}
-                                                className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-all cursor-pointer group active:scale-[0.98]"
+                                                className="flex items-center justify-between p-4 rounded-2xl bg-surface-subtle border border-border-subtle hover:bg-surface-hover transition-all cursor-pointer group active:scale-[0.98]"
                                             >
                                                 <div className="flex items-center gap-4">
                                                     <div
-                                                        className="w-12 h-12 rounded-2xl flex items-center justify-center border border-white/[0.08]"
+                                                        className="w-12 h-12 rounded-2xl flex items-center justify-center border border-border-subtle"
                                                         style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
                                                     >
                                                         <CategoryIcon name={cat.icon} size={22} />
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-base font-black text-white uppercase tracking-tight leading-tight">{cat.name}</span>
-                                                        <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1 opacity-70">{cat.sub_categories.length} Sub-nodes</span>
+                                                        <span className="text-base font-black text-primary uppercase tracking-tight leading-tight">{cat.name}</span>
+                                                        <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest mt-1 opacity-70">{cat.sub_categories.length} Sub-nodes</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
@@ -248,19 +248,19 @@ const Categories: React.FC = () => {
                                                                     setEditingId(cat.id);
                                                                     setEditorMode('EDIT_CAT');
                                                                 }}
-                                                                className="p-3 text-gray-400 hover:text-white transition-all active:scale-90"
+                                                                className="p-3 text-text-muted hover:text-primary transition-all active:scale-90"
                                                             >
                                                                 <Pencil size={18} />
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); deleteCategoryMutation.mutate(cat.id); }}
-                                                                className="p-3 text-gray-800 hover:text-red-500 transition-all active:scale-90"
+                                                                className="p-3 text-text-muted hover:text-red-500 transition-all active:scale-90"
                                                             >
                                                                 <Trash2 size={18} />
                                                             </button>
                                                         </>
                                                     )}
-                                                    <ChevronRight size={18} className="text-gray-900 group-hover:translate-x-1 transition-all ml-1" />
+                                                    <ChevronRight size={18} className="text-text-muted group-hover:translate-x-1 transition-all ml-1" />
                                                 </div>
                                             </div>
                                         ))}
@@ -280,7 +280,7 @@ const Categories: React.FC = () => {
                                         }
                                         resetForm();
                                     }}
-                                    className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center shadow-[0_25px_50px_-12px_rgba(255,255,255,0.4)] active:scale-90 transition-all"
+                                    className="w-16 h-16 rounded-full bg-primary text-background flex items-center justify-center shadow-2xl active:scale-90 transition-all"
                                 >
                                     <Plus size={32} strokeWidth={3} />
                                 </button>
@@ -296,7 +296,7 @@ const Categories: React.FC = () => {
                         >
                             <div className="flex flex-col items-center gap-8 pt-4">
                                 <div
-                                    className="w-32 h-32 rounded-[2.5rem] flex items-center justify-center shadow-2xl transition-all duration-300 relative border-[6px] border-white/5"
+                                    className="w-32 h-32 rounded-[2.5rem] flex items-center justify-center shadow-2xl transition-all duration-300 relative border-[6px] border-border-subtle"
                                     style={{
                                         backgroundColor: `${newColor}15`,
                                         color: newColor,
@@ -310,7 +310,7 @@ const Categories: React.FC = () => {
                                         placeholder="Identify..."
                                         value={newName}
                                         onChange={e => setNewName(e.target.value)}
-                                        className="w-full bg-transparent border-none text-4xl font-black text-center focus:outline-none placeholder-gray-900 uppercase tracking-tighter"
+                                        className="w-full bg-transparent border-none text-4xl font-black text-center focus:outline-none placeholder-text-muted/40 uppercase tracking-tighter text-primary"
                                         autoFocus
                                     />
                                     {(editorMode === 'CREATE_SUB' || editorMode === 'EDIT_SUB') && (
@@ -328,45 +328,45 @@ const Categories: React.FC = () => {
                                         onClick={() => setNewIsSurety(!newIsSurety)}
                                         className={`w-full flex items-center justify-between p-4 rounded-[1.5rem] border transition-all active:scale-[0.98] ${newIsSurety
                                             ? 'bg-status-warning-bg border-status-warning-border'
-                                            : 'bg-white/[0.02] border-white/[0.05]'
+                                            : 'bg-surface-subtle border-border-subtle'
                                             }`}
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${newIsSurety
                                                 ? 'bg-status-warning-bg border-status-warning-border text-status-warning-text'
-                                                : 'bg-white/[0.03] border-white/[0.08] text-gray-500'
+                                                : 'bg-surface border-border-subtle text-text-muted'
                                                 }`}>
                                                 <Save size={18} />
                                             </div>
                                             <div className="text-left">
-                                                <h4 className={`text-sm font-black uppercase tracking-tight ${newIsSurety ? 'text-status-warning-text' : 'text-gray-500'}`}>Recurring Surety</h4>
+                                                <h4 className={`text-sm font-black uppercase tracking-tight ${newIsSurety ? 'text-status-warning-text' : 'text-text-muted'}`}>Recurring Surety</h4>
                                                 <p className="text-[9px] font-bold uppercase tracking-widest opacity-60">Fixed Monthly Obligation</p>
                                             </div>
                                         </div>
-                                        <div className={`w-12 h-6 rounded-full p-1 transition-colors ${newIsSurety ? 'bg-status-warning-solid' : 'bg-white/10'}`}>
-                                            <div className={`w-4 h-4 rounded-full shadow-sm transition-transform ${newIsSurety ? 'bg-white translate-x-6' : 'bg-white translate-x-0'}`} />
+                                        <div className={`w-12 h-6 rounded-full p-1 transition-colors ${newIsSurety ? 'bg-status-warning-solid' : 'bg-surface-pill'}`}>
+                                            <div className={`w-4 h-4 rounded-full shadow-sm transition-transform ${newIsSurety ? 'bg-white translate-x-6' : 'bg-text-muted translate-x-0'}`} />
                                         </div>
                                     </button>
                                 )}
                             </div>
 
                             <div className="space-y-5">
-                                <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Logic Archetype</h4>
-                                <div className="flex gap-2 p-1.5 bg-white/[0.02] rounded-3xl border border-white/[0.05] h-14 relative">
+                                <h4 className="text-[10px] text-text-muted font-black uppercase tracking-[5px] ml-1">Logic Archetype</h4>
+                                <div className="flex gap-2 p-1.5 bg-surface-subtle rounded-3xl border border-border-subtle h-14 relative">
                                     {['EXPENSE', 'INCOME', 'INVESTMENT'].map((t) => (
                                         <button
                                             key={t}
                                             onClick={() => setNewType(t as TransactionType)}
                                             className={`
                                                 relative flex-1 rounded-[1rem] text-[9px] font-black uppercase tracking-[2px] transition-colors z-10
-                                                ${newType === t ? 'text-black font-extrabold' : 'text-gray-600'}
+                                                ${newType === t ? 'text-background font-extrabold' : 'text-text-muted'}
                                             `}
                                         >
                                             {t}
                                             {newType === t && (
                                                 <motion.div
                                                     layoutId="full-archetype-indicator"
-                                                    className="absolute inset-0 bg-white rounded-[1rem] -z-10 shadow-xl"
+                                                    className="absolute inset-0 bg-primary rounded-[1rem] -z-10 shadow-md"
                                                     transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
                                                 />
                                             )}
@@ -377,29 +377,29 @@ const Categories: React.FC = () => {
 
                             {!editorMode.includes('SUB') ? (
                                 <div className="space-y-5">
-                                    <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Aesthetic Color</h4>
+                                    <h4 className="text-[10px] text-text-muted font-black uppercase tracking-[5px] ml-1">Aesthetic Color</h4>
                                     <ColorSelector selectedColor={newColor} onSelect={setNewColor} />
                                 </div>
                             ) : (
-                                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between">
+                                <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between">
                                     <div>
-                                        <h4 className="text-xs font-black uppercase tracking-tight text-gray-400">Synchronized Color</h4>
-                                        <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">Inherited from parent category</p>
+                                        <h4 className="text-xs font-black uppercase tracking-tight text-primary">Synchronized Color</h4>
+                                        <p className="text-[9px] text-text-muted font-bold uppercase tracking-widest mt-0.5">Inherited from parent category</p>
                                     </div>
-                                    <div className="w-7 h-7 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: newColor }} />
+                                    <div className="w-7 h-7 rounded-full border border-border-subtle shadow-sm" style={{ backgroundColor: newColor }} />
                                 </div>
                             )}
 
                             <div className="space-y-5">
-                                <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[5px] ml-1">Symbolic Glyph</h4>
+                                <h4 className="text-[10px] text-text-muted font-black uppercase tracking-[5px] ml-1">Symbolic Glyph</h4>
                                 <IconSelector selectedIcon={newIcon} onSelect={setNewIcon} color={newColor} />
                             </div>
 
-                            <div className="fixed bottom-0 left-0 right-0 p-6 bg-[#050505]/80 backdrop-blur-2xl border-t border-white/[0.05] z-50">
+                            <div className="fixed bottom-0 left-0 right-0 p-6 bg-page/80 backdrop-blur-2xl border-t border-border-subtle z-50">
                                 <div className="max-w-xl mx-auto flex gap-4">
                                     <button
                                         onClick={() => setEditorMode('NONE')}
-                                        className="flex-1 py-5 rounded-[2rem] bg-white/5 text-gray-600 font-black uppercase text-xs tracking-[3px] transition-all active:scale-95 border border-white/[0.05] hover:text-white"
+                                        className="flex-1 py-5 rounded-[2rem] bg-surface-subtle text-text-muted font-black uppercase text-xs tracking-[3px] transition-all active:scale-95 border border-border-subtle hover:text-primary"
                                     >
                                         Drop
                                     </button>
@@ -433,7 +433,7 @@ const Categories: React.FC = () => {
                                             }
                                         }}
                                         isLoading={createCategoryMutation.isPending || createSubCategoryMutation.isPending || updateCategoryMutation.isPending || updateSubCategoryMutation.isPending}
-                                        className="flex-[2] py-5 rounded-[2rem] bg-white text-black font-black uppercase text-xs tracking-[4px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none"
+                                        className="flex-[2] py-5 rounded-[2rem] bg-primary text-background font-black uppercase text-xs tracking-[4px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none"
                                     >
                                         <Save size={20} />
                                         Commit

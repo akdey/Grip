@@ -49,14 +49,14 @@ const CreditCardDetailsPage: React.FC = () => {
     const currentDebt = Math.abs(unsettledAmount || 0);
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white pb-20">
-            <header className="px-6 py-6 flex items-center gap-4 sticky top-0 bg-[#050505]/80 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
-                <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all">
+        <div className="min-h-screen text-primary pb-20">
+            <header className="px-6 py-6 flex items-center gap-4 sticky top-0 bg-page/80 backdrop-blur-3xl z-30 border-b border-border-subtle">
+                <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all">
                     <ArrowLeft size={20} />
                 </button>
                 <div>
-                    <h1 className="text-lg font-black tracking-tight uppercase">{card.card_name}</h1>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[2px]">
+                    <h1 className="text-lg font-black tracking-tight uppercase text-primary">{card.card_name}</h1>
+                    <p className="text-[9px] text-text-muted font-bold uppercase tracking-[2px]">
                         •••• {card.last_four_digits}
                     </p>
                 </div>
@@ -64,33 +64,33 @@ const CreditCardDetailsPage: React.FC = () => {
 
             <div className="p-6 space-y-8 animate-enter">
                 {/* Summary Card */}
-                <div className="glass-card p-6 rounded-[2.5rem] border border-white/[0.05] relative overflow-hidden">
+                <div className="glass-card p-6 rounded-[2.5rem] border border-border-subtle relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-6 opacity-5">
                         <CardIcon size={120} />
                     </div>
-                    <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1">Current Unsettled Debt</p>
-                    <h2 className="text-3xl font-black text-white tracking-tighter mb-4">{formatCurrency(currentDebt)}</h2>
+                    <p className="text-[9px] text-text-muted font-black uppercase tracking-widest mb-1">Current Unsettled Debt</p>
+                    <h2 className="text-3xl font-black text-primary tracking-tighter mb-4">{formatCurrency(currentDebt)}</h2>
 
                     <div className="flex gap-4">
-                        <div className="px-4 py-2 bg-white/[0.03] rounded-xl border border-white/[0.05]">
-                            <p className="text-[7px] text-gray-500 uppercase font-bold mb-0.5">Limit</p>
-                            <p className="text-xs font-black">{formatCurrency(card.credit_limit)}</p>
+                        <div className="px-4 py-2 bg-surface-subtle rounded-xl border border-border-subtle">
+                            <p className="text-[7px] text-text-muted uppercase font-bold mb-0.5">Limit</p>
+                            <p className="text-xs font-black text-primary">{formatCurrency(card.credit_limit)}</p>
                         </div>
-                        <div className="px-4 py-2 bg-white/[0.03] rounded-xl border border-white/[0.05]">
-                            <p className="text-[7px] text-gray-500 uppercase font-bold mb-0.5">Due Date</p>
-                            <p className="text-xs font-black">{card.payment_due_date}th</p>
+                        <div className="px-4 py-2 bg-surface-subtle rounded-xl border border-border-subtle">
+                            <p className="text-[7px] text-text-muted uppercase font-bold mb-0.5">Due Date</p>
+                            <p className="text-xs font-black text-primary">{card.payment_due_date}th</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Transactions List */}
                 <div className="space-y-4">
-                    <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[3px] px-2">Transactions</h3>
+                    <h3 className="text-[10px] font-black text-text-muted uppercase tracking-[3px] px-2">Transactions</h3>
 
                     {isTxnLoading ? (
                         <div className="py-10 flex justify-center"><Loader /></div>
                     ) : sortedTransactions.length === 0 ? (
-                        <p className="text-center text-gray-600 text-xs py-10 uppercase tracking-widest">No Transactions Found</p>
+                        <p className="text-center text-text-muted text-xs py-10 uppercase tracking-widest">No Transactions Found</p>
                     ) : (
                         sortedTransactions.map(txn => {
                             const dateObj = txn.transaction_date ? parseISO(txn.transaction_date) : new Date(txn.created_at);
@@ -100,8 +100,8 @@ const CreditCardDetailsPage: React.FC = () => {
                                     className={`
                                         flex items-center justify-between p-4 rounded-3xl border transition-all
                                         ${txn.is_settled
-                                            ? 'bg-white/[0.01] border-white/[0.02] opacity-50'
-                                            : 'bg-white/[0.03] border-white/[0.08]'
+                                            ? 'bg-surface-subtle/50 border-border-subtle opacity-50'
+                                            : 'bg-surface-subtle border-border-subtle hover:bg-surface-hover'
                                         }
                                     `}
                                 >
@@ -115,8 +115,8 @@ const CreditCardDetailsPage: React.FC = () => {
                                             className={`
                                                 w-6 h-6 rounded-full flex items-center justify-center transition-all
                                                 ${txn.is_settled
-                                                    ? 'bg-white text-black'
-                                                    : 'bg-white/[0.05] text-gray-600 hover:bg-white/[0.1]'
+                                                    ? 'bg-primary text-background'
+                                                    : 'bg-surface-pill text-text-muted hover:text-primary'
                                                 }
                                                 ${toggleSettledMutation.isPending ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                                             `}
@@ -125,19 +125,19 @@ const CreditCardDetailsPage: React.FC = () => {
                                         </button>
 
                                         <div>
-                                            <p className={`font-bold text-sm ${txn.is_settled ? 'line-through text-gray-500' : 'text-white'}`}>
+                                            <p className={`font-bold text-sm ${txn.is_settled ? 'line-through text-text-muted' : 'text-primary'}`}>
                                                 {txn.merchant_name || txn.category}
                                             </p>
                                             <div className="flex items-center gap-2 mt-0.5">
-                                                <span className="text-[9px] text-gray-500 font-black uppercase tracking-wider">{format(dateObj, 'MMM d')}</span>
-                                                <span className="text-[9px] text-gray-600">•</span>
-                                                <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">{txn.category}</span>
+                                                <span className="text-[9px] text-text-muted font-black uppercase tracking-wider">{format(dateObj, 'MMM d')}</span>
+                                                <span className="text-[9px] text-text-muted/60">•</span>
+                                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">{txn.category}</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="text-right">
-                                        <p className={`font-black tracking-tighter ${txn.is_settled ? 'text-gray-600' : 'text-white'}`}>
+                                        <p className={`font-black tracking-tighter ${txn.is_settled ? 'text-text-muted' : 'text-primary'}`}>
                                             {formatCurrency(txn.amount)}
                                         </p>
                                     </div>

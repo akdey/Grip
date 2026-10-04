@@ -161,39 +161,39 @@ const Wealth: React.FC = () => {
         new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
     return (
-        <div className="min-h-screen text-white p-6 pb-24 overflow-x-hidden">
+        <div className="min-h-screen text-primary p-6 pb-24 overflow-x-hidden">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div className="flex flex-col">
-                    <h1 className="text-4xl font-black tracking-tighter text-white heading-apple">
+                    <h1 className="text-4xl font-black tracking-tighter text-primary heading-apple">
                         Wealth
                     </h1>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">Your Financial Core</p>
+                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">Your Financial Core</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsLinkerOpen(true)}
-                        className="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/10 text-white text-xs font-semibold border border-white/10 transition-colors flex items-center gap-1.5"
+                        className="px-3.5 py-2 rounded-xl bg-surface-subtle hover:bg-surface-hover text-primary text-xs font-semibold border border-border-subtle transition-colors flex items-center gap-1.5"
                     >
                         <LinkIcon size={14} /> Link Transaction
                     </button>
                     <button
                         onClick={() => setIsStatementImportOpen(true)}
-                        className="w-9 h-9 rounded-xl bg-white/[0.05] hover:bg-white/10 text-white transition-colors border border-white/10 flex items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-surface-subtle hover:bg-surface-hover text-primary transition-colors border border-border-subtle flex items-center justify-center"
                         aria-label="Import Statement (CAMS/KFin/MFCentral)"
                     >
                         <Upload size={16} />
                     </button>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="w-9 h-9 rounded-xl bg-white/[0.05] hover:bg-white/10 text-white transition-colors border border-white/10 flex items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-surface-subtle hover:bg-surface-hover text-primary transition-colors border border-border-subtle flex items-center justify-center"
                         aria-label="Add Asset Manually"
                     >
                         <Plus size={16} />
                     </button>
                     <button
                         onClick={fetchData}
-                        className="w-9 h-9 rounded-xl bg-white/[0.05] hover:bg-white/10 text-white transition-colors border border-white/10 flex items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-surface-subtle hover:bg-surface-hover text-primary transition-colors border border-border-subtle flex items-center justify-center"
                         aria-label="Refresh wealth data"
                     >
                         <RefreshCw size={16} className={holdingsLoading || forecastLoading ? "animate-spin" : ""} />
@@ -205,20 +205,20 @@ const Wealth: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <motion.div
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 relative overflow-hidden"
+                    className="bg-surface-subtle border border-border-subtle rounded-2xl p-6 relative overflow-hidden"
                 >
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <Wallet size={64} />
                     </div>
                     {holdingsLoading ? (
                         <div className="animate-pulse space-y-3">
-                            <div className="h-4 w-20 bg-white/10 rounded" />
-                            <div className="h-8 w-32 bg-white/10 rounded" />
+                            <div className="h-4 w-20 bg-surface-hover rounded" />
+                            <div className="h-8 w-32 bg-surface-hover rounded" />
                         </div>
                     ) : (
                         <>
-                            <p className="text-gray-500 text-sm font-medium">Net Worth</p>
-                            <h2 className="text-3xl font-bold mt-2">{formatCurrency(totalWealth)}</h2>
+                            <p className="text-text-muted text-sm font-medium">Net Worth</p>
+                            <h2 className="text-3xl font-bold mt-2 text-primary">{formatCurrency(totalWealth)}</h2>
                             <div className="flex items-center mt-2 space-x-2">
                                 <span className={`text-sm px-2 py-0.5 rounded-full ${absoluteReturn >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}>
                                     {absoluteReturn >= 0 ? "+" : ""}{formatCurrency(absoluteReturn)}
@@ -230,40 +230,40 @@ const Wealth: React.FC = () => {
 
                 <motion.div
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6"
+                    className="bg-surface-subtle border border-border-subtle rounded-2xl p-6"
                 >
                     {holdingsLoading ? (
                         <div className="animate-pulse space-y-3">
-                            <div className="h-4 w-20 bg-white/10 rounded" />
-                            <div className="h-8 w-32 bg-white/10 rounded" />
+                            <div className="h-4 w-20 bg-surface-hover rounded" />
+                            <div className="h-8 w-32 bg-surface-hover rounded" />
                         </div>
                     ) : (
                         <>
-                            <p className="text-gray-500 text-sm font-medium">Portfolio Returns</p>
-                            <h2 className={`text-3xl font-bold mt-2 ${returnPercentage >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            <p className="text-text-muted text-sm font-medium">Portfolio Returns</p>
+                            <h2 className={`text-3xl font-bold mt-2 ${returnPercentage >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                                 {returnPercentage.toFixed(2)}%
                             </h2>
-                            <p className="text-xs text-gray-600 mt-2">Overall Absolute Return</p>
+                            <p className="text-xs text-text-muted mt-2">Overall Absolute Return</p>
                         </>
                     )}
                 </motion.div>
 
                 <motion.div
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                    className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6"
+                    className="bg-surface-subtle border border-border-subtle rounded-2xl p-6"
                 >
                     {forecastLoading ? (
                         <div className="animate-pulse space-y-3">
-                            <div className="h-4 w-20 bg-white/10 rounded" />
-                            <div className="h-8 w-32 bg-white/10 rounded" />
+                            <div className="h-4 w-20 bg-surface-hover rounded" />
+                            <div className="h-8 w-32 bg-surface-hover rounded" />
                         </div>
                     ) : (
                         <>
-                            <p className="text-gray-500 text-sm font-medium">Projected (10Y)</p>
-                            <h2 className="text-3xl font-bold mt-2 text-white">
+                            <p className="text-text-muted text-sm font-medium">Projected (10Y)</p>
+                            <h2 className="text-3xl font-bold mt-2 text-primary">
                                 {forecastData?.forecast.length ? formatCurrency(forecastData.forecast[forecastData.forecast.length - 1].yhat) : "..."}
                             </h2>
-                            <p className="text-xs text-gray-500 mt-2 line-clamp-1">{forecastData?.summary_text}</p>
+                            <p className="text-xs text-text-muted mt-2 line-clamp-1">{forecastData?.summary_text}</p>
                         </>
                     )}
                 </motion.div>
@@ -274,22 +274,22 @@ const Wealth: React.FC = () => {
                 {/* Financial Time Machine Card */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-                    className="lg:col-span-1 bg-[#0A0A0A] border border-white/5 hover:border-white/20 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden group cursor-pointer transition-all"
+                    className="lg:col-span-1 bg-surface-subtle border border-border-subtle hover:border-border-default rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden group cursor-pointer transition-all"
                     onClick={() => setIsSimulatorOpen(true)}
                 >
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Calculator size={80} />
                     </div>
                     <div>
-                        <div className="p-2 bg-white/[0.06] rounded-lg w-fit mb-3 text-white">
+                        <div className="p-2 bg-accent-subtle rounded-lg w-fit mb-3 text-primary">
                             <BrainCircuit size={24} />
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-1">Time Machine</h3>
-                        <p className="text-xs text-gray-400 leading-relaxed">
+                        <h3 className="text-xl font-bold text-primary mb-1">Time Machine</h3>
+                        <p className="text-xs text-text-muted leading-relaxed">
                             Simulate "What-If" scenarios. See how your investments would have performed if you timed them differently.
                         </p>
                     </div>
-                    <button className="mt-4 w-full py-2.5 bg-white text-black hover:bg-neutral-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+                    <button className="mt-4 w-full py-2.5 bg-primary text-background hover:opacity-90 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2">
                         Run Simulator <Calculator size={14} />
                     </button>
                 </motion.div>
@@ -297,20 +297,20 @@ const Wealth: React.FC = () => {
                 {/* Main Predictions Chart */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-                    className="lg:col-span-3 bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 min-h-[350px]"
+                    className="lg:col-span-3 bg-surface-subtle border border-border-subtle rounded-2xl p-6 min-h-[350px]"
                 >
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex space-x-4">
                             <button
                                 onClick={() => setActiveMainTab('trajectory')}
-                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'trajectory' ? 'text-accent-text border-b-2 border-accent pb-1' : 'text-gray-600 hover:text-gray-400 pb-1'}`}
+                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'trajectory' ? 'text-accent-text border-b-2 border-accent pb-1' : 'text-text-muted hover:text-primary pb-1'}`}
                             >
                                 <LineChart size={16} />
                                 Future Predictions
                             </button>
                             <button
                                 onClick={() => setActiveMainTab('intelligence')}
-                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'intelligence' ? 'text-accent-text border-b-2 border-accent pb-1' : 'text-gray-600 hover:text-gray-400 pb-1'}`}
+                                className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${activeMainTab === 'intelligence' ? 'text-accent-text border-b-2 border-accent pb-1' : 'text-text-muted hover:text-primary pb-1'}`}
                             >
                                 <BrainCircuit size={16} />
                                 Intelligence
@@ -319,13 +319,13 @@ const Wealth: React.FC = () => {
 
                         {activeMainTab === 'trajectory' && (
                             <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
-                                    <span className="text-[10px] text-gray-500 uppercase font-bold">Monthly SIP</span>
+                                <div className="flex items-center gap-2 bg-surface px-3 py-1.5 rounded-lg border border-border-subtle">
+                                    <span className="text-[10px] text-text-muted uppercase font-bold">Monthly SIP</span>
                                     <input
                                         type="number"
                                         value={monthlySIP}
                                         onChange={(e) => setMonthlySIP(Number(e.target.value))}
-                                        className="w-16 bg-transparent outline-none text-right font-mono text-sm text-white"
+                                        className="w-16 bg-transparent outline-none text-right font-mono text-sm text-primary"
                                     />
                                 </div>
                                 <button
@@ -342,8 +342,8 @@ const Wealth: React.FC = () => {
                     <div className={`w-full ${activeMainTab === 'trajectory' ? 'h-[280px]' : ''}`}>
                         {activeMainTab === 'trajectory' ? (
                             forecastLoading ? (
-                                <div className="w-full h-full flex items-center justify-center animate-pulse bg-white/[0.02] rounded-xl">
-                                    <div className="text-gray-600 text-xs">Generating Prediction Model...</div>
+                                <div className="w-full h-full flex items-center justify-center animate-pulse bg-surface rounded-xl">
+                                    <div className="text-text-muted text-xs">Generating Prediction Model...</div>
                                 </div>
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
@@ -358,15 +358,15 @@ const Wealth: React.FC = () => {
                                                 <stop offset="95%" stopColor="var(--color-accent-solid, #22d3ee)" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                                        <XAxis dataKey="date" stroke="#444" tick={{ fontSize: 10 }} minTickGap={30} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle, #333)" vertical={false} />
+                                        <XAxis dataKey="date" stroke="var(--color-text-muted, #888)" tick={{ fontSize: 10 }} minTickGap={30} />
                                         <YAxis
-                                            stroke="#444"
+                                            stroke="var(--color-text-muted, #888)"
                                             tick={{ fontSize: 10 }}
                                             tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
                                         />
                                         <Tooltip
-                                            contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '8px', fontSize: '12px' }}
+                                            contentStyle={{ backgroundColor: 'var(--color-bg-surface, #121212)', borderColor: 'var(--color-border-subtle, #333)', color: 'var(--color-text-primary, #fff)', borderRadius: '8px', fontSize: '12px' }}
                                             formatter={(val: number) => formatCurrency(val)}
                                         />
                                         <Area
@@ -401,28 +401,28 @@ const Wealth: React.FC = () => {
             {/* Investment Categories */}
             <div className="space-y-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <Layers className="text-white/80" size={20} />
-                    <h2 className="text-xl font-bold text-gray-200">Portfolio Breakdown</h2>
+                    <Layers className="text-primary" size={20} />
+                    <h2 className="text-xl font-bold text-primary">Portfolio Breakdown</h2>
                 </div>
 
                 {holdingsLoading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {[1, 2].map(i => (
-                            <div key={i} className="h-40 bg-[#0A0A0A] border border-white/5 rounded-2xl animate-pulse" />
+                            <div key={i} className="h-40 bg-surface-subtle border border-border-subtle rounded-2xl animate-pulse" />
                         ))}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {/* Map over grouped holdings */}
-                        {Object.entries(holdingsByType).map(([type, typeHoldings], index) => (
+                        {Object.entries(holdingsByType).map(([type, typeHoldings]) => (
                             <WealthCategoryCard
                                 key={type}
                                 title={type === 'MUTUAL_FUND' ? 'Mutual Funds' : type === 'STOCK' ? 'Stocks' : type}
                                 type={type}
                                 icon={
-                                    type === 'MUTUAL_FUND' ? <PieChart size={20} className="text-white/80" /> :
-                                        type === 'STOCK' ? <Activity size={20} className="text-white/80" /> :
-                                            <Wallet size={20} className="text-white/80" />
+                                    type === 'MUTUAL_FUND' ? <PieChart size={20} className="text-primary" /> :
+                                        type === 'STOCK' ? <Activity size={20} className="text-primary" /> :
+                                            <Wallet size={20} className="text-primary" />
                                 }
                                 holdings={typeHoldings}
                                 onHoldingClick={fetchHoldingDetails}
@@ -432,11 +432,11 @@ const Wealth: React.FC = () => {
                         ))}
 
                         {holdings.length === 0 && (
-                            <div className="col-span-full py-12 text-center border dashed border-white/10 rounded-2xl bg-[#0A0A0A]">
-                                <p className="text-gray-500">No investments found.</p>
+                            <div className="col-span-full py-12 text-center border dashed border-border-subtle rounded-2xl bg-surface-subtle">
+                                <p className="text-text-muted">No investments found.</p>
                                 <button
                                     onClick={() => setIsAddModalOpen(true)}
-                                    className="mt-4 px-6 py-2.5 bg-white text-black rounded-xl text-sm font-semibold hover:bg-neutral-200 transition-colors shadow-sm"
+                                    className="mt-4 px-6 py-2.5 bg-primary text-background rounded-xl text-sm font-semibold hover:opacity-90 transition-colors shadow-sm"
                                 >
                                     Add your first investment
                                 </button>
@@ -485,11 +485,11 @@ const Wealth: React.FC = () => {
                     background: transparent;
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #333;
+                    background: var(--color-border-subtle, #333);
                     border-radius: 4px;
                 }
             `}</style>
-        </div >
+        </div>
     );
 };
 

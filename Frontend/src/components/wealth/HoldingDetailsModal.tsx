@@ -78,20 +78,20 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                         </div>
 
                         {/* Header */}
-                        <div className="p-6 sm:p-8 border-b border-white/[0.06] flex justify-between items-start bg-gradient-to-b from-white/[0.04] to-transparent shrink-0">
+                        <div className="p-6 sm:p-8 border-b border-border-subtle flex justify-between items-start bg-surface-subtle shrink-0">
                             <div>
-                                <h2 className="text-2xl sm:text-3xl font-black text-white line-clamp-1 tracking-tighter uppercase italic heading-apple">
+                                <h2 className="text-2xl sm:text-3xl font-black text-primary line-clamp-1 tracking-tighter uppercase italic heading-apple">
                                     {holding.name}
                                 </h2>
-                                <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 font-bold uppercase tracking-widest">
-                                    <span className="bg-white/[0.06] text-white/90 px-3 py-1 rounded-full border border-white/10">{holding.asset_type}</span>
+                                <div className="flex items-center gap-3 mt-2 text-xs text-text-muted font-bold uppercase tracking-widest">
+                                    <span className="bg-accent-subtle text-primary px-3 py-1 rounded-full border border-border-subtle">{holding.asset_type}</span>
                                     {holding.ticker_symbol && <span>• {holding.ticker_symbol}</span>}
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={onClose}
-                                    className="w-14 h-14 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group"
+                                    className="w-14 h-14 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-xl group"
                                 >
                                     <ChevronDown size={28} className="group-hover:translate-y-0.5 transition-transform" />
                                 </button>
@@ -101,23 +101,23 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                         {/* Tabs & Content Container */}
                         <div className="flex-1 overflow-hidden flex flex-col">
                             {hasSIPData && (
-                                <div className="flex gap-2 px-6 sm:px-10 border-b border-white/5 bg-white/[0.01]">
+                                <div className="flex gap-2 px-6 sm:px-10 border-b border-border-subtle bg-surface-subtle/50">
                                     <button
                                         onClick={() => setActiveTab('performance')}
-                                        className={`px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative ${activeTab === 'performance' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
+                                        className={`px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative ${activeTab === 'performance' ? 'text-emerald-500' : 'text-text-muted hover:text-primary'}`}
                                     >
                                         Performance
                                         {activeTab === 'performance' && (
-                                            <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-400" />
+                                            <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
                                         )}
                                     </button>
                                     <button
                                         onClick={() => setActiveTab('sip-analysis')}
-                                        className={`px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative ${activeTab === 'sip-analysis' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
+                                        className={`px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative ${activeTab === 'sip-analysis' ? 'text-emerald-500' : 'text-text-muted hover:text-primary'}`}
                                     >
                                         SIP Intelligence
                                         {activeTab === 'sip-analysis' && (
-                                            <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-400" />
+                                            <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
                                         )}
                                     </button>
                                 </div>
@@ -128,31 +128,31 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                     <>
                                         {/* KPIS */}
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                                                <p className="text-xs text-gray-500">Current Value</p>
-                                                <p className="text-xl font-bold mt-1">{formatCurrency(holding.current_value)}</p>
+                                            <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                <p className="text-xs text-text-muted">Current Value</p>
+                                                <p className="text-xl font-bold mt-1 text-primary">{formatCurrency(holding.current_value)}</p>
                                             </div>
-                                            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                                                <p className="text-xs text-gray-500">Invested</p>
-                                                <p className="text-xl font-bold mt-1">{formatCurrency(holding.total_invested)}</p>
+                                            <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                <p className="text-xs text-text-muted">Invested</p>
+                                                <p className="text-xl font-bold mt-1 text-primary">{formatCurrency(holding.total_invested)}</p>
                                             </div>
-                                            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                                                <p className="text-xs text-gray-500">Net Returns</p>
-                                                <p className={`text-xl font-bold mt-1 ${(holding.current_value - holding.total_invested) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                            <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                <p className="text-xs text-text-muted">Net Returns</p>
+                                                <p className={`text-xl font-bold mt-1 ${(holding.current_value - holding.total_invested) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                                                     {formatCurrency(holding.current_value - holding.total_invested)}
                                                 </p>
                                             </div>
-                                            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                                                <p className="text-xs text-gray-500">XIRR</p>
-                                                <p className="text-xl font-bold mt-1 text-white">
+                                            <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                <p className="text-xs text-text-muted">XIRR</p>
+                                                <p className="text-xl font-bold mt-1 text-primary">
                                                     {holding.xirr ? `${holding.xirr.toFixed(1)}%` : "N/A"}
                                                 </p>
                                             </div>
                                         </div>
 
                                         {/* Chart */}
-                                        <div className="bg-[#050505] rounded-xl border border-white/5 p-4 h-[250px] sm:h-[300px]">
-                                            <h3 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
+                                        <div className="bg-surface-subtle rounded-xl border border-border-subtle p-4 h-[250px] sm:h-[300px]">
+                                            <h3 className="text-sm font-medium text-text-muted mb-4 flex items-center gap-2">
                                                 <TrendingUp size={16} /> Performance History
                                             </h3>
                                             <ResponsiveContainer width="100%" height="100%">
@@ -163,11 +163,11 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                             <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                                         </linearGradient>
                                                     </defs>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                                                    <XAxis dataKey="date" stroke="#444" tick={{ fontSize: 10 }} minTickGap={30} />
-                                                    <YAxis stroke="#444" tick={{ fontSize: 10 }} tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`} />
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle, #333)" vertical={false} />
+                                                    <XAxis dataKey="date" stroke="var(--color-text-muted, #888)" tick={{ fontSize: 10 }} minTickGap={30} />
+                                                    <YAxis stroke="var(--color-text-muted, #888)" tick={{ fontSize: 10 }} tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`} />
                                                     <Tooltip
-                                                        contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '8px', fontSize: '12px' }}
+                                                        contentStyle={{ backgroundColor: 'var(--color-bg-surface, #111)', borderColor: 'var(--color-border-subtle, #333)', color: 'var(--color-text-primary, #fff)', borderRadius: '8px', fontSize: '12px' }}
                                                         formatter={(val: any) => formatCurrency(Number(val))}
                                                     />
                                                     <Area

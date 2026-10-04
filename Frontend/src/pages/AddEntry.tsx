@@ -324,13 +324,13 @@ const AddEntry: React.FC = () => {
 
     return (
         <LayoutGroup id="add-entry">
-            <div className="min-h-screen text-white flex flex-col pb-24 overflow-x-hidden">
-                <header className="px-5 py-3.5 flex items-center justify-between sticky top-0 bg-[#050505]/60 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
+            <div className="min-h-screen text-primary flex flex-col pb-24 overflow-x-hidden">
+                <header className="px-5 py-3.5 flex items-center justify-between sticky top-0 bg-page/80 backdrop-blur-3xl z-30 border-b border-border-subtle">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all">
+                        <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all">
                             <ArrowLeft size={16} />
                         </button>
-                        <h1 className="text-sm font-black tracking-tight uppercase">
+                        <h1 className="text-sm font-black tracking-tight uppercase text-primary">
                             {existingTxn?.status === 'PENDING' ? 'Review Transaction' : (id ? 'Edit Entry' : 'New Entry')}
                         </h1>
                     </div>
@@ -729,7 +729,7 @@ const AddEntry: React.FC = () => {
                     noPadding
                     title={isAddMode !== 'NONE' ? `New ${isAddMode === 'CATEGORY' ? 'Entity' : 'Node'}` : (view === 'CATEGORIES' ? "Categories" : "Sub-Nodes")}
                 >
-                    <div className="flex-1 flex flex-col bg-[#050505] overflow-hidden">
+                    <div className="flex-1 flex flex-col bg-surface overflow-hidden">
                         {isAddMode === 'NONE' ? (
                             <div className="flex-1 flex flex-col min-h-0 relative">
                                 <div className="p-6 pb-0">
@@ -861,18 +861,18 @@ const AddEntry: React.FC = () => {
                                             <button
                                                 key={c}
                                                 onClick={() => setNewColor(c)}
-                                                className={`w-10 h-10 rounded-full shrink-0 transition-all active:scale-75 ${newColor === c ? 'ring-2 ring-white ring-offset-4 ring-offset-[#050505] scale-110' : 'opacity-40'}`}
+                                                className={`w-10 h-10 rounded-full shrink-0 transition-all active:scale-75 ${newColor === c ? 'ring-2 ring-primary ring-offset-4 ring-offset-background scale-110' : 'opacity-40'}`}
                                                 style={{ backgroundColor: c }}
                                             />
                                         ))}
                                     </div>
                                 </div>
 
-                                <div className="mt-auto pt-10 sticky bottom-0 bg-[#050505] pb-10 z-[30]">
+                                <div className="mt-auto pt-10 sticky bottom-0 bg-surface pb-10 z-[30]">
                                     <div className="flex gap-4 px-2">
                                         <button
                                             onClick={() => setAddMode('NONE')}
-                                            className="flex-1 py-4 rounded-2xl bg-white/5 text-gray-600 font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 border border-white/[0.05]"
+                                            className="flex-1 py-4 rounded-2xl bg-surface-subtle text-text-muted hover:text-primary font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 border border-border-subtle"
                                         >
                                             Cancel
                                         </button>

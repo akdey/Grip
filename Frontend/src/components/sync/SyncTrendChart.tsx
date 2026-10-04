@@ -65,7 +65,7 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
         <div className="w-full mt-6">
             <div className="flex items-center justify-between mb-4 px-1">
                 <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-[2px] text-white/40">Automation Yield</span>
+                    <span className="text-[10px] font-black uppercase tracking-[2px] text-text-muted">Automation Yield</span>
                     <div className="flex items-center gap-2 mt-1">
                         <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
                         <span className="text-lg font-black text-accent-text leading-none">
@@ -74,7 +74,7 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                     </div>
                 </div>
                 <div className="text-right">
-                    <span className="text-[10px] font-black uppercase tracking-[2px] text-white/40">Human Friction</span>
+                    <span className="text-[10px] font-black uppercase tracking-[2px] text-text-muted">Human Friction</span>
                     <div className="flex items-center gap-2 mt-1 justify-end">
                         <span className="text-lg font-black text-rose-500 leading-none">
                             {processedData[processedData.length - 1]?.friction || 0}%
@@ -105,13 +105,13 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                                 </linearGradient>
                             </defs>
 
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" vertical={false} />
 
                             <XAxis
                                 dataKey="formattedDate"
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fill: '#374151', fontSize: 9, fontWeight: '900' }}
+                                tick={{ fill: 'var(--color-text-muted)', fontSize: 9, fontWeight: '900' }}
                                 dy={10}
                             />
 
@@ -119,7 +119,7 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                                 domain={[0, 100]}
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fill: '#374151', fontSize: 9, fontWeight: '900' }}
+                                tick={{ fill: 'var(--color-text-muted)', fontSize: 9, fontWeight: '900' }}
                             />
 
                             <Tooltip
@@ -127,25 +127,25 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                                     if (active && payload && payload.length) {
                                         const item = payload[0].payload;
                                         return (
-                                            <div className="bg-[#0a0a0a] border border-white/10 p-3 rounded-xl shadow-2xl backdrop-blur-xl min-w-[160px]">
-                                                <p className="text-[10px] font-black text-gray-500 uppercase mb-3 tracking-widest">{label}</p>
+                                            <div className="bg-surface border border-border-subtle p-3 rounded-xl shadow-2xl backdrop-blur-xl min-w-[160px]">
+                                                <p className="text-[10px] font-black text-text-muted uppercase mb-3 tracking-widest">{label}</p>
                                                 <div className="space-y-2">
                                                     <div className="flex flex-col">
                                                         <div className="flex justify-between items-center mb-0.5">
-                                                            <span className="text-[10px] font-black text-white/80">AUTOMATION</span>
-                                                            <span className="text-[10px] font-black">{item.yield}%</span>
+                                                            <span className="text-[10px] font-black text-primary">AUTOMATION</span>
+                                                            <span className="text-[10px] font-black text-primary">{item.yield}%</span>
                                                         </div>
-                                                        <span className="text-[9px] font-bold text-gray-500 uppercase">{item.system} Auto Entries</span>
+                                                        <span className="text-[9px] font-bold text-text-muted uppercase">{item.system} Auto Entries</span>
                                                     </div>
 
-                                                    <div className="h-[1px] bg-white/5 w-full" />
+                                                    <div className="h-[1px] bg-border-subtle w-full" />
 
                                                     <div className="flex flex-col">
                                                         <div className="flex justify-between items-center mb-0.5">
                                                             <span className="text-[10px] font-black text-rose-500">FRICTION</span>
-                                                            <span className="text-[10px] font-black">{item.friction}%</span>
+                                                            <span className="text-[10px] font-black text-rose-500">{item.friction}%</span>
                                                         </div>
-                                                        <span className="text-[9px] font-bold text-gray-500 uppercase">{item.manual} Manual Entries</span>
+                                                        <span className="text-[9px] font-bold text-text-muted uppercase">{item.manual} Manual Entries</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -182,18 +182,18 @@ export const SyncTrendChart: React.FC<SyncTrendChartProps> = ({ data }) => {
                 </div>
             </div>
 
-            <div className="mt-6 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between">
+            <div className="mt-6 p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center text-white">
+                    <div className="w-8 h-8 rounded-lg bg-surface border border-border-subtle flex items-center justify-center text-primary">
                         <span className="text-xs font-black">AI</span>
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-white/80 uppercase tracking-tight">Financial Autopilot</p>
-                        <p className="text-[8px] text-gray-500 font-bold uppercase">Tracking Automated Growth</p>
+                        <p className="text-[10px] font-black text-primary uppercase tracking-tight">Financial Autopilot</p>
+                        <p className="text-[8px] text-text-muted font-bold uppercase">Tracking Automated Growth</p>
                     </div>
                 </div>
-                <div className="px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-                    <span className="text-[8px] font-black text-green-400 uppercase tracking-wider">Operational</span>
+                <div className="px-3 py-1 rounded-full bg-status-success-bg border border-status-success-border">
+                    <span className="text-[8px] font-black text-status-success-text uppercase tracking-wider">Operational</span>
                 </div>
             </div>
         </div>

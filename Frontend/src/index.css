@@ -467,21 +467,21 @@ body::before {
     pointer-events: none;
   }
 
-  /* Liquid Glass for Drawers - Apple Sheet Material matching Dashboard pure dark (#050505) */
+  /* Liquid Glass for Drawers - Apple Sheet Material adapting to active theme */
   .glass-drawer {
     backdrop-filter: blur(32px) saturate(190%);
     -webkit-backdrop-filter: blur(32px) saturate(190%);
-    background: #050505;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 -20px 80px rgba(0, 0, 0, 0.95);
+    background: var(--color-bg-page);
+    border-top: 1px solid var(--color-border-subtle);
+    box-shadow: 0 -20px 80px rgba(0, 0, 0, 0.4);
   }
 
   /* Premium Loader */
   .premium-loader {
     width: 40px;
     height: 40px;
-    border: 3px solid rgba(255, 255, 255, 0.05);
-    border-top: 3px solid #fff;
+    border: 3px solid var(--color-border-subtle);
+    border-top: 3px solid var(--color-text-primary);
     border-radius: 50%;
     animation: premium-spin 0.8s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
   }
@@ -501,7 +501,7 @@ body::before {
   }
 
   .glass-button {
-    @apply relative overflow-hidden px-8 py-4.5 rounded-[1.5rem] bg-white text-black font-semibold uppercase text-[11px] tracking-widest shadow-xl border border-white hover:bg-neutral-200 transition-transform duration-100 ease-out;
+    @apply relative overflow-hidden px-8 py-4.5 rounded-[1.5rem] bg-primary text-text-inverse font-semibold uppercase text-[11px] tracking-widest shadow-xl border border-border-subtle hover:opacity-90 transition-transform duration-100 ease-out;
     touch-action: manipulation;
   }
   .glass-button:active {
@@ -509,7 +509,7 @@ body::before {
   }
 
   .glass-button.secondary {
-    @apply bg-white/[0.05] border border-white/10 text-white hover:bg-white/10 hover:text-white;
+    @apply bg-surface-subtle border border-border-subtle text-text-muted hover:bg-surface-hover hover:text-primary;
   }
 
   .glass-button.accent {

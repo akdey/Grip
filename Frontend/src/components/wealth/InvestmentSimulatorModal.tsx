@@ -132,10 +132,10 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                     </div>
 
                     {/* Header */}
-                    <div className="p-6 sm:p-8 border-b border-white/[0.06] flex justify-between items-center bg-white/[0.02] shrink-0">
+                    <div className="p-6 sm:p-8 border-b border-border-subtle flex justify-between items-center bg-surface-subtle shrink-0">
                         <div>
-                            <h2 className="text-2xl font-black italic tracking-tighter flex items-center gap-2 heading-apple text-white">
-                                <Calculator className="text-white" size={26} />
+                            <h2 className="text-2xl font-black italic tracking-tighter flex items-center gap-2 heading-apple text-primary">
+                                <Calculator className="text-primary" size={26} />
                                 TIME MACHINE
                             </h2>
                             <p className="text-[10px] text-text-muted uppercase tracking-[4px] font-semibold">Mutual Fund Intelligence Simulator</p>
@@ -146,7 +146,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                     haptics.selection();
                                     onClose();
                                 }}
-                                className="w-12 h-12 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group touch-manipulation"
+                                className="w-12 h-12 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-xl group touch-manipulation"
                                 aria-label="Close"
                             >
                                 <ChevronDown size={24} className="group-hover:translate-y-0.5 transition-transform" />
@@ -155,26 +155,26 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                     </div>
 
                     {/* Content */}
-                    <div className="p-6 flex-1 overflow-y-auto select-text">
+                    <div className="p-6 flex-1 overflow-y-auto select-text custom-scrollbar">
 
                         {step === 1 && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                                 {/* Search Fund */}
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Select Mutual Fund</label>
+                                    <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Select Mutual Fund</label>
                                     <div className="relative">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
                                         <input
                                             value={searchTerm}
                                             onChange={e => { setSearchTerm(e.target.value); setShowDropdown(true); }}
                                             onFocus={() => setShowDropdown(true)}
                                             placeholder="Search e.g. Parag Parikh Flexi Cap..."
-                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm font-medium focus:outline-none focus:border-white/30 transition-all placeholder:text-gray-600"
+                                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-12 pr-4 py-4 text-sm font-medium focus:outline-none focus:border-border-default transition-all placeholder:text-text-muted text-primary"
                                         />
-                                        {isSchemesLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full" />}
+                                        {isSchemesLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 border-2 border-border-subtle border-t-primary rounded-full" />}
 
                                         {showDropdown && searchTerm.length > 1 && (
-                                            <div className="absolute z-50 w-full mt-2 bg-[#1A1A1A] border border-white/10 rounded-2xl max-h-60 overflow-y-auto shadow-2xl custom-scrollbar">
+                                            <div className="absolute z-50 w-full mt-2 bg-surface border border-border-subtle rounded-2xl max-h-60 overflow-y-auto shadow-2xl custom-scrollbar">
                                                 {schemes.filter(s => s.schemeName.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 50).map(s => (
                                                     <button
                                                         key={s.schemeCode}
@@ -183,45 +183,44 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                                             setSearchTerm(s.schemeName);
                                                             setShowDropdown(false);
                                                         }}
-                                                        className="w-full text-left px-4 py-3 hover:bg-white/5 border-b border-white/5 last:border-0 text-xs transition-colors"
+                                                        className="w-full text-left px-4 py-3 hover:bg-surface-hover border-b border-border-subtle last:border-0 text-xs transition-colors"
                                                     >
-                                                        <p className="font-bold text-gray-200">{s.schemeName}</p>
-                                                        <p className="text-[10px] text-gray-500 font-mono mt-0.5">{s.schemeCode}</p>
+                                                        <p className="font-bold text-primary">{s.schemeName}</p>
+                                                        <p className="text-[10px] text-text-muted font-mono mt-0.5">{s.schemeCode}</p>
                                                     </button>
                                                 ))}
                                             </div>
                                         )}
-                                        {formData.schemeCode && <p className="text-[10px] text-white/70 mt-2 font-mono">Picked: {formData.schemeCode}</p>}
+                                        {formData.schemeCode && <p className="text-[10px] text-text-muted mt-2 font-mono">Picked: {formData.schemeCode}</p>}
                                     </div>
                                 </div>
 
                                 {/* Type Toggle */}
-                                <div className="flex gap-2 bg-white/5 p-1 rounded-xl">
+                                <div className="flex gap-2 bg-surface border border-border-subtle p-1 rounded-xl">
                                     {['LUMPSUM', 'SIP'].map(t => (
                                         <button
                                             key={t}
                                             onClick={() => setFormData({ ...formData, investmentType: t })}
-                                            className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${formData.investmentType === t ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-white'}`}
+                                            className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${formData.investmentType === t ? 'bg-primary text-background shadow-sm' : 'text-text-muted hover:text-primary'}`}
                                         >
                                             {t}
                                         </button>
                                     ))}
                                 </div>
 
-
                                 {/* Amount */}
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    <label className="text-xs font-bold text-text-muted uppercase tracking-wider">
                                         {formData.investmentType === 'SIP' ? 'Monthly Amount (₹)' : 'Investment Amount (₹)'}
                                     </label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted font-bold">₹</span>
                                         <input
                                             type="number"
                                             value={formData.amount}
                                             onChange={e => setFormData({ ...formData, amount: e.target.value })}
                                             placeholder="5000"
-                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl pl-10 pr-4 py-4 text-sm font-medium focus:outline-none focus:border-white/30 transition-all font-mono"
+                                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-10 pr-4 py-4 text-sm font-medium focus:outline-none focus:border-border-default transition-all font-mono text-primary"
                                         />
                                     </div>
                                 </div>
@@ -229,17 +228,17 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                 {/* Date Range */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Start Date</label>
+                                        <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Start Date</label>
                                         <input
                                             type="date"
                                             value={formData.date}
                                             max={new Date().toISOString().split('T')[0]}
                                             onChange={e => setFormData({ ...formData, date: e.target.value })}
-                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl px-4 py-4 text-sm font-medium focus:outline-none focus:border-white/30 transition-all [color-scheme:dark]"
+                                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-4 text-sm font-medium focus:outline-none focus:border-border-default transition-all text-primary"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">End Date (Opt)</label>
+                                        <label className="text-xs font-bold text-text-muted uppercase tracking-wider">End Date (Opt)</label>
                                         <input
                                             type="date"
                                             value={formData.endDate}
@@ -247,9 +246,9 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                             max={new Date().toISOString().split('T')[0]}
                                             onChange={e => setFormData({ ...formData, endDate: e.target.value })}
                                             placeholder="Today"
-                                            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl px-4 py-4 text-sm font-medium focus:outline-none focus:border-white/30 transition-all [color-scheme:dark]"
+                                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-4 text-sm font-medium focus:outline-none focus:border-border-default transition-all text-primary"
                                         />
-                                        <p className="text-[9px] text-gray-600 ml-1">Leave empty for today</p>
+                                        <p className="text-[9px] text-text-muted ml-1">Leave empty for today</p>
                                     </div>
                                 </div>
 
@@ -276,24 +275,24 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-6">
 
                                 <div className="space-y-1">
-                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Snapshot</p>
-                                    <h3 className="text-sm font-medium text-gray-300 max-w-[90%] mx-auto leading-relaxed">
-                                        {formData.investmentType} of <span className="text-white font-bold">₹{parseFloat(formData.amount).toLocaleString()}</span> in <br />
+                                    <p className="text-xs text-text-muted font-bold uppercase tracking-widest">Snapshot</p>
+                                    <h3 className="text-sm font-medium text-text-muted max-w-[90%] mx-auto leading-relaxed">
+                                        {formData.investmentType} of <span className="text-primary font-bold">₹{parseFloat(formData.amount).toLocaleString()}</span> in <br />
                                         <span className="text-accent-text font-semibold">{formData.schemeName.substring(0, 35)}...</span><br />
-                                        <span className="text-gray-500 text-xs">from {new Date(result.invested_date).toLocaleDateString()} to {result.end_date ? new Date(result.end_date).toLocaleDateString() : 'Today'}</span>
+                                        <span className="text-text-muted text-xs">from {new Date(result.invested_date).toLocaleDateString()} to {result.end_date ? new Date(result.end_date).toLocaleDateString() : 'Today'}</span>
                                     </h3>
                                 </div>
 
-                                <div className="bg-[#151515] border border-white/5 rounded-3xl p-6 relative overflow-hidden">
+                                <div className="bg-surface-subtle border border-border-subtle rounded-3xl p-6 relative overflow-hidden">
                                     <div className={`absolute top-0 left-0 w-full h-1 ${result.return_percentage >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
 
                                     <div className="relative z-10">
-                                        <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Total Value</p>
-                                        <h1 className="text-4xl font-black tracking-tighter text-white mb-2">
+                                        <p className="text-text-muted text-xs uppercase tracking-widest mb-1">Total Value</p>
+                                        <h1 className="text-4xl font-black tracking-tighter text-primary mb-2">
                                             ₹{Math.round(result.current_value).toLocaleString()}
                                         </h1>
 
-                                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${result.return_percentage >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${result.return_percentage >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                                             {result.return_percentage >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
                                             <span className="font-bold font-mono text-sm">
                                                 {result.return_percentage >= 0 ? '+' : ''}{result.return_percentage.toFixed(2)}%
@@ -302,22 +301,22 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                     </div>
                                 </div>
 
-                                <div className="bg-white/[0.03] rounded-2xl p-4 grid grid-cols-2 gap-4 text-left">
+                                <div className="bg-surface border border-border-subtle rounded-2xl p-4 grid grid-cols-2 gap-4 text-left">
                                     <div>
-                                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Total Invested</p>
-                                        <p className="font-mono text-sm text-gray-200">₹{Math.round(result.invested_amount).toLocaleString()}</p>
+                                        <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Total Invested</p>
+                                        <p className="font-mono text-sm text-primary">₹{Math.round(result.invested_amount).toLocaleString()}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Current NAV</p>
-                                        <p className="font-mono text-sm text-gray-200">₹{result.current_nav.toFixed(2)}</p>
+                                        <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Current NAV</p>
+                                        <p className="font-mono text-sm text-primary">₹{result.current_nav.toFixed(2)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Units</p>
-                                        <p className="font-mono text-sm text-gray-200">{result.units_allotted.toFixed(3)}</p>
+                                        <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Units</p>
+                                        <p className="font-mono text-sm text-primary">{result.units_allotted.toFixed(3)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Gain/Loss</p>
-                                        <p className={`font-mono text-sm ${result.absolute_return >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Gain/Loss</p>
+                                        <p className={`font-mono text-sm ${result.absolute_return >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                             {result.absolute_return >= 0 ? '+' : ''}₹{Math.round(result.absolute_return).toLocaleString()}
                                         </p>
                                     </div>
@@ -325,7 +324,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
 
                                 <button
                                     onClick={reset}
-                                    className="w-full py-4 text-sm font-bold text-gray-400 hover:text-white transition-colors uppercase tracking-widest"
+                                    className="w-full py-4 text-sm font-bold text-text-muted hover:text-primary transition-colors uppercase tracking-widest"
                                 >
                                     Run Another Simulation
                                 </button>

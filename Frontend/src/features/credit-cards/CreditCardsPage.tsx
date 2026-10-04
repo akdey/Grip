@@ -56,15 +56,15 @@ const CreditCardsPage: React.FC = () => {
     if (isLoading) return <Loader fullPage text="Initializing Vault" />;
 
     return (
-        <div className="text-white pb-24 overflow-x-hidden relative">
-            <header className="px-5 pt-safe pt-6 pb-4 flex items-center justify-between sticky top-0 bg-[#050505]/80 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
+        <div className="text-primary pb-24 overflow-x-hidden relative">
+            <header className="px-5 pt-safe pt-6 pb-4 flex items-center justify-between sticky top-0 bg-page/80 backdrop-blur-3xl z-30 border-b border-border-subtle">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all">
+                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all">
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-xl font-black tracking-tight uppercase">Credit</h1>
-                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">Matrix Cards</p>
+                        <h1 className="text-xl font-black tracking-tight uppercase text-primary">Credit</h1>
+                        <p className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">Matrix Cards</p>
                     </div>
                 </div>
                 <button
@@ -75,7 +75,7 @@ const CreditCardsPage: React.FC = () => {
                             setShowForm(true);
                         }
                     }}
-                    className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-all shadow-xl"
+                    className="w-10 h-10 rounded-full bg-primary text-background flex items-center justify-center active:scale-90 transition-all shadow-xl"
                 >
                     <Plus size={20} strokeWidth={3} />
                 </button>
@@ -83,8 +83,8 @@ const CreditCardsPage: React.FC = () => {
 
             <div className="px-5 py-6 space-y-10 animate-enter">
                 {showForm && (
-                    <div className="glass-card p-6 rounded-[2.5rem] border-white/10 space-y-6">
-                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[4px] ml-1">
+                    <div className="glass-card p-6 rounded-[2.5rem] border-border-subtle space-y-6">
+                        <h3 className="text-[10px] font-black text-text-muted uppercase tracking-[4px] ml-1">
                             {editingCardId ? 'Update Matrix' : 'New Card Matrix'}
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-5">
@@ -114,36 +114,36 @@ const CreditCardsPage: React.FC = () => {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-3xl flex flex-col justify-center">
-                                    <span className="text-[7px] text-gray-600 font-black uppercase tracking-widest pl-2 mb-1">Statement Day</span>
+                                <div className="bg-surface-subtle border border-border-subtle p-3 rounded-3xl flex flex-col justify-center">
+                                    <span className="text-[7px] text-text-muted font-black uppercase tracking-widest pl-2 mb-1">Statement Day</span>
                                     <input
                                         type="number"
                                         min="1" max="31"
                                         value={formData.statement_date}
                                         onChange={e => setFormData({ ...formData, statement_date: Number(e.target.value) })}
-                                        className="bg-transparent text-sm text-white focus:outline-none font-black"
+                                        className="bg-transparent text-sm text-primary focus:outline-none font-black"
                                     />
                                 </div>
-                                <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-3xl flex flex-col justify-center">
-                                    <span className="text-[7px] text-gray-600 font-black uppercase tracking-widest pl-2 mb-1">Terminal Day</span>
+                                <div className="bg-surface-subtle border border-border-subtle p-3 rounded-3xl flex flex-col justify-center">
+                                    <span className="text-[7px] text-text-muted font-black uppercase tracking-widest pl-2 mb-1">Terminal Day</span>
                                     <input
                                         type="number"
                                         min="1" max="31"
                                         value={formData.payment_due_date}
                                         onChange={e => setFormData({ ...formData, payment_due_date: Number(e.target.value) })}
-                                        className="bg-transparent text-sm text-white focus:outline-none font-black"
+                                        className="bg-transparent text-sm text-primary focus:outline-none font-black"
                                     />
                                 </div>
                             </div>
 
                             <div className="flex gap-3 pt-4">
-                                <button type="submit" className="flex-1 py-4.5 rounded-[1.5rem] bg-white text-black font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
+                                <button type="submit" className="flex-1 py-4.5 rounded-[1.5rem] bg-primary text-background font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
                                     {addCardMutation.isPending || updateCardMutation.isPending ? 'Syncing...' : (editingCardId ? 'Update' : 'Commit')}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={handleCancel}
-                                    className="px-6 py-4.5 rounded-[1.5rem] bg-white/5 border border-white/5 text-gray-500 font-bold text-xs uppercase active:scale-95 transition-all"
+                                    className="px-6 py-4.5 rounded-[1.5rem] bg-surface-subtle border border-border-subtle text-text-muted hover:text-primary font-bold text-xs uppercase active:scale-95 transition-all"
                                 >
                                     Cancel
                                 </button>

@@ -137,10 +137,10 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                     </div>
 
                     {/* Fixed Header */}
-                    <div className="p-6 sm:p-8 border-b border-white/[0.06] flex justify-between items-center bg-gradient-to-b from-white/[0.04] to-transparent shrink-0">
+                    <div className="p-6 sm:p-8 border-b border-border-subtle flex justify-between items-center bg-surface-subtle shrink-0">
                         <div>
-                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic heading-apple">Add New Asset</h3>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[4px] mt-1">Portfolio Expansion Engine</p>
+                            <h3 className="text-2xl font-black text-primary tracking-tighter uppercase italic heading-apple">Add New Asset</h3>
+                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-[4px] mt-1">Portfolio Expansion Engine</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <button
@@ -148,7 +148,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                     haptics.selection();
                                     onClose();
                                 }}
-                                className="w-12 h-12 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group touch-manipulation"
+                                className="w-12 h-12 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-xl group touch-manipulation"
                                 aria-label="Close"
                             >
                                 <ChevronDown size={24} className="group-hover:translate-y-0.5 transition-transform" />
@@ -160,74 +160,74 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                     <div className="overflow-y-auto flex-1 custom-scrollbar select-text">
                         <div className="p-6 sm:p-10 space-y-6">
                             <div>
-                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Asset Name</label>
+                                <label className="block text-[10px] font-black text-text-muted uppercase tracking-widest mb-2">Asset Name</label>
                                 <input
                                     type="text"
                                     required
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="e.g. Axis Bluechip Fund"
-                                    className="w-full bg-white/[0.02] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-white/30 transition-all placeholder:text-gray-600"
+                                    className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-border-default transition-all placeholder:text-text-muted text-primary"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+                                    <label className="block text-xs font-medium text-text-muted mb-1">Type</label>
                                     <select
                                         value={formData.asset_type}
                                         onChange={e => setFormData({ ...formData, asset_type: e.target.value })}
-                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 appearance-none cursor-pointer"
+                                        className="w-full bg-surface-subtle border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default text-primary appearance-none cursor-pointer"
                                     >
-                                        <option value="MUTUAL_FUND">Mutual Fund</option>
-                                        <option value="STOCK">Stock</option>
-                                        <option value="SIP">SIP</option>
-                                        <option value="FD">FD</option>
-                                        <option value="RD">RD</option>
-                                        <option value="PF">Provident Fund</option>
-                                        <option value="GOLD">Gold</option>
+                                        <option value="MUTUAL_FUND" className="bg-surface text-primary">Mutual Fund</option>
+                                        <option value="STOCK" className="bg-surface text-primary">Stock</option>
+                                        <option value="SIP" className="bg-surface text-primary">SIP</option>
+                                        <option value="FD" className="bg-surface text-primary">FD</option>
+                                        <option value="RD" className="bg-surface text-primary">RD</option>
+                                        <option value="PF" className="bg-surface text-primary">Provident Fund</option>
+                                        <option value="GOLD" className="bg-surface text-primary">Gold</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Source</label>
+                                    <label className="block text-xs font-medium text-text-muted mb-1">Source</label>
                                     <select
                                         value={formData.api_source}
                                         onChange={e => setFormData({ ...formData, api_source: e.target.value })}
-                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 appearance-none cursor-pointer"
+                                        className="w-full bg-surface-subtle border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default text-primary appearance-none cursor-pointer"
                                     >
-                                        <option value="MFAPI">MF API (India)</option>
-                                        <option value="YFINANCE">Yahoo Finance</option>
-                                        <option value="MANUAL">Manual</option>
+                                        <option value="MFAPI" className="bg-surface text-primary">MF API (India)</option>
+                                        <option value="YFINANCE" className="bg-surface text-primary">Yahoo Finance</option>
+                                        <option value="MANUAL" className="bg-surface text-primary">Manual</option>
                                     </select>
                                 </div>
                             </div>
 
                             {formData.api_source !== 'MANUAL' && (
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                                    <label className="block text-xs font-medium text-text-muted mb-1">
                                         {formData.api_source === 'MFAPI' ? 'Search Mutual Fund Scheme' : 'Ticker / Scheme Code'}
                                     </label>
 
                                     {formData.api_source === 'MFAPI' ? (
                                         <div className="relative">
                                             <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
                                                 <input
                                                     type="text"
                                                     value={searchTerm}
                                                     onChange={e => { setSearchTerm(e.target.value); setShowDropdown(true); }}
                                                     onFocus={() => setShowDropdown(true)}
                                                     placeholder="Search e.g. Axis Bluechip..."
-                                                    className="w-full bg-[#151515] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                                    className="w-full bg-surface-subtle border border-border-subtle rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary placeholder:text-text-muted"
                                                 />
                                                 {isSchemesLoading && (
-                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full"></div>
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 border-2 border-border-subtle border-t-primary rounded-full"></div>
                                                 )}
                                             </div>
 
                                             {/* Dropdown */}
                                             {showDropdown && searchTerm.length > 1 && (
-                                                <div className="absolute z-50 w-full mt-1 bg-[#151515] border border-white/10 rounded-xl max-h-60 overflow-y-auto shadow-2xl custom-scrollbar">
+                                                <div className="absolute z-50 w-full mt-1 bg-surface border border-border-subtle rounded-xl max-h-60 overflow-y-auto shadow-2xl custom-scrollbar">
                                                     {schemes
                                                         .filter(s => s.schemeName.toLowerCase().includes(searchTerm.toLowerCase()))
                                                         .slice(0, 50)
@@ -269,9 +269,9 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 value={formData.ticker_symbol}
                                                 onChange={e => setFormData({ ...formData, ticker_symbol: e.target.value })}
                                                 placeholder="e.g. RELIANCE.NS"
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors font-mono"
+                                                className="w-full bg-surface-subtle border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors font-mono text-primary placeholder:text-text-muted"
                                             />
-                                            <p className="text-[10px] text-gray-600 mt-1">
+                                            <p className="text-[10px] text-text-muted mt-1">
                                                 Use Ticker Symbol (e.g., RELIANCE.NS for NSE)
                                             </p>
                                         </>
@@ -281,11 +281,11 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
 
                             {/* Manual Entry Fields */}
                             {formData.api_source === 'MANUAL' && (
-                                <div className="space-y-4 p-4 bg-white/[0.03] rounded-xl border border-white/10">
-                                    <p className="text-xs text-white/80 font-medium">📝 Manual Entry</p>
+                                <div className="space-y-4 p-4 bg-surface-subtle rounded-xl border border-border-subtle">
+                                    <p className="text-xs text-primary font-medium">📝 Manual Entry</p>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1">
                                                 Current Units
                                             </label>
                                             <input
@@ -295,11 +295,11 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 value={formData.current_units}
                                                 onChange={e => setFormData({ ...formData, current_units: e.target.value })}
                                                 placeholder="e.g. 2500"
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                                className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1">
                                                 Total Invested (₹)
                                             </label>
                                             <input
@@ -309,7 +309,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 value={formData.total_invested}
                                                 onChange={e => setFormData({ ...formData, total_invested: e.target.value })}
                                                 placeholder="e.g. 100000"
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                                className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary"
                                             />
                                         </div>
                                     </div>
@@ -318,14 +318,14 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
 
                             {/* FD/RD Specific Fields */}
                             {(formData.asset_type === 'FD' || formData.asset_type === 'RD') && (
-                                <div className="space-y-4 p-4 bg-white/[0.03] rounded-xl border border-white/10">
-                                    <p className="text-xs text-white/80 font-medium">
+                                <div className="space-y-4 p-4 bg-surface-subtle rounded-xl border border-border-subtle">
+                                    <p className="text-xs text-primary font-medium">
                                         💰 {formData.asset_type === 'FD' ? 'Fixed Deposit' : 'Recurring Deposit'} Details
                                     </p>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1">
                                                 Principal Amount (₹)
                                             </label>
                                             <input
@@ -335,14 +335,14 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 value={formData.total_invested}
                                                 onChange={e => setFormData({ ...formData, total_invested: e.target.value })}
                                                 placeholder={formData.asset_type === 'FD' ? "e.g. 100000" : "e.g. 5000 (monthly)"}
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                                className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary"
                                             />
-                                            <p className="text-[10px] text-gray-600 mt-1">
+                                            <p className="text-[10px] text-text-muted mt-1">
                                                 {formData.asset_type === 'FD' ? 'One-time deposit' : 'Monthly deposit amount'}
                                             </p>
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1">
                                                 Interest Rate (% p.a.)
                                             </label>
                                             <input
@@ -352,14 +352,14 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 value={formData.interest_rate}
                                                 onChange={e => setFormData({ ...formData, interest_rate: e.target.value })}
                                                 placeholder="e.g. 7.5"
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                                className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary"
                                             />
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1">
                                                 Start Date
                                             </label>
                                             <input
@@ -367,11 +367,11 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 required
                                                 value={formData.investment_start_date}
                                                 onChange={e => setFormData({ ...formData, investment_start_date: e.target.value })}
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                                className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1">
                                                 Maturity Date
                                             </label>
                                             <input
@@ -379,12 +379,12 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 required
                                                 value={formData.maturity_date}
                                                 onChange={e => setFormData({ ...formData, maturity_date: e.target.value })}
-                                                className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                                className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary"
                                             />
                                         </div>
                                     </div>
 
-                                    <p className="text-[10px] text-gray-600">
+                                    <p className="text-[10px] text-text-muted">
                                         💡 We'll calculate the current value based on interest accrued till today
                                     </p>
                                 </div>
@@ -392,7 +392,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
 
                             {/* Existing Holdings Section - Only for Mutual Funds/Stocks */}
                             {formData.asset_type !== 'FD' && formData.asset_type !== 'RD' && (
-                                <div className="border-t border-white/5 pt-4 mt-2">
+                                <div className="border-t border-border-subtle pt-4 mt-2">
                                     <button
                                         type="button"
                                         onClick={() => setShowExistingFields(!showExistingFields)}
@@ -406,15 +406,15 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                         <motion.div
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: 'auto' }}
-                                            className="mt-4 space-y-4 p-4 bg-white/[0.02] rounded-xl border border-white/5"
+                                            className="mt-4 space-y-4 p-4 bg-surface-subtle rounded-xl border border-border-subtle"
                                         >
-                                            <p className="text-xs text-gray-500">
+                                            <p className="text-xs text-text-muted">
                                                 Enter your current holdings to calculate accurate returns (XIRR)
                                             </p>
 
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                    <label className="block text-xs font-medium text-text-muted mb-1">
                                                         Current Units
                                                     </label>
                                                     <input
@@ -423,11 +423,11 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                         value={formData.current_units}
                                                         onChange={e => setFormData({ ...formData, current_units: e.target.value })}
                                                         placeholder="e.g. 2500"
-                                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                                        className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                    <label className="block text-xs font-medium text-text-muted mb-1">
                                                         Total Invested (₹)
                                                     </label>
                                                     <input
@@ -436,39 +436,39 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                         value={formData.total_invested}
                                                         onChange={e => setFormData({ ...formData, total_invested: e.target.value })}
                                                         placeholder="e.g. 100000"
-                                                        className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                                        className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary"
                                                     />
                                                 </div>
                                             </div>
 
                                             <div>
-                                                <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                <label className="block text-xs font-medium text-text-muted mb-1">
                                                     When did you start investing?
                                                 </label>
                                                 <input
                                                     type="date"
                                                     value={formData.investment_start_date}
                                                     onChange={e => setFormData({ ...formData, investment_start_date: e.target.value })}
-                                                    className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                                    className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary"
                                                 />
-                                                <p className="text-[10px] text-gray-600 mt-1">
+                                                <p className="text-[10px] text-text-muted mt-1">
                                                     Helps calculate accurate XIRR
                                                 </p>
                                             </div>
 
                                             <div>
-                                                <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                <label className="block text-xs font-medium text-text-muted mb-1">
                                                     Investment Type
                                                 </label>
                                                 <select
                                                     value={formData.investment_type}
                                                     onChange={e => setFormData({ ...formData, investment_type: e.target.value })}
-                                                    className="w-full bg-[#151515] border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/30 appearance-none cursor-pointer"
+                                                    className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default text-primary appearance-none cursor-pointer"
                                                 >
-                                                    <option value="SIP">SIP (Monthly)</option>
-                                                    <option value="LUMPSUM">Lump Sum</option>
+                                                    <option value="SIP" className="bg-surface text-primary">SIP (Monthly)</option>
+                                                    <option value="LUMPSUM" className="bg-surface text-primary">Lump Sum</option>
                                                 </select>
-                                                <p className="text-[10px] text-gray-600 mt-1">
+                                                <p className="text-[10px] text-text-muted mt-1">
                                                     SIP: Regular monthly investments | Lump Sum: One-time investment
                                                 </p>
                                             </div>

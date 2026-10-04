@@ -395,10 +395,10 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                             </h4>
                                         </div>
 
-                                        <div className="bg-white/[0.02] rounded-3xl border border-white/5 max-h-[40vh] overflow-auto custom-scrollbar">
+                                        <div className="bg-surface-subtle rounded-3xl border border-border-subtle max-h-[40vh] overflow-auto custom-scrollbar">
                                             <table className="w-full text-xs text-left">
-                                                <thead className="sticky top-0 bg-[#0A0A0A] border-b border-white/10 z-10">
-                                                    <tr className="text-gray-500">
+                                                <thead className="sticky top-0 bg-surface border-b border-border-subtle z-10">
+                                                    <tr className="text-text-muted">
                                                         <th className="px-5 py-4 font-black uppercase tracking-widest text-[9px]">Event Date</th>
                                                         <th className="px-5 py-4 font-black uppercase tracking-widest text-[9px]">Scheme Descriptor</th>
                                                         <th className="px-5 py-4 font-black uppercase tracking-widest text-[9px]">Type</th>
@@ -406,21 +406,21 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                                         <th className="px-5 py-4 font-black uppercase tracking-widest text-[9px] text-right">Units</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody className="divide-y divide-white/[0.05]">
+                                                <tbody className="divide-y divide-border-subtle">
                                                     {transactions.slice(0, 100).map((txn, idx) => (
-                                                        <tr key={idx} className="hover:bg-white/[0.04] transition-colors">
-                                                            <td className="px-5 py-4 whitespace-nowrap text-gray-400 font-mono">{txn.transaction_date}</td>
-                                                            <td className="px-5 py-4 font-bold text-white truncate max-w-[250px]" title={txn.scheme_name}>{txn.scheme_name}</td>
+                                                        <tr key={idx} className="hover:bg-surface-hover transition-colors">
+                                                            <td className="px-5 py-4 whitespace-nowrap text-text-muted font-mono">{txn.transaction_date}</td>
+                                                            <td className="px-5 py-4 font-bold text-primary truncate max-w-[250px]" title={txn.scheme_name}>{txn.scheme_name}</td>
                                                             <td className="px-5 py-4">
                                                                 <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest ${txn.transaction_type.toLowerCase().includes('purchase') || txn.transaction_type.toLowerCase().includes('sip')
-                                                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10'
-                                                                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/10'
+                                                                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/10'
+                                                                    : 'bg-rose-500/10 text-rose-500 border border-rose-500/10'
                                                                     }`}>
                                                                     {txn.transaction_type}
                                                                 </span>
                                                             </td>
-                                                            <td className="px-5 py-4 text-right font-black text-white">₹{txn.amount.toLocaleString()}</td>
-                                                            <td className="px-5 py-4 text-right font-mono text-gray-400">{txn.units.toFixed(3)}</td>
+                                                            <td className="px-5 py-4 text-right font-black text-primary">₹{txn.amount.toLocaleString()}</td>
+                                                            <td className="px-5 py-4 text-right font-mono text-text-muted">{txn.units.toFixed(3)}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>

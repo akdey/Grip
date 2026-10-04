@@ -119,13 +119,13 @@ const Dashboard: React.FC = () => {
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                     transition={{ duration: 0.2 }}
-                                    className="absolute top-full left-0 mt-2 w-40 bg-[#1A1A1A] border border-white/[0.1] rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl z-[100]"
+                                    className="absolute top-full left-0 mt-2 w-40 bg-surface border border-border-subtle rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl z-[100]"
                                 >
                                     {scopes.map(s => (
                                         <button
                                             key={s.id}
                                             onClick={() => { setScope(s.id); setShowScopeMenu(false); }}
-                                            className={`w-full text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-white/[0.05] transition-all flex items-center justify-between ${scope === s.id ? 'text-accent-text bg-accent-subtle font-semibold' : 'text-gray-500'}`}
+                                            className={`w-full text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-surface-hover transition-all flex items-center justify-between ${scope === s.id ? 'text-accent-text bg-accent-subtle font-semibold' : 'text-text-muted hover:text-primary'}`}
                                         >
                                             {s.label}
                                             {scope === s.id && <Check size={12} className="text-accent-text" />}
@@ -218,7 +218,7 @@ const Dashboard: React.FC = () => {
                                 haptics.selection();
                                 setShowForecastDetails(false);
                             }}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
+                            className="absolute inset-0 bg-overlay backdrop-blur-md pointer-events-auto"
                         />
                         <motion.div
                             initial={{ y: '100%' }}
@@ -371,7 +371,7 @@ const Dashboard: React.FC = () => {
                                 haptics.selection();
                                 setShowObligations(false);
                             }}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
+                            className="absolute inset-0 bg-overlay backdrop-blur-md pointer-events-auto"
                         />
                         <motion.div
                             initial={{ y: '100%' }}

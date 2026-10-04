@@ -85,23 +85,23 @@ const SettleUp: React.FC = () => {
     if (isLoading) return <Loader fullPage text="Loading balances" />;
 
     return (
-        <div className="min-h-screen text-white pb-24">
+        <div className="min-h-screen text-primary pb-24">
             {/* Header */}
-            <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-[#050505]/80 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
+            <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-page/80 backdrop-blur-3xl z-30 border-b border-border-subtle">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all">
+                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all">
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">Settle Up</h1>
-                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">
+                        <h1 className="text-xl font-bold tracking-tight text-primary">Settle Up</h1>
+                        <p className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">
                             {balances?.length || 0} active peers
                         </p>
                     </div>
                 </div>
                 <button
                     onClick={() => setShowAddForm(true)}
-                    className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-all shadow-md"
+                    className="w-10 h-10 rounded-full bg-primary text-background flex items-center justify-center active:scale-90 transition-all shadow-md"
                 >
                     <Plus size={20} />
                 </button>
@@ -123,15 +123,15 @@ const SettleUp: React.FC = () => {
                             <div
                                 key={peer.peer_name}
                                 onClick={() => setSelectedPeer(peer.peer_name)}
-                                className="flex items-center justify-between p-4 bg-white/[0.02] hover:bg-white/[0.04] transition-all border border-white/[0.05] rounded-2xl cursor-pointer active:scale-[0.98]"
+                                className="flex items-center justify-between p-4 bg-surface-subtle hover:bg-surface-hover transition-all border border-border-subtle rounded-2xl cursor-pointer active:scale-[0.98]"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border border-white/[0.08] ${isOwed ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border border-border-subtle ${isOwed ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                                         {isOwed ? <ArrowDownLeft size={22} /> : <ArrowUpRight size={22} />}
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-white/90 text-sm">{peer.peer_name}</p>
-                                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">
+                                        <p className="font-semibold text-primary text-sm">{peer.peer_name}</p>
+                                        <p className="text-[9px] text-text-muted font-bold uppercase tracking-widest mt-1">
                                             {peer.last_activity_date
                                                 ? formatDistanceToNow(parseISO(peer.last_activity_date), { addSuffix: true })
                                                 : 'No activity'}
@@ -173,18 +173,18 @@ const SettleUp: React.FC = () => {
                     {/* Info Note */}
                     <div className="flex items-start gap-3 p-4 rounded-2xl bg-accent-subtle border border-accent-border">
                         <Info size={16} className="text-accent-text mt-0.5 shrink-0" />
-                        <p className="text-[10px] text-gray-400 leading-relaxed">
+                        <p className="text-[10px] text-text-secondary leading-relaxed">
                             Manual entries added here only update peer balances and <strong className="text-accent-text">will not affect your main expense tracking</strong>.
                         </p>
                     </div>
 
                     {/* Type Toggle */}
-                    <div className="grid grid-cols-2 gap-2 p-1.5 bg-white/[0.02] border border-white/[0.08] rounded-2xl">
+                    <div className="grid grid-cols-2 gap-2 p-1.5 bg-surface-subtle border border-border-subtle rounded-2xl">
                         <button
                             onClick={() => setNewType('expense')}
                             className={`py-3.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${newType === 'expense'
                                 ? 'bg-status-success-bg text-status-success-text border border-status-success-border shadow-sm'
-                                : 'text-gray-400 hover:text-white'
+                                : 'text-text-muted hover:text-primary'
                                 }`}
                         >
                             I Lent
@@ -193,7 +193,7 @@ const SettleUp: React.FC = () => {
                             onClick={() => setNewType('income')}
                             className={`py-3.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${newType === 'income'
                                 ? 'bg-status-danger-bg text-status-danger-text border border-status-danger-border shadow-sm'
-                                : 'text-gray-400 hover:text-white'
+                                : 'text-text-muted hover:text-primary'
                                 }`}
                         >
                             I Borrowed
@@ -202,47 +202,47 @@ const SettleUp: React.FC = () => {
 
                     {/* Peer Name */}
                     <div className="space-y-2">
-                        <label className="text-[9px] text-gray-600 font-bold uppercase tracking-[3px] ml-1">Person</label>
+                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-[3px] ml-1">Person</label>
                         <input
                             type="text"
                             value={newPeerName}
                             onChange={(e) => setNewPeerName(e.target.value)}
                             placeholder="e.g. John Doe"
-                            className="w-full bg-[#1A1A1A] border border-white/[0.05] rounded-2xl px-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-white/30 placeholder-gray-700"
+                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-primary focus:outline-none focus:border-border-default placeholder-text-muted/50"
                         />
                     </div>
 
                     {/* Amount */}
                     <div className="space-y-2">
-                        <label className="text-[9px] text-gray-600 font-bold uppercase tracking-[3px] ml-1">Amount</label>
+                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-[3px] ml-1">Amount</label>
                         <div className="relative">
-                            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
+                            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted font-bold">₹</span>
                             <input
                                 type="number"
                                 value={newAmount}
                                 onChange={(e) => setNewAmount(e.target.value)}
                                 placeholder="0"
-                                className="w-full bg-[#1A1A1A] border border-white/[0.05] rounded-2xl pl-10 pr-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-white/30 placeholder-gray-700"
+                                className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-10 pr-5 py-4 text-sm font-bold text-primary focus:outline-none focus:border-border-default placeholder-text-muted/50"
                             />
                         </div>
                     </div>
 
                     {/* Remarks */}
                     <div className="space-y-2">
-                        <label className="text-[9px] text-gray-600 font-bold uppercase tracking-[3px] ml-1">Note (Optional)</label>
+                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-[3px] ml-1">Note (Optional)</label>
                         <input
                             type="text"
                             value={newRemarks}
                             onChange={(e) => setNewRemarks(e.target.value)}
                             placeholder="e.g. Dinner split"
-                            className="w-full bg-[#1A1A1A] border border-white/[0.05] rounded-2xl px-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-white/30 placeholder-gray-700"
+                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-primary focus:outline-none focus:border-border-default placeholder-text-muted/50"
                         />
                     </div>
 
                     <button
                         onClick={handleSaveEntry}
                         disabled={addMutation.isPending || updateMutation.isPending || !newPeerName.trim() || !newAmount.trim()}
-                        className="w-full py-5 rounded-[2rem] bg-white text-black font-black text-lg shadow-2xl active:scale-95 transition-all disabled:opacity-30 disabled:scale-100"
+                        className="w-full py-5 rounded-[2rem] bg-primary text-background font-black text-lg shadow-2xl active:scale-95 transition-all disabled:opacity-30 disabled:scale-100"
                     >
                         {addMutation.isPending || updateMutation.isPending ? 'Saving...' : (editingEntry ? 'Update Record' : 'Add Record')}
                     </button>
@@ -273,7 +273,7 @@ const PeerHistoryDrawer = ({
     return (
         <Drawer isOpen={isOpen} onClose={onClose} title={peerName || ''} height="h-[90vh]">
             <div className="space-y-4 px-2 pb-10">
-                <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[3px] ml-1">Transaction History</p>
+                <p className="text-[9px] text-text-muted font-bold uppercase tracking-[3px] ml-1">Transaction History</p>
 
                 {isLoading ? (
                     <div className="flex justify-center py-20">
@@ -291,20 +291,20 @@ const PeerHistoryDrawer = ({
                                 <div
                                     key={entry.id}
                                     onClick={() => onEdit(entry)}
-                                    className="group flex items-center justify-between p-3.5 bg-white/[0.02] border border-white/[0.05] rounded-2xl relative overflow-hidden cursor-pointer hover:bg-white/[0.04] active:scale-[0.98] transition-all"
+                                    className="group flex items-center justify-between p-3.5 bg-surface-subtle border border-border-subtle rounded-2xl relative overflow-hidden cursor-pointer hover:bg-surface-hover active:scale-[0.98] transition-all"
                                 >
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
                                         <div className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center ${isDebit ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                                             {isDebit ? <ArrowUpRight size={14} /> : <ArrowDownLeft size={14} />}
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-xs font-bold text-gray-300">
+                                            <p className="text-xs font-bold text-primary">
                                                 {isDebit ? 'You lent' : 'You received'}
                                             </p>
                                             {entry.remarks && (
-                                                <p className="text-[9px] text-gray-600 mt-0.5 truncate">{entry.remarks}</p>
+                                                <p className="text-[9px] text-text-muted mt-0.5 truncate">{entry.remarks}</p>
                                             )}
-                                            <p className="text-[8px] text-gray-700 mt-0.5">
+                                            <p className="text-[8px] text-text-muted/70 mt-0.5">
                                                 {formatDistanceToNow(parseISO(entry.date), { addSuffix: true })}
                                             </p>
                                         </div>
@@ -318,7 +318,7 @@ const PeerHistoryDrawer = ({
                                                         Synced
                                                     </span>
                                                 )}
-                                                <p className={`font-black text-sm tracking-tighter ${isDebit ? 'text-white' : 'text-emerald-400'}`}>
+                                                <p className={`font-black text-sm tracking-tighter ${isDebit ? 'text-primary' : 'text-emerald-500'}`}>
                                                     {isDebit ? '-' : '+'}{formatCurrency(entry.amount)}
                                                 </p>
                                             </div>

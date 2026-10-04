@@ -50,24 +50,24 @@ const Sureties: React.FC = () => {
     if (isLoading) return <Loader fullPage />;
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white p-6 pb-24 animate-in fade-in duration-500">
-            <header className="flex items-center gap-4 mb-8 sticky top-0 bg-[#050505]/80 backdrop-blur-xl py-4 z-10 border-b border-white/5 -mx-6 px-6">
+        <div className="min-h-screen text-primary p-6 pb-24 animate-in fade-in duration-500">
+            <header className="flex items-center gap-4 mb-8 sticky top-0 bg-page/80 backdrop-blur-xl py-4 z-10 border-b border-border-subtle -mx-6 px-6">
                 <button
                     onClick={() => navigate(-1)}
-                    className="p-2 rounded-full bg-white/5 hover:bg-white/10 active:scale-95 transition-all"
+                    className="p-2 rounded-full bg-surface-subtle hover:bg-surface-hover active:scale-95 transition-all text-text-muted hover:text-primary border border-border-subtle"
                 >
                     <ArrowLeft size={18} />
                 </button>
                 <div>
-                    <h1 className="text-xl font-bold tracking-tight text-white heading-apple">Manage sureties</h1>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Auto-detected Obligations</p>
+                    <h1 className="text-xl font-bold tracking-tight text-primary heading-apple">Manage sureties</h1>
+                    <p className="text-[10px] text-text-muted uppercase tracking-widest font-bold">Auto-detected Obligations</p>
                 </div>
             </header>
 
             <div className="space-y-4">
                 {sureties?.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-500 gap-4">
-                        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center">
+                    <div className="flex flex-col items-center justify-center py-20 text-text-muted gap-4">
+                        <div className="w-16 h-16 rounded-full bg-surface-subtle flex items-center justify-center">
                             <RefreshCw size={24} className="opacity-50" />
                         </div>
                         <p className="text-sm font-medium">No auto-detected sureties found.</p>
@@ -75,26 +75,26 @@ const Sureties: React.FC = () => {
                 )}
 
                 {sureties?.map((surety) => (
-                    <div key={surety.id} className="p-5 rounded-[1.5rem] bg-white/[0.02] border border-white/[0.08] relative overflow-hidden group hover:border-white/20 transition-all duration-300">
+                    <div key={surety.id} className="p-5 rounded-[1.5rem] bg-surface-subtle border border-border-subtle relative overflow-hidden group hover:border-border-default transition-all duration-300">
                         {/* Status Badge */}
                         <div className="absolute top-4 right-4">
                             <div className={`text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest border
                                     ${surety.status === 'OVERDUE' ? 'bg-status-danger-bg text-status-danger-text border-status-danger-border' :
                                     surety.status === 'PAID' ? 'bg-status-success-bg text-status-success-text border-status-success-border' :
                                         surety.status === 'SKIPPED' ? 'bg-status-warning-bg text-status-warning-text border-status-warning-border' :
-                                            surety.status === 'COVERED' ? 'bg-white/[0.04] text-white/60 border-white/10' :
+                                            surety.status === 'COVERED' ? 'bg-surface-pill text-text-muted border-border-subtle' :
                                                 'bg-accent-subtle text-accent-text border-accent-border'}`}>
                                 {surety.status}
                             </div>
                         </div>
 
                         <div className="pr-20">
-                            <h3 className="font-bold text-gray-100 text-lg leading-tight mb-1">{surety.title.replace(' (Auto-detected)', '')}</h3>
-                            <p className="text-xs text-gray-500 font-mono uppercase tracking-wider">{format(new Date(surety.due_date), 'MMMM do')} • {surety.sub_category}</p>
+                            <h3 className="font-bold text-primary text-lg leading-tight mb-1">{surety.title.replace(' (Auto-detected)', '')}</h3>
+                            <p className="text-xs text-text-muted font-mono uppercase tracking-wider">{format(new Date(surety.due_date), 'MMMM do')} • {surety.sub_category}</p>
                         </div>
 
                         <div className="mt-4 flex items-end justify-between">
-                            <div className="font-mono font-medium text-2xl tracking-tighter text-white">
+                            <div className="font-mono font-medium text-2xl tracking-tighter text-primary">
                                 ₹{Math.abs(surety.amount).toLocaleString('en-IN')}
                             </div>
 
@@ -108,14 +108,14 @@ const Sureties: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-white/[0.05]">
+                        <div className="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-border-subtle">
                             <button
                                 onClick={() => surety.source_id && handleMarkPaid(surety.id, surety.source_id)}
                                 disabled={['SKIPPED', 'PAID', 'COVERED', 'TERMINATED'].includes(surety.status) || createExclusion.isPending}
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black text-xs font-semibold hover:bg-neutral-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-background text-xs font-semibold hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
                             >
                                 {actionLoading?.id === surety.id && actionLoading?.action === 'PAID' ? (
-                                    <Loader2 size={14} className="animate-spin text-black" />
+                                    <Loader2 size={14} className="animate-spin text-background" />
                                 ) : (
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                 )}
@@ -124,7 +124,7 @@ const Sureties: React.FC = () => {
                             <button
                                 onClick={() => surety.source_id && handleSkip(surety.id, surety.source_id)}
                                 disabled={['SKIPPED', 'PAID', 'COVERED', 'TERMINATED'].includes(surety.status) || createExclusion.isPending}
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.04] text-white/70 text-xs font-medium hover:bg-white/[0.08] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-white/10 hover:border-white/20"
+                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-subtle text-text-muted text-xs font-medium hover:bg-surface-hover hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-border-subtle"
                             >
                                 {actionLoading?.id === surety.id && actionLoading?.action === 'SKIP' ? (
                                     <Loader2 size={14} className="animate-spin" />
@@ -136,7 +136,7 @@ const Sureties: React.FC = () => {
                             <button
                                 onClick={() => handleTerminate(surety.id, surety.title, surety.sub_category)}
                                 disabled={['TERMINATED', 'COVERED'].includes(surety.status) || createExclusion.isPending}
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/[0.04] text-rose-400/80 text-xs font-medium hover:bg-rose-500/10 hover:text-rose-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-white/10 hover:border-rose-500/20"
+                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-subtle text-rose-500 text-xs font-medium hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all border border-border-subtle"
                             >
                                 {actionLoading?.id === surety.id && actionLoading?.action === 'STOP' ? (
                                     <Loader2 size={14} className="animate-spin" />

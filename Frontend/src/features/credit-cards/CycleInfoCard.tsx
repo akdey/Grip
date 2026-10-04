@@ -34,17 +34,17 @@ export const CycleInfoCard: React.FC<Props> = ({ cardId, initialData, onEdit }) 
     return (
         <div
             onClick={() => navigate(`/credit-cards/${cardId}`)}
-            className="glass-card p-6 rounded-[2.5rem] relative overflow-hidden group border border-white/[0.05] active:scale-[0.99] transition-all cursor-pointer"
+            className="glass-card p-6 rounded-[2.5rem] relative overflow-hidden group border border-border-subtle active:scale-[0.99] transition-all cursor-pointer"
         >
             <div className="relative z-10 space-y-6">
                 <div className="flex justify-between items-start">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center shadow-inner">
-                            <CardIcon className="text-white/60" size={24} />
+                        <div className="w-12 h-12 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-center shadow-inner">
+                            <CardIcon className="text-text-muted" size={24} />
                         </div>
                         <div>
-                            <h3 className="font-black text-sm uppercase tracking-tight text-white/90">{card.card_name}</h3>
-                            <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest mt-0.5">
+                            <h3 className="font-black text-sm uppercase tracking-tight text-primary">{card.card_name}</h3>
+                            <p className="text-[10px] text-text-muted font-black uppercase tracking-widest mt-0.5">
                                 •••• {card.last_four_digits || '0000'}
                             </p>
                         </div>
@@ -66,7 +66,7 @@ export const CycleInfoCard: React.FC<Props> = ({ cardId, initialData, onEdit }) 
                                 e.stopPropagation();
                                 onEdit(card);
                             }}
-                            className="p-2 rounded-full hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                            className="p-2 rounded-full hover:bg-surface-hover text-text-muted hover:text-primary transition-colors"
                         >
                             <Pencil size={12} />
                         </button>
@@ -77,21 +77,21 @@ export const CycleInfoCard: React.FC<Props> = ({ cardId, initialData, onEdit }) 
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[3px] mb-1.5 ml-1">Spent</p>
-                                <div className="text-xl font-black text-white tracking-tighter">
+                                <p className="text-[9px] text-text-muted font-black uppercase tracking-[3px] mb-1.5 ml-1">Spent</p>
+                                <div className="text-xl font-black text-primary tracking-tighter">
                                     {formatCurrency(data.unbilled_amount)}
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[3px] mb-1.5 mr-1">Available</p>
-                                <div className="text-xl font-black text-emerald-400 tracking-tighter">
+                                <p className="text-[9px] text-text-muted font-black uppercase tracking-[3px] mb-1.5 mr-1">Available</p>
+                                <div className="text-xl font-black text-emerald-500 tracking-tighter">
                                     {formatCurrency(availableLimit)}
                                 </div>
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <div className="w-full h-1.5 bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.05]">
+                            <div className="w-full h-1.5 bg-surface-pill rounded-full overflow-hidden border border-border-subtle">
                                 <div
                                     className={`h-full rounded-full transition-all duration-1000 ${data.utilization_percentage > 70 ? 'bg-rose-500' :
                                         data.utilization_percentage > 30 ? 'bg-amber-500' : 'bg-emerald-500'
@@ -100,34 +100,34 @@ export const CycleInfoCard: React.FC<Props> = ({ cardId, initialData, onEdit }) 
                                 />
                             </div>
                             <div className="flex justify-between items-center">
-                                <p className="text-[8px] font-black text-gray-700 uppercase tracking-widest">Limit: {formatCurrency(data.credit_limit || 0)}</p>
-                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">
+                                <p className="text-[8px] font-black text-text-muted uppercase tracking-widest">Limit: {formatCurrency(data.credit_limit || 0)}</p>
+                                <p className="text-[8px] font-black text-text-muted uppercase tracking-widest">
                                     {(data.utilization_percentage ?? 0).toFixed(1)}% Used
                                 </p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/[0.05]">
+                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border-subtle">
                             <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-gray-600">
+                                <div className="flex items-center gap-1.5 text-text-muted">
                                     <Calendar size={10} />
                                     <span className="text-[8px] font-black uppercase tracking-widest">Cycle End</span>
                                 </div>
-                                <p className="text-[10px] font-black text-white/80 uppercase">{formatDate(data.cycle_end)}</p>
+                                <p className="text-[10px] font-black text-primary uppercase">{formatDate(data.cycle_end)}</p>
                             </div>
                             <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-gray-600">
+                                <div className="flex items-center gap-1.5 text-text-muted">
                                     <TrendingUp size={10} />
                                     <span className="text-[8px] font-black uppercase tracking-widest">Due Day</span>
                                 </div>
-                                <p className="text-[10px] font-black text-white/80 uppercase">
-                                    {card.payment_due_date}th <span className="text-[8px] text-gray-700 font-bold ml-1">MONTHLY</span>
+                                <p className="text-[10px] font-black text-primary uppercase">
+                                    {card.payment_due_date}th <span className="text-[8px] text-text-muted font-bold ml-1">MONTHLY</span>
                                 </p>
                             </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="h-24 flex flex-col items-center justify-center text-gray-700">
+                    <div className="h-24 flex flex-col items-center justify-center text-text-muted">
                         <Loader />
                         <span className="text-[8px] font-black uppercase tracking-[3px] mt-4">Synchronizing</span>
                     </div>

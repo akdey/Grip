@@ -60,28 +60,28 @@ const Goals: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+            <div className="min-h-screen bg-page flex items-center justify-center">
                 <Loader />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen text-white pb-24">
+        <div className="min-h-screen text-primary pb-24">
             {/* Header */}
-            <header className="px-4 py-6 flex items-center justify-between border-b border-white/[0.05]">
+            <header className="px-4 py-6 flex items-center justify-between border-b border-border-subtle sticky top-0 bg-page/80 backdrop-blur-3xl z-30">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-accent-subtle flex items-center justify-center border border-accent-border text-accent-text">
                         <Target size={20} />
                     </div>
                     <div>
-                        <h1 className="text-lg font-black uppercase tracking-tight text-white heading-apple">Goals</h1>
-                        <p className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Financial Targets</p>
+                        <h1 className="text-lg font-black uppercase tracking-tight text-primary heading-apple">Goals</h1>
+                        <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold">Financial Targets</p>
                     </div>
                 </div>
                 <button
                     onClick={() => setShowForm(!showForm)}
-                    className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/10 flex items-center justify-center hover:bg-white/10 text-white transition-all"
+                    className="w-10 h-10 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center hover:bg-surface-hover text-text-muted hover:text-primary transition-all active:scale-95"
                 >
                     <Plus size={18} />
                 </button>
@@ -97,15 +97,15 @@ const Goals: React.FC = () => {
                             exit={{ opacity: 0, height: 0 }}
                             className="overflow-hidden"
                         >
-                            <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4 space-y-4">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide">New Goal</h3>
+                            <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-4 space-y-4">
+                                <h3 className="text-sm font-bold text-text-muted uppercase tracking-wide">New Goal</h3>
 
                                 <input
                                     type="text"
                                     placeholder="Goal name (e.g., Trip to Goa)"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-white/30"
+                                    className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-primary placeholder-text-muted/50 focus:outline-none focus:border-border-default"
                                 />
 
                                 <input
@@ -113,14 +113,14 @@ const Goals: React.FC = () => {
                                     placeholder="Target amount (₹)"
                                     value={formData.target_amount}
                                     onChange={(e) => setFormData({ ...formData, target_amount: e.target.value })}
-                                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-white/30"
+                                    className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-primary placeholder-text-muted/50 focus:outline-none focus:border-border-default"
                                 />
 
                                 <input
                                     type="date"
                                     value={formData.target_date}
                                     onChange={(e) => setFormData({ ...formData, target_date: e.target.value })}
-                                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30"
+                                    className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-primary focus:outline-none focus:border-border-default"
                                 />
 
                                 {/* Feasibility Check */}
@@ -140,15 +140,15 @@ const Goals: React.FC = () => {
                                                 <AlertCircle size={18} className="text-amber-400 mt-0.5" />
                                             )}
                                             <div className="flex-1">
-                                                <p className="text-xs text-gray-300 mb-2">{feasibility.message}</p>
+                                                <p className="text-xs text-text-secondary mb-2">{feasibility.message}</p>
                                                 <div className="grid grid-cols-2 gap-2 text-[10px]">
                                                     <div>
-                                                        <span className="text-gray-500 block">Required/Month</span>
-                                                        <span className="text-white font-bold">{formatCurrency(feasibility.required_monthly_savings)}</span>
+                                                        <span className="text-text-muted block">Required/Month</span>
+                                                        <span className="text-primary font-bold">{formatCurrency(feasibility.required_monthly_savings)}</span>
                                                     </div>
                                                     <div>
-                                                        <span className="text-gray-500 block">Available Capacity</span>
-                                                        <span className="text-white font-bold">{formatCurrency(feasibility.available_monthly_liquidity)}</span>
+                                                        <span className="text-text-muted block">Available Capacity</span>
+                                                        <span className="text-primary font-bold">{formatCurrency(feasibility.available_monthly_liquidity)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -160,14 +160,14 @@ const Goals: React.FC = () => {
                                     <button
                                         onClick={handleCheckFeasibility}
                                         disabled={!formData.name || !formData.target_amount || !formData.target_date}
-                                        className="flex-1 py-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-xs font-bold text-gray-400 uppercase tracking-wide hover:bg-white/[0.08] transition-all disabled:opacity-50"
+                                        className="flex-1 py-3 rounded-xl bg-surface border border-border-subtle text-xs font-bold text-text-muted uppercase tracking-wide hover:text-primary transition-all disabled:opacity-50"
                                     >
                                         Check Feasibility
                                     </button>
                                     <button
                                         onClick={handleCreateGoal}
                                         disabled={!feasibility?.is_feasible}
-                                        className="flex-1 py-3 rounded-xl bg-white text-black hover:bg-neutral-200 border border-white text-xs font-bold uppercase tracking-wide transition-all disabled:opacity-50"
+                                        className="flex-1 py-3 rounded-xl bg-primary text-background text-xs font-bold uppercase tracking-wide transition-all disabled:opacity-50 active:scale-95 shadow-md"
                                     >
                                         Create Goal
                                     </button>
@@ -185,37 +185,37 @@ const Goals: React.FC = () => {
                                 key={goal.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4 hover:bg-white/[0.04] transition-all"
+                                className="bg-surface-subtle border border-border-subtle rounded-2xl p-4 hover:bg-surface-hover transition-all"
                             >
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex-1">
-                                        <h3 className="text-sm font-bold text-white mb-1">{goal.name}</h3>
-                                        <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                                        <h3 className="text-sm font-bold text-primary mb-1">{goal.name}</h3>
+                                        <div className="flex items-center gap-2 text-[10px] text-text-muted">
                                             <Calendar size={12} />
                                             <span>Target: {formatDate(goal.target_date)}</span>
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => deleteGoalMutation.mutate(goal.id)}
-                                        className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center hover:bg-red-500/20 transition-all"
+                                        className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center hover:bg-red-500/20 transition-all text-red-500"
                                     >
-                                        <Trash2 size={14} className="text-red-400" />
+                                        <Trash2 size={14} />
                                     </button>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3 mb-3">
-                                    <div className="bg-white/[0.02] rounded-xl p-3 border border-white/[0.05]">
-                                        <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Target</p>
-                                        <p className="text-base font-black text-white">{formatCurrency(goal.target_amount)}</p>
+                                    <div className="bg-surface rounded-xl p-3 border border-border-subtle">
+                                        <p className="text-[9px] text-text-muted uppercase tracking-widest mb-1">Target</p>
+                                        <p className="text-base font-black text-primary">{formatCurrency(goal.target_amount)}</p>
                                     </div>
                                     <div className="bg-accent-subtle rounded-xl p-3 border border-accent-border">
                                         <p className="text-[9px] text-accent-text uppercase tracking-widest mb-1 font-bold">Monthly</p>
-                                        <p className="text-base font-black text-white">{formatCurrency(goal.monthly_contribution)}</p>
+                                        <p className="text-base font-black text-primary">{formatCurrency(goal.monthly_contribution)}</p>
                                     </div>
                                 </div>
 
                                 {/* Progress Bar */}
-                                <div className="relative h-2 bg-white/[0.05] rounded-full overflow-hidden">
+                                <div className="relative h-2 bg-border-subtle rounded-full overflow-hidden">
                                     <motion.div
                                         initial={{ width: 0 }}
                                         animate={{ width: `${(goal.current_saved / goal.target_amount) * 100}%` }}
@@ -223,7 +223,7 @@ const Goals: React.FC = () => {
                                         className="absolute inset-y-0 left-0 bg-accent rounded-full"
                                     />
                                 </div>
-                                <p className="text-[9px] text-gray-600 mt-2 text-right">
+                                <p className="text-[9px] text-text-muted mt-2 text-right">
                                     {formatCurrency(goal.current_saved)} / {formatCurrency(goal.target_amount)}
                                 </p>
                             </motion.div>
@@ -234,8 +234,8 @@ const Goals: React.FC = () => {
                         <div className="w-16 h-16 rounded-2xl bg-accent-subtle border border-accent-border flex items-center justify-center mx-auto mb-4 text-accent-text">
                             <Target size={28} />
                         </div>
-                        <p className="text-sm text-gray-500">No goals yet</p>
-                        <p className="text-xs text-gray-700 mt-1">Create your first financial goal</p>
+                        <p className="text-sm text-text-muted">No goals yet</p>
+                        <p className="text-xs text-text-muted/60 mt-1">Create your first financial goal</p>
                     </div>
                 )}
             </div>

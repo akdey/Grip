@@ -110,21 +110,21 @@ const Analytics: React.FC = () => {
     // Blocking loader removed for progressive loading
 
     return (
-        <div className="min-h-screen text-white p-6 pb-24 overflow-x-hidden relative">
+        <div className="min-h-screen text-primary p-6 pb-24 overflow-x-hidden relative">
             <header className="flex items-center justify-between mb-8 relative z-50">
                 <div className="flex flex-col">
-                    <h1 className="text-4xl font-black tracking-tighter text-white heading-apple">
+                    <h1 className="text-4xl font-black tracking-tighter text-primary heading-apple">
                         Analytics
                     </h1>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">Financial Intelligence</p>
+                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">Financial Intelligence</p>
                 </div>
 
                 <div className="flex items-center gap-3">
                     <button
                         onClick={togglePrivacy}
                         className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all shadow-2xl ${showSensitive
-                            ? 'bg-white/10 border-white/20 text-white'
-                            : 'bg-white/[0.03] border-white/[0.08] text-gray-400'
+                            ? 'bg-accent-subtle border-accent-border text-accent-text'
+                            : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary'
                             }`}
                         aria-label={showSensitive ? "Hide sensitive data" : "Show sensitive data"}
                     >
@@ -140,19 +140,19 @@ const Analytics: React.FC = () => {
                     <div className="flex items-center justify-between px-2">
                         <button
                             onClick={() => setReferenceDate(subMonths(referenceDate, 1))}
-                            className="w-12 h-12 rounded-full bg-white/[0.02] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all hover:bg-white/[0.05]"
+                            className="w-12 h-12 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted active:scale-90 transition-all hover:bg-surface-hover hover:text-primary"
                             aria-label="Previous month"
                         >
                             <ChevronLeft size={20} />
                         </button>
-                        <div className="bg-white/[0.03] px-8 py-3 rounded-2xl border border-white/[0.05]">
-                            <span className="text-[12px] font-black uppercase tracking-[3px]">
+                        <div className="bg-surface-subtle px-8 py-3 rounded-2xl border border-border-subtle">
+                            <span className="text-[12px] font-black uppercase tracking-[3px] text-primary">
                                 {format(referenceDate, 'MMMM yyyy')}
                             </span>
                         </div>
                         <button
                             onClick={() => setReferenceDate(addMonths(referenceDate, 1))}
-                            className="w-12 h-12 rounded-full bg-white/[0.02] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all hover:bg-white/[0.05]"
+                            className="w-12 h-12 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted active:scale-90 transition-all hover:bg-surface-hover hover:text-primary"
                             aria-label="Next month"
                         >
                             <ChevronRight size={20} />
@@ -185,8 +185,8 @@ const Analytics: React.FC = () => {
                                         <TrendingUp size={16} />
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className="text-[8px] font-black text-rose-500/60 uppercase tracking-widest leading-none mb-1">Spending</span>
-                                        <span className="text-sm font-black text-white tracking-tighter whitespace-nowrap">
+                                        <span className="text-[8px] font-black text-rose-500/80 uppercase tracking-widest leading-none mb-1">Spending</span>
+                                        <span className="text-sm font-black text-primary tracking-tighter whitespace-nowrap">
                                             {formatCurrency(summary?.total_expense || 0)}
                                         </span>
                                     </div>
@@ -198,10 +198,10 @@ const Analytics: React.FC = () => {
                                     </div>
                                     <div className="flex flex-col min-w-0">
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-[8px] font-black text-emerald-500/60 uppercase tracking-widest leading-none mb-1">Income</span>
-                                            {!showSensitive && <Lock size={8} className="text-emerald-500/40 mb-1" />}
+                                            <span className="text-[8px] font-black text-emerald-500/80 uppercase tracking-widest leading-none mb-1">Income</span>
+                                            {!showSensitive && <Lock size={8} className="text-emerald-500/60 mb-1" />}
                                         </div>
-                                        <span className="text-sm font-black text-white tracking-tighter whitespace-nowrap">
+                                        <span className="text-sm font-black text-primary tracking-tighter whitespace-nowrap">
                                             {showSensitive ? formatCurrency(summary?.total_income || 0) : '******'}
                                         </span>
                                     </div>
@@ -231,17 +231,17 @@ const Analytics: React.FC = () => {
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                             {/* 1. Period Net Flow (Surplus / Deficit) */}
-                            <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-3xl flex items-center justify-between">
+                            <div className="bg-surface-subtle border border-border-subtle p-4 rounded-3xl flex items-center justify-between">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 border ${Number(summary?.balance || 0) >= 0 ? 'bg-status-success-bg text-status-success-text border-status-success-border' : 'bg-status-danger-bg text-status-danger-text border-status-danger-border'}`}>
                                         {Number(summary?.balance || 0) >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
                                     </div>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-1.5">
-                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest truncate">Period Net Flow</p>
-                                            {!showSensitive && <Lock size={9} className="text-gray-500" />}
+                                            <p className="text-[9px] font-black text-text-muted uppercase tracking-widest truncate">Period Net Flow</p>
+                                            {!showSensitive && <Lock size={9} className="text-text-muted" />}
                                         </div>
-                                        <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">Monthly Cash Surplus</p>
+                                        <p className="text-[8px] text-text-muted/70 font-bold uppercase tracking-wider">Monthly Cash Surplus</p>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
@@ -256,21 +256,21 @@ const Analytics: React.FC = () => {
                             </div>
 
                             {/* 2. Total Liquid Account Balance */}
-                            <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-3xl flex items-center justify-between">
+                            <div className="bg-surface-subtle border border-border-subtle p-4 rounded-3xl flex items-center justify-between">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-9 h-9 rounded-2xl bg-accent-subtle text-accent-text flex items-center justify-center shrink-0 border border-accent-border">
                                         <Wallet size={16} />
                                     </div>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-1.5">
-                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest truncate">Liquid Balance</p>
-                                            {!showSensitive && <Lock size={9} className="text-gray-500" />}
+                                            <p className="text-[9px] font-black text-text-muted uppercase tracking-widest truncate">Liquid Balance</p>
+                                            {!showSensitive && <Lock size={9} className="text-text-muted" />}
                                         </div>
-                                        <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">Bank & Cash Total</p>
+                                        <p className="text-[8px] text-text-muted/70 font-bold uppercase tracking-wider">Bank & Cash Total</p>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <p className="text-base font-black text-white tracking-tight">
+                                    <p className="text-base font-black text-primary tracking-tight">
                                         {showSensitive ? formatCurrency(effectiveLiquidBalance) : '******'}
                                     </p>
                                 </div>
@@ -285,17 +285,17 @@ const Analytics: React.FC = () => {
                         <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center">
                             <TrendingUp size={16} />
                         </div>
-                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white/60">Outflow Matrix</h2>
+                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-text-muted">Outflow Matrix</h2>
                     </div>
 
                     {isVarianceLoading ? (
-                        <div className="glass-card rounded-[2.5rem] p-6 h-[380px] border border-white/[0.05] animate-pulse relative">
+                        <div className="glass-card rounded-[2.5rem] p-6 h-[380px] border border-border-subtle animate-pulse relative">
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-40 h-40 rounded-full bg-white/[0.05]" />
+                                <div className="w-40 h-40 rounded-full bg-surface-subtle" />
                             </div>
                         </div>
                     ) : (
-                        <div className="glass-card rounded-[2.5rem] p-6 h-[380px] border border-white/[0.05] relative overflow-hidden">
+                        <div className="glass-card rounded-[2.5rem] p-6 h-[380px] border border-border-subtle relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-8 opacity-5">
                                 <Layers size={120} />
                             </div>
@@ -312,22 +312,23 @@ const Analytics: React.FC = () => {
                                         className="cursor-pointer focus:outline-none"
                                     >
                                         {categoryData.map((entry) => (
-                                            <Cell
+                                             <Cell
                                                 key={entry.name}
                                                 fill={entry.color}
-                                                style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.04))' }}
+                                                style={{ filter: 'drop-shadow(0 0 8px rgba(0,0,0,0.08))' }}
                                             />
                                         ))}
                                     </Pie>
                                     <Tooltip
                                         contentStyle={{
-                                            backgroundColor: 'rgba(5, 5, 5, 0.8)',
+                                            backgroundColor: 'var(--color-bg-surface)',
                                             borderRadius: '1.5rem',
-                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            border: '1px solid var(--color-border-subtle)',
                                             backdropFilter: 'blur(20px)',
-                                            padding: '12px 16px'
+                                            padding: '12px 16px',
+                                            color: 'var(--color-text-primary)'
                                         }}
-                                        itemStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}
+                                        itemStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', color: 'var(--color-text-primary)' }}
                                         formatter={(value) => formatCurrency(Number(value))}
                                     />
                                     <Legend
@@ -344,15 +345,15 @@ const Analytics: React.FC = () => {
                     <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                         {isVarianceLoading ? (
                             [...Array(4)].map((_, i) => (
-                                <div key={i} className="flex items-center justify-between p-4 rounded-[1.8rem] bg-white/[0.02] border border-white/[0.05] animate-pulse">
+                                <div key={i} className="flex items-center justify-between p-4 rounded-[1.8rem] bg-surface-subtle border border-border-subtle animate-pulse">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-1.5 h-8 rounded-full bg-white/[0.05]" />
+                                        <div className="w-1.5 h-8 rounded-full bg-border-subtle" />
                                         <div className="space-y-2">
-                                            <div className="h-3 w-32 bg-white/[0.05] rounded" />
-                                            <div className="h-2 w-16 bg-white/[0.05] rounded" />
+                                            <div className="h-3 w-32 bg-border-subtle rounded" />
+                                            <div className="h-2 w-16 bg-border-subtle rounded" />
                                         </div>
                                     </div>
-                                    <div className="h-4 w-20 bg-white/[0.05] rounded" />
+                                    <div className="h-4 w-20 bg-border-subtle rounded" />
                                 </div>
                             ))
                         ) : (
@@ -360,16 +361,16 @@ const Analytics: React.FC = () => {
                                 <div
                                     key={cat.name}
                                     onClick={() => handleCategoryClick(cat.name)}
-                                    className="flex items-center justify-between p-4 rounded-[1.8rem] bg-white/[0.02] border border-white/[0.05] cursor-pointer hover:bg-white/[0.04] transition-colors active:scale-[0.98]"
+                                    className="flex items-center justify-between p-4 rounded-[1.8rem] bg-surface-subtle border border-border-subtle cursor-pointer hover:bg-surface-hover transition-colors active:scale-[0.98]"
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: cat.color }} />
                                         <div>
-                                            <p className="font-black text-white/90 text-sm uppercase tracking-tight">{cat.name}</p>
-                                            <p className="text-[9px] text-gray-600 font-bold mt-0.5 uppercase tracking-widest">Growth: {cat.variance_percentage > 0 ? '+' : ''}{cat.variance_percentage.toFixed(0)}%</p>
+                                            <p className="font-black text-primary text-sm uppercase tracking-tight">{cat.name}</p>
+                                            <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase tracking-widest">Growth: {cat.variance_percentage > 0 ? '+' : ''}{cat.variance_percentage.toFixed(0)}%</p>
                                         </div>
                                     </div>
-                                    <p className="font-black text-white text-base tracking-tighter">{formatCurrency(cat.current)}</p>
+                                    <p className="font-black text-primary text-base tracking-tighter">{formatCurrency(cat.current)}</p>
                                 </div>
                             ))
                         )}
@@ -379,32 +380,32 @@ const Analytics: React.FC = () => {
                 {/* Investment Matrix Section */}
                 <div className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-white/[0.06] text-white flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-surface-subtle text-primary flex items-center justify-center">
                             <Target size={16} />
                         </div>
-                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white/60">Capital Matrix</h2>
+                        <h2 className="text-[10px] font-black uppercase tracking-[4px] text-text-muted">Capital Matrix</h2>
                     </div>
 
                     {isInvestLoading ? (
                         <div className="glass-card rounded-[2.5rem] p-8 animate-pulse">
-                            <div className="h-3 w-24 bg-white/[0.05] rounded mb-1" />
-                            <div className="h-10 w-48 bg-white/[0.05] rounded mb-8" />
+                            <div className="h-3 w-24 bg-surface-subtle rounded mb-1" />
+                            <div className="h-10 w-48 bg-surface-subtle rounded mb-8" />
                             <div className="space-y-4">
                                 {[...Array(3)].map((_, i) => (
                                     <div key={i} className="space-y-2">
                                         <div className="flex justify-between">
-                                            <div className="h-3 w-32 bg-white/[0.05] rounded" />
-                                            <div className="h-3 w-20 bg-white/[0.05] rounded" />
+                                            <div className="h-3 w-32 bg-surface-subtle rounded" />
+                                            <div className="h-3 w-20 bg-surface-subtle rounded" />
                                         </div>
-                                        <div className="w-full h-1 bg-white/[0.05] rounded-full" />
+                                        <div className="w-full h-1 bg-surface-subtle rounded-full" />
                                     </div>
                                 ))}
                             </div>
                         </div>
                     ) : (
                         <div className="glass-card rounded-[2.5rem] p-8">
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-60">Total Deployed</p>
-                            <h3 className="text-4xl font-black text-white tracking-tighter mb-8">
+                            <p className="text-[9px] font-black text-text-muted uppercase tracking-widest mb-1 opacity-60">Total Deployed</p>
+                            <h3 className="text-4xl font-black text-primary tracking-tighter mb-8">
                                 {formatCurrency(Math.abs(investments?.total_investments || 0))}
                             </h3>
 
@@ -414,12 +415,12 @@ const Analytics: React.FC = () => {
                                     return (
                                         <div key={inv.name} className="space-y-2">
                                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                                                <span className="text-white/60">{inv.name}</span>
-                                                <span className="text-white">{formatCurrency(inv.value)}</span>
+                                                <span className="text-text-muted">{inv.name}</span>
+                                                <span className="text-primary font-bold">{formatCurrency(inv.value)}</span>
                                             </div>
-                                            <div className="w-full h-1 bg-white/[0.03] rounded-full overflow-hidden">
+                                            <div className="w-full h-1 bg-surface-pill rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-white transition-all duration-1000"
+                                                    className="h-full bg-primary transition-all duration-1000"
                                                     style={{ width: `${percentage}%` }}
                                                 />
                                             </div>
@@ -432,41 +433,41 @@ const Analytics: React.FC = () => {
                 </div>
 
                 {/* Macro Timeline Section */}
-                <div className="space-y-6 pt-10 border-t border-white/[0.05]">
+                <div className="space-y-6 pt-10 border-t border-border-subtle">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-white/[0.06] text-white flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-lg bg-surface-subtle text-primary flex items-center justify-center">
                                 <TrendingUp size={16} />
                             </div>
-                            <h2 className="text-[10px] font-black uppercase tracking-[4px] text-white/60">Burn Timeline</h2>
+                            <h2 className="text-[10px] font-black uppercase tracking-[4px] text-text-muted">Burn Timeline</h2>
                         </div>
-                        <div className="flex bg-white/[0.03] p-1 rounded-xl border border-white/[0.05]">
+                        <div className="flex bg-surface-subtle p-1 rounded-xl border border-border-subtle">
                             <button
                                 onClick={() => setTrendFreq('weekly')}
-                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'weekly' ? 'bg-accent-subtle text-accent-text border border-accent-border font-semibold shadow-sm' : 'text-gray-500 hover:text-white'}`}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'weekly' ? 'bg-accent-subtle text-accent-text border border-accent-border font-semibold shadow-sm' : 'text-text-muted hover:text-primary'}`}
                             >
                                 Weekly
                             </button>
                             <button
                                 onClick={() => setTrendFreq('monthly')}
-                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'monthly' ? 'bg-accent-subtle text-accent-text border border-accent-border font-semibold shadow-sm' : 'text-gray-500 hover:text-white'}`}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trendFreq === 'monthly' ? 'bg-accent-subtle text-accent-text border border-accent-border font-semibold shadow-sm' : 'text-text-muted hover:text-primary'}`}
                             >
                                 Monthly
                             </button>
                         </div>
                     </div>
 
-                    <Card className="p-8 bg-white/[0.02] border-white/[0.05] rounded-[2.5rem]">
+                    <Card className="p-8 bg-surface-subtle border-border-subtle rounded-[2.5rem]">
                         <div className="mb-6">
-                            <h4 className="text-xl font-black text-white tracking-tighter uppercase whitespace-nowrap">Macro Spending Trend</h4>
-                            <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">
+                            <h4 className="text-xl font-black text-primary tracking-tighter uppercase whitespace-nowrap">Macro Spending Trend</h4>
+                            <p className="text-[9px] text-text-muted font-bold uppercase tracking-widest mt-1">
                                 {trendFreq === 'monthly' ? 'Last 6 Months Data' : 'Last 12 Weeks Analysis'}
                             </p>
                         </div>
 
                         {isTrendsLoading ? (
                             <div className="h-[240px] flex items-center justify-center animate-pulse">
-                                <div className="text-[10px] font-black uppercase tracking-[3px] text-gray-700">Analyzing History...</div>
+                                <div className="text-[10px] font-black uppercase tracking-[3px] text-text-muted">Analyzing History...</div>
                             </div>
                         ) : (
                             <SpendTrendChart data={spendTrends?.trends || []} frequency={trendFreq} />

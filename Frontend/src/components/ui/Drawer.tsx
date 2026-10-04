@@ -128,7 +128,7 @@ export const Drawer: React.FC<DrawerProps> = ({
                                 onClose();
                             }}
                         >
-                            <div className="w-10 h-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95" />
+                            <div className="w-10 h-1.5 bg-border-strong rounded-full transition-colors active:scale-95" />
                         </div>
 
                         {/* Header */}

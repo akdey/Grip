@@ -21,25 +21,25 @@ const WealthIntelligence: React.FC<{ holdings: Holding[] }> = ({ holdings }) => 
 
     return (
         <div className="min-h-[500px]">
-            <div className="flex space-x-6 border-b border-white/5 pb-4 mb-6 overflow-x-auto scrollbar-hide">
+            <div className="flex space-x-6 border-b border-border-subtle pb-4 mb-6 overflow-x-auto scrollbar-hide">
                 <button
                     onClick={() => setActiveTab('timing')}
-                    className={`pb-2 text-sm font-medium transition-colors relative ${activeTab === 'timing' ? 'text-white' : 'text-gray-400 hover:text-gray-300'
+                    className={`pb-2 text-sm font-medium transition-colors relative ${activeTab === 'timing' ? 'text-primary' : 'text-text-muted hover:text-primary'
                         }`}
                 >
                     Timing Alpha
                     {activeTab === 'timing' && (
-                        <motion.div layoutId="activeTab" className="absolute bottom-[-17px] left-0 right-0 h-0.5 bg-white" />
+                        <motion.div layoutId="activeTab" className="absolute bottom-[-17px] left-0 right-0 h-0.5 bg-primary" />
                     )}
                 </button>
                 <button
                     onClick={() => setActiveTab('simulator')}
-                    className={`pb-2 text-sm font-medium transition-colors relative ${activeTab === 'simulator' ? 'text-white' : 'text-gray-400 hover:text-gray-300'
+                    className={`pb-2 text-sm font-medium transition-colors relative ${activeTab === 'simulator' ? 'text-primary' : 'text-text-muted hover:text-primary'
                         }`}
                 >
                     What-If Simulator
                     {activeTab === 'simulator' && (
-                        <motion.div layoutId="activeTab" className="absolute bottom-[-17px] left-0 right-0 h-0.5 bg-white" />
+                        <motion.div layoutId="activeTab" className="absolute bottom-[-17px] left-0 right-0 h-0.5 bg-primary" />
                     )}
                 </button>
             </div>
@@ -172,41 +172,41 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
             ) : analysis ? (
                 <div className="space-y-6">
                     {/* Insight Card */}
-                    <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4">
+                    <div className="bg-surface-subtle border border-border-subtle rounded-xl p-4">
                         <div className="flex items-start gap-3">
-                            <div className="p-2 bg-white/[0.06] rounded-full mt-1">
-                                <TrendingUp size={18} className="text-white/80" />
+                            <div className="p-2 bg-accent-subtle rounded-full mt-1">
+                                <TrendingUp size={18} className="text-primary" />
                             </div>
                             <div>
-                                <h4 className="font-semibold text-white">Analysis Result</h4>
-                                <p className="text-sm text-gray-300 mt-1 leading-relaxed">{analysis.insight}</p>
+                                <h4 className="font-semibold text-primary">Analysis Result</h4>
+                                <p className="text-sm text-text-muted mt-1 leading-relaxed">{analysis.insight}</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                            <p className="text-xs text-gray-500 uppercase">Your Date</p>
-                            <p className="text-xl font-bold mt-1 text-white">{analysis.user_sip_date}<span className="text-xs font-normal text-gray-500 align-top">th</span></p>
-                            <p className={`text-xs mt-1 ${analysis.user_performance.return_percentage >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                            <p className="text-xs text-text-muted uppercase">Your Date</p>
+                            <p className="text-xl font-bold mt-1 text-primary">{analysis.user_sip_date}<span className="text-xs font-normal text-text-muted align-top">th</span></p>
+                            <p className={`text-xs mt-1 ${analysis.user_performance.return_percentage >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                                 {analysis.user_performance.return_percentage.toFixed(2)}% Return
                             </p>
                         </div>
-                        <div className="bg-white/5 rounded-xl p-4 border border-white/5 relative overflow-hidden">
+                        <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-4 opacity-5"><CheckCircle2 size={40} /></div>
-                            <p className="text-xs text-gray-500 uppercase">Best Date</p>
-                            <p className="text-xl font-bold mt-1 text-emerald-400">{analysis.best_alternative.date}<span className="text-xs font-normal text-emerald-500/70 align-top">th</span></p>
+                            <p className="text-xs text-text-muted uppercase">Best Date</p>
+                            <p className="text-xl font-bold mt-1 text-emerald-500">{analysis.best_alternative.date}<span className="text-xs font-normal text-emerald-500/70 align-top">th</span></p>
                             <p className="text-xs text-emerald-500 mt-1">
                                 {(analysis.best_alternative.improvement || 0) >= 0 ? "+" : "-"}₹{Math.abs(analysis.best_alternative.improvement || 0).toFixed(0)} Total Extra Return
                             </p>
                         </div>
-                        <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                            <p className="text-xs text-gray-500 uppercase">Opportunity</p>
-                            <p className="text-xl font-bold mt-1 text-white">
+                        <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                            <p className="text-xs text-text-muted uppercase">Opportunity</p>
+                            <p className="text-xl font-bold mt-1 text-primary">
                                 ₹{Math.abs(analysis.best_alternative.performance.current_value - analysis.user_performance.current_value).toFixed(0)}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">Missed Value</p>
+                            <p className="text-xs text-text-muted mt-1">Missed Value</p>
                         </div>
                     </div>
 
@@ -215,25 +215,25 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={chartData}>
                                 <Tooltip
-                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                    contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '8px' }}
+                                    cursor={{ fill: 'var(--color-bg-surface-hover, rgba(255,255,255,0.05))' }}
+                                    contentStyle={{ backgroundColor: 'var(--color-bg-surface, #000)', borderColor: 'var(--color-border-subtle, #333)', color: 'var(--color-text-primary, #fff)', borderRadius: '8px' }}
                                 />
                                 <Bar dataKey="return" radius={[4, 4, 0, 0]}>
                                     {chartData.map((entry, index) => (
                                         <Cell
                                             key={`cell-${index}`}
-                                            fill={entry.isUserDate ? 'var(--color-accent-solid, #ffffff)' : entry.isBest ? '#10b981' : '#262626'}
+                                            fill={entry.isUserDate ? 'var(--color-accent-solid, #ffffff)' : entry.isBest ? '#10b981' : 'var(--color-border-default, #262626)'}
                                             fillOpacity={entry.isUserDate || entry.isBest ? 1 : 0.5}
                                         />
                                     ))}
                                 </Bar>
-                                <XAxis dataKey="day" stroke="#666" tick={{ fontSize: 10 }} tickFormatter={(d) => `${d}`} interval={2} />
+                                <XAxis dataKey="day" stroke="var(--color-text-muted, #666)" tick={{ fontSize: 10 }} tickFormatter={(d) => `${d}`} interval={2} />
                             </BarChart>
                         </ResponsiveContainer>
-                        <div className="flex justify-center gap-4 text-[10px] text-gray-500 mt-2">
+                        <div className="flex justify-center gap-4 text-[10px] text-text-muted mt-2">
                             <div className="flex items-center gap-1"><div className="w-2 h-2 bg-accent rounded-full"></div> Your Day</div>
                             <div className="flex items-center gap-1"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> Best Day</div>
-                            <div className="flex items-center gap-1"><div className="w-2 h-2 bg-neutral-700 rounded-full"></div> Others</div>
+                            <div className="flex items-center gap-1"><div className="w-2 h-2 bg-neutral-400 rounded-full"></div> Others</div>
                         </div>
                     </div>
                 </div>
@@ -339,9 +339,9 @@ const InvestmentSimulator: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2 relative">
-                    <label className="text-xs text-gray-500 uppercase">Search Mutual Fund</label>
-                    <div className={`bg-white/5 border rounded-lg flex items-center px-3 py-2 transition-colors ${showDropdown ? 'border-accent-border' : 'border-white/10'}`}>
-                        <Search size={16} className="text-gray-500 mr-2" />
+                    <label className="text-xs text-text-muted uppercase">Search Mutual Fund</label>
+                    <div className={`bg-surface-subtle border rounded-lg flex items-center px-3 py-2 transition-colors ${showDropdown ? 'border-accent-border' : 'border-border-subtle'}`}>
+                        <Search size={16} className="text-text-muted mr-2" />
                         <input
                             type="text"
                             value={searchQuery}
@@ -351,60 +351,60 @@ const InvestmentSimulator: React.FC = () => {
                             }}
                             onFocus={() => searchQuery.length >= 3 && setShowDropdown(true)}
                             placeholder="e.g. HDFC Index Fund"
-                            className="bg-transparent outline-none w-full text-sm placeholder-gray-600"
+                            className="bg-transparent outline-none w-full text-sm placeholder:text-text-muted text-primary"
                         />
-                        {isSearching && <div className="w-3 h-3 border-b-2 border-white rounded-full animate-spin ml-2" />}
+                        {isSearching && <div className="w-3 h-3 border-b-2 border-primary rounded-full animate-spin ml-2" />}
                     </div>
 
                     {showDropdown && searchResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-[#111] border border-white/10 rounded-xl overflow-hidden z-[60] shadow-2xl max-h-[250px] overflow-y-auto custom-scrollbar">
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border-subtle rounded-xl overflow-hidden z-[60] shadow-2xl max-h-[250px] overflow-y-auto custom-scrollbar">
                             {searchResults.map((s) => (
                                 <button
                                     key={s.schemeCode}
                                     onClick={() => handleSelectScheme(s)}
-                                    className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
+                                    className="w-full text-left px-4 py-3 hover:bg-surface-hover transition-colors border-b border-border-subtle last:border-0"
                                 >
-                                    <p className="text-sm font-medium text-gray-200 line-clamp-1">{s.schemeName}</p>
-                                    <p className="text-[10px] text-gray-500 mt-0.5">Code: {s.schemeCode}</p>
+                                    <p className="text-sm font-medium text-primary line-clamp-1">{s.schemeName}</p>
+                                    <p className="text-[10px] text-text-muted mt-0.5">Code: {s.schemeCode}</p>
                                 </button>
                             ))}
                         </div>
                     )}
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs text-gray-500 uppercase">Investment Date</label>
-                    <div className="bg-white/5 border border-white/10 rounded-lg flex items-center px-3 py-2">
-                        <Calendar size={16} className="text-gray-500 mr-2" />
+                    <label className="text-xs text-text-muted uppercase">Investment Date</label>
+                    <div className="bg-surface-subtle border border-border-subtle rounded-lg flex items-center px-3 py-2">
+                        <Calendar size={16} className="text-text-muted mr-2" />
                         <input
                             type="date"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
-                            className="bg-transparent outline-none w-full text-sm text-gray-300 [color-scheme:dark]"
+                            className="bg-transparent outline-none w-full text-sm text-primary"
                         />
                     </div>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs text-gray-500 uppercase">End Date (Optional)</label>
-                    <div className="bg-white/5 border border-white/10 rounded-lg flex items-center px-3 py-2">
-                        <Calendar size={16} className="text-gray-500 mr-2" />
+                    <label className="text-xs text-text-muted uppercase">End Date (Optional)</label>
+                    <div className="bg-surface-subtle border border-border-subtle rounded-lg flex items-center px-3 py-2">
+                        <Calendar size={16} className="text-text-muted mr-2" />
                         <input
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            className="bg-transparent outline-none w-full text-sm text-gray-300 [color-scheme:dark]"
+                            className="bg-transparent outline-none w-full text-sm text-primary"
                             placeholder="Today"
                         />
                     </div>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs text-gray-500 uppercase">Amount (₹)</label>
-                    <div className="bg-white/5 border border-white/10 rounded-lg flex items-center px-3 py-2">
-                        <DollarSign size={16} className="text-gray-500 mr-2" />
+                    <label className="text-xs text-text-muted uppercase">Amount (₹)</label>
+                    <div className="bg-surface-subtle border border-border-subtle rounded-lg flex items-center px-3 py-2">
+                        <DollarSign size={16} className="text-text-muted mr-2" />
                         <input
                             type="number"
                             value={amount}
                             onChange={(e) => setAmount(Number(e.target.value))}
-                            className="bg-transparent outline-none w-full text-sm"
+                            className="bg-transparent outline-none w-full text-sm text-primary"
                         />
                     </div>
                 </div>
@@ -421,20 +421,20 @@ const InvestmentSimulator: React.FC = () => {
             {error && <div className="p-3 bg-red-500/10 text-red-500 text-sm rounded-lg flex items-center gap-2 border border-red-500/20"><AlertCircle size={16} /> {error}</div>}
 
             {result && (
-                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-[#121212] border border-white/10 rounded-2xl p-6 mt-4 relative overflow-hidden">
+                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-surface-subtle border border-border-subtle rounded-2xl p-6 mt-4 relative overflow-hidden">
 
                     <div className="flex flex-col sm:flex-row justify-between gap-6 relative z-10">
                         <div>
-                            <p className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Invested Value</p>
-                            <h3 className="text-2xl font-bold text-gray-200 mt-1">₹{result.invested_amount.toLocaleString()}</h3>
-                            <p className="text-xs text-gray-500 mt-1 bg-white/5 w-fit px-2 py-0.5 rounded border border-white/5">on {new Date(result.invested_date).toLocaleDateString()}</p>
+                            <p className="text-text-muted text-xs uppercase tracking-wider font-semibold">Invested Value</p>
+                            <h3 className="text-2xl font-bold text-primary mt-1">₹{result.invested_amount.toLocaleString()}</h3>
+                            <p className="text-xs text-text-muted mt-1 bg-surface w-fit px-2 py-0.5 rounded border border-border-subtle">on {new Date(result.invested_date).toLocaleDateString()}</p>
                         </div>
                         <div className="sm:text-right">
-                            <p className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Current Value</p>
-                            <h3 className={`text-4xl font-bold mt-1 ${result.absolute_return >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            <p className="text-text-muted text-xs uppercase tracking-wider font-semibold">Current Value</p>
+                            <h3 className={`text-4xl font-bold mt-1 ${result.absolute_return >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                                 ₹{result.current_value.toLocaleString()}
                             </h3>
-                            <div className={`inline-flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg text-sm font-bold ${result.absolute_return >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
+                            <div className={`inline-flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg text-sm font-bold ${result.absolute_return >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}>
                                 {result.absolute_return >= 0 ? <TrendingUp size={16} /> : <TrendingUp size={16} className="rotate-180" />}
                                 {result.absolute_return >= 0 ? "+" : ""}{result.return_percentage.toFixed(2)}%
                             </div>

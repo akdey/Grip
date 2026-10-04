@@ -61,20 +61,20 @@ const BillsPage: React.FC = () => {
     if (isLoading) return <Loader fullPage text="Scanning Obligations" />;
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white pb-24 overflow-x-hidden">
-            <header className="px-6 py-8 flex items-center justify-between sticky top-0 bg-[#050505]/60 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
+        <div className="min-h-screen text-primary pb-24 overflow-x-hidden">
+            <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-page/80 backdrop-blur-3xl z-30 border-b border-border-subtle">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all">
+                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all">
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-xl font-black tracking-tight uppercase">Surety</h1>
-                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">Bills & Obligations</p>
+                        <h1 className="text-xl font-bold tracking-tight text-primary">Surety</h1>
+                        <p className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">Bills & Obligations</p>
                     </div>
                 </div>
                 <button
                     onClick={() => setShowForm(!showForm)}
-                    className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-all shadow-xl"
+                    className="w-10 h-10 rounded-full bg-primary text-background flex items-center justify-center active:scale-90 transition-all shadow-md"
                 >
                     <Plus size={20} strokeWidth={3} />
                 </button>
@@ -83,25 +83,25 @@ const BillsPage: React.FC = () => {
             <div className="p-6 space-y-10 animate-enter">
                 {/* Visual Summary */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2.5rem] relative overflow-hidden">
-                        <ShieldAlert className="absolute -right-4 -bottom-4 text-white/5" size={80} />
+                    <div className="bg-surface-subtle border border-border-subtle p-6 rounded-[2.5rem] relative overflow-hidden">
+                        <ShieldAlert className="absolute -right-4 -bottom-4 text-primary/5" size={80} />
                         <div>
                             <p className="text-[8px] font-black text-rose-400 uppercase tracking-widest mb-1">Overdue</p>
-                            <p className="text-2xl font-black text-white leading-none">₹{stats.overdue >= 1000 ? `${(stats.overdue / 1000).toFixed(1)}k` : stats.overdue}</p>
+                            <p className="text-2xl font-black text-primary leading-none">₹{stats.overdue >= 1000 ? `${(stats.overdue / 1000).toFixed(1)}k` : stats.overdue}</p>
                         </div>
                     </div>
-                    <div className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[2.5rem] relative overflow-hidden">
-                        <TrendingDown className="absolute -right-4 -bottom-4 text-white/5" size={80} />
+                    <div className="bg-surface-subtle border border-border-subtle p-6 rounded-[2.5rem] relative overflow-hidden">
+                        <TrendingDown className="absolute -right-4 -bottom-4 text-primary/5" size={80} />
                         <div>
                             <p className="text-[8px] font-black text-accent-text uppercase tracking-widest mb-1">Due 7d</p>
-                            <p className="text-2xl font-black text-white/90 leading-none">₹{stats.dueSoon >= 1000 ? `${(stats.dueSoon / 1000).toFixed(1)}k` : stats.dueSoon}</p>
+                            <p className="text-2xl font-black text-primary leading-none">₹{stats.dueSoon >= 1000 ? `${(stats.dueSoon / 1000).toFixed(1)}k` : stats.dueSoon}</p>
                         </div>
                     </div>
                 </div>
 
                 {showForm && (
-                    <div className="glass-card p-6 rounded-[2.5rem] border-white/10 space-y-6">
-                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[4px] ml-1">New Obligation</h3>
+                    <div className="glass-card p-6 rounded-[2.5rem] border-border-subtle space-y-6">
+                        <h3 className="text-[10px] font-black text-text-muted uppercase tracking-[4px] ml-1">New Obligation</h3>
                         <form onSubmit={handleCreate} className="space-y-5">
                             <input
                                 placeholder="Identify Title"
@@ -119,25 +119,25 @@ const BillsPage: React.FC = () => {
                                     className="glass-input font-black"
                                     required
                                 />
-                                <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-3xl flex flex-col justify-center">
-                                    <span className="text-[7px] text-gray-600 font-black uppercase tracking-widest pl-2 mb-1">Terminal Date</span>
+                                <div className="bg-surface-subtle border border-border-subtle p-3 rounded-3xl flex flex-col justify-center">
+                                    <span className="text-[7px] text-text-muted font-black uppercase tracking-widest pl-2 mb-1">Terminal Date</span>
                                     <input
                                         type="date"
                                         value={formData.due_date}
                                         onChange={e => setFormData({ ...formData, due_date: e.target.value })}
-                                        className="bg-transparent text-xs text-white focus:outline-none font-bold uppercase"
+                                        className="bg-transparent text-xs text-primary focus:outline-none font-bold uppercase"
                                         required
                                     />
                                 </div>
                             </div>
                             <div className="flex gap-3 pt-4">
-                                <button type="submit" className="flex-1 py-4.5 rounded-[1.5rem] bg-white text-black font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
+                                <button type="submit" className="flex-1 py-4.5 rounded-[1.5rem] bg-primary text-background font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
                                     {addBill.isPending ? 'Syncing...' : 'Commit'}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setShowForm(false)}
-                                    className="px-6 py-4.5 rounded-[1.5rem] bg-white/5 border border-white/5 text-gray-500 font-bold text-xs uppercase active:scale-95 transition-all"
+                                    className="px-6 py-4.5 rounded-[1.5rem] bg-surface-subtle border border-border-subtle text-text-muted hover:text-primary font-bold text-xs uppercase active:scale-95 transition-all"
                                 >
                                     Cancel
                                 </button>
@@ -147,7 +147,7 @@ const BillsPage: React.FC = () => {
                 )}
 
                 <div className="space-y-4">
-                    <h2 className="text-[9px] font-black text-gray-600 uppercase tracking-[4px] ml-2">Pending Nodes</h2>
+                    <h2 className="text-[9px] font-black text-text-muted uppercase tracking-[4px] ml-2">Pending Nodes</h2>
                     {unpaidBills?.length === 0 ? (
                         <div className="py-20 flex flex-col items-center justify-center opacity-10 space-y-6">
                             <CheckCircle size={80} strokeWidth={1} />
@@ -158,22 +158,22 @@ const BillsPage: React.FC = () => {
                             {unpaidBills?.map((bill) => {
                                 const isOverdue = isPast(new Date(bill.due_date));
                                 return (
-                                    <div key={bill.id} className={`bg-white/[0.02] border ${isOverdue ? 'border-rose-500/30' : 'border-white/[0.05]'} p-5 rounded-[2rem] flex items-center justify-between group active:scale-[0.99] transition-all`}>
+                                    <div key={bill.id} className={`bg-surface-subtle border ${isOverdue ? 'border-status-danger-border' : 'border-border-subtle'} p-5 rounded-[2rem] flex items-center justify-between group active:scale-[0.99] transition-all`}>
                                         <div className="flex items-center gap-5">
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${isOverdue ? 'bg-rose-500/10 border-rose-500/10' : 'bg-white/[0.03] border-white/[0.08]'}`}>
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${isOverdue ? 'bg-status-danger-bg border border-status-danger-border text-status-danger-text' : 'bg-surface border border-border-subtle text-primary'}`}>
                                                 {getIcon(bill.category)}
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="font-black text-white/90 text-sm uppercase tracking-tight">{bill.title}</p>
+                                                <p className="font-black text-primary text-sm uppercase tracking-tight">{bill.title}</p>
                                                 <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest mt-1">
-                                                    <CalendarIcon size={10} className={isOverdue ? 'text-rose-500' : 'text-gray-600'} />
-                                                    <span className={isOverdue ? 'text-rose-500/80' : 'text-gray-600'}>Due: {format(new Date(bill.due_date), 'MMM d, yyyy')}</span>
+                                                    <CalendarIcon size={10} className={isOverdue ? 'text-status-danger-text' : 'text-text-muted'} />
+                                                    <span className={isOverdue ? 'text-status-danger-text' : 'text-text-muted'}>Due: {format(new Date(bill.due_date), 'MMM d, yyyy')}</span>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div className="text-right shrink-0">
-                                            <p className="text-lg font-black tracking-tighter text-white">₹{Number(bill.amount).toLocaleString()}</p>
+                                            <p className="text-lg font-black tracking-tighter text-primary">₹{Number(bill.amount).toLocaleString()}</p>
                                             <button
                                                 className="mt-2 text-[8px] font-black uppercase tracking-widest py-1.5 px-3 rounded-full bg-status-success-bg text-status-success-text border border-status-success-border hover:bg-emerald-500/20 active:scale-90 transition-all"
                                                 onClick={() => markPaid.mutate({ id: bill.id, paid: true })}

@@ -278,15 +278,15 @@ const Transactions: React.FC = () => {
     if (isLoading && limit === 200) return <Loader fullPage text="Retrieving History" />;
 
     return (
-        <div className="min-h-screen text-white pb-20">
+        <div className="min-h-screen text-primary pb-20">
             {/* Header */}
-            <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-[#050505]/80 backdrop-blur-3xl z-30 border-b border-white/[0.05]">
+            <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-page/80 backdrop-blur-3xl z-30 border-b border-border-subtle">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all">
+                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all">
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">
+                        <h1 className="text-xl font-bold tracking-tight text-primary">
                             {view === 'day' ? "Today" :
                                 view === 'month' ? "Month View" :
                                     view === 'year' ? "Year View" :
@@ -294,7 +294,7 @@ const Transactions: React.FC = () => {
                                             view === 'custom' ? "Filtered" :
                                                 "History"}
                         </h1>
-                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">
+                        <p className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">
                             {view === 'day' ? format(currentMonth, 'EEE, dd MMM yyyy') :
                                 view === 'month' ? format(currentMonth, 'MMMM yyyy') :
                                     view === 'year' ? format(currentMonth, 'yyyy') :
@@ -310,7 +310,7 @@ const Transactions: React.FC = () => {
                         className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
                             sortBy !== 'date_desc' || groupBy !== 'date'
                                 ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm'
-                                : 'bg-white/[0.03] border-white/10 text-gray-400'
+                                : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary'
                         }`}
                         title="Sort & Group Ledger"
                     >
@@ -320,7 +320,7 @@ const Transactions: React.FC = () => {
                     {/* Filter Button - Active State Indication */}
                     <button
                         onClick={() => setFilterOpen(true)}
-                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${hasActiveFilters ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm' : 'bg-white/[0.03] border-white/10 text-gray-400'}`}
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${hasActiveFilters ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm' : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary'}`}
                         title="Filter Discovery"
                     >
                         <Filter size={18} />
@@ -348,7 +348,7 @@ const Transactions: React.FC = () => {
                     </div>
                     <button
                         onClick={clearFilters}
-                        className="px-2.5 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[9px] font-black text-rose-400 hover:text-rose-300 uppercase tracking-widest flex items-center gap-1.5 transition-all shrink-0 active:scale-95"
+                        className="px-2.5 py-1 rounded-xl bg-surface-subtle hover:bg-surface-hover text-[9px] font-black text-rose-400 hover:text-rose-300 uppercase tracking-widest flex items-center gap-1.5 transition-all shrink-0 active:scale-95 border border-border-subtle"
                         title="Remove filters and show all activity"
                     >
                         <X size={12} />
@@ -373,19 +373,19 @@ const Transactions: React.FC = () => {
                             <TransactionItem key={txn.id} txn={{ ...txn, status: 'PENDING' }} formatCurrency={formatCurrency} />
                         ))}
                     </div>
-                    <div className="h-px w-full bg-white/[0.05] mx-2" />
+                    <div className="h-px w-full bg-border-subtle mx-2" />
                 </div>
             )}
 
             {view !== 'pending' && <div className="px-4 py-6 space-y-6 animate-enter">
                 {/* Day Navigator */}
                 {view === 'day' && (
-                    <div className="flex items-center justify-between bg-white/[0.03] p-2 rounded-[2rem] border border-white/[0.05] mb-6">
-                        <button onClick={() => setCurrentMonth(subDays(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-white/5 text-gray-500">
+                    <div className="flex items-center justify-between bg-surface-subtle p-2 rounded-[2rem] border border-border-subtle mb-6">
+                        <button onClick={() => setCurrentMonth(subDays(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-surface-hover text-text-muted hover:text-primary transition-colors">
                             <ChevronLeft size={20} />
                         </button>
-                        <span className="font-bold text-sm uppercase tracking-widest">{format(currentMonth, 'EEE, dd MMM yyyy')}</span>
-                        <button onClick={() => setCurrentMonth(addDays(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-white/5 text-gray-500">
+                        <span className="font-bold text-sm uppercase tracking-widest text-primary">{format(currentMonth, 'EEE, dd MMM yyyy')}</span>
+                        <button onClick={() => setCurrentMonth(addDays(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-surface-hover text-text-muted hover:text-primary transition-colors">
                             <ChevronRight size={20} />
                         </button>
                     </div>
@@ -393,12 +393,12 @@ const Transactions: React.FC = () => {
 
                 {/* Year Navigator */}
                 {view === 'year' && (
-                    <div className="flex items-center justify-between bg-white/[0.03] p-2 rounded-[2rem] border border-white/[0.05] mb-6">
-                        <button onClick={() => setCurrentMonth(subYears(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-white/5 text-gray-500">
+                    <div className="flex items-center justify-between bg-surface-subtle p-2 rounded-[2rem] border border-border-subtle mb-6">
+                        <button onClick={() => setCurrentMonth(subYears(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-surface-hover text-text-muted hover:text-primary transition-colors">
                             <ChevronLeft size={20} />
                         </button>
-                        <span className="font-bold text-sm uppercase tracking-widest">{format(currentMonth, 'yyyy')}</span>
-                        <button onClick={() => setCurrentMonth(addYears(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-white/5 text-gray-500">
+                        <span className="font-bold text-sm uppercase tracking-widest text-primary">{format(currentMonth, 'yyyy')}</span>
+                        <button onClick={() => setCurrentMonth(addYears(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-surface-hover text-text-muted hover:text-primary transition-colors">
                             <ChevronRight size={20} />
                         </button>
                     </div>
@@ -407,12 +407,12 @@ const Transactions: React.FC = () => {
                 {view === 'month' ? (
                     <div className="space-y-8">
                         {/* Compact Month Selector */}
-                        <div className="flex items-center justify-between bg-white/[0.03] p-2 rounded-[2rem] border border-white/[0.05]">
-                            <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-white/5 text-gray-500">
+                        <div className="flex items-center justify-between bg-surface-subtle p-2 rounded-[2rem] border border-border-subtle">
+                            <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-surface-hover text-text-muted hover:text-primary transition-colors">
                                 <ChevronLeft size={20} />
                             </button>
-                            <span className="font-bold text-sm uppercase tracking-widest">{format(currentMonth, 'MMMM yyyy')}</span>
-                            <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-white/5 text-gray-500">
+                            <span className="font-bold text-sm uppercase tracking-widest text-primary">{format(currentMonth, 'MMMM yyyy')}</span>
+                            <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-surface-hover text-text-muted hover:text-primary transition-colors">
                                 <ChevronRight size={20} />
                             </button>
                         </div>
@@ -421,7 +421,7 @@ const Transactions: React.FC = () => {
                         <div className="glass-card rounded-[2.5rem] p-4">
                             <div className="grid grid-cols-7 mb-4">
                                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-                                    <div key={d} className="text-center text-[9px] font-black text-gray-600 uppercase py-2">{d}</div>
+                                    <div key={d} className="text-center text-[9px] font-black text-text-muted uppercase py-2">{d}</div>
                                 ))}
                             </div>
                             <div className="grid grid-cols-7 gap-1.5">
@@ -433,12 +433,12 @@ const Transactions: React.FC = () => {
                                         <div
                                             key={i}
                                             className={`
-                                                aspect-[3/4.5] p-1 border border-white/[0.02] flex flex-col items-center justify-between py-2 rounded-2xl transition-all
-                                                ${!isCurrentMonth ? 'opacity-10' : ''}
-                                                ${isToday(day) ? 'bg-accent-subtle border-accent-border text-accent-text font-black' : 'bg-white/[0.01]'}
+                                                aspect-[3/4.5] p-1 border border-border-subtle flex flex-col items-center justify-between py-2 rounded-2xl transition-all
+                                                ${!isCurrentMonth ? 'opacity-20' : ''}
+                                                ${isToday(day) ? 'bg-accent-subtle border-accent-border text-accent-text font-black' : 'bg-surface-subtle'}
                                             `}
                                         >
-                                            <span className={`text-[10px] font-black ${isCurrentMonth ? 'text-gray-400' : 'text-gray-700'}`}>
+                                            <span className={`text-[10px] font-black ${isCurrentMonth ? 'text-secondary' : 'text-text-disabled'}`}>
                                                 {format(day, 'd')}
                                             </span>
                                             {dailyTotal !== 0 && (
@@ -463,26 +463,26 @@ const Transactions: React.FC = () => {
                                                     className="w-6 h-6 rounded-lg flex items-center justify-center text-xs shrink-0"
                                                     style={{
                                                         backgroundColor: `${group.color || '#fff'}20`,
-                                                        color: group.color || '#fff'
+                                                        color: group.color || 'var(--color-text-primary)'
                                                     }}
                                                 >
                                                     <CategoryIcon name={group.icon || 'tag'} size={14} />
                                                 </div>
                                             )}
-                                            <h3 className="text-[10px] font-black text-white/70 uppercase tracking-[3px] whitespace-nowrap">
+                                            <h3 className="text-[10px] font-black text-text-muted uppercase tracking-[3px] whitespace-nowrap">
                                                 {group.label}
                                             </h3>
-                                            <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">
+                                            <span className="text-[8px] font-bold text-text-muted uppercase tracking-widest">
                                                 ({group.items.length})
                                             </span>
                                         </div>
                                         {groupBy === 'category' && group.total !== undefined && (
-                                            <span className={`text-xs font-black tracking-tight ${group.total >= 0 ? 'text-emerald-400' : 'text-white'}`}>
+                                            <span className={`text-xs font-black tracking-tight ${group.total >= 0 ? 'text-emerald-500' : 'text-primary'}`}>
                                                 {formatCurrency(group.total)}
                                             </span>
                                         )}
                                     </div>
-                                    {groupBy !== 'category' && <div className="h-px w-full bg-white/[0.05]" />}
+                                    {groupBy !== 'category' && <div className="h-px w-full bg-border-subtle" />}
                                     <div className="space-y-3">
                                         {group.items.map(txn => (
                                             <TransactionItem key={txn.id} txn={txn} formatCurrency={formatCurrency} />
@@ -511,26 +511,26 @@ const Transactions: React.FC = () => {
                                                     className="w-6 h-6 rounded-lg flex items-center justify-center text-xs shrink-0"
                                                     style={{
                                                         backgroundColor: `${group.color || '#fff'}20`,
-                                                        color: group.color || '#fff'
+                                                        color: group.color || 'var(--color-text-primary)'
                                                     }}
                                                 >
                                                     <CategoryIcon name={group.icon || 'tag'} size={14} />
                                                 </div>
                                             )}
-                                            <h3 className="text-[10px] font-black text-white/70 uppercase tracking-[3px] whitespace-nowrap">
+                                            <h3 className="text-[10px] font-black text-text-muted uppercase tracking-[3px] whitespace-nowrap">
                                                 {group.label}
                                             </h3>
-                                            <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">
+                                            <span className="text-[8px] font-bold text-text-muted uppercase tracking-widest">
                                                 ({group.items.length})
                                             </span>
                                         </div>
                                         {groupBy === 'category' && group.total !== undefined && (
-                                            <span className={`text-xs font-black tracking-tight ${group.total >= 0 ? 'text-emerald-400' : 'text-white'}`}>
+                                            <span className={`text-xs font-black tracking-tight ${group.total >= 0 ? 'text-emerald-500' : 'text-primary'}`}>
                                                 {formatCurrency(group.total)}
                                             </span>
                                         )}
                                     </div>
-                                    {groupBy !== 'category' && <div className="h-px w-full bg-white/[0.05]" />}
+                                    {groupBy !== 'category' && <div className="h-px w-full bg-border-subtle" />}
                                     <div className="space-y-3">
                                         {group.items.map((txn) => (
                                             <TransactionItem key={txn.id} txn={txn} formatCurrency={formatCurrency} />
@@ -544,7 +544,7 @@ const Transactions: React.FC = () => {
                         {transactions && transactions.length >= limit && (
                             <button
                                 onClick={() => setLimit(prev => prev + 100)}
-                                className="w-full py-4 rounded-2xl bg-white/[0.03] border border-white/[0.05] text-xs font-bold uppercase tracking-widest text-gray-500 hover:bg-white/[0.05] transition-all"
+                                className="w-full py-4 rounded-2xl bg-surface-subtle border border-border-subtle text-xs font-bold uppercase tracking-widest text-text-muted hover:bg-surface-hover hover:text-primary transition-all"
                             >
                                 Load More History
                             </button>
@@ -563,28 +563,28 @@ const Transactions: React.FC = () => {
 
             <Drawer isOpen={isFilterOpen} onClose={() => setFilterOpen(false)} title="Discovery Filter">
                 <div className="space-y-10 px-2 pb-10">
-                    <p className="text-gray-500 text-xs leading-relaxed uppercase font-bold tracking-widest px-1">Narrow down your insights</p>
+                    <p className="text-text-muted text-xs leading-relaxed uppercase font-bold tracking-widest px-1">Narrow down your insights</p>
 
                     <div className="space-y-6">
                         <div className="flex flex-col gap-2">
-                            <label className="text-[9px] text-gray-600 font-bold uppercase tracking-[3px] ml-1">Time Horizon</label>
+                            <label className="text-[9px] text-text-muted font-bold uppercase tracking-[3px] ml-1">Time Horizon</label>
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-white/[0.02] p-4 rounded-3xl border border-white/[0.05]">
-                                    <span className="block text-[7px] text-gray-500 font-black uppercase mb-1.5 tracking-tighter">Genesis</span>
+                                <div className="bg-surface-subtle p-4 rounded-3xl border border-border-subtle">
+                                    <span className="block text-[7px] text-text-muted font-black uppercase mb-1.5 tracking-tighter">Genesis</span>
                                     <input
                                         type="date"
                                         value={drawerDateRange.start}
                                         onChange={(e) => setDrawerDateRange(prev => ({ ...prev, start: e.target.value }))}
-                                        className="bg-transparent w-full text-white text-xs focus:outline-none font-bold"
+                                        className="bg-transparent w-full text-primary text-xs focus:outline-none font-bold"
                                     />
                                 </div>
-                                <div className="bg-white/[0.02] p-4 rounded-3xl border border-white/[0.05]">
-                                    <span className="block text-[7px] text-gray-500 font-black uppercase mb-1.5 tracking-tighter">Terminal</span>
+                                <div className="bg-surface-subtle p-4 rounded-3xl border border-border-subtle">
+                                    <span className="block text-[7px] text-text-muted font-black uppercase mb-1.5 tracking-tighter">Terminal</span>
                                     <input
                                         type="date"
                                         value={drawerDateRange.end}
                                         onChange={(e) => setDrawerDateRange(prev => ({ ...prev, end: e.target.value }))}
-                                        className="bg-transparent w-full text-white text-xs focus:outline-none font-bold"
+                                        className="bg-transparent w-full text-primary text-xs focus:outline-none font-bold"
                                     />
                                 </div>
                             </div>
@@ -593,29 +593,29 @@ const Transactions: React.FC = () => {
                         {/* Category Checkbox Multi-Selector */}
                         <div className="flex flex-col gap-2.5">
                             <div className="flex items-center justify-between ml-1">
-                                <label className="text-[9px] text-gray-400 font-bold uppercase tracking-[3px]">
+                                <label className="text-[9px] text-text-muted font-bold uppercase tracking-[3px]">
                                     Categories {drawerCategories.length > 0 && `(${drawerCategories.length} selected)`}
                                 </label>
                                 <div className="flex items-center gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setDrawerCategories(categories ? categories.map(c => c.name) : [])}
-                                        className="text-[9px] text-white hover:text-gray-300 font-bold uppercase tracking-wider transition-colors"
+                                        className="text-[9px] text-primary hover:text-text-secondary font-bold uppercase tracking-wider transition-colors"
                                     >
                                         Select All
                                     </button>
-                                    <span className="text-gray-600 text-[9px]">•</span>
+                                    <span className="text-text-muted text-[9px]">•</span>
                                     <button
                                         type="button"
                                         onClick={() => setDrawerCategories([])}
-                                        className="text-[9px] text-gray-500 hover:text-white font-bold uppercase tracking-wider transition-colors"
+                                        className="text-[9px] text-text-muted hover:text-primary font-bold uppercase tracking-wider transition-colors"
                                     >
                                         Clear
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="max-h-60 overflow-y-auto no-scrollbar space-y-1.5 p-1 bg-white/[0.01] rounded-3xl border border-white/[0.05]">
+                            <div className="max-h-60 overflow-y-auto no-scrollbar space-y-1.5 p-1 bg-surface-subtle rounded-3xl border border-border-subtle">
                                 {categories?.map((cat) => {
                                     const isSelected = drawerCategories.includes(cat.name);
                                     return (
@@ -624,8 +624,8 @@ const Transactions: React.FC = () => {
                                             onClick={() => toggleCategory(cat.name)}
                                             className={`p-3 rounded-2xl border flex items-center justify-between transition-all cursor-pointer select-none active:scale-[0.99] ${
                                                 isSelected
-                                                    ? 'bg-white/10 border-white/20'
-                                                    : 'bg-white/[0.02] border-white/[0.04] hover:bg-white/[0.04] text-gray-400 hover:text-white'
+                                                    ? 'bg-accent-subtle border-accent-border'
+                                                    : 'bg-surface-subtle border-border-subtle hover:bg-surface-hover text-text-muted hover:text-primary'
                                             }`}
                                         >
                                             <div className="flex items-center gap-3 min-w-0">
@@ -633,12 +633,12 @@ const Transactions: React.FC = () => {
                                                     className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
                                                     style={{
                                                         backgroundColor: `${cat.color || '#fff'}20`,
-                                                        color: cat.color || '#fff'
+                                                        color: cat.color || 'var(--color-text-primary)'
                                                     }}
                                                 >
                                                     <CategoryIcon name={cat.icon || 'tag'} size={16} />
                                                 </div>
-                                                <span className={`text-xs font-bold truncate ${isSelected ? 'text-white' : 'text-gray-300'}`}>
+                                                <span className={`text-xs font-bold truncate ${isSelected ? 'text-primary' : 'text-secondary'}`}>
                                                     {cat.name}
                                                 </span>
                                             </div>
@@ -647,8 +647,8 @@ const Transactions: React.FC = () => {
                                             <div
                                                 className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
                                                     isSelected
-                                                        ? 'bg-white border-white text-black shadow-sm'
-                                                        : 'border-white/20 bg-white/[0.03]'
+                                                        ? 'bg-primary border-primary text-background shadow-sm'
+                                                        : 'border-border-default bg-surface-subtle'
                                                 }`}
                                             >
                                                 {isSelected && <Check size={13} strokeWidth={3} />}
@@ -661,12 +661,12 @@ const Transactions: React.FC = () => {
 
                         {/* Sub-Category Selector */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-[9px] text-gray-600 font-bold uppercase tracking-[3px] ml-1">Sub Category</label>
+                            <label className="text-[9px] text-text-muted font-bold uppercase tracking-[3px] ml-1">Sub Category</label>
                             <select
                                 value={drawerSubCategory}
                                 onChange={(e) => setDrawerSubCategory(e.target.value)}
                                 disabled={drawerCategories.length === 0}
-                                className={`w-full bg-[#1A1A1A] border border-white/[0.05] rounded-3xl px-6 py-4 text-xs font-bold text-white focus:outline-none focus:border-white/30 appearance-none ${drawerCategories.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`w-full bg-surface-subtle border border-border-subtle rounded-3xl px-6 py-4 text-xs font-bold text-primary focus:outline-none focus:border-border-focus appearance-none ${drawerCategories.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <option value="">All Sub-Categories</option>
                                 {availableSubCategories.map((sub) => (
@@ -681,13 +681,13 @@ const Transactions: React.FC = () => {
                     <div className="pt-6 flex items-center gap-3">
                         <button
                             onClick={clearFilters}
-                            className="flex-1 py-4 rounded-[2rem] bg-white/[0.04] hover:bg-white/[0.08] text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider transition-all"
+                            className="flex-1 py-4 rounded-[2rem] bg-surface-subtle hover:bg-surface-hover text-text-muted hover:text-primary font-bold text-xs uppercase tracking-wider transition-all border border-border-subtle"
                         >
                             Remove Filter
                         </button>
                         <button
                             onClick={applyFilters}
-                            className="flex-1 py-4 rounded-[2rem] bg-white text-black font-black text-sm uppercase tracking-wider shadow-2xl active:scale-95 transition-all"
+                            className="flex-1 py-4 rounded-[2rem] bg-primary text-background font-black text-sm uppercase tracking-wider shadow-xl active:scale-95 transition-all"
                         >
                             Apply Filter
                         </button>
@@ -698,13 +698,13 @@ const Transactions: React.FC = () => {
             {/* Sort & Group Drawer */}
             <Drawer isOpen={isSortOpen} onClose={() => setIsSortOpen(false)} title="Sort & Group">
                 <div className="space-y-8 px-2 pb-10">
-                    <p className="text-gray-500 text-xs leading-relaxed uppercase font-bold tracking-widest px-1">
+                    <p className="text-text-muted text-xs leading-relaxed uppercase font-bold tracking-widest px-1">
                         Organize your financial ledger
                     </p>
 
                     {/* Grouping Section */}
                     <div className="space-y-3">
-                        <label className="text-[9px] text-gray-500 font-black uppercase tracking-[3px] ml-1">
+                        <label className="text-[9px] text-text-muted font-black uppercase tracking-[3px] ml-1">
                             Group Transactions By
                         </label>
                         <div className="grid grid-cols-2 gap-2.5">
@@ -712,17 +712,17 @@ const Transactions: React.FC = () => {
                                 onClick={() => setGroupBy('date')}
                                 className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
                                     groupBy === 'date'
-                                        ? 'bg-white/10 border-white/20 text-white'
-                                        : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white'
+                                        ? 'bg-accent-subtle border-accent-border text-primary'
+                                        : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
                                 }`}
                             >
                                 <div className="flex items-center justify-between w-full">
                                     <Calendar size={18} />
-                                    {groupBy === 'date' && <Check size={16} className="text-white" />}
+                                    {groupBy === 'date' && <Check size={16} className="text-accent-text" />}
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-white">Daily Timeline</p>
-                                    <p className="text-[9px] text-gray-500 mt-0.5">Chronological day groups</p>
+                                    <p className="text-xs font-bold text-primary">Daily Timeline</p>
+                                    <p className="text-[9px] text-text-muted mt-0.5">Chronological day groups</p>
                                 </div>
                             </button>
 
@@ -730,17 +730,17 @@ const Transactions: React.FC = () => {
                                 onClick={() => setGroupBy('category')}
                                 className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
                                     groupBy === 'category'
-                                        ? 'bg-white/10 border-white/20 text-white'
-                                        : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white'
+                                        ? 'bg-accent-subtle border-accent-border text-primary'
+                                        : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
                                 }`}
                             >
                                 <div className="flex items-center justify-between w-full">
                                     <Layers size={18} />
-                                    {groupBy === 'category' && <Check size={16} className="text-white" />}
+                                    {groupBy === 'category' && <Check size={16} className="text-accent-text" />}
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-white">By Category</p>
-                                    <p className="text-[9px] text-gray-500 mt-0.5">Subtotals & spend by tag</p>
+                                    <p className="text-xs font-bold text-primary">By Category</p>
+                                    <p className="text-[9px] text-text-muted mt-0.5">Subtotals & spend by tag</p>
                                 </div>
                             </button>
                         </div>
@@ -748,7 +748,7 @@ const Transactions: React.FC = () => {
 
                     {/* Sorting Section */}
                     <div className="space-y-3">
-                        <label className="text-[9px] text-gray-500 font-black uppercase tracking-[3px] ml-1">
+                        <label className="text-[9px] text-text-muted font-black uppercase tracking-[3px] ml-1">
                             Sort Order
                         </label>
                         <div className="space-y-2">
@@ -765,15 +765,15 @@ const Transactions: React.FC = () => {
                                     onClick={() => setSortBy(option.id as any)}
                                     className={`w-full p-3.5 rounded-2xl border flex items-center justify-between transition-all ${
                                         sortBy === option.id
-                                            ? 'bg-white/10 border-white/20 text-white'
-                                            : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                                            ? 'bg-accent-subtle border-accent-border text-primary'
+                                            : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
                                     }`}
                                 >
                                     <div className="text-left">
-                                        <p className="text-xs font-bold text-white">{option.label}</p>
-                                        <p className="text-[9px] text-gray-500">{option.desc}</p>
+                                        <p className="text-xs font-bold text-primary">{option.label}</p>
+                                        <p className="text-[9px] text-text-muted">{option.desc}</p>
                                     </div>
-                                    {sortBy === option.id && <Check size={16} className="text-white shrink-0" />}
+                                    {sortBy === option.id && <Check size={16} className="text-accent-text shrink-0" />}
                                 </button>
                             ))}
                         </div>
@@ -786,13 +786,13 @@ const Transactions: React.FC = () => {
                                 setSortBy('date_desc');
                                 setGroupBy('date');
                             }}
-                            className="flex-1 py-4 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] text-gray-400 hover:text-white text-xs font-bold uppercase tracking-wider transition-all"
+                            className="flex-1 py-4 rounded-2xl bg-surface-subtle hover:bg-surface-hover text-text-muted hover:text-primary text-xs font-bold uppercase tracking-wider transition-all border border-border-subtle"
                         >
                             Reset
                         </button>
                         <button
                             onClick={() => setIsSortOpen(false)}
-                            className="flex-1 py-4 rounded-2xl bg-white text-black font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all"
+                            className="flex-1 py-4 rounded-2xl bg-primary text-background font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all"
                         >
                             Done
                         </button>
@@ -869,35 +869,35 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
     return (
         <div
             onClick={() => navigate(`/transactions/${txn.id}`)}
-            className="flex items-center justify-between p-3.5 bg-white/[0.02] hover:bg-white/[0.04] transition-all border border-white/[0.05] group active:scale-[0.98] rounded-2xl cursor-pointer"
+            className="flex items-center justify-between p-3.5 bg-surface-subtle hover:bg-surface-hover transition-all border border-border-subtle group active:scale-[0.98] rounded-2xl cursor-pointer"
         >
             <div className="flex items-center gap-4">
                 <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border border-white/[0.08]"
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border border-border-subtle"
                     style={{
-                        backgroundColor: (txn.sub_category_color || txn.category_color) ? `${txn.sub_category_color || txn.category_color}15` : 'rgba(255,255,255,0.03)',
-                        color: txn.sub_category_color || txn.category_color || '#fff'
+                        backgroundColor: (txn.sub_category_color || txn.category_color) ? `${txn.sub_category_color || txn.category_color}18` : 'var(--color-bg-surface-pill)',
+                        color: txn.sub_category_color || txn.category_color || 'var(--color-text-primary)'
                     }}
                 >
                     <CategoryIcon name={txn.sub_category_icon || txn.category_icon} size={22} />
                 </div>
                 <div className="flex flex-col min-w-0">
-                    <p className="font-semibold text-white/90 truncate max-w-[150px] text-sm leading-tight">
+                    <p className="font-semibold text-primary truncate max-w-[150px] text-sm leading-tight">
                         {txn.merchant_name || txn.category}
                     </p>
                     <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[9px] text-gray-500 font-black uppercase tracking-widest truncate max-w-[80px]">
+                        <span className="text-[9px] text-text-muted font-black uppercase tracking-widest truncate max-w-[80px]">
                             {txn.sub_category}
                         </span>
-                        <span className="text-[8px] text-gray-700">•</span>
-                        <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest whitespace-nowrap">
+                        <span className="text-[8px] text-text-muted/60">•</span>
+                        <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest whitespace-nowrap">
                             {format(dateObj, 'MMM d')}
                         </span>
                     </div>
                     {txn.tags && txn.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
                             {txn.tags.map((tag: string) => (
-                                <span key={tag} className="text-[7px] px-1.5 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.05] text-gray-500 font-black uppercase tracking-tighter">
+                                <span key={tag} className="text-[7px] px-1.5 py-0.5 rounded-md bg-surface-pill border border-border-subtle text-text-muted font-black uppercase tracking-tighter">
                                     #{tag}
                                 </span>
                             ))}
@@ -907,7 +907,7 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
             </div>
 
             <div className="text-right shrink-0">
-                <p className="font-black text-white text-base leading-none tracking-tighter">
+                <p className="font-black text-primary text-base leading-none tracking-tighter">
                     {formatCurrency(txn.amount)}
                 </p>
                 <div className="flex items-center justify-end gap-1 mt-1.5">
@@ -916,13 +916,13 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
                             Review
                         </span>
                     ) : (
-                        <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter ${txn.is_manual ? 'border-amber-500/20 text-amber-500/80' : 'border-white/10 text-white/70 bg-white/[0.04]'
+                        <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter ${txn.is_manual ? 'border-amber-500/30 text-amber-500 bg-amber-500/10' : 'border-border-subtle text-text-muted bg-surface-pill'
                             }`}>
                             {txn.is_manual ? 'Manual' : 'Sync'}
                         </span>
                     )}
                     {txn.sub_category === 'Credit Card Payment' && (
-                        <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-white/10 text-white/70 bg-white/[0.04] uppercase tracking-tighter">
+                        <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-border-subtle text-text-muted bg-surface-pill uppercase tracking-tighter">
                             Offset
                         </span>
                     )}

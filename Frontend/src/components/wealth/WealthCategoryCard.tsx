@@ -52,23 +52,23 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
     return (
         <motion.div
             layout
-            className="bg-[#0A0A0A] border border-white/5 rounded-2xl overflow-hidden hover:border-white/10 transition-colors"
+            className="bg-surface-subtle border border-border-subtle rounded-2xl overflow-hidden hover:border-border-default transition-colors"
         >
             <div className="p-5">
                 {/* Header */}
                 <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
-                        <div className={`p-2.5 rounded-xl bg-white/5 text-gray-300`}>
+                        <div className="p-2.5 rounded-xl bg-accent-subtle text-primary">
                             {icon}
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-gray-100">{title}</h3>
-                            <p className="text-xs text-gray-500 font-medium">{holdings.length} Holdings</p>
+                            <h3 className="text-lg font-bold text-primary">{title}</h3>
+                            <p className="text-xs text-text-muted font-medium">{holdings.length} Holdings</p>
                         </div>
                     </div>
 
                     <div className="text-right">
-                        <p className="text-lg font-bold text-gray-100">{formatCurrency(totalValue)}</p>
+                        <p className="text-lg font-bold text-primary">{formatCurrency(totalValue)}</p>
                         <div className={`flex items-center justify-end gap-1 text-xs font-bold ${absoluteReturn >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                             {absoluteReturn >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                             <span>{absoluteReturn >= 0 ? "+" : ""}{formatCurrency(absoluteReturn)} ({returnPercentage.toFixed(1)}%)</span>
@@ -82,7 +82,7 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                         {onSimulate && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onSimulate(); }}
-                                className="flex-1 py-2 px-3 bg-white/[0.04] hover:bg-white/[0.08] text-white/90 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-colors border border-white/10 hover:border-white/20"
+                                className="flex-1 py-2 px-3 bg-surface hover:bg-surface-hover text-primary rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-colors border border-border-subtle"
                             >
                                 <Calculator size={14} />
                                 What-If Simulator
@@ -91,7 +91,7 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                         {onAnalyze && type === 'MUTUAL_FUND' && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onAnalyze(); }}
-                                className="flex-1 py-2 px-3 bg-white/[0.04] hover:bg-white/[0.08] text-white/90 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-colors border border-white/10 hover:border-white/20"
+                                className="flex-1 py-2 px-3 bg-surface hover:bg-surface-hover text-primary rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-colors border border-border-subtle"
                             >
                                 <CalendarClock size={14} />
                                 SIP Analysis
@@ -101,7 +101,7 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                 )}
 
                 {/* Progress Bar / Visual Indicator */}
-                <div className="w-full h-1.5 bg-white/5 rounded-full mb-4 overflow-hidden">
+                <div className="w-full h-1.5 bg-surface rounded-full mb-4 overflow-hidden">
                     <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.min(returnPercentage, 100)}%` }} // Just a visual rep of return, capped
@@ -112,7 +112,7 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                 {/* Expanded Content Toggle */}
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="w-full flex items-center justify-center gap-2 text-xs text-gray-500 hover:text-gray-300 py-2 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 text-xs text-text-muted hover:text-primary py-2 transition-colors"
                 >
                     {isExpanded ? "Show Less" : "View Holdings"}
                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -126,24 +126,24 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="bg-black/20 border-t border-white/5"
+                        className="bg-surface/50 border-t border-border-subtle"
                     >
                         <div className="p-2 space-y-1">
                             {holdings.map(h => (
                                 <div
                                     key={h.id}
                                     onClick={() => onHoldingClick(h.id)}
-                                    className="flex justify-between items-center p-3 hover:bg-white/5 rounded-lg cursor-pointer transition-colors group"
+                                    className="flex justify-between items-center p-3 hover:bg-surface-hover rounded-lg cursor-pointer transition-colors group"
                                 >
                                     <div>
-                                        <p className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">{h.name}</p>
+                                        <p className="text-sm font-medium text-primary transition-colors">{h.name}</p>
                                         <div className="flex items-center gap-2">
                                             {h.xirr && <span className="text-[10px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">XIRR {h.xirr.toFixed(1)}%</span>}
-                                            <span className="text-[10px] text-gray-600">Inv: {formatCurrency(h.total_invested)}</span>
+                                            <span className="text-[10px] text-text-muted">Inv: {formatCurrency(h.total_invested)}</span>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-sm font-bold text-gray-200">{formatCurrency(h.current_value)}</p>
+                                        <p className="text-sm font-bold text-primary">{formatCurrency(h.current_value)}</p>
                                         <div className={`flex items-center justify-end gap-1 text-[10px] ${(h.current_value - h.total_invested) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                                             {((h.current_value - h.total_invested) / h.total_invested * 100).toFixed(1)}%
                                         </div>
