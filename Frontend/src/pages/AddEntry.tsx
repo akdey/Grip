@@ -512,17 +512,8 @@ const AddEntry: React.FC = () => {
 
                         {/* Payment Channel */}
                         <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <label className="text-[8px] text-gray-600 font-black uppercase tracking-[2px] ml-1 opacity-60">Settlement Route</label>
-                                {!isSourceSelected && (
-                                    <span className="text-[8px] text-amber-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                                        * Source Required (Bank / Cash / Card)
-                                    </span>
-                                )}
-                            </div>
-                            <div className={`flex gap-2 overflow-x-auto no-scrollbar pb-1 p-1 -m-1 rounded-2xl transition-all ${
-                                !isSourceSelected ? 'ring-1 ring-amber-500/30 bg-amber-500/[0.02]' : ''
-                            }`}>
+                            <label className="text-[8px] text-gray-600 font-black uppercase tracking-[2px] ml-1 opacity-60">Settlement Route</label>
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                                 <button
                                     onClick={() => { setAccountType('ACCOUNT'); setCardId(''); }}
                                     className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all whitespace-nowrap min-w-[90px] justify-center ${accountType === 'ACCOUNT'
@@ -693,12 +684,11 @@ const AddEntry: React.FC = () => {
                     {existingTxn?.status === 'PENDING' ? (
                         <button
                             onClick={handleApprove}
-                            disabled={verifyMutation.isPending || !amount || !category || !isSourceSelected}
+                            disabled={verifyMutation.isPending || !amount || !category}
                             className={`
                                 h-14 px-8 rounded-full bg-white text-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all
-                                ${verifyMutation.isPending || !amount || !category || !isSourceSelected ? 'opacity-20 cursor-not-allowed' : 'hover:scale-105'}
+                                ${verifyMutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed' : 'hover:scale-105'}
                             `}
-                            title={!isSourceSelected ? "Please select a payment source" : "Approve Transaction"}
                         >
                             <span className="text-xs font-black uppercase tracking-widest">Approve</span>
                             <Check size={20} strokeWidth={3} />
@@ -708,24 +698,23 @@ const AddEntry: React.FC = () => {
                             {!id && (
                                 <button
                                     onClick={handleSaveAndNew}
-                                    disabled={mutation.isPending || !amount || !category || !isSourceSelected}
+                                    disabled={mutation.isPending || !amount || !category}
                                     className={`
                                         w-14 h-14 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/10 active:scale-95 transition-all
-                                        ${mutation.isPending || !amount || !category || !isSourceSelected ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white/20'}
+                                        ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white/20'}
                                     `}
-                                    title={!isSourceSelected ? "Please select a payment source" : "Save & Add Another"}
+                                    title="Save & Add Another"
                                 >
                                     <Plus size={24} strokeWidth={2.5} />
                                 </button>
                             )}
                             <button
                                 onClick={handleSave}
-                                disabled={mutation.isPending || !amount || !category || !isSourceSelected}
+                                disabled={mutation.isPending || !amount || !category}
                                 className={`
                                     w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-2xl shadow-indigo-500/20 active:scale-95 transition-all
-                                    ${mutation.isPending || !amount || !category || !isSourceSelected ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6'}
+                                    ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6'}
                                 `}
-                                title={!isSourceSelected ? "Please select a payment source" : "Save Entry"}
                             >
                                 <Save size={24} strokeWidth={2.5} />
                             </button>

@@ -526,12 +526,8 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
                 </p>
                 <div className="flex items-center justify-end gap-1 mt-1.5">
                     {txn.status === 'PENDING' ? (
-                        <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter ${
-                            !hasValidSource || isDateOutside3Days
-                                ? 'border-amber-500/50 text-amber-400 bg-amber-500/20'
-                                : 'border-amber-500/40 text-amber-500 bg-amber-500/10'
-                        }`}>
-                            {!hasValidSource ? '⚠️ Set Source' : (isDateOutside3Days ? '⚠️ Check Date' : 'Review')}
+                        <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-amber-500/40 text-amber-500 bg-amber-500/10 uppercase tracking-tighter">
+                            Review
                         </span>
                     ) : (
                         <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter ${txn.is_manual ? 'border-amber-500/20 text-amber-500/80' : 'border-cyan-500/20 text-cyan-500/80'
