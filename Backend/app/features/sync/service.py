@@ -263,15 +263,15 @@ class SyncService:
 
         RETURN ONLY RAW JSON (Ensure all strings are quoted properly):
         {{
-          "is_transaction": true,
-          "amount": 1000.00,
+          "is_transaction": "<bool: true if it is really a transaction, else false>",
+          "amount": "<float: the value of the transaction>",
           "currency": "INR",
-          "merchant_name": "Merchant Name",
-          "category": "Food",
-          "sub_category": "Dining",
-          "account_type": "SAVINGS",
-          "transaction_type": "DEBIT",
-          "extracted_date": "2026-10-04"
+          "merchant_name": "<string: name of the merchant>",
+          "category": "<string: category name>",
+          "sub_category": "<string: sub-category name>",
+          "account_type": "<SAVINGS or CREDIT_CARD>",
+          "transaction_type": "<DEBIT or CREDIT>",
+          "extracted_date": "<YYYY-MM-DD or null>"
         }}
         """
          # Stage 1: Try Local LLM
