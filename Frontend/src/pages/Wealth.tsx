@@ -350,11 +350,11 @@ const Wealth: React.FC = () => {
                                     <AreaChart data={chartData}>
                                         <defs>
                                             <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                                <stop offset="5%" stopColor="var(--color-status-success-solid, #52a37f)" stopOpacity={0.25} />
+                                                <stop offset="95%" stopColor="var(--color-status-success-solid, #52a37f)" stopOpacity={0} />
                                             </linearGradient>
                                             <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="var(--color-accent-solid, #22d3ee)" stopOpacity={0.3} />
+                                                <stop offset="5%" stopColor="var(--color-accent-solid, #22d3ee)" stopOpacity={0.25} />
                                                 <stop offset="95%" stopColor="var(--color-accent-solid, #22d3ee)" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
@@ -372,7 +372,7 @@ const Wealth: React.FC = () => {
                                         <Area
                                             type="monotone"
                                             dataKey="value"
-                                            stroke="#10b981"
+                                            stroke="var(--color-status-success-solid, #52a37f)"
                                             strokeWidth={2}
                                             fillOpacity={1}
                                             fill="url(#colorValue)"

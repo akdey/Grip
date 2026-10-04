@@ -31,31 +31,39 @@
   --color-cyan-900: #164e63;
   --color-cyan-950: #082736;
 
-  /* Status Ramp: Danger (Red) */
+  /* Status Ramp: Danger (Faded / Dimmed Red) */
   --color-red-50: #fef2f2;
   --color-red-100: #fee2e2;
   --color-red-200: #fecaca;
   --color-red-300: #fca5a5;
-  --color-red-400: #f87171;
-  --color-red-500: #ef4444;
-  --color-red-600: #dc2626;
+  --color-red-400: oklch(0.75 0.080 25);
+  --color-red-500: oklch(0.64 0.085 25);
+  --color-red-600: oklch(0.54 0.085 25);
   --color-red-700: #b91c1c;
   --color-red-800: #991b1b;
   --color-red-900: #7f1d1d;
   --color-red-950: #320909;
 
-  /* Status Ramp: Success (Emerald) */
+  --color-rose-400: oklch(0.75 0.080 25);
+  --color-rose-500: oklch(0.64 0.085 25);
+  --color-rose-600: oklch(0.54 0.085 25);
+
+  /* Status Ramp: Success (Faded / Dimmed Green) */
   --color-emerald-50: #ecfdf5;
   --color-emerald-100: #d1fae5;
   --color-emerald-200: #a7f3d0;
   --color-emerald-300: #6ee7b7;
-  --color-emerald-400: #34d399;
-  --color-emerald-500: #10b981;
-  --color-emerald-600: #059669;
+  --color-emerald-400: oklch(0.77 0.075 152);
+  --color-emerald-500: oklch(0.65 0.080 152);
+  --color-emerald-600: oklch(0.54 0.080 152);
   --color-emerald-700: #047857;
   --color-emerald-800: #065f46;
   --color-emerald-900: #064e3b;
   --color-emerald-950: #04231b;
+
+  --color-green-400: oklch(0.77 0.075 152);
+  --color-green-500: oklch(0.65 0.080 152);
+  --color-green-600: oklch(0.54 0.080 152);
 
   /* Status Ramp: Warning (Amber) */
   --color-amber-50: #fffbeb;
@@ -136,30 +144,30 @@
   --color-accent-border: var(--brand-accent-border);
   --color-accent-text: var(--brand-accent-text);
 
-  /* Status: Danger */
-  --color-status-danger-bg: rgba(239, 68, 68, 0.14);
-  --color-status-danger-border: rgba(239, 68, 68, 0.3);
-  --color-status-danger-solid: #dc2626;
-  --color-status-danger-solid-hover: #ef4444;
-  --color-status-danger-text: #f87171;
+  /* Status: Danger (Faded / Dimmed Outflow & Debt) */
+  --color-status-danger-bg: oklch(0.72 0.080 25 / 0.09);
+  --color-status-danger-border: oklch(0.72 0.080 25 / 0.22);
+  --color-status-danger-solid: oklch(0.56 0.085 25);
+  --color-status-danger-solid-hover: oklch(0.62 0.085 25);
+  --color-status-danger-text: oklch(0.75 0.080 25);
 
-  /* Status: Success */
-  --color-status-success-bg: rgba(16, 185, 129, 0.14);
-  --color-status-success-border: rgba(16, 185, 129, 0.3);
-  --color-status-success-solid: #059669;
-  --color-status-success-solid-hover: #10b981;
-  --color-status-success-text: #34d399;
+  /* Status: Success (Faded / Dimmed Inflow & Surplus) */
+  --color-status-success-bg: oklch(0.74 0.075 152 / 0.09);
+  --color-status-success-border: oklch(0.74 0.075 152 / 0.22);
+  --color-status-success-solid: oklch(0.56 0.080 152);
+  --color-status-success-solid-hover: oklch(0.62 0.080 152);
+  --color-status-success-text: oklch(0.77 0.075 152);
 
   /* Status: Warning */
-  --color-status-warning-bg: rgba(245, 158, 11, 0.14);
-  --color-status-warning-border: rgba(245, 158, 11, 0.3);
+  --color-status-warning-bg: rgba(245, 158, 11, 0.12);
+  --color-status-warning-border: rgba(245, 158, 11, 0.25);
   --color-status-warning-solid: #d97706;
   --color-status-warning-solid-hover: #f59e0b;
   --color-status-warning-text: #fbbf24;
 
   /* Status: Info */
-  --color-status-info-bg: rgba(59, 130, 246, 0.14);
-  --color-status-info-border: rgba(59, 130, 246, 0.3);
+  --color-status-info-bg: rgba(59, 130, 246, 0.12);
+  --color-status-info-border: rgba(59, 130, 246, 0.25);
   --color-status-info-solid: #2563eb;
   --color-status-info-solid-hover: #3b82f6;
   --color-status-info-text: #60a5fa;
