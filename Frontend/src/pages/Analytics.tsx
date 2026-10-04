@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { TrendingUp, Target, Layers, ChevronLeft, ChevronRight, TrendingDown, Eye, EyeOff, Lock, Wallet, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, Target, Layers, ChevronLeft, ChevronRight, TrendingDown, Eye, EyeOff, Lock, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { useVariance, useInvestments, useMonthlySummary, useSpendTrends, useSafeToSpend } from '../features/dashboard/hooks';
@@ -200,16 +200,19 @@ const Analytics: React.FC = () => {
                             {/* 1. Period Net Flow (Surplus / Deficit) */}
                             <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-3xl flex items-center justify-between">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${Number(summary?.balance || 0) >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                                    <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 border ${Number(summary?.balance || 0) >= 0 ? 'bg-status-success-bg text-status-success-text border-status-success-border' : 'bg-status-danger-bg text-status-danger-text border-status-danger-border'}`}>
                                         {Number(summary?.balance || 0) >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest truncate">Period Net Flow</p>
-                                        <p className="text-[8px] text-gray-600 font-bold uppercase tracking-wider">Monthly Cash Surplus</p>
+                                        <div className="flex items-center gap-1.5">
+                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest truncate">Period Net Flow</p>
+                                            {!showSensitive && <Lock size={9} className="text-gray-500" />}
+                                        </div>
+                                        <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">Monthly Cash Surplus</p>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <p className={`text-base font-black tracking-tight ${Number(summary?.balance || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                    <p className={`text-base font-black tracking-tight ${Number(summary?.balance || 0) >= 0 ? 'text-status-success-text' : 'text-status-danger-text'}`}>
                                         {showSensitive ? (
                                             <>
                                                 {Number(summary?.balance || 0) < 0 ? '-' : '+'}{formatCurrency(Math.abs(summary?.balance || 0))}
@@ -220,32 +223,23 @@ const Analytics: React.FC = () => {
                             </div>
 
                             {/* 2. Total Liquid Account Balance */}
-                            <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-3xl flex items-center justify-between group hover:border-white/20 transition-all">
+                            <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-3xl flex items-center justify-between">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-9 h-9 rounded-2xl bg-accent-subtle text-accent-text flex items-center justify-center shrink-0 border border-accent-border">
                                         <Wallet size={16} />
                                     </div>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-1.5">
-                                            <p className="text-[9px] font-black text-accent-text uppercase tracking-widest truncate">Liquid Balance</p>
-                                            {!showSensitive && <Lock size={9} className="text-gray-400" />}
+                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest truncate">Liquid Balance</p>
+                                            {!showSensitive && <Lock size={9} className="text-gray-500" />}
                                         </div>
                                         <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">Bank & Cash Total</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2.5 shrink-0">
-                                    <div className="text-right">
-                                        <p className="text-base font-black text-white tracking-tight">
-                                            {showSensitive ? formatCurrency(effectiveLiquidBalance) : '******'}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => navigate('/add')}
-                                        className="w-8 h-8 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] hover:border-white/20 text-gray-400 hover:text-white flex items-center justify-center transition-all active:scale-95"
-                                        title="Adjust Balance / Add Entry"
-                                    >
-                                        <ArrowUpRight size={14} />
-                                    </button>
+                                <div className="text-right shrink-0">
+                                    <p className="text-base font-black text-white tracking-tight">
+                                        {showSensitive ? formatCurrency(effectiveLiquidBalance) : '******'}
+                                    </p>
                                 </div>
                             </div>
                         </div>
