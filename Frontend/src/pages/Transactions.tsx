@@ -12,10 +12,9 @@ import {
     Check,
     Trash2,
     ArrowUpDown,
-    TrendingUp,
-    TrendingDown,
     Layers,
-    Calendar
+    Calendar,
+    X
 } from 'lucide-react';
 import {
     format,
@@ -109,24 +108,27 @@ const Transactions: React.FC = () => {
     const { data: transactions, isLoading } = useTransactions(queryFilters);
     const { data: pendingTransactions } = usePendingTransactions();
 
-    // Financial Metrics (Inflow vs Outflow for current horizon)
-    const { totalInflow, totalOutflow, netBalance, verifiedCount } = useMemo(() => {
-        if (!transactions) return { totalInflow: 0, totalOutflow: 0, netBalance: 0, verifiedCount: 0 };
-        let inf = 0;
-        let outf = 0;
-        let count = 0;
-        transactions.forEach(t => {
-            if (t.status === 'PENDING') return;
-            count++;
-            const amt = Number(t.amount || 0);
-            if (amt > 0) {
-                inf += amt;
-            } else {
-                outf += Math.abs(amt);
-            }
-        });
-        return { totalInflow: inf, totalOutflow: outf, netBalance: inf - outf, verifiedCount: count };
+    // Filter Status & Helpers
+    const hasActiveFilters = Boolean(
+        (view && view !== 'all') ||
+        searchParams.get('category') ||
+        searchParams.get('sub_category') ||
+        searchParams.get('start_date') ||
+        searchParams.get('end_date')
+    );
+
+    const verifiedCount = useMemo(() => {
+        if (!transactions) return 0;
+        return transactions.filter(t => t.status !== 'PENDING').length;
     }, [transactions]);
+
+    const clearFilters = () => {
+        setSearchParams({});
+        setDrawerCategory('');
+        setDrawerSubCategory('');
+        setDrawerDateRange({ start: '', end: '' });
+        setFilterOpen(false);
+    };
 
     const applyFilters = () => {
         const params: any = { view: 'custom' };
@@ -298,7 +300,7 @@ const Transactions: React.FC = () => {
                     {/* Filter Button - Active State Indication */}
                     <button
                         onClick={() => setFilterOpen(true)}
-                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${view === 'custom' ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400' : 'bg-white/[0.03] border-white/10 text-gray-400'}`}
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${hasActiveFilters ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400' : 'bg-white/[0.03] border-white/10 text-gray-400'}`}
                         title="Filter Discovery"
                     >
                         <Filter size={18} />
@@ -306,104 +308,28 @@ const Transactions: React.FC = () => {
                 </div>
             </header>
 
-            {/* Inflow / Outflow Financial Strip */}
-            {view !== 'pending' && (
-                <div className="mx-4 mt-4 p-4 rounded-3xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.06] shadow-xl">
-                    <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-[2px] text-gray-500 mb-2.5">
-                        <span>
-                            {view === 'day' ? 'Today\'s Cashflow' :
-                             view === 'month' ? `${format(currentMonth, 'MMMM yyyy')} Cashflow` :
-                             view === 'year' ? `${format(currentMonth, 'yyyy')} Annual Cashflow` :
-                             'Horizon Cashflow'}
+            {/* Active Filter Banner with 1-click Clear Filter */}
+            {hasActiveFilters && (
+                <div className="mx-4 mt-3 px-4 py-2.5 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between animate-enter">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                        <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider truncate">
+                            {view === 'day' ? `Day: ${format(currentMonth, 'dd MMM yyyy')}` :
+                             view === 'month' ? `Month: ${format(currentMonth, 'MMMM yyyy')}` :
+                             view === 'year' ? `Year: ${format(currentMonth, 'yyyy')}` :
+                             view === 'pending' ? 'Action Center' :
+                             drawerCategory ? `Category: ${drawerCategory}` :
+                             'Filtered Activity'}
                         </span>
-                        <span className="text-gray-400 font-bold">{verifiedCount} Verified</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
-                        <div className="bg-emerald-500/[0.06] border border-emerald-500/15 p-2.5 rounded-2xl">
-                            <div className="flex items-center gap-1 text-emerald-400 text-[8px] font-bold uppercase tracking-wider mb-0.5">
-                                <TrendingUp size={11} />
-                                <span>Inflow</span>
-                            </div>
-                            <p className="text-xs sm:text-sm font-black text-white tracking-tight truncate">
-                                +{formatCurrency(totalInflow)}
-                            </p>
-                        </div>
-                        <div className="bg-rose-500/[0.06] border border-rose-500/15 p-2.5 rounded-2xl">
-                            <div className="flex items-center gap-1 text-rose-400 text-[8px] font-bold uppercase tracking-wider mb-0.5">
-                                <TrendingDown size={11} />
-                                <span>Outflow</span>
-                            </div>
-                            <p className="text-xs sm:text-sm font-black text-white tracking-tight truncate">
-                                -{formatCurrency(totalOutflow)}
-                            </p>
-                        </div>
-                        <div className="bg-white/[0.02] border border-white/[0.06] p-2.5 rounded-2xl">
-                            <div className="text-gray-400 text-[8px] font-bold uppercase tracking-wider mb-0.5">
-                                <span>Net Flow</span>
-                            </div>
-                            <p className={`text-xs sm:text-sm font-black tracking-tight truncate ${netBalance >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                {netBalance >= 0 ? '+' : ''}{formatCurrency(netBalance)}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Quick Time Horizon & Grouping Bar */}
-            {view !== 'pending' && (
-                <div className="px-4 mt-3 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-                    <div className="flex items-center gap-1 p-1 bg-white/[0.02] border border-white/[0.05] rounded-2xl">
-                        {[
-                            { id: 'day', label: 'Day' },
-                            { id: 'month', label: 'Month' },
-                            { id: 'year', label: 'Year' },
-                            { id: 'all', label: 'All' },
-                        ].map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => {
-                                    const params: any = {};
-                                    if (tab.id !== 'all') params.view = tab.id;
-                                    setSearchParams(params);
-                                }}
-                                className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${
-                                    (view === tab.id || (tab.id === 'all' && view === 'all'))
-                                        ? 'bg-white text-black shadow-lg font-black'
-                                        : 'text-gray-500 hover:text-white'
-                                }`}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                            onClick={() => setGroupBy(prev => prev === 'date' ? 'category' : 'date')}
-                            className={`px-3 py-2 rounded-2xl border text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
-                                groupBy === 'category'
-                                    ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
-                                    : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-white'
-                            }`}
-                            title="Toggle Group By Category or Date"
-                        >
-                            <Layers size={12} />
-                            <span>{groupBy === 'category' ? 'By Category' : 'By Date'}</span>
-                        </button>
-
-                        <button
-                            onClick={() => setIsSortOpen(true)}
-                            className={`px-3 py-2 rounded-2xl border text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
-                                sortBy !== 'date_desc'
-                                    ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
-                                    : 'bg-white/[0.02] border-white/[0.05] text-gray-400 hover:text-white'
-                            }`}
-                            title="Sort options"
-                        >
-                            <ArrowUpDown size={12} />
-                            <span className="hidden sm:inline">Sort</span>
-                        </button>
-                    </div>
+                    <button
+                        onClick={clearFilters}
+                        className="px-2.5 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[9px] font-black text-rose-400 hover:text-rose-300 uppercase tracking-widest flex items-center gap-1.5 transition-all shrink-0 active:scale-95"
+                        title="Remove filters and show all activity"
+                    >
+                        <X size={12} />
+                        <span>Clear</span>
+                    </button>
                 </div>
             )}
 
@@ -679,12 +605,18 @@ const Transactions: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="pt-6">
+                    <div className="pt-6 flex items-center gap-3">
+                        <button
+                            onClick={clearFilters}
+                            className="flex-1 py-4 rounded-[2rem] bg-white/[0.04] hover:bg-white/[0.08] text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider transition-all"
+                        >
+                            Remove Filter
+                        </button>
                         <button
                             onClick={applyFilters}
-                            className="w-full py-5 rounded-[2rem] bg-white text-black font-black text-lg shadow-2xl active:scale-95 transition-all"
+                            className="flex-1 py-4 rounded-[2rem] bg-white text-black font-black text-sm uppercase tracking-wider shadow-2xl active:scale-95 transition-all"
                         >
-                            Refine Activity
+                            Apply Filter
                         </button>
                     </div>
                 </div>

@@ -37,7 +37,7 @@ export const SummaryGrid: React.FC<SummaryGridProps> = memo(({
                                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Inflow</p>
                                 {!showSensitive && <Lock size={10} className="text-gray-400" aria-hidden="true" />}
                             </div>
-                            <p className="text-xl font-black text-white leading-none whitespace-nowrap">
+                            <p className="text-base font-black text-white leading-none whitespace-nowrap">
                                 {showSensitive ? formatCurrency(totalIncome) : '******'}
                             </p>
                         </div>
@@ -61,7 +61,7 @@ export const SummaryGrid: React.FC<SummaryGridProps> = memo(({
                         </div>
                         <div>
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Outflow</p>
-                            <p className="text-xl font-black text-white leading-none whitespace-nowrap">{formatCurrency(totalExpense)}</p>
+                            <p className="text-base font-black text-white leading-none whitespace-nowrap">{formatCurrency(totalExpense)}</p>
                         </div>
                     </>
                 )}

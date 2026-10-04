@@ -98,7 +98,7 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
                     {isAccrual ? 'Total Incurred Spend' : 'Total Liquid Outflow'}
                 </span>
-                <span className="text-xl font-black text-white tracking-tight">
+                <span className="text-lg font-black text-white tracking-tight">
                     {formatCurrency(activeTotal)}
                 </span>
             </div>
