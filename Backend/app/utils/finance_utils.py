@@ -17,59 +17,6 @@ class TransactionBehavior(str, Enum):
     SETTLEMENT_CREDIT = "SETTLEMENT_CREDIT" # Credit to CREDIT_CARD liability account offsetting debt
     OTHER = "OTHER"
 
-INVESTMENT_SUBCATEGORIES = [
-    "sip",
-    "recurring deposit (rd)",
-    "fixed deposit (fd)",
-    "mutual funds",
-    "mutual fund",
-    "pli",
-    "apy",
-    "stocks",
-    "stock",
-    "shares",
-    "share",
-    "equity",
-    "gold",
-    "silver",
-    "nps",
-    "ppf",
-    "epf",
-    "etf",
-    "bonds",
-    "bond",
-    "crypto",
-    "cryptocurrency",
-    "real estate",
-    "reit",
-    "investment",
-    "investments",
-]
-
-def get_investment_sql_condition():
-    """
-    Returns a composite SQLAlchemy boolean condition identifying investment transactions:
-    - category matches '%invest%'
-    - sub_category matches '%invest%'
-    - sub_category in known investment instruments (SIP, RD, FD, Mutual Funds, PLI, APY, Stocks, Gold, etc.)
-    - category matches any Category where Category.type == 'INVESTMENT'
-    - sub_category matches any SubCategory where SubCategory.type == 'INVESTMENT'
-    """
-    from sqlalchemy import select, func, or_
-    from app.features.categories.models import Category, SubCategory
-    from app.features.transactions.models import Transaction
-
-    inv_cat_subq = select(Category.name).where(Category.type == "INVESTMENT")
-    inv_subcat_subq = select(SubCategory.name).where(SubCategory.type == "INVESTMENT")
-
-    return or_(
-        func.lower(Transaction.category).like("%invest%"),
-        func.lower(Transaction.sub_category).like("%invest%"),
-        func.lower(Transaction.sub_category).in_(INVESTMENT_SUBCATEGORIES),
-        Transaction.category.in_(inv_cat_subq),
-        Transaction.sub_category.in_(inv_subcat_subq)
-    )
-
 def classify_transaction(
     account_type: Optional[str],
     category: Optional[str],
@@ -98,11 +45,7 @@ def classify_transaction(
     if cat_clean == "income" or (amount > 0 and acc_clean != "CREDIT_CARD"):
         return TransactionBehavior.INCOME
 
-    is_investment = (
-        "invest" in cat_clean
-        or "invest" in sub_cat_clean
-        or sub_cat_clean in INVESTMENT_SUBCATEGORIES
-    )
+    is_investment = cat_clean == "investment"
 
     if is_investment and amount < 0 and acc_clean in ("SAVINGS", "CASH", "ACCOUNT"):
         return TransactionBehavior.CAPITAL_OUTFLOW

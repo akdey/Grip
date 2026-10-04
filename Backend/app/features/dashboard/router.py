@@ -73,13 +73,18 @@ async def get_investments_dashboard(
     year: Optional[int] = Query(None, ge=2000, le=2100)
 ):
     from datetime import date
-    from app.utils.finance_utils import get_month_date_range, get_investment_sql_condition
+    from app.utils.finance_utils import get_month_date_range
+    from app.features.categories.models import Category
+
+    investment_filter = (Transaction.category == "Investment") | Transaction.category.in_(
+        select(Category.name).where(Category.type == "INVESTMENT")
+    )
 
     # Aggregate by SubCategory for Investment Category
     stmt = (
         select(Transaction.sub_category, func.sum(Transaction.amount))
         .where(Transaction.user_id == current_user.id)
-        .where(get_investment_sql_condition())
+        .where(investment_filter)
     )
 
     if month and year:

@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, case
 from app.features.transactions.models import Transaction, AccountType
+from app.features.categories.models import Category
 from app.features.goals.models import Goal
 from app.features.analytics.schemas import (
     CategoryVariance,
@@ -30,8 +31,7 @@ from app.utils.finance_utils import (
     get_trend_indicator,
     get_month_date_range,
     get_previous_month_date_range,
-    get_year_date_range,
-    get_investment_sql_condition
+    get_year_date_range
 )
 
 from datetime import datetime, date, timedelta
@@ -68,6 +68,10 @@ class AnalyticsService:
         current_range = get_month_date_range(target_date)
         previous_range = get_previous_month_date_range(target_date)
         
+        investment_filter = (Transaction.category == "Investment") | Transaction.category.in_(
+            select(Category.name).where(Category.type == "INVESTMENT")
+        )
+
         # Prepare Current month spending query (Accrual expenses: exclude Income, Investment, and Debt Transfer)
         current_stmt = (
             select(
@@ -76,7 +80,7 @@ class AnalyticsService:
             )
             .where(Transaction.user_id == user_id)
             .where(Transaction.category != "Income")
-            .where(~get_investment_sql_condition())
+            .where(~investment_filter)
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= current_range["month_start"])
@@ -92,7 +96,7 @@ class AnalyticsService:
             )
             .where(Transaction.user_id == user_id)
             .where(Transaction.category != "Income")
-            .where(~get_investment_sql_condition())
+            .where(~investment_filter)
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= previous_range["month_start"])
@@ -509,7 +513,9 @@ class AnalyticsService:
         is_liquid = Transaction.account_type.in_([AccountType.SAVINGS, AccountType.CASH])
         is_cc = Transaction.account_type == AccountType.CREDIT_CARD
         is_cc_payment = func.lower(Transaction.sub_category) == "credit card payment"
-        is_investment = get_investment_sql_condition()
+        is_investment = (Transaction.category == "Investment") | Transaction.category.in_(
+            select(Category.name).where(Category.type == "INVESTMENT")
+        )
         is_outflow = Transaction.amount < 0
         is_inflow = (Transaction.category == "Income") | (Transaction.amount > 0)
 
@@ -655,6 +661,10 @@ class AnalyticsService:
             date_field = Transaction.transaction_date
             limit_points = days
 
+        investment_filter = (Transaction.category == "Investment") | Transaction.category.in_(
+            select(Category.name).where(Category.type == "INVESTMENT")
+        )
+
         stmt = (
             select(
                 date_field.label("date"),
@@ -662,7 +672,7 @@ class AnalyticsService:
             )
             .where(Transaction.user_id == user_id)
             .where(Transaction.category.notin_(["Income", "Transfer"]))
-            .where(~get_investment_sql_condition())
+            .where(~investment_filter)
             .where(func.lower(Transaction.sub_category) != "credit card payment")
             .where(Transaction.amount < 0)
             .where(Transaction.transaction_date >= start_date)
