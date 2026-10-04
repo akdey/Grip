@@ -137,7 +137,8 @@ const AddEntry: React.FC = () => {
     const today = startOfToday();
     const daysDiff = differenceInCalendarDays(txnDateObj, today);
     const absDaysDiff = Math.abs(daysDiff);
-    const isDateOutside3Days = absDaysDiff > 3;
+    // Only check date divergence for new entries, not when editing historical transactions
+    const isDateOutside3Days = !id && absDaysDiff > 3;
 
     const validateAndConfirm = (): boolean => {
         if (!amount || Number(amount) <= 0) {
