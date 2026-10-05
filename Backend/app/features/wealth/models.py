@@ -7,6 +7,7 @@ from sqlalchemy import String, Float, DateTime, ForeignKey, Integer, Date, Boole
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
+from app.features.transactions.models import Transaction
 
 class AssetType(str, Enum):
     SIP = "SIP"
@@ -50,6 +51,7 @@ class InvestmentHolding(Base):
     
     snapshots: Mapped[list["InvestmentSnapshot"]] = relationship("InvestmentSnapshot", back_populates="holding", cascade="all, delete-orphan")
     mapping_rules: Mapped[list["InvestmentMappingRule"]] = relationship("InvestmentMappingRule", back_populates="holding", cascade="all, delete-orphan")
+    transaction_mappings: Mapped[list["InvestmentTransactionMapping"]] = relationship("InvestmentTransactionMapping", back_populates="holding", cascade="all, delete-orphan")
 
 class InvestmentSnapshot(Base):
     __tablename__ = "investment_snapshots"
@@ -89,4 +91,14 @@ class InvestmentMappingRule(Base):
     match_type: Mapped[str] = mapped_column(String, default="CONTAINS") # CONTAINS, REGEX, EXACT
     
     holding: Mapped["InvestmentHolding"] = relationship("InvestmentHolding", back_populates="mapping_rules")
+
+class InvestmentTransactionMapping(Base):
+    __tablename__ = "investment_transaction_mappings"
+
+    transaction_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("transactions.id", ondelete="CASCADE"), primary_key=True)
+    holding_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("investment_holdings.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    holding: Mapped["InvestmentHolding"] = relationship("InvestmentHolding", back_populates="transaction_mappings")
 

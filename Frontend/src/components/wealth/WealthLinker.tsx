@@ -1,16 +1,17 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Search, Link as LinkIcon, Check } from 'lucide-react';
+import { ChevronDown, Search, Link as LinkIcon, Check, Layers, ListFilter } from 'lucide-react';
 import { api } from '../../lib/api';
 
-interface Transaction {
-    id: string;
-    merchant_name: string;
-    amount: number;
-    transaction_date: string;
-    category: string;
-    sub_category: string;
+function getOrdinalSuffix(day: number): string {
+    if (day > 3 && day < 21) return 'th';
+    switch (day % 10) {
+        case 1:  return "st";
+        case 2:  return "nd";
+        case 3:  return "rd";
+        default: return "th";
+    }
 }
 
 interface Holding {
@@ -26,13 +27,26 @@ interface WealthLinkerProps {
     onLinkSuccess: () => void;
 }
 
+interface RecurringGroup {
+    key: string;
+    amount: number;
+    dayOfMonth?: number;
+    merchant: string;
+    count: number;
+    totalAmount: number;
+    suggestedHoldingId?: string;
+    suggestedHoldingName?: string;
+}
+
 export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, holdings, onLinkSuccess }) => {
     const [step, setStep] = useState<'SELECT_TXN' | 'SELECT_HOLDING'>('SELECT_TXN');
+    const [activeTab, setActiveTab] = useState<'RECURRING' | 'INDIVIDUAL'>('RECURRING');
     const [transactions, setTransactions] = useState<any[]>([]);
     const [selectedTxn, setSelectedTxn] = useState<any | null>(null);
     const [loading, setLoading] = useState(false);
     const [autoDetecting, setAutoDetecting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [batchHoldingSelections, setBatchHoldingSelections] = useState<{ [groupKey: string]: string }>({});
 
     const fetchTransactions = async () => {
         setLoading(true);
@@ -52,6 +66,61 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
         }
     }, [isOpen, step]);
 
+    // Group transactions by recurring pattern (Amount + Day of Month)
+    const recurringGroups = React.useMemo(() => {
+        const map = new Map<string, RecurringGroup>();
+        transactions.forEach(t => {
+            const amt = Math.abs(t.amount);
+            const day = t.transaction_date ? new Date(t.transaction_date).getDate() : undefined;
+            const key = day !== undefined ? `${amt}_day_${day}` : `${amt}`;
+            if (!map.has(key)) {
+                map.set(key, {
+                    key,
+                    amount: amt,
+                    dayOfMonth: day,
+                    merchant: t.merchant_name || 'Investment',
+                    count: 0,
+                    totalAmount: 0,
+                    suggestedHoldingId: t.suggested_holding_id,
+                    suggestedHoldingName: t.suggested_holding_name
+                });
+            }
+            const g = map.get(key)!;
+            g.count += 1;
+            g.totalAmount += amt;
+            if (!g.suggestedHoldingId && t.suggested_holding_id) {
+                g.suggestedHoldingId = t.suggested_holding_id;
+                g.suggestedHoldingName = t.suggested_holding_name;
+            }
+        });
+        return Array.from(map.values()).sort((a, b) => b.count - a.count);
+    }, [transactions]);
+
+    const handleBatchLink = async (group: RecurringGroup, holdingId?: string) => {
+        const selectedHolding = holdingId || batchHoldingSelections[group.key] || group.suggestedHoldingId;
+        if (!selectedHolding) {
+            alert("Please select an asset to map this recurring SIP to.");
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await api.post('/wealth/batch-map-recurring', {
+                holding_id: selectedHolding,
+                amount: group.amount,
+                day_of_month: group.dayOfMonth,
+                create_rule: true
+            });
+            alert(`Successfully linked ${res.data.linked_count} transactions!`);
+            onLinkSuccess();
+            fetchTransactions();
+        } catch (error) {
+            console.error("Batch link error", error);
+            alert("Failed to batch link transactions");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleLink = async (holdingId: string, txnId?: string) => {
         const targetId = txnId || selectedTxn?.id;
         if (!targetId) return;
@@ -63,7 +132,6 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                 create_rule: false
             });
             onLinkSuccess();
-            // Remove from local list
             setTransactions(prev => prev.filter(t => t.id !== targetId));
             if (selectedTxn?.id === targetId) {
                 setStep('SELECT_TXN');
@@ -94,7 +162,6 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
 
     if (!isOpen) return null;
 
-
     return (
         <AnimatePresence>
             <div className="fixed inset-0 z-50 flex justify-center pointer-events-none">
@@ -117,7 +184,7 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                         <div>
                             <h3 className="text-2xl font-black text-primary tracking-tighter uppercase italic flex items-center gap-3">
                                 <LinkIcon className="text-primary" size={28} />
-                                Neural Linker
+                                Asset Linker
                             </h3>
                             <p className="text-[10px] text-text-muted font-bold uppercase tracking-[4px] mt-1">Transaction-to-Asset Mapping Engine</p>
                         </div>
@@ -142,7 +209,7 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                             {transactions.length} unassigned investment contribution{transactions.length === 1 ? '' : 's'}
                                         </p>
                                         <p className="text-[11px] text-text-muted opacity-70">
-                                            Debits from Groww, RD, APY, PLI, Bank to map to your portfolio assets.
+                                            Mapped using dedicated database relation table (no tags on transactions).
                                         </p>
                                     </div>
                                     {transactions.length > 0 && (
@@ -156,9 +223,78 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                     )}
                                 </div>
 
+                                {/* Tabs for Recurring vs All */}
+                                {transactions.length > 0 && (
+                                    <div className="flex items-center gap-2 mb-4 p-1 bg-surface-subtle rounded-xl border border-border-subtle w-fit">
+                                        <button
+                                            onClick={() => setActiveTab('RECURRING')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${activeTab === 'RECURRING' ? 'bg-surface text-primary shadow-sm' : 'text-text-muted hover:text-primary'}`}
+                                        >
+                                            <Layers size={14} /> Recurring Patterns ({recurringGroups.length})
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('INDIVIDUAL')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${activeTab === 'INDIVIDUAL' ? 'bg-surface text-primary shadow-sm' : 'text-text-muted hover:text-primary'}`}
+                                        >
+                                            <ListFilter size={14} /> Individual ({transactions.length})
+                                        </button>
+                                    </div>
+                                )}
+
                                 {loading && transactions.length === 0 ? (
                                     <div className="flex-1 flex items-center justify-center">
                                         <div className="animate-spin w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full"></div>
+                                    </div>
+                                ) : activeTab === 'RECURRING' && transactions.length > 0 ? (
+                                    <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
+                                        <p className="text-xs text-text-muted mb-1">
+                                            Link your recurring monthly SIPs in 1-click by matching the fixed amount & day of month:
+                                        </p>
+                                        {recurringGroups.map(group => {
+                                            const selectedId = batchHoldingSelections[group.key] || group.suggestedHoldingId || '';
+                                            return (
+                                                <div
+                                                    key={group.key}
+                                                    className="p-4 rounded-xl border border-border-subtle bg-surface-subtle hover:bg-surface-hover transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-3"
+                                                >
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-primary font-mono text-base">₹{group.amount.toLocaleString('en-IN')}</span>
+                                                            {group.dayOfMonth && (
+                                                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent font-semibold">
+                                                                    {group.dayOfMonth}{getOrdinalSuffix(group.dayOfMonth)} of month
+                                                                </span>
+                                                            )}
+                                                            <span className="text-xs text-text-muted">
+                                                                • {group.count} debits (₹{group.totalAmount.toLocaleString('en-IN')})
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-text-muted mt-1">{group.merchant}</p>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 w-full md:w-auto">
+                                                        <select
+                                                            value={selectedId}
+                                                            onChange={(e) => setBatchHoldingSelections(prev => ({ ...prev, [group.key]: e.target.value }))}
+                                                            className="bg-surface border border-border-subtle text-xs text-primary rounded-lg px-2.5 py-1.5 flex-1 md:w-56 focus:outline-none"
+                                                        >
+                                                            <option value="">Select Asset...</option>
+                                                            {holdings.map(h => (
+                                                                <option key={h.id} value={h.id}>{h.name} ({h.asset_type})</option>
+                                                            ))}
+                                                        </select>
+
+                                                        <button
+                                                            onClick={() => handleBatchLink(group, selectedId)}
+                                                            disabled={!selectedId || loading}
+                                                            className="px-3 py-1.5 rounded-lg bg-primary text-page font-semibold text-xs hover:opacity-90 transition-all disabled:opacity-40 whitespace-nowrap active:scale-95"
+                                                        >
+                                                            Link All {group.count}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 ) : (
                                     <div className="flex-1 overflow-y-auto space-y-2.5 custom-scrollbar pr-2">

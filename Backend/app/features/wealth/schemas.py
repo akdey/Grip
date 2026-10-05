@@ -109,6 +109,17 @@ class MapTransactionRequest(BaseModel):
 class UnmapTransactionRequest(BaseModel):
     transaction_id: UUID
 
+class BatchMapRecurringRequest(BaseModel):
+    holding_id: UUID
+    amount: Optional[float] = None
+    day_of_month: Optional[int] = None
+    merchant_pattern: Optional[str] = None
+    create_rule: bool = True
+
+class BatchMapResponse(BaseModel):
+    linked_count: int
+    message: str
+
 class UnassignedTransactionOut(BaseModel):
     id: UUID
     transaction_date: Optional[date] = None

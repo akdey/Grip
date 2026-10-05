@@ -111,6 +111,24 @@ async def map_transaction(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.post("/batch-map-recurring", response_model=schemas.BatchMapResponse)
+async def batch_map_recurring(
+    payload: schemas.BatchMapRecurringRequest,
+    current_user: User = Depends(get_current_user),
+    service: WealthService = Depends()
+):
+    try:
+        count = await service.batch_map_recurring(
+            user_id=current_user.id,
+            holding_id=payload.holding_id,
+            amount=payload.amount,
+            day_of_month=payload.day_of_month,
+            merchant_pattern=payload.merchant_pattern,
+            create_rule=payload.create_rule
+        )
+        return schemas.BatchMapResponse(linked_count=count, message=f"Successfully mapped {count} transactions")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/sync-prices")
 async def trigger_price_sync(

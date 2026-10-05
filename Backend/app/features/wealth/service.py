@@ -13,7 +13,7 @@ from sqlalchemy import select, desc, func, and_
 from fastapi import HTTPException, Depends
 
 from app.core.database import get_db
-from app.features.wealth.models import InvestmentHolding, InvestmentSnapshot, InvestmentMappingRule, AssetType
+from app.features.wealth.models import InvestmentHolding, InvestmentSnapshot, InvestmentMappingRule, AssetType, InvestmentTransactionMapping
 from app.features.wealth import schemas
 from app.features.transactions.models import Transaction
 
@@ -695,12 +695,78 @@ class WealthService:
         await self.db.refresh(holding)
         return holding
 
+    async def sync_legacy_tags_to_mappings(self, user_id: uuid.UUID):
+        """
+        One-time migration: Converts existing 'holding:<uuid>' tags in transactions
+        into InvestmentTransactionMapping rows, and strips the holding tags from transactions.tags.
+        """
+        # Validate against existing holdings to prevent FK violation on orphaned tags
+        holdings_res = await self.db.execute(
+            select(InvestmentHolding.id).where(InvestmentHolding.user_id == user_id)
+        )
+        valid_holding_ids = set(holdings_res.scalars().all())
+
+        stmt = (
+            select(Transaction)
+            .where(
+                and_(
+                    Transaction.user_id == user_id,
+                    Transaction.tags.is_not(None)
+                )
+            )
+        )
+        txns = (await self.db.execute(stmt)).scalars().all()
+        updated = False
+        for t in txns:
+            holding_id = None
+            clean_tags = []
+            has_holding_tag = False
+            for tag in (t.tags or []):
+                if tag.startswith("holding:"):
+                    has_holding_tag = True
+                    try:
+                        hid = uuid.UUID(tag.split("holding:")[1])
+                        if hid in valid_holding_ids:
+                            holding_id = hid
+                    except Exception:
+                        pass
+                else:
+                    clean_tags.append(tag)
+            
+            if has_holding_tag:
+                t.tags = clean_tags if clean_tags else None
+                self.db.add(t)
+                updated = True
+                
+                if holding_id:
+                    mapping_stmt = select(InvestmentTransactionMapping).where(
+                        InvestmentTransactionMapping.transaction_id == t.id
+                    )
+                    existing_m = (await self.db.execute(mapping_stmt)).scalar_one_or_none()
+                    if not existing_m:
+                        new_m = InvestmentTransactionMapping(
+                            transaction_id=t.id,
+                            holding_id=holding_id,
+                            user_id=user_id
+                        )
+                        self.db.add(new_m)
+        if updated:
+            await self.db.commit()
+
     async def delete_holding(self, holding_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         holding = await self.db.get(InvestmentHolding, holding_id)
         if not holding or holding.user_id != user_id:
             raise ValueError("Holding not found")
             
-        # Untag any transactions tagged with holding:{holding_id}
+        # Clean up any mappings in InvestmentTransactionMapping
+        del_mappings_stmt = select(InvestmentTransactionMapping).where(
+            InvestmentTransactionMapping.holding_id == holding_id
+        )
+        mappings = (await self.db.execute(del_mappings_stmt)).scalars().all()
+        for m in mappings:
+            await self.db.delete(m)
+
+        # Untag any legacy transactions tagged with holding:{holding_id}
         tag_str = f"holding:{holding_id}"
         stmt = select(Transaction).where(
             and_(
@@ -711,7 +777,8 @@ class WealthService:
         res = await self.db.execute(stmt)
         txns = res.scalars().all()
         for txn in txns:
-            txn.tags = [t for t in (txn.tags or []) if t != tag_str]
+            clean_tags = [t for t in (txn.tags or []) if t != tag_str]
+            txn.tags = clean_tags if clean_tags else None
             self.db.add(txn)
             
         await self.db.delete(holding)
@@ -729,13 +796,28 @@ class WealthService:
             
         await self.add_transaction_to_holding(transaction, holding_id)
         
-        # Tag transaction
-        tags = list(transaction.tags or [])
-        tag_str = f"holding:{holding_id}"
-        if tag_str not in tags:
-            tags.append(tag_str)
-            transaction.tags = tags
-            self.db.add(transaction)
+        # Save mapping in dedicated investment_transaction_mappings table (no tags!)
+        mapping_stmt = select(InvestmentTransactionMapping).where(
+            InvestmentTransactionMapping.transaction_id == transaction_id
+        )
+        existing_mapping = (await self.db.execute(mapping_stmt)).scalar_one_or_none()
+        if existing_mapping:
+            existing_mapping.holding_id = holding_id
+            self.db.add(existing_mapping)
+        else:
+            new_mapping = InvestmentTransactionMapping(
+                transaction_id=transaction_id,
+                holding_id=holding_id,
+                user_id=transaction.user_id
+            )
+            self.db.add(new_mapping)
+            
+        # Strip any legacy holding tag from transaction.tags
+        if transaction.tags:
+            clean_tags = [t for t in transaction.tags if not t.startswith("holding:")]
+            if len(clean_tags) != len(transaction.tags):
+                transaction.tags = clean_tags if clean_tags else None
+                self.db.add(transaction)
         
         if create_rule and transaction.merchant_name:
             # Create a rule for this merchant
@@ -763,19 +845,22 @@ class WealthService:
         if not transaction:
             raise ValueError("Transaction not found")
             
-        holding_id = None
-        new_tags = []
-        for tag in (transaction.tags or []):
-            if tag.startswith("holding:"):
-                try:
-                    holding_id = uuid.UUID(tag.split("holding:")[1])
-                except Exception:
-                    pass
-            else:
-                new_tags.append(tag)
-                
-        transaction.tags = new_tags
-        self.db.add(transaction)
+        # Look up mapping in dedicated table
+        mapping_stmt = select(InvestmentTransactionMapping).where(
+            InvestmentTransactionMapping.transaction_id == transaction_id
+        )
+        mapping = (await self.db.execute(mapping_stmt)).scalar_one_or_none()
+        
+        holding_id = mapping.holding_id if mapping else None
+        if mapping:
+            await self.db.delete(mapping)
+            
+        # Also clean any legacy residual holding tag
+        if transaction.tags:
+            clean_tags = [t for t in transaction.tags if not t.startswith("holding:")]
+            if len(clean_tags) != len(transaction.tags):
+                transaction.tags = clean_tags if clean_tags else None
+                self.db.add(transaction)
         
         if holding_id:
             txn_date = transaction.transaction_date or date.today()
@@ -797,13 +882,97 @@ class WealthService:
         await self.db.commit()
         return True
 
+    async def batch_map_recurring(
+        self,
+        user_id: uuid.UUID,
+        holding_id: uuid.UUID,
+        amount: Optional[float] = None,
+        day_of_month: Optional[int] = None,
+        merchant_pattern: Optional[str] = None,
+        create_rule: bool = True
+    ) -> int:
+        """
+        Batch maps all unassigned transactions matching criteria (amount, day_of_month, merchant)
+        to a holding in a single operation.
+        """
+        holding = await self.db.get(InvestmentHolding, holding_id)
+        if not holding or holding.user_id != user_id:
+            raise ValueError("Holding not found")
+
+        # Get all mapped IDs
+        mapped_stmt = select(InvestmentTransactionMapping.transaction_id).where(
+            InvestmentTransactionMapping.user_id == user_id
+        )
+        mapped_ids = set((await self.db.execute(mapped_stmt)).scalars().all())
+
+        stmt = select(Transaction).where(
+            and_(
+                Transaction.user_id == user_id,
+                Transaction.category.ilike("%invest%")
+            )
+        )
+        txns = (await self.db.execute(stmt)).scalars().all()
+
+        linked_count = 0
+        for t in txns:
+            if t.id in mapped_ids:
+                continue
+
+            # Check criteria
+            t_amt = abs(float(t.amount))
+            if amount is not None and abs(t_amt - amount) > 0.01:
+                continue
+
+            if day_of_month is not None and t.transaction_date:
+                if t.transaction_date.day != day_of_month:
+                    continue
+
+            if merchant_pattern:
+                t_merch = (t.merchant_name or "").lower()
+                if merchant_pattern.lower() not in t_merch:
+                    continue
+
+            # Matches criteria! Link transaction
+            await self.add_transaction_to_holding(t, holding_id)
+            new_mapping = InvestmentTransactionMapping(
+                transaction_id=t.id,
+                holding_id=holding_id,
+                user_id=user_id
+            )
+            self.db.add(new_mapping)
+            mapped_ids.add(t.id)
+
+            # Clean any legacy tag if present
+            if t.tags:
+                clean_tags = [tag for tag in t.tags if not tag.startswith("holding:")]
+                if len(clean_tags) != len(t.tags):
+                    t.tags = clean_tags if clean_tags else None
+                    self.db.add(t)
+
+            linked_count += 1
+
+        if linked_count > 0:
+            await self.recalculate_holding_history(holding_id)
+            await self.db.commit()
+
+        return linked_count
+
     async def get_unassigned_transactions(self, user_id: uuid.UUID) -> List[dict]:
+        # Sync any legacy tags once and clean them
+        await self.sync_legacy_tags_to_mappings(user_id)
+
         holdings = await self.get_holdings(user_id)
         holdings_by_name = {h.name.lower(): h for h in holdings}
         holdings_by_type = {}
         for h in holdings:
             holdings_by_type.setdefault(h.asset_type, []).append(h)
             
+        # Get all mapped transaction IDs from dedicated table
+        mapped_stmt = select(InvestmentTransactionMapping.transaction_id).where(
+            InvestmentTransactionMapping.user_id == user_id
+        )
+        mapped_ids = set((await self.db.execute(mapped_stmt)).scalars().all())
+
         stmt = (
             select(Transaction)
             .where(
@@ -818,8 +987,7 @@ class WealthService:
         
         unassigned = []
         for t in txns:
-            is_mapped = any(tag.startswith("holding:") for tag in (t.tags or []))
-            if is_mapped:
+            if t.id in mapped_ids:
                 continue
                 
             suggested_holding_id = None
@@ -941,8 +1109,15 @@ class WealthService:
             created_count += 1
             return holding
 
+        await self.sync_legacy_tags_to_mappings(user_id)
+
+        mapped_stmt = select(InvestmentTransactionMapping.transaction_id).where(
+            InvestmentTransactionMapping.user_id == user_id
+        )
+        mapped_ids = set((await self.db.execute(mapped_stmt)).scalars().all())
+
         for t in txns:
-            if any(tag.startswith("holding:") for tag in (t.tags or [])):
+            if t.id in mapped_ids:
                 continue
                 
             sub = (t.sub_category or "").lower()
@@ -969,10 +1144,20 @@ class WealthService:
                 
             if target_holding:
                 await self.add_transaction_to_holding(t, target_holding.id)
-                tags = list(t.tags or [])
-                tags.append(f"holding:{target_holding.id}")
-                t.tags = tags
-                self.db.add(t)
+                new_mapping = InvestmentTransactionMapping(
+                    transaction_id=t.id,
+                    holding_id=target_holding.id,
+                    user_id=t.user_id
+                )
+                self.db.add(new_mapping)
+                mapped_ids.add(t.id)
+
+                if t.tags:
+                    clean_tags = [tag for tag in t.tags if not tag.startswith("holding:")]
+                    if len(clean_tags) != len(t.tags):
+                        t.tags = clean_tags if clean_tags else None
+                        self.db.add(t)
+
                 linked_count += 1
                 
         for h in holdings_map.values():
