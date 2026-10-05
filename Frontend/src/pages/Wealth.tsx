@@ -24,6 +24,7 @@ interface Holding {
     ticker_symbol: string | null;
     interest_rate?: number | null;
     maturity_date?: string | null;
+    maturity_amount?: number | null;
 }
 
 const Wealth: React.FC = () => {

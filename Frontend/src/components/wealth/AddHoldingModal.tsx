@@ -30,7 +30,8 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
         investment_type: 'SIP',
         // For FD/RD
         interest_rate: '',
-        maturity_date: ''
+        maturity_date: '',
+        maturity_amount: ''
     });
 
     useEffect(() => {
@@ -67,6 +68,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                 investment_type: formData.investment_type || null,
                 interest_rate: formData.interest_rate ? parseFloat(formData.interest_rate) : null,
                 maturity_date: formData.maturity_date || null,
+                maturity_amount: formData.maturity_amount ? parseFloat(formData.maturity_amount) : null,
             };
 
             await api.post('/wealth/holdings', submitData);
@@ -82,7 +84,8 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                 investment_start_date: '',
                 investment_type: 'SIP',
                 interest_rate: '',
-                maturity_date: ''
+                maturity_date: '',
+                maturity_amount: ''
             });
         } catch (error) {
             console.error("Failed to create holding", error);
@@ -384,6 +387,20 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                 className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary"
                                             />
                                         </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-1">
+                                            Maturity Amount (₹) <span className="text-[10px] text-text-muted">(Optional, from FD certificate)</span>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={formData.maturity_amount}
+                                            onChange={e => setFormData({ ...formData, maturity_amount: e.target.value })}
+                                            placeholder="e.g. 31989"
+                                            className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default transition-colors text-primary"
+                                        />
                                     </div>
 
                                     <p className="text-[10px] text-text-muted">

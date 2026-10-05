@@ -15,6 +15,7 @@ interface Holding {
     ticker_symbol: string | null;
     interest_rate?: number | null;
     maturity_date?: string | null;
+    maturity_amount?: number | null;
 }
 
 interface WealthCategoryCardProps {
@@ -142,6 +143,7 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                                         <div className="flex flex-wrap items-center gap-2 mt-0.5">
                                             {h.xirr && <span className="text-[10px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono font-bold">XIRR {h.xirr.toFixed(1)}%</span>}
                                             {h.interest_rate && <span className="text-[10px] text-accent-text bg-accent-subtle px-1.5 py-0.5 rounded font-mono">{h.interest_rate}% p.a.</span>}
+                                            {h.maturity_amount && <span className="text-[10px] text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded font-mono font-semibold">Mat: {formatCurrency(h.maturity_amount)}</span>}
                                             {h.maturity_date && <span className="text-[10px] text-text-muted">Matures {new Date(h.maturity_date).toLocaleDateString([], { month: 'short', year: '2-digit' })}</span>}
                                             <span className="text-[10px] text-text-muted">Inv: {formatCurrency(h.total_invested)}</span>
                                         </div>

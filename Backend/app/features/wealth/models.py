@@ -40,6 +40,7 @@ class InvestmentHolding(Base):
     # Fixed income details
     interest_rate: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     maturity_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    maturity_amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     
     # Computed/Cached fields
     current_value: Mapped[float] = mapped_column(Float, default=0.0)

@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, TrendingUp, Pencil, Save, X, Check, Percent, Calendar } from 'lucide-react';
+import { ChevronDown, TrendingUp, Pencil, Save, X, Check, Percent, Calendar, Lock } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { SIPDateAnalysis } from './SIPDateAnalysis';
 import { haptics } from '../../lib/haptics';
@@ -26,6 +26,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
     const [editInvested, setEditInvested] = useState<string>('');
     const [editInterestRate, setEditInterestRate] = useState<string>('');
     const [editMaturityDate, setEditMaturityDate] = useState<string>('');
+    const [editMaturityAmount, setEditMaturityAmount] = useState<string>('');
 
     useEffect(() => {
         if (holding) {
@@ -34,6 +35,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
             setEditInvested(holding.total_invested?.toString() || '');
             setEditInterestRate(holding.interest_rate?.toString() || '');
             setEditMaturityDate(holding.maturity_date ? holding.maturity_date.split('T')[0] : '');
+            setEditMaturityAmount(holding.maturity_amount?.toString() || '');
             setIsEditing(false);
         }
     }, [holding]);
@@ -60,6 +62,8 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
 
     if (!currentHolding) return null;
 
+    const isFixedIncome = ['FD', 'RD', 'FIXED_DEPOSIT', 'RECURRING_DEPOSIT'].includes(currentHolding?.asset_type?.toUpperCase());
+    const isMarketLinked = ['MUTUAL_FUND', 'STOCK', 'SIP', 'GOLD'].includes(currentHolding?.asset_type?.toUpperCase());
     const hasSIPData = currentHolding.snapshots?.some((s: any) => s.is_sip);
 
     const formatCurrency = (val: number) =>
@@ -69,10 +73,17 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
         setSaving(true);
         try {
             const payload: any = {};
-            if (editCurrentValue !== '') payload.current_value = parseFloat(editCurrentValue);
-            if (editInvested !== '') payload.total_invested = parseFloat(editInvested);
-            if (editInterestRate !== '') payload.interest_rate = parseFloat(editInterestRate);
-            if (editMaturityDate !== '') payload.maturity_date = editMaturityDate;
+            if (isFixedIncome) {
+                if (editCurrentValue !== '') payload.current_value = parseFloat(editCurrentValue);
+                if (editInvested !== '') payload.total_invested = parseFloat(editInvested);
+                if (editInterestRate !== '') payload.interest_rate = parseFloat(editInterestRate);
+                if (editMaturityDate !== '') payload.maturity_date = editMaturityDate;
+                if (editMaturityAmount !== '') payload.maturity_amount = parseFloat(editMaturityAmount);
+            } else {
+                // For Market-Linked (SIP / Mutual Funds / Stocks):
+                // Current balance is NOT manually edited because it's computed live from AMFI NAV × units!
+                if (editInvested !== '') payload.total_invested = parseFloat(editInvested);
+            }
 
             const res = await api.patch(`/wealth/holdings/${currentHolding.id}`, payload);
             setCurrentHolding(res.data);
@@ -140,11 +151,14 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                 <h2 className="text-2xl sm:text-3xl font-black text-primary line-clamp-1 tracking-tighter uppercase italic heading-apple">
                                     {currentHolding.name}
                                 </h2>
-                                <div className="flex items-center gap-3 mt-2 text-xs text-text-muted font-bold uppercase tracking-widest">
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 text-xs text-text-muted font-bold uppercase tracking-widest">
                                     <span className="bg-accent-subtle text-primary px-3 py-1 rounded-full border border-border-subtle">{currentHolding.asset_type}</span>
                                     {currentHolding.ticker_symbol && <span>• {currentHolding.ticker_symbol}</span>}
-                                    {currentHolding.interest_rate && (
+                                    {isFixedIncome && currentHolding.interest_rate && (
                                         <span className="text-emerald-400 font-semibold">• {currentHolding.interest_rate}% p.a.</span>
+                                    )}
+                                    {isFixedIncome && currentHolding.maturity_amount && (
+                                        <span className="text-cyan-400 font-semibold">• Mat: {formatCurrency(currentHolding.maturity_amount)}</span>
                                     )}
                                 </div>
                             </div>
@@ -181,54 +195,109 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                     exit={{ height: 0, opacity: 0 }}
                                     className="border-b border-border-subtle bg-surface/90 px-6 sm:px-10 py-5 overflow-hidden shrink-0"
                                 >
-                                    <div className="max-w-3xl">
-                                        <p className="text-xs uppercase tracking-widest font-black text-emerald-400 mb-3">
-                                            Update Holding Details
-                                        </p>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                            <div>
-                                                <label className="text-[11px] font-bold text-text-muted uppercase">Current Balance (₹)</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={editCurrentValue}
-                                                    onChange={(e) => setEditCurrentValue(e.target.value)}
-                                                    placeholder="72177"
-                                                    className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-bold text-sm focus:outline-none focus:border-emerald-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-[11px] font-bold text-text-muted uppercase">Total Invested (₹)</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={editInvested}
-                                                    onChange={(e) => setEditInvested(e.target.value)}
-                                                    placeholder="70000"
-                                                    className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-bold text-sm focus:outline-none focus:border-emerald-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-[11px] font-bold text-text-muted uppercase">Interest Rate (%)</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={editInterestRate}
-                                                    onChange={(e) => setEditInterestRate(e.target.value)}
-                                                    placeholder="6.6"
-                                                    className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-bold text-sm focus:outline-none focus:border-emerald-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-[11px] font-bold text-text-muted uppercase">Maturity Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={editMaturityDate}
-                                                    onChange={(e) => setEditMaturityDate(e.target.value)}
-                                                    className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-bold text-sm focus:outline-none focus:border-emerald-500"
-                                                />
-                                            </div>
+                                    <div className="max-w-4xl">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <p className="text-xs uppercase tracking-widest font-black text-emerald-400">
+                                                {isFixedIncome ? 'Update Fixed Deposit / RD Details' : 'Update Investment Details'}
+                                            </p>
+                                            {isMarketLinked && (
+                                                <div className="flex items-center gap-1.5 text-[11px] text-amber-400/90 font-medium bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                                                    <Lock size={12} />
+                                                    <span>Current balance is synced live with AMFI NAV</span>
+                                                </div>
+                                            )}
                                         </div>
+
+                                        {isFixedIncome ? (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-text-muted uppercase">Current Balance (₹)</label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={editCurrentValue}
+                                                        onChange={(e) => setEditCurrentValue(e.target.value)}
+                                                        placeholder="29000"
+                                                        className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-bold text-sm focus:outline-none focus:border-emerald-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-text-muted uppercase">Principal Deposited (₹)</label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={editInvested}
+                                                        onChange={(e) => setEditInvested(e.target.value)}
+                                                        placeholder="29000"
+                                                        className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-bold text-sm focus:outline-none focus:border-emerald-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-text-muted uppercase">Interest Rate (%)</label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={editInterestRate}
+                                                        onChange={(e) => setEditInterestRate(e.target.value)}
+                                                        placeholder="6.6"
+                                                        className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-bold text-sm focus:outline-none focus:border-emerald-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-text-muted uppercase">Maturity Date</label>
+                                                    <input
+                                                        type="date"
+                                                        value={editMaturityDate}
+                                                        onChange={(e) => setEditMaturityDate(e.target.value)}
+                                                        className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-bold text-sm focus:outline-none focus:border-emerald-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-text-muted uppercase">Maturity Amount (₹)</label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={editMaturityAmount}
+                                                        onChange={(e) => setEditMaturityAmount(e.target.value)}
+                                                        placeholder="31989"
+                                                        className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-bold text-sm focus:outline-none focus:border-emerald-500"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <div className="flex items-center justify-between">
+                                                        <label className="text-[11px] font-bold text-text-muted uppercase">Current Balance (Live NAV)</label>
+                                                        <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
+                                                            <Lock size={10} /> Live Synced
+                                                        </span>
+                                                    </div>
+                                                    <div className="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-surface-subtle/60 border border-border-subtle/80 text-text-muted font-bold text-sm flex items-center justify-between select-all cursor-not-allowed">
+                                                        <span>{formatCurrency(currentHolding.current_value)}</span>
+                                                        <span className="text-[10px] uppercase tracking-wider font-semibold text-text-muted">AMFI API</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-text-muted mt-1.5">
+                                                        Current balance is evaluated live from AMFI NAV × units and cannot be edited manually.
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-text-muted uppercase">Total Capital Invested (₹)</label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={editInvested}
+                                                        onChange={(e) => setEditInvested(e.target.value)}
+                                                        placeholder="Cost basis"
+                                                        className="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-bold text-sm focus:outline-none focus:border-emerald-500"
+                                                    />
+                                                    <p className="text-[10px] text-text-muted mt-1.5">
+                                                        Update your cumulative purchase cost / invested principal.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <div className="flex justify-end gap-3 mt-4">
                                             <button
                                                 onClick={handleSave}
@@ -280,30 +349,58 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                 {activeTab === 'performance' ? (
                                     <>
                                         {/* KPIS */}
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                            <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
-                                                <p className="text-xs text-text-muted">Current Value</p>
-                                                <p className="text-xl font-bold mt-1 text-primary">{formatCurrency(currentHolding.current_value)}</p>
+                                        {isFixedIncome ? (
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                                <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                    <p className="text-xs text-text-muted">Current Balance</p>
+                                                    <p className="text-xl font-bold mt-1 text-primary">{formatCurrency(currentHolding.current_value)}</p>
+                                                </div>
+                                                <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                    <p className="text-xs text-text-muted">Principal Invested</p>
+                                                    <p className="text-xl font-bold mt-1 text-primary">{formatCurrency(currentHolding.total_invested)}</p>
+                                                </div>
+                                                <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                    <p className="text-xs text-text-muted">Interest Rate</p>
+                                                    <p className="text-xl font-bold mt-1 text-emerald-400">
+                                                        {currentHolding.interest_rate ? `${currentHolding.interest_rate}% p.a.` : 'N/A'}
+                                                    </p>
+                                                </div>
+                                                <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                    <p className="text-xs text-text-muted">Maturity Amount</p>
+                                                    <p className="text-xl font-bold mt-1 text-cyan-400">
+                                                        {currentHolding.maturity_amount ? formatCurrency(currentHolding.maturity_amount) : 'N/A'}
+                                                    </p>
+                                                    {currentHolding.maturity_date && (
+                                                        <p className="text-[10px] text-text-muted mt-0.5">
+                                                            Matures: {new Date(currentHolding.maturity_date).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
-                                                <p className="text-xs text-text-muted">Invested</p>
-                                                <p className="text-xl font-bold mt-1 text-primary">{formatCurrency(currentHolding.total_invested)}</p>
+                                        ) : (
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                                <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                    <p className="text-xs text-text-muted">Current Value</p>
+                                                    <p className="text-xl font-bold mt-1 text-primary">{formatCurrency(currentHolding.current_value)}</p>
+                                                </div>
+                                                <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                    <p className="text-xs text-text-muted">Invested</p>
+                                                    <p className="text-xl font-bold mt-1 text-primary">{formatCurrency(currentHolding.total_invested)}</p>
+                                                </div>
+                                                <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                    <p className="text-xs text-text-muted">Net Returns</p>
+                                                    <p className={`text-xl font-bold mt-1 ${(currentHolding.current_value - currentHolding.total_invested) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                                                        {formatCurrency(currentHolding.current_value - currentHolding.total_invested)}
+                                                    </p>
+                                                </div>
+                                                <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
+                                                    <p className="text-xs text-text-muted">XIRR</p>
+                                                    <p className="text-xl font-bold mt-1 text-primary">
+                                                        {currentHolding.xirr ? `${currentHolding.xirr.toFixed(1)}%` : "N/A"}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
-                                                <p className="text-xs text-text-muted">Net Returns</p>
-                                                <p className={`text-xl font-bold mt-1 ${(currentHolding.current_value - currentHolding.total_invested) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                                                    {formatCurrency(currentHolding.current_value - currentHolding.total_invested)}
-                                                </p>
-                                            </div>
-                                            <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
-                                                <p className="text-xs text-text-muted">{currentHolding.interest_rate ? "Interest Rate" : "XIRR"}</p>
-                                                <p className="text-xl font-bold mt-1 text-primary">
-                                                    {currentHolding.interest_rate 
-                                                        ? `${currentHolding.interest_rate}% p.a.`
-                                                        : (currentHolding.xirr ? `${currentHolding.xirr.toFixed(1)}%` : "N/A")}
-                                                </p>
-                                            </div>
-                                        </div>
+                                        )}
 
                                         {/* Chart */}
                                         <div className="bg-surface-subtle rounded-xl border border-border-subtle p-4 h-[280px] sm:h-[320px]">
