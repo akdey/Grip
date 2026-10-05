@@ -423,7 +423,7 @@ class WealthService:
             
         # Match found! Execute Logic.
         holding_id = matched_rule.holding_id
-        await self.add_transaction_to_holding(transaction, holding_id)
+        await self.map_transaction(transaction.id, holding_id, create_rule=False)
         return True
 
     async def add_transaction_to_holding(self, transaction: Transaction, holding_id: uuid.UUID):
@@ -963,15 +963,18 @@ class WealthService:
 
         holdings = await self.get_holdings(user_id)
         holdings_by_name = {h.name.lower(): h for h in holdings}
-        holdings_by_type = {}
-        for h in holdings:
-            holdings_by_type.setdefault(h.asset_type, []).append(h)
             
-        # Get all mapped transaction IDs from dedicated table
+        # Get all mapped transaction IDs from dedicated mapping table
         mapped_stmt = select(InvestmentTransactionMapping.transaction_id).where(
             InvestmentTransactionMapping.user_id == user_id
         )
         mapped_ids = set((await self.db.execute(mapped_stmt)).scalars().all())
+
+        # Load user-defined mapping rules for intelligent suggestion
+        rules_stmt = select(InvestmentMappingRule, InvestmentHolding).join(
+            InvestmentHolding, InvestmentMappingRule.holding_id == InvestmentHolding.id
+        ).where(InvestmentMappingRule.user_id == user_id)
+        rules = (await self.db.execute(rules_stmt)).all()
 
         stmt = (
             select(Transaction)
@@ -993,58 +996,26 @@ class WealthService:
             suggested_holding_id = None
             suggested_holding_name = None
             
-            remarks = (t.remarks or "").lower()
-            merchant = (t.merchant_name or "").lower()
-            subcat = (t.sub_category or "").lower()
-            amt = abs(float(t.amount))
+            search_text = f"{t.merchant_name or ''} {t.remarks or ''} {t.sub_category or ''}".lower()
             
-            is_mf = any(k in merchant for k in ["groww", "iccl", "clearing", "mutual"]) or subcat in ["sip", "mutual funds"]
-
-            for name, h in holdings_by_name.items():
-                if name in remarks or (name in merchant and not is_mf):
+            # 1. Match against user's defined InvestmentMappingRules
+            for rule, h in rules:
+                if rule.match_type == "CONTAINS" and rule.pattern.lower() in search_text:
                     suggested_holding_id = h.id
                     suggested_holding_name = h.name
                     break
-                    
-            if not suggested_holding_id:
-                if is_mf:
-                    if "parag" in remarks or amt == 7000.0:
-                        targets = [h for h in holdings if "parag" in h.name.lower()]
-                        if targets:
-                            suggested_holding_id = targets[0].id
-                            suggested_holding_name = targets[0].name
-                    elif "gold" in remarks or (amt == 3000.0 and t.transaction_date and t.transaction_date.day == 1):
-                        targets = [h for h in holdings if "gold" in h.name.lower()]
-                        if targets:
-                            suggested_holding_id = targets[0].id
-                            suggested_holding_name = targets[0].name
-                    elif "canara" in remarks or amt == 2000.0:
-                        targets = [h for h in holdings if "canara" in h.name.lower()]
-                        if targets:
-                            suggested_holding_id = targets[0].id
-                            suggested_holding_name = targets[0].name
-                else:
-                    if "apy" in subcat or "apy" in merchant or amt == 409.0:
-                        targets = holdings_by_type.get(AssetType.APY, []) + [h for h in holdings if "apy" in h.name.lower()]
-                        if targets:
-                            suggested_holding_id = targets[0].id
-                            suggested_holding_name = targets[0].name
-                    elif "pli" in subcat or "pli" in merchant or amt in [1880.0, 1900.0, 1964.0]:
-                        targets = holdings_by_type.get(AssetType.PLI, []) + [h for h in holdings if "pli" in h.name.lower()]
-                        if targets:
-                            suggested_holding_id = targets[0].id
-                            suggested_holding_name = targets[0].name
-                    elif "rd" in subcat or "rd" in remarks or "rd" in merchant or amt == 5000.0:
-                        targets = holdings_by_type.get(AssetType.RD, []) + [h for h in holdings if "rd" in h.name.lower()]
-                        if targets:
-                            suggested_holding_id = targets[0].id
-                            suggested_holding_name = targets[0].name
-                    elif "fd" in subcat or "fd" in merchant:
-                        targets = holdings_by_type.get(AssetType.FD, []) + [h for h in holdings if "fd" in h.name.lower()]
-                        if targets:
-                            suggested_holding_id = targets[0].id
-                            suggested_holding_name = targets[0].name
+                elif rule.match_type == "EXACT" and rule.pattern.lower() == search_text.strip():
+                    suggested_holding_id = h.id
+                    suggested_holding_name = h.name
+                    break
 
+            # 2. Fallback: Match against active holding names
+            if not suggested_holding_id:
+                for name, h in holdings_by_name.items():
+                    if name in search_text:
+                        suggested_holding_id = h.id
+                        suggested_holding_name = h.name
+                        break
                         
             unassigned.append({
                 "id": t.id,
@@ -1083,31 +1054,6 @@ class WealthService:
         created_count = 0
         linked_count = 0
         
-        async def get_or_create(name: str, asset_type: AssetType, ticker: Optional[str] = None, api_source: Optional[str] = None, interest_rate: Optional[float] = None) -> InvestmentHolding:
-            nonlocal created_count
-            key = name.lower()
-            if key in holdings_map:
-                return holdings_map[key]
-            for h in holdings_map.values():
-                if h.asset_type == asset_type and h.asset_type in [AssetType.RD, AssetType.APY, AssetType.PLI]:
-                    return h
-                    
-            holding = InvestmentHolding(
-                user_id=user_id,
-                name=name,
-                asset_type=asset_type,
-                ticker_symbol=ticker,
-                api_source=api_source,
-                interest_rate=interest_rate,
-                total_invested=0.0,
-                current_value=0.0
-            )
-            self.db.add(holding)
-            await self.db.commit()
-            await self.db.refresh(holding)
-            holdings_map[key] = holding
-            created_count += 1
-            return holding
 
         await self.sync_legacy_tags_to_mappings(user_id)
 
@@ -1116,31 +1062,34 @@ class WealthService:
         )
         mapped_ids = set((await self.db.execute(mapped_stmt)).scalars().all())
 
+        # Load user-defined mapping rules
+        rules_stmt = select(InvestmentMappingRule, InvestmentHolding).join(
+            InvestmentHolding, InvestmentMappingRule.holding_id == InvestmentHolding.id
+        ).where(InvestmentMappingRule.user_id == user_id)
+        rules = (await self.db.execute(rules_stmt)).all()
+
         for t in txns:
             if t.id in mapped_ids:
                 continue
                 
-            sub = (t.sub_category or "").lower()
-            merch = (t.merchant_name or "").lower()
-            rem = (t.remarks or "").lower()
-            amt = abs(float(t.amount))
-            
+            search_text = f"{t.merchant_name or ''} {t.remarks or ''} {t.sub_category or ''}".lower()
             target_holding = None
             
-            if "parag parikh" in rem:
-                target_holding = await get_or_create("Parag Parikh Flexi Cap Fund", AssetType.MUTUAL_FUND, ticker="122639", api_source="MFAPI")
-            elif "sbi gold" in rem:
-                target_holding = await get_or_create("SBI Gold Fund", AssetType.MUTUAL_FUND, ticker="119598", api_source="MFAPI")
-            elif "canara robeco" in rem:
-                target_holding = await get_or_create("Canara Robeco Small Cap Fund", AssetType.MUTUAL_FUND, ticker="145552", api_source="MFAPI")
-            elif "rd" in sub or "rd" in rem or merch == "rd":
-                target_holding = await get_or_create("Recurring Deposit (RD)", AssetType.RD, interest_rate=7.1)
-            elif "apy" in sub or "apy" in merch or "apy" in rem or amt == 409.0:
-                target_holding = await get_or_create("Atal Pension Yojana (APY)", AssetType.APY)
-            elif "pli" in sub or "pli" in merch or "pli" in rem or amt in [1880.0, 1900.0, 1964.0]:
-                target_holding = await get_or_create("Postal Life Insurance (PLI)", AssetType.PLI)
-            elif "fd" in sub or "fd" in merch or (amt == 20000.0 and "axis" in merch):
-                target_holding = await get_or_create("Axis Bank Fixed Deposit", AssetType.FD, interest_rate=7.0)
+            # 1. Match against user's defined InvestmentMappingRules
+            for rule, h in rules:
+                if rule.match_type == "CONTAINS" and rule.pattern.lower() in search_text:
+                    target_holding = h
+                    break
+                elif rule.match_type == "EXACT" and rule.pattern.lower() == search_text.strip():
+                    target_holding = h
+                    break
+
+            # 2. Fallback: Match against existing holding names
+            if not target_holding:
+                for name, h in holdings_map.items():
+                    if name in search_text:
+                        target_holding = h
+                        break
                 
             if target_holding:
                 await self.add_transaction_to_holding(t, target_holding.id)

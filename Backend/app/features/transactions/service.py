@@ -212,6 +212,13 @@ class TransactionService:
         if verification.approved:
             await self._sync_double_entry_credit_card_payment(txn)
             await self._maybe_shadow_to_ledger(txn)
+            if (txn.category or "").lower() == "investment":
+                try:
+                    from app.features.wealth.service import WealthService
+                    wealth_service = WealthService(self.db)
+                    await wealth_service.process_transaction_for_investments(txn)
+                except Exception as e:
+                    logger.warning(f"Wealth auto-linking skipped for txn {txn.id}: {e}")
         else:
             await self._sync_double_entry_credit_card_payment(txn)
 
@@ -270,6 +277,14 @@ class TransactionService:
 
         # Shadow to Settle Up ledger if this is a loan-related category
         await self._maybe_shadow_to_ledger(txn)
+
+        if (txn.category or "").lower() == "investment":
+            try:
+                from app.features.wealth.service import WealthService
+                wealth_service = WealthService(self.db)
+                await wealth_service.process_transaction_for_investments(txn)
+            except Exception as e:
+                logger.warning(f"Wealth auto-linking skipped for manual txn {txn.id}: {e}")
 
         return txn
 
