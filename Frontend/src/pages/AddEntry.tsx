@@ -222,7 +222,7 @@ const AddEntry: React.FC = () => {
                 setCardId('');
                 setDate(format(new Date(), 'yyyy-MM-dd'));
                 setTime(format(new Date(), 'HH:mm'));
-                document.querySelector('input[type="number"]')?.focus();
+                document.querySelector<HTMLInputElement>('input[type="number"]')?.focus();
             }
         });
     };

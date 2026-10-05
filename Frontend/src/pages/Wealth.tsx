@@ -166,7 +166,7 @@ const Wealth: React.FC = () => {
                     {/* Add Asset Modal */}
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="px-3.5 py-2 rounded-xl bg-primary text-background text-xs font-bold hover:opacity-90 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                        className="px-3.5 py-2 rounded-xl bg-primary text-text-inverse text-xs font-bold hover:opacity-90 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
                     >
                         <Plus size={14} />
                         Add Asset
@@ -446,6 +446,7 @@ const Wealth: React.FC = () => {
                 isOpen={!!selectedHolding}
                 onClose={() => setSelectedHolding(null)}
                 holding={selectedHolding}
+                onUpdated={fetchHoldingsAndUnassigned}
             />
         </div>
     );

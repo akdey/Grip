@@ -167,7 +167,7 @@ const Goals: React.FC = () => {
                                     <button
                                         onClick={handleCreateGoal}
                                         disabled={!feasibility?.is_feasible}
-                                        className="flex-1 py-3 rounded-xl bg-primary text-background text-xs font-bold uppercase tracking-wide transition-all disabled:opacity-50 active:scale-95 shadow-md"
+                                        className="flex-1 py-3 rounded-xl bg-primary text-text-inverse text-xs font-bold uppercase tracking-wide transition-all disabled:opacity-50 active:scale-95 shadow-md"
                                     >
                                         Create Goal
                                     </button>

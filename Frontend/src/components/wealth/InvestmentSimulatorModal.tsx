@@ -201,7 +201,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                         <button
                                             key={t}
                                             onClick={() => setFormData({ ...formData, investmentType: t })}
-                                            className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${formData.investmentType === t ? 'bg-primary text-background shadow-sm' : 'text-text-muted hover:text-primary'}`}
+                                            className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${formData.investmentType === t ? 'bg-primary text-text-inverse shadow-sm' : 'text-text-muted hover:text-primary'}`}
                                         >
                                             {t}
                                         </button>

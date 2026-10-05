@@ -74,7 +74,7 @@ const BillsPage: React.FC = () => {
                 </div>
                 <button
                     onClick={() => setShowForm(!showForm)}
-                    className="w-10 h-10 rounded-full bg-primary text-background flex items-center justify-center active:scale-90 transition-all shadow-md"
+                    className="w-10 h-10 rounded-full bg-primary text-text-inverse flex items-center justify-center active:scale-90 transition-all shadow-md"
                 >
                     <Plus size={20} strokeWidth={3} />
                 </button>
@@ -131,7 +131,7 @@ const BillsPage: React.FC = () => {
                                 </div>
                             </div>
                             <div className="flex gap-3 pt-4">
-                                <button type="submit" className="flex-1 py-4.5 rounded-[1.5rem] bg-primary text-background font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
+                                <button type="submit" className="flex-1 py-4.5 rounded-[1.5rem] bg-primary text-text-inverse font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
                                     {addBill.isPending ? 'Syncing...' : 'Commit'}
                                 </button>
                                 <button

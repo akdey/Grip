@@ -692,7 +692,7 @@ const Transactions: React.FC = () => {
                                             <div
                                                 className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
                                                     isSelected
-                                                        ? 'bg-primary border-primary text-background shadow-sm'
+                                                        ? 'bg-primary border-primary text-text-inverse shadow-sm'
                                                         : 'border-border-default bg-surface-subtle'
                                                 }`}
                                             >
@@ -732,7 +732,7 @@ const Transactions: React.FC = () => {
                         </button>
                         <button
                             onClick={applyFilters}
-                            className="flex-1 py-4 rounded-[2rem] bg-primary text-background font-black text-sm uppercase tracking-wider shadow-xl active:scale-95 transition-all"
+                            className="flex-1 py-4 rounded-[2rem] bg-primary text-text-inverse font-black text-sm uppercase tracking-wider shadow-xl active:scale-95 transition-all"
                         >
                             Apply Filter
                         </button>
@@ -891,7 +891,7 @@ const Transactions: React.FC = () => {
                         </button>
                         <button
                             onClick={() => setIsSortOpen(false)}
-                            className="flex-1 py-4 rounded-2xl bg-primary text-background font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all"
+                            className="flex-1 py-4 rounded-2xl bg-primary text-text-inverse font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all"
                         >
                             Done
                         </button>

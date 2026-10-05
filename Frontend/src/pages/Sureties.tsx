@@ -112,10 +112,10 @@ const Sureties: React.FC = () => {
                             <button
                                 onClick={() => surety.source_id && handleMarkPaid(surety.id, surety.source_id)}
                                 disabled={['SKIPPED', 'PAID', 'COVERED', 'TERMINATED'].includes(surety.status) || createExclusion.isPending}
-                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-background text-xs font-semibold hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-text-inverse text-xs font-semibold hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
                             >
                                 {actionLoading?.id === surety.id && actionLoading?.action === 'PAID' ? (
-                                    <Loader2 size={14} className="animate-spin text-background" />
+                                    <Loader2 size={14} className="animate-spin text-text-inverse" />
                                 ) : (
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                 )}

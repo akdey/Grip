@@ -75,7 +75,7 @@ const CreditCardsPage: React.FC = () => {
                             setShowForm(true);
                         }
                     }}
-                    className="w-10 h-10 rounded-full bg-primary text-background flex items-center justify-center active:scale-90 transition-all shadow-xl"
+                    className="w-10 h-10 rounded-full bg-primary text-text-inverse flex items-center justify-center active:scale-90 transition-all shadow-xl"
                 >
                     <Plus size={20} strokeWidth={3} />
                 </button>
@@ -137,7 +137,7 @@ const CreditCardsPage: React.FC = () => {
                             </div>
 
                             <div className="flex gap-3 pt-4">
-                                <button type="submit" className="flex-1 py-4.5 rounded-[1.5rem] bg-primary text-background font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
+                                <button type="submit" className="flex-1 py-4.5 rounded-[1.5rem] bg-primary text-text-inverse font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
                                     {addCardMutation.isPending || updateCardMutation.isPending ? 'Syncing...' : (editingCardId ? 'Update' : 'Commit')}
                                 </button>
                                 <button

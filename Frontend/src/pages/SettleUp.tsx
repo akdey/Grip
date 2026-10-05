@@ -101,7 +101,7 @@ const SettleUp: React.FC = () => {
                 </div>
                 <button
                     onClick={() => setShowAddForm(true)}
-                    className="w-10 h-10 rounded-full bg-primary text-background flex items-center justify-center active:scale-90 transition-all shadow-md"
+                    className="w-10 h-10 rounded-full bg-primary text-text-inverse flex items-center justify-center active:scale-90 transition-all shadow-md"
                 >
                     <Plus size={20} />
                 </button>
@@ -242,7 +242,7 @@ const SettleUp: React.FC = () => {
                     <button
                         onClick={handleSaveEntry}
                         disabled={addMutation.isPending || updateMutation.isPending || !newPeerName.trim() || !newAmount.trim()}
-                        className="w-full py-5 rounded-[2rem] bg-primary text-background font-black text-lg shadow-2xl active:scale-95 transition-all disabled:opacity-30 disabled:scale-100"
+                        className="w-full py-5 rounded-[2rem] bg-primary text-text-inverse font-black text-lg shadow-2xl active:scale-95 transition-all disabled:opacity-30 disabled:scale-100"
                     >
                         {addMutation.isPending || updateMutation.isPending ? 'Saving...' : (editingEntry ? 'Update Record' : 'Add Record')}
                     </button>

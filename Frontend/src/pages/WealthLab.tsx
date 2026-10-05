@@ -308,7 +308,7 @@ const WealthLab: React.FC = () => {
                                             />
                                             <Tooltip
                                                 contentStyle={{ backgroundColor: 'var(--color-bg-surface, #121212)', borderColor: 'var(--color-border-subtle, #333)', color: 'var(--color-text-primary, #fff)', borderRadius: '8px', fontSize: '12px' }}
-                                                formatter={(val: number) => formatCurrency(val)}
+                                                formatter={(val: any) => formatCurrency(Number(val) || 0)}
                                             />
                                             <Area
                                                 type="monotone"

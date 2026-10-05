@@ -280,7 +280,7 @@ const Categories: React.FC = () => {
                                         }
                                         resetForm();
                                     }}
-                                    className="w-16 h-16 rounded-full bg-primary text-background flex items-center justify-center shadow-2xl active:scale-90 transition-all"
+                                    className="w-16 h-16 rounded-full bg-primary text-text-inverse flex items-center justify-center shadow-2xl active:scale-90 transition-all"
                                 >
                                     <Plus size={32} strokeWidth={3} />
                                 </button>
@@ -359,7 +359,7 @@ const Categories: React.FC = () => {
                                             onClick={() => setNewType(t as TransactionType)}
                                             className={`
                                                 relative flex-1 rounded-[1rem] text-[9px] font-black uppercase tracking-[2px] transition-colors z-10
-                                                ${newType === t ? 'text-background font-extrabold' : 'text-text-muted'}
+                                                ${newType === t ? 'text-text-inverse font-extrabold' : 'text-text-muted'}
                                             `}
                                         >
                                             {t}
@@ -433,7 +433,7 @@ const Categories: React.FC = () => {
                                             }
                                         }}
                                         isLoading={createCategoryMutation.isPending || createSubCategoryMutation.isPending || updateCategoryMutation.isPending || updateSubCategoryMutation.isPending}
-                                        className="flex-[2] py-5 rounded-[2rem] bg-primary text-background font-black uppercase text-xs tracking-[4px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none"
+                                        className="flex-[2] py-5 rounded-[2rem] bg-primary text-text-inverse font-black uppercase text-xs tracking-[4px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none"
                                     >
                                         <Save size={20} />
                                         Commit

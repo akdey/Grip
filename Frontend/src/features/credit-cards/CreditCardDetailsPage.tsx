@@ -115,7 +115,7 @@ const CreditCardDetailsPage: React.FC = () => {
                                             className={`
                                                 w-6 h-6 rounded-full flex items-center justify-center transition-all
                                                 ${txn.is_settled
-                                                    ? 'bg-primary text-background'
+                                                    ? 'bg-primary text-text-inverse'
                                                     : 'bg-surface-pill text-text-muted hover:text-primary'
                                                 }
                                                 ${toggleSettledMutation.isPending ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
