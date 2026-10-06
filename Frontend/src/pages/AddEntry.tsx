@@ -344,7 +344,7 @@ const AddEntry: React.FC = () => {
                                     });
                                 }
                             }}
-                            className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-500/10 hover:border-red-500/20 active:scale-90 transition-all"
+                            className="w-8 h-8 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-status-danger-solid hover:bg-status-danger-bg hover:border-status-danger-border active:scale-90 transition-all"
                         >
                             <Trash2 size={14} />
                         </button>
@@ -381,21 +381,21 @@ const AddEntry: React.FC = () => {
 
                 <div className="flex-1 space-y-6 animate-enter p-5">
                     {/* Magnitude & Mode */}
-                    <div className="flex gap-2 p-1 bg-white/[0.02] rounded-2xl border border-white/[0.05] relative h-12">
+                    <div className="flex gap-2 p-1 bg-surface-subtle rounded-2xl border border-border-subtle relative h-12">
                         {['EXPENSE', 'INCOME'].map((t) => (
                             <button
                                 key={t}
                                 onClick={() => setType(t as any)}
                                 className={`
                                         relative flex-1 rounded-xl text-[9px] font-black uppercase tracking-[1.5px] transition-colors z-10
-                                        ${type === t ? 'text-black font-extrabold' : 'text-gray-600 hover:text-gray-300'}
+                                        ${type === t ? 'text-text-inverse font-extrabold' : 'text-text-muted hover:text-primary'}
                                     `}
                             >
                                 {t}
                                 {type === t && (
                                     <motion.div
                                         layoutId="mode-indicator"
-                                        className="absolute inset-0 bg-white rounded-xl -z-10 shadow-lg"
+                                        className="absolute inset-0 bg-primary rounded-xl -z-10 shadow-lg"
                                         transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
                                     />
                                 )}
@@ -404,22 +404,22 @@ const AddEntry: React.FC = () => {
                     </div>
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-[8px] text-gray-600 font-black uppercase tracking-[2px] ml-1 opacity-60">Magnitude</label>
+                            <label className="text-[8px] text-text-muted font-black uppercase tracking-[2px] ml-1">Magnitude</label>
                             <div className="flex items-center gap-3 group">
-                                <span className="text-3xl text-gray-700 font-black tracking-tighter shrink-0">₹</span>
+                                <span className="text-3xl text-text-muted font-black tracking-tighter shrink-0">₹</span>
                                 <div className="relative flex-1">
                                     <input
                                         type="number"
                                         value={amount}
                                         onChange={(e) => setAmount(e.target.value)}
                                         placeholder="0"
-                                        className={`bg-transparent font-black w-full focus:outline-none placeholder-gray-900 tracking-tighter transition-all ${amount.length > 7 ? 'text-3xl' : amount.length > 5 ? 'text-4xl' : 'text-5xl'}`}
+                                        className={`bg-transparent font-black w-full focus:outline-none text-primary placeholder-text-muted/40 tracking-tighter transition-all ${amount.length > 7 ? 'text-3xl' : amount.length > 5 ? 'text-4xl' : 'text-5xl'}`}
                                         autoFocus={!id}
                                     />
                                 </div>
                                 <button
                                     onClick={() => setCalculatorOpen(true)}
-                                    className="w-10 h-10 bg-white/[0.03] border border-white/[0.08] rounded-lg flex items-center justify-center transition-all active:scale-90 text-gray-400"
+                                    className="w-10 h-10 bg-surface-subtle border border-border-subtle rounded-lg flex items-center justify-center transition-all active:scale-90 text-text-muted hover:text-primary hover:bg-surface-hover"
                                 >
                                     <Calculator size={18} />
                                 </button>
@@ -431,14 +431,14 @@ const AddEntry: React.FC = () => {
                     <div className="grid grid-cols-1 gap-4">
                         {/* Category Selector */}
                         <div className="space-y-2">
-                            <label className="text-[8px] text-gray-600 font-black uppercase tracking-[2px] ml-1 opacity-60">Entity Type</label>
+                            <label className="text-[8px] text-text-muted font-black uppercase tracking-[2px] ml-1">Entity Type</label>
                             <div
-                                className="flex items-center justify-between p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.05] cursor-pointer group active:scale-[0.98] transition-all"
+                                className="flex items-center justify-between p-3.5 bg-surface-subtle rounded-2xl border border-border-subtle hover:bg-surface-hover cursor-pointer group active:scale-[0.98] transition-all"
                                 onClick={() => { setView('CATEGORIES'); setCategoryOpen(true); }}
                             >
                                 <div className="flex items-center gap-3.5">
                                     <div
-                                        className="w-10 h-10 rounded-xl flex items-center justify-center shadow-inner border border-white/[0.08] transition-all"
+                                        className="w-10 h-10 rounded-xl flex items-center justify-center shadow-inner border border-border-subtle transition-all"
                                         style={{
                                             backgroundColor: `${(getSelectedSubCategory()?.color || getSelectedCategory()?.color)}15` || 'rgba(255,255,255,0.03)',
                                             color: getSelectedSubCategory()?.color || getSelectedCategory()?.color || '#444'
@@ -450,37 +450,37 @@ const AddEntry: React.FC = () => {
                                         />
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className={`text-base font-black tracking-tight uppercase leading-tight ${category ? 'text-white' : 'text-gray-700'}`}>
+                                        <span className={`text-base font-black tracking-tight uppercase leading-tight ${category ? 'text-primary' : 'text-text-muted'}`}>
                                             {category || 'Select Category'}
                                         </span>
                                         {subCategory && subCategory !== 'Uncategorized' && (
-                                            <span className="text-[7px] text-white/70 font-black uppercase tracking-widest mt-0.5 opacity-80">{subCategory}</span>
+                                            <span className="text-[7px] text-text-muted font-black uppercase tracking-widest mt-0.5">{subCategory}</span>
                                         )}
                                     </div>
                                 </div>
-                                <ChevronRight className="text-gray-800 transition-transform group-hover:translate-x-1" size={14} />
+                                <ChevronRight className="text-text-muted transition-transform group-hover:translate-x-1" size={14} />
                             </div>
                         </div>
 
                         {/* Space-Time Row */}
                         <div className="space-y-2">
-                            <label className="text-[8px] text-gray-600 font-black uppercase tracking-[2px] ml-1 opacity-60">Space-Time</label>
-                            <div className="relative flex items-center justify-between p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.05] cursor-pointer hover:bg-white/[0.04] transition-all group active:scale-[0.98]">
+                            <label className="text-[8px] text-text-muted font-black uppercase tracking-[2px] ml-1">Space-Time</label>
+                            <div className="relative flex items-center justify-between p-3.5 bg-surface-subtle rounded-2xl border border-border-subtle cursor-pointer hover:bg-surface-hover transition-all group active:scale-[0.98]">
                                 <div className="flex items-center gap-3.5">
-                                    <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-500">
+                                    <div className="w-10 h-10 rounded-xl bg-surface border border-border-subtle flex items-center justify-center text-text-muted">
                                         <Calendar size={16} />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-sm font-black text-white/90 uppercase tracking-tighter leading-tight">
+                                        <span className="text-sm font-black text-primary uppercase tracking-tighter leading-tight">
                                             {format(parse(date, 'yyyy-MM-dd', new Date()), 'MMM d, yyyy')}
                                         </span>
-                                        <span className="text-[7px] text-gray-600 font-bold uppercase tracking-[1px] mt-0.5 flex items-center gap-1.5 opacity-80">
+                                        <span className="text-[7px] text-text-muted font-bold uppercase tracking-[1px] mt-0.5 flex items-center gap-1.5">
                                             <Clock size={8} />
                                             {time}
                                         </span>
                                     </div>
                                 </div>
-                                <ChevronRight size={14} className="text-gray-800 group-hover:translate-x-1 transition-all" />
+                                <ChevronRight size={14} className="text-text-muted group-hover:translate-x-1 transition-all" />
                                 <div className="absolute inset-0 opacity-0">
                                     <input
                                         ref={dateInputRef}
@@ -502,8 +502,8 @@ const AddEntry: React.FC = () => {
                                 </div>
                             </div>
                             {isDateOutside3Days && (
-                                <div className="flex items-center gap-2 px-3.5 py-2.5 bg-amber-500/10 border border-amber-500/25 rounded-2xl text-amber-400 text-[10px] font-bold mt-2">
-                                    <AlertTriangle size={14} className="shrink-0 text-amber-400" />
+                                <div className="flex items-center gap-2 px-3.5 py-2.5 bg-status-warning-bg border border-status-warning-border rounded-2xl text-status-warning-text text-[10px] font-bold mt-2">
+                                    <AlertTriangle size={14} className="shrink-0 text-status-warning-text" />
                                     <span>
                                         Notice: Selected date is {absDaysDiff} days {daysDiff < 0 ? 'in the past' : 'in the future'} ({format(txnDateObj, 'MMM d, yyyy')}). Verify if the LLM picked a wrong date.
                                     </span>
@@ -513,13 +513,13 @@ const AddEntry: React.FC = () => {
 
                         {/* Payment Channel */}
                         <div className="space-y-2">
-                            <label className="text-[8px] text-gray-600 font-black uppercase tracking-[2px] ml-1 opacity-60">Settlement Route</label>
+                            <label className="text-[8px] text-text-muted font-black uppercase tracking-[2px] ml-1">Settlement Route</label>
                             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                                 <button
                                     onClick={() => { setAccountType('ACCOUNT'); setCardId(''); }}
                                     className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all whitespace-nowrap min-w-[90px] justify-center ${accountType === 'ACCOUNT'
-                                        ? 'bg-white/15 border-white/30 text-white font-bold shadow-sm'
-                                        : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-white'
+                                        ? 'bg-primary border-primary text-text-inverse font-bold shadow-sm'
+                                        : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
                                         }`}
                                 >
                                     <Landmark size={14} />
@@ -528,8 +528,8 @@ const AddEntry: React.FC = () => {
                                 <button
                                     onClick={() => { setAccountType('CASH'); setCardId(''); }}
                                     className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all whitespace-nowrap min-w-[90px] justify-center ${accountType === 'CASH'
-                                        ? 'bg-white/15 border-white/30 text-white font-bold shadow-sm'
-                                        : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-white'
+                                        ? 'bg-primary border-primary text-text-inverse font-bold shadow-sm'
+                                        : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
                                         }`}
                                 >
                                     <Banknote size={14} />
@@ -540,8 +540,8 @@ const AddEntry: React.FC = () => {
                                         key={card.id}
                                         onClick={() => { setAccountType('CREDIT_CARD'); setCardId(card.id); }}
                                         className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all whitespace-nowrap min-w-[110px] justify-center ${accountType === 'CREDIT_CARD' && cardId === card.id
-                                            ? 'bg-white/15 border-white/30 text-white font-bold shadow-sm'
-                                            : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-white'
+                                            ? 'bg-primary border-primary text-text-inverse font-bold shadow-sm'
+                                            : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
                                             }`}
                                     >
                                         <CreditCard size={14} />
@@ -554,7 +554,7 @@ const AddEntry: React.FC = () => {
                         {/* Destination Card for Credit Card Payment */}
                         {subCategory === 'Credit Card Payment' && creditCards && creditCards.length > 0 && (
                             <div className="space-y-2">
-                                <label className="text-[8px] text-white/80 font-black uppercase tracking-[2px] ml-1 opacity-80">
+                                <label className="text-[8px] text-text-muted font-black uppercase tracking-[2px] ml-1">
                                     Target Credit Card (Liability Offset)
                                 </label>
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -566,7 +566,7 @@ const AddEntry: React.FC = () => {
                                             className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border transition-all whitespace-nowrap min-w-[110px] justify-center ${
                                                 cardId === card.id
                                                     ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm font-bold'
-                                                    : 'bg-white/[0.02] border-white/[0.05] text-gray-500 hover:text-gray-300'
+                                                    : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
                                             }`}
                                         >
                                             <CreditCard size={14} />
@@ -581,16 +581,16 @@ const AddEntry: React.FC = () => {
 
                         {/* Merchant Name */}
                         <div className="space-y-2">
-                            <label className="text-[8px] text-gray-600 font-black uppercase tracking-[2px] ml-1 opacity-60">Merchant / Counterparty</label>
-                            <div className="flex items-center gap-3.5 p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.05] group">
-                                <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-700 group-focus-within:text-white transition-colors">
+                            <label className="text-[8px] text-text-muted font-black uppercase tracking-[2px] ml-1">Merchant / Counterparty</label>
+                            <div className="flex items-center gap-3.5 p-3.5 bg-surface-subtle rounded-2xl border border-border-subtle group">
+                                <div className="w-10 h-10 rounded-xl bg-surface border border-border-subtle flex items-center justify-center text-text-muted group-focus-within:text-primary transition-colors">
                                     <Store size={16} />
                                 </div>
                                 <input
                                     placeholder="Where was this?"
                                     value={merchantName}
                                     onChange={e => setMerchantName(e.target.value)}
-                                    className="bg-transparent flex-1 focus:outline-none text-white text-base font-bold placeholder-gray-800 uppercase tracking-tighter"
+                                    className="bg-transparent flex-1 focus:outline-none text-primary text-base font-bold placeholder-text-muted/40 uppercase tracking-tighter"
                                 />
                             </div>
                         </div>
@@ -598,28 +598,28 @@ const AddEntry: React.FC = () => {
 
                         {/* Tags Section */}
                         <div className="space-y-2">
-                            <label className="text-[8px] text-gray-600 font-black uppercase tracking-[2px] ml-1 opacity-60">Intelligence Tags</label>
-                            <div className="p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.05] space-y-3">
+                            <label className="text-[8px] text-text-muted font-black uppercase tracking-[2px] ml-1">Intelligence Tags</label>
+                            <div className="p-3.5 bg-surface-subtle rounded-2xl border border-border-subtle space-y-3">
                                 <div className="flex flex-wrap gap-2">
                                     {tags.map(tag => (
                                         <span key={tag} className="flex items-center gap-1.5 px-2.5 py-1 bg-accent-subtle border border-accent-border rounded-lg text-accent-text text-[9px] font-black uppercase tracking-wider">
                                             {tag}
-                                            <button onClick={() => removeTag(tag)} className="hover:text-white transition-colors">
+                                            <button onClick={() => removeTag(tag)} className="hover:text-primary transition-colors">
                                                 <X size={10} />
                                             </button>
                                         </span>
                                     ))}
-                                    {tags.length === 0 && <span className="text-[9px] text-gray-800 font-black uppercase tracking-widest py-1">No identifiers</span>}
+                                    {tags.length === 0 && <span className="text-[9px] text-text-muted font-black uppercase tracking-widest py-1">No identifiers</span>}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <div className="flex-1 flex items-center gap-2.5 bg-white/[0.03] rounded-xl px-3 py-2 border border-white/[0.05]">
-                                        <TagIcon size={12} className="text-gray-700" />
+                                    <div className="flex-1 flex items-center gap-2.5 bg-surface rounded-xl px-3 py-2 border border-border-subtle">
+                                        <TagIcon size={12} className="text-text-muted" />
                                         <input
                                             placeholder="Add label..."
                                             value={tagInput}
                                             onChange={e => setTagInput(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && addTag()}
-                                            className="bg-transparent flex-1 focus:outline-none text-[10px] text-white font-bold placeholder-gray-800 uppercase tracking-widest"
+                                            className="bg-transparent flex-1 focus:outline-none text-[10px] text-primary font-bold placeholder-text-muted/40 uppercase tracking-widest"
                                         />
                                     </div>
                                     <button
@@ -635,9 +635,9 @@ const AddEntry: React.FC = () => {
                         {/* Memoirs & Obligations */}
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-[8px] text-gray-600 font-black uppercase tracking-[2px] ml-1 opacity-60">Memoirs</label>
-                                <div className="flex items-center gap-3.5 p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.05] group">
-                                    <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-700 group-focus-within:text-white transition-colors">
+                                <label className="text-[8px] text-text-muted font-black uppercase tracking-[2px] ml-1">Memoirs</label>
+                                <div className="flex items-center gap-3.5 p-3.5 bg-surface-subtle rounded-2xl border border-border-subtle group">
+                                    <div className="w-10 h-10 rounded-xl bg-surface border border-border-subtle flex items-center justify-center text-text-muted group-focus-within:text-primary transition-colors">
                                         <AlignLeft size={16} />
                                     </div>
                                     <textarea
@@ -645,19 +645,19 @@ const AddEntry: React.FC = () => {
                                         value={remarks}
                                         onChange={e => setRemarks(e.target.value)}
                                         rows={2}
-                                        className="bg-transparent flex-1 focus:outline-none text-white text-sm font-bold placeholder-gray-800 uppercase tracking-tighter py-1"
+                                        className="bg-transparent flex-1 focus:outline-none text-primary text-sm font-bold placeholder-text-muted/40 uppercase tracking-tighter py-1"
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.05]">
+                            <div className="flex items-center justify-between p-3.5 bg-surface-subtle rounded-2xl border border-border-subtle">
                                 <div className="flex items-center gap-3.5">
-                                    <div className={`w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center transition-colors ${isSurety ? 'text-status-warning-text' : 'text-gray-700'}`}>
+                                    <div className={`w-10 h-10 rounded-xl bg-surface border border-border-subtle flex items-center justify-center transition-colors ${isSurety ? 'text-status-warning-text' : 'text-text-muted'}`}>
                                         <ToggleLeft size={16} />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-xs font-black text-white/90 uppercase tracking-tight leading-tight">Fixed Obligation</span>
-                                        <span className="text-[7px] text-gray-600 uppercase font-black tracking-[1px] mt-0.5">Surety / Bills</span>
+                                        <span className="text-xs font-black text-primary uppercase tracking-tight leading-tight">Fixed Obligation</span>
+                                        <span className="text-[7px] text-text-muted uppercase font-black tracking-[1px] mt-0.5">Surety / Bills</span>
                                     </div>
                                 </div>
                                 <button
@@ -672,7 +672,7 @@ const AddEntry: React.FC = () => {
                                     {isSurety ? (
                                         <ToggleRight size={32} className="text-status-warning-text opacity-90" />
                                     ) : (
-                                        <ToggleLeft size={32} className="text-gray-700" />
+                                        <ToggleLeft size={32} className="text-text-muted" />
                                     )}
                                 </button>
                             </div>
@@ -738,18 +738,18 @@ const AddEntry: React.FC = () => {
                                         {view === 'SUBCATEGORIES' && (
                                             <button
                                                 onClick={() => setView('CATEGORIES')}
-                                                className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-white active:scale-90 transition-all"
+                                                className="w-10 h-10 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-primary hover:bg-surface-hover active:scale-90 transition-all"
                                             >
                                                 <ChevronLeft size={20} />
                                             </button>
                                         )}
                                         <div className="relative flex-1">
-                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-700" size={14} />
+                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={14} />
                                             <input
                                                 placeholder="Filter nodes..."
                                                 value={searchQuery}
                                                 onChange={e => setSearchQuery(e.target.value)}
-                                                className="w-full bg-white/[0.03] rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-800 focus:outline-none border border-white/[0.05] focus:border-white/[0.1] transition-all font-black uppercase text-[10px] tracking-widest"
+                                                className="w-full bg-surface-subtle rounded-xl py-3 pl-11 pr-4 text-primary placeholder-text-muted/50 focus:outline-none border border-border-subtle focus:border-primary/20 transition-all font-black uppercase text-[10px] tracking-widest"
                                             />
                                         </div>
                                     </div>
@@ -765,35 +765,35 @@ const AddEntry: React.FC = () => {
                                             <div
                                                 key={cat.id}
                                                 onClick={() => handleCategorySelect(cat)}
-                                                className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-all cursor-pointer group active:scale-[0.98]"
+                                                className="flex items-center justify-between p-3 rounded-xl bg-surface-subtle border border-border-subtle hover:bg-surface-hover transition-all cursor-pointer group active:scale-[0.98]"
                                             >
                                                 <div className="flex items-center gap-3.5">
                                                     <div
-                                                        className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/[0.08]"
+                                                        className="w-10 h-10 rounded-xl flex items-center justify-center border border-border-subtle"
                                                         style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
                                                     >
                                                         <CategoryIcon name={cat.icon} size={18} />
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="font-black text-white/90 text-sm uppercase tracking-tight">{cat.name}</span>
-                                                        <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest leading-none mt-1">{cat.sub_categories.length} Nodes</span>
+                                                        <span className="font-black text-primary text-sm uppercase tracking-tight">{cat.name}</span>
+                                                        <span className="text-[8px] text-text-muted font-bold uppercase tracking-widest leading-none mt-1">{cat.sub_categories.length} Nodes</span>
                                                     </div>
                                                 </div>
-                                                <ChevronRight size={14} className="text-gray-800 transition-transform group-hover:translate-x-1" />
+                                                <ChevronRight size={14} className="text-text-muted transition-transform group-hover:text-primary group-hover:translate-x-1" />
                                             </div>
                                         ))
                                     ) : (
                                         <div className="space-y-4">
-                                            <div className="flex items-center gap-4 p-4 rounded-3xl bg-white/[0.03] border border-white/[0.08]">
+                                            <div className="flex items-center gap-4 p-4 rounded-3xl bg-surface-subtle border border-border-subtle">
                                                 <div
-                                                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl border border-white/10 shadow-2xl"
+                                                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl border border-border-subtle shadow-2xl"
                                                     style={{ backgroundColor: `${tempCategory?.color}20`, color: tempCategory?.color }}
                                                 >
                                                     <CategoryIcon name={tempCategory?.icon} size={24} />
                                                 </div>
                                                 <div>
-                                                    <h4 className="text-lg font-black text-white uppercase tracking-tight">{tempCategory?.name}</h4>
-                                                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[2px]">{type}</p>
+                                                    <h4 className="text-lg font-black text-primary uppercase tracking-tight">{tempCategory?.name}</h4>
+                                                    <p className="text-[9px] text-text-muted font-bold uppercase tracking-[2px]">{type}</p>
                                                 </div>
                                             </div>
 
@@ -805,16 +805,16 @@ const AddEntry: React.FC = () => {
                                                     <div
                                                         key={sub.id}
                                                         onClick={() => handleSubCategorySelect(sub)}
-                                                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-[0.98] ${subCategory === sub.name ? 'bg-accent-subtle border-accent-border text-accent-text' : 'bg-white/[0.02] border-white/[0.05]'}`}
+                                                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-[0.98] ${subCategory === sub.name ? 'bg-accent-subtle border-accent-border text-accent-text' : 'bg-surface-subtle border-border-subtle hover:bg-surface-hover'}`}
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             <div
-                                                                className="w-8 h-8 rounded-lg flex items-center justify-center border border-white/5"
+                                                                className="w-8 h-8 rounded-lg flex items-center justify-center border border-border-subtle"
                                                                 style={{ backgroundColor: `${sub.color || tempCategory?.color}10`, color: sub.color || tempCategory?.color }}
                                                             >
                                                                 <CategoryIcon name={sub.icon} size={14} fallback={<CategoryIcon name={tempCategory?.icon} size={14} />} />
                                                             </div>
-                                                            <span className={`text-sm font-bold uppercase tracking-tight ${subCategory === sub.name ? 'text-accent-text font-black' : 'text-gray-400'}`}>{sub.name}</span>
+                                                            <span className={`text-sm uppercase tracking-tight ${subCategory === sub.name ? 'text-accent-text font-black' : 'text-primary font-bold'}`}>{sub.name}</span>
                                                         </div>
                                                         {subCategory === sub.name && (
                                                             <Check size={14} className="text-accent-text" />
@@ -830,7 +830,7 @@ const AddEntry: React.FC = () => {
                             <div className="flex flex-col h-full space-y-10 p-6 pb-32 overflow-y-auto custom-scrollbar">
                                 <div className="flex flex-col items-center gap-6 pt-6">
                                     <div
-                                        className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-2xl transition-all duration-300 relative border border-white/10"
+                                        className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-2xl transition-all duration-300 relative border border-border-subtle"
                                         style={{
                                             backgroundColor: `${newColor}15`,
                                             color: newColor,
@@ -844,11 +844,11 @@ const AddEntry: React.FC = () => {
                                             placeholder="Identify..."
                                             value={newName}
                                             onChange={e => setNewName(e.target.value)}
-                                            className="w-full bg-transparent border-none text-2xl font-black text-center focus:outline-none placeholder-gray-900 uppercase tracking-tighter"
+                                            className="w-full bg-transparent border-none text-2xl font-black text-center focus:outline-none text-primary placeholder-text-muted/40 uppercase tracking-tighter"
                                             autoFocus
                                         />
                                         {isAddMode === 'SUB_CATEGORY' && (
-                                            <p className="text-[8px] text-gray-700 font-black uppercase tracking-[5px] mt-2">
+                                            <p className="text-[8px] text-text-muted font-black uppercase tracking-[5px] mt-2">
                                                 Parent: {tempCategory?.name}
                                             </p>
                                         )}
@@ -856,7 +856,7 @@ const AddEntry: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-4 px-2">
-                                    <h4 className="text-[10px] text-gray-700 font-black uppercase tracking-[4px] ml-1">Fluid Color</h4>
+                                    <h4 className="text-[10px] text-text-muted font-black uppercase tracking-[4px] ml-1">Fluid Color</h4>
                                     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
                                         {['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b2d2', '#8b5cf6', '#ec4899'].map(c => (
                                             <button
@@ -886,7 +886,7 @@ const AddEntry: React.FC = () => {
                                                 }
                                             }}
                                             disabled={!newName || createCategoryMutation.isPending || createSubCategoryMutation.isPending}
-                                            className="flex-[2] py-4 rounded-2xl bg-white text-black font-black uppercase text-[10px] tracking-[2px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none"
+                                            className="flex-[2] py-4 rounded-2xl bg-primary text-text-inverse font-black uppercase text-[10px] tracking-[2px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none"
                                         >
                                             <Save size={16} />
                                             {createCategoryMutation.isPending || createSubCategoryMutation.isPending ? 'Committing...' : 'Commit Node'}
