@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import {
     Wallet, Plus, RefreshCw, Link as LinkIcon,
     PieChart, Sparkles, Landmark, Repeat, ShieldCheck,
-    Coins, ArrowRight, BrainCircuit, FileSpreadsheet
+    Coins, ArrowRight, BrainCircuit, FileSpreadsheet, TrendingUp
 } from 'lucide-react';
 
 import { api } from '../lib/api';
@@ -38,6 +38,7 @@ const Wealth: React.FC = () => {
     // Data States
     const [holdings, setHoldings] = useState<Holding[]>([]);
     const [unassignedTxns, setUnassignedTxns] = useState<any[]>([]);
+    const [monthlyInvestmentOutflow, setMonthlyInvestmentOutflow] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const [autoDetecting, setAutoDetecting] = useState(false);
     const [exportingStatement, setExportingStatement] = useState(false);
@@ -82,12 +83,16 @@ const Wealth: React.FC = () => {
     const fetchHoldingsAndUnassigned = async () => {
         setLoading(true);
         try {
-            const [holdingsRes, unassignedRes] = await Promise.all([
+            const [holdingsRes, unassignedRes, summaryRes] = await Promise.all([
                 api.get('/wealth/holdings'),
-                api.get('/wealth/unassigned-transactions').catch(() => ({ data: [] }))
+                api.get('/wealth/unassigned-transactions').catch(() => ({ data: [] })),
+                api.get('/analytics/summary/?scope=month').catch(() => ({ data: null }))
             ]);
             setHoldings(holdingsRes.data || []);
             setUnassignedTxns(unassignedRes.data || []);
+            if (summaryRes?.data?.capital_investments != null) {
+                setMonthlyInvestmentOutflow(Number(summaryRes.data.capital_investments));
+            }
         } catch (err) {
             console.error("Failed to fetch wealth assets", err);
         } finally {
@@ -121,13 +126,15 @@ const Wealth: React.FC = () => {
 
     // Group holdings into clean financial asset classes
     const groupedHoldings = useMemo(() => {
-        const mutualFunds = holdings.filter(h => ['MUTUAL_FUND', 'SIP', 'STOCK'].includes(h.asset_type));
+        const stocks = holdings.filter(h => h.asset_type === 'STOCK');
+        const mutualFunds = holdings.filter(h => ['MUTUAL_FUND', 'SIP'].includes(h.asset_type));
         const recurringDeposits = holdings.filter(h => h.asset_type === 'RD');
         const fixedDeposits = holdings.filter(h => h.asset_type === 'FD');
         const govtPensions = holdings.filter(h => ['APY', 'PLI', 'PF', 'GRATUITY'].includes(h.asset_type));
         const goldAndOther = holdings.filter(h => ['GOLD', 'REAL_ESTATE', 'OTHER'].includes(h.asset_type) || !['MUTUAL_FUND', 'SIP', 'STOCK', 'RD', 'FD', 'APY', 'PLI', 'PF', 'GRATUITY'].includes(h.asset_type));
 
         return {
+            stocks,
             mutualFunds,
             recurringDeposits,
             fixedDeposits,
@@ -135,22 +142,6 @@ const Wealth: React.FC = () => {
             goldAndOther
         };
     }, [holdings]);
-
-    // Active Monthly Commitments calculation
-    const monthlyCommitment = useMemo(() => {
-        let total = 0;
-        groupedHoldings.recurringDeposits.forEach(() => {
-            total += 5000;
-        });
-        groupedHoldings.govtPensions.forEach(gp => {
-            if (gp.name.toLowerCase().includes('apy') || gp.asset_type === 'APY') total += 409;
-            else if (gp.name.toLowerCase().includes('pli') || gp.asset_type === 'PLI') total += 1880;
-        });
-        groupedHoldings.mutualFunds.forEach(() => {
-            total += 3000;
-        });
-        return total;
-    }, [groupedHoldings]);
 
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
@@ -226,6 +217,7 @@ const Wealth: React.FC = () => {
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {/* 1. Portfolio Net Worth */}
                 <motion.div
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                     className="bg-surface-subtle border border-border-subtle rounded-2xl p-6 relative overflow-hidden"
@@ -242,17 +234,16 @@ const Wealth: React.FC = () => {
                         <>
                             <p className="text-text-muted text-xs font-semibold uppercase tracking-wider">Portfolio Net Worth</p>
                             <h2 className="text-3xl font-black mt-2 text-primary">{formatCurrency(totalWealth)}</h2>
-                            <div className="flex items-center mt-2 space-x-2">
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${absoluteReturn >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
-                                    {absoluteReturn >= 0 ? "+" : ""}{formatCurrency(absoluteReturn)} ({returnPercentage.toFixed(1)}%)
-                                </span>
-                            </div>
+                            <p className="text-xs text-text-muted mt-2 font-medium">
+                                Across {holdings.length} assets in {Object.values(groupedHoldings).filter(list => list.length > 0).length} classes
+                            </p>
                         </>
                     )}
                 </motion.div>
 
+                {/* 2. Total Invested */}
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
                     className="bg-surface-subtle border border-border-subtle rounded-2xl p-6"
                 >
                     {loading ? (
@@ -271,8 +262,9 @@ const Wealth: React.FC = () => {
                     )}
                 </motion.div>
 
+                {/* 3. Total Net Returns (High-Value KPI replacing Verified Assets) */}
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}
                     className="bg-surface-subtle border border-border-subtle rounded-2xl p-6"
                 >
                     {loading ? (
@@ -282,15 +274,20 @@ const Wealth: React.FC = () => {
                         </div>
                     ) : (
                         <>
-                            <p className="text-text-muted text-xs font-semibold uppercase tracking-wider">Active Monthly Outflow</p>
-                            <h2 className="text-3xl font-black mt-2 text-accent-text">
-                                ~{formatCurrency(monthlyCommitment)}
+                            <p className="text-text-muted text-xs font-semibold uppercase tracking-wider">Total Net Returns</p>
+                            <h2 className={`text-3xl font-black mt-2 ${absoluteReturn >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                {absoluteReturn >= 0 ? "+" : ""}{formatCurrency(absoluteReturn)}
                             </h2>
-                            <p className="text-xs text-text-muted mt-2 font-medium">RD + APY + PLI + SIP commitments</p>
+                            <p className="text-xs text-text-muted mt-2 font-medium">
+                                <span className={`font-bold ${absoluteReturn >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                    {absoluteReturn >= 0 ? "+" : ""}{returnPercentage.toFixed(1)}%
+                                </span> all-time capital growth
+                            </p>
                         </>
                     )}
                 </motion.div>
 
+                {/* 4. Monthly Capital Deployed */}
                 <motion.div
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                     className="bg-surface-subtle border border-border-subtle rounded-2xl p-6"
@@ -302,12 +299,12 @@ const Wealth: React.FC = () => {
                         </div>
                     ) : (
                         <>
-                            <p className="text-text-muted text-xs font-semibold uppercase tracking-wider">Verified Assets</p>
-                            <h2 className="text-3xl font-black mt-2 text-primary">
-                                {holdings.length}
+                            <p className="text-text-muted text-xs font-semibold uppercase tracking-wider">Monthly Capital Deployed</p>
+                            <h2 className="text-3xl font-black mt-2 text-accent-text">
+                                {formatCurrency(monthlyInvestmentOutflow)}
                             </h2>
                             <p className="text-xs text-text-muted mt-2 font-medium">
-                                Across {Object.values(groupedHoldings).filter(list => list.length > 0).length} asset categories
+                                Tracked investment debits this month
                             </p>
                         </>
                     )}
@@ -388,6 +385,17 @@ const Wealth: React.FC = () => {
 
                 {/* Categorized Holdings Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {/* 0. Direct Stocks & Equities (When present) */}
+                    {groupedHoldings.stocks.length > 0 && (
+                        <WealthCategoryCard
+                            title="Direct Stocks & Equities"
+                            type="STOCK"
+                            icon={<TrendingUp size={20} className="text-primary" />}
+                            holdings={groupedHoldings.stocks}
+                            onHoldingClick={fetchHoldingDetails}
+                        />
+                    )}
+
                     {/* 1. Mutual Funds & SIPs */}
                     {groupedHoldings.mutualFunds.length > 0 && (
                         <WealthCategoryCard

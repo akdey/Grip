@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    ChevronDown, ChevronUp, TrendingUp, TrendingDown,
+    ChevronDown, ChevronUp, ChevronRight, TrendingUp, TrendingDown,
     MoreHorizontal, Calculator, CalendarClock, PieChart
 } from 'lucide-react';
 
@@ -136,23 +136,31 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                                 <div
                                     key={h.id}
                                     onClick={() => onHoldingClick(h.id)}
-                                    className="flex justify-between items-center p-3 hover:bg-surface-hover rounded-lg cursor-pointer transition-colors group"
+                                    role="button"
+                                    tabIndex={0}
+                                    className="flex justify-between items-center p-3 rounded-xl border border-transparent hover:border-border-default/60 bg-surface/30 hover:bg-surface-hover/80 active:scale-[0.985] active:bg-surface-hover cursor-pointer transition-all duration-150 group shadow-none hover:shadow-sm"
                                 >
-                                    <div>
-                                        <p className="text-sm font-medium text-primary transition-colors">{h.name}</p>
-                                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                    <div className="min-w-0 pr-2">
+                                        <p className="text-sm font-semibold text-primary group-hover:text-accent-text transition-colors truncate">
+                                            {h.name}
+                                        </p>
+                                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
                                             {h.xirr && <span className="text-[10px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono font-bold">XIRR {h.xirr.toFixed(1)}%</span>}
-                                            {h.interest_rate && <span className="text-[10px] text-accent-text bg-accent-subtle px-1.5 py-0.5 rounded font-mono">{h.interest_rate}% p.a.</span>}
+                                            {h.interest_rate && <span className="text-[10px] text-accent-text bg-accent-subtle px-1.5 py-0.5 rounded font-mono font-bold">{h.interest_rate}% p.a.</span>}
                                             {h.maturity_amount && <span className="text-[10px] text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded font-mono font-semibold">Mat: {formatCurrency(h.maturity_amount)}</span>}
                                             {h.maturity_date && <span className="text-[10px] text-text-muted">Matures {new Date(h.maturity_date).toLocaleDateString([], { month: 'short', year: '2-digit' })}</span>}
                                             <span className="text-[10px] text-text-muted">Inv: {formatCurrency(h.total_invested)}</span>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-bold text-primary">{formatCurrency(h.current_value)}</p>
-                                        <div className={`flex items-center justify-end gap-1 text-[10px] ${(h.current_value - h.total_invested) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                                            {((h.current_value - h.total_invested) / h.total_invested * 100).toFixed(1)}%
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <div className="text-right">
+                                            <p className="text-sm font-bold text-primary group-hover:text-primary transition-colors">{formatCurrency(h.current_value)}</p>
+                                            <div className={`flex items-center justify-end gap-1 text-[10px] font-semibold ${(h.current_value - h.total_invested) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                                                {(h.current_value - h.total_invested) >= 0 ? "+" : ""}
+                                                {((h.current_value - h.total_invested) / h.total_invested * 100).toFixed(1)}%
+                                            </div>
                                         </div>
+                                        <ChevronRight size={16} className="text-text-muted/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                                     </div>
                                 </div>
                             ))}

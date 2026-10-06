@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, TrendingUp, Pencil, Save, X, Check, Percent, Calendar, Lock, ShieldCheck, Landmark, FileText, UserCheck, MapPin } from 'lucide-react';
+import { ChevronDown, TrendingUp, Pencil, Save, X, Check, Percent, Calendar, Lock, ShieldCheck, Landmark, FileText, UserCheck, MapPin, Loader2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { SIPDateAnalysis } from './SIPDateAnalysis';
 import { haptics } from '../../lib/haptics';
@@ -31,6 +31,9 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
     const [editAccountNumber, setEditAccountNumber] = useState<string>('');
     const [editNomineeName, setEditNomineeName] = useState<string>('');
     const [editRemarks, setEditRemarks] = useState<string>('');
+    const [isEditingRecords, setIsEditingRecords] = useState(false);
+    const [savingRecords, setSavingRecords] = useState(false);
+    const [recordsSavedSuccess, setRecordsSavedSuccess] = useState(false);
 
     useEffect(() => {
         if (holding) {
@@ -45,6 +48,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
             setEditNomineeName(holding.nominee_name || '');
             setEditRemarks(holding.remarks || '');
             setIsEditing(false);
+            setIsEditingRecords(false);
         }
     }, [holding]);
 
@@ -80,12 +84,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
     const handleSave = async () => {
         setSaving(true);
         try {
-            const payload: any = {
-                institution_name: editInstitutionName.trim() || null,
-                account_number_or_folio: editAccountNumber.trim() || null,
-                nominee_name: editNomineeName.trim() || null,
-                remarks: editRemarks.trim() || null
-            };
+            const payload: any = {};
             if (isFixedIncome) {
                 if (editCurrentValue !== '') payload.current_value = parseFloat(editCurrentValue);
                 if (editInvested !== '') payload.total_invested = parseFloat(editInvested);
@@ -112,6 +111,32 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
             haptics.notification('error');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleSaveRecords = async () => {
+        setSavingRecords(true);
+        try {
+            const payload = {
+                institution_name: editInstitutionName.trim() || null,
+                account_number_or_folio: editAccountNumber.trim() || null,
+                nominee_name: editNomineeName.trim() || null,
+                remarks: editRemarks.trim() || null
+            };
+            const res = await api.patch(`/wealth/holdings/${currentHolding.id}`, payload);
+            setCurrentHolding(res.data);
+            setRecordsSavedSuccess(true);
+            haptics.notification('success');
+            onUpdated?.();
+            setTimeout(() => {
+                setRecordsSavedSuccess(false);
+                setIsEditingRecords(false);
+            }, 600);
+        } catch (e) {
+            console.error('Failed to update account records', e);
+            haptics.notification('error');
+        } finally {
+            setSavingRecords(false);
         }
     };
 
@@ -145,7 +170,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                 haptics.selection();
                             }
                         }}
-                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[90vh] glass-drawer rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.7)] overflow-hidden pointer-events-auto select-none touch-none"
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[92vh] max-h-[92vh] glass-drawer rounded-t-[2.5rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.7)] overflow-hidden pointer-events-auto"
                     >
                         {/* Grabber Pill */}
                         <div
@@ -206,7 +231,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                     initial={{ height: 0, opacity: 0 }}
                                     animate={{ height: 'auto', opacity: 1 }}
                                     exit={{ height: 0, opacity: 0 }}
-                                    className="border-b border-border-subtle bg-surface/90 px-6 sm:px-10 py-5 overflow-hidden shrink-0"
+                                    className="border-b border-border-subtle bg-surface/90 px-6 sm:px-10 py-5 overflow-y-auto max-h-[50vh] custom-scrollbar shrink-0"
                                 >
                                     <div className="max-w-4xl">
                                         <div className="flex items-center justify-between mb-3">
@@ -310,58 +335,6 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                 </div>
                                             </div>
                                         )}
-
-                                        {/* Account & Institutional Records */}
-                                        <div className="mt-4 pt-4 border-t border-border-subtle">
-                                            <div className="flex items-center gap-1.5 mb-3">
-                                                <ShieldCheck size={14} className="text-emerald-400" />
-                                                <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400">
-                                                    Account & Institutional Records
-                                                </span>
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-text-muted uppercase">Bank / Institution</label>
-                                                    <input
-                                                        type="text"
-                                                        value={editInstitutionName}
-                                                        onChange={(e) => setEditInstitutionName(e.target.value)}
-                                                        placeholder="e.g. Axis Bank, Zerodha, EPFO"
-                                                        className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-medium text-xs focus:outline-none focus:border-emerald-500"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-text-muted uppercase">Folio / Account / PRAN #</label>
-                                                    <input
-                                                        type="text"
-                                                        value={editAccountNumber}
-                                                        onChange={(e) => setEditAccountNumber(e.target.value)}
-                                                        placeholder="e.g. Folio #, FD A/c #, UAN"
-                                                        className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-medium text-xs focus:outline-none focus:border-emerald-500"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-text-muted uppercase">Registered Nominee</label>
-                                                    <input
-                                                        type="text"
-                                                        value={editNomineeName}
-                                                        onChange={(e) => setEditNomineeName(e.target.value)}
-                                                        placeholder="e.g. Spouse / Mother / Self"
-                                                        className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-medium text-xs focus:outline-none focus:border-emerald-500"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-text-muted uppercase">Remarks & Location</label>
-                                                    <input
-                                                        type="text"
-                                                        value={editRemarks}
-                                                        onChange={(e) => setEditRemarks(e.target.value)}
-                                                        placeholder="e.g. Locker #, Passbook in safe"
-                                                        className="w-full mt-1 px-3 py-2 rounded-xl bg-surface-subtle border border-border-subtle text-primary font-medium text-xs focus:outline-none focus:border-emerald-500"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
 
                                         <div className="flex justify-end gap-3 mt-4">
                                             <button
@@ -541,45 +514,134 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                         <p className="text-[10px] text-text-muted">Included in your Consolidated Portfolio Statement export</p>
                                                     </div>
                                                 </div>
-                                                {!isEditing && (
+                                                {isEditingRecords ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                haptics.selection();
+                                                                setIsEditingRecords(false);
+                                                                // Reset to current holding values
+                                                                setEditInstitutionName(currentHolding.institution_name || '');
+                                                                setEditAccountNumber(currentHolding.account_number_or_folio || '');
+                                                                setEditNomineeName(currentHolding.nominee_name || '');
+                                                                setEditRemarks(currentHolding.remarks || '');
+                                                            }}
+                                                            disabled={savingRecords}
+                                                            className="text-xs px-2.5 py-1 rounded-lg border border-border-subtle bg-surface-subtle text-text-muted hover:text-primary transition-all active:scale-95"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                        <button
+                                                            onClick={handleSaveRecords}
+                                                            disabled={savingRecords}
+                                                            className={`text-xs px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-sm ${
+                                                                recordsSavedSuccess
+                                                                    ? 'bg-emerald-500 text-white'
+                                                                    : 'bg-emerald-500 hover:bg-emerald-400 text-black'
+                                                            }`}
+                                                        >
+                                                            {savingRecords ? (
+                                                                <Loader2 size={12} className="animate-spin" />
+                                                            ) : recordsSavedSuccess ? (
+                                                                <Check size={12} />
+                                                            ) : (
+                                                                <Save size={12} />
+                                                            )}
+                                                            <span>{recordsSavedSuccess ? 'Saved' : savingRecords ? 'Saving...' : 'Save Records'}</span>
+                                                        </button>
+                                                    </div>
+                                                ) : (
                                                     <button
                                                         onClick={() => {
                                                             haptics.selection();
-                                                            setIsEditing(true);
+                                                            setIsEditingRecords(true);
                                                         }}
-                                                        className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 active:scale-95 transition-all"
+                                                        className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 active:scale-95 transition-all bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20"
                                                     >
-                                                        <Pencil size={11} /> Edit Info
+                                                        <Pencil size={11} /> Edit Records
                                                     </button>
                                                 )}
                                             </div>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                                <div className="bg-surface/60 rounded-xl p-3 border border-border-subtle/50">
-                                                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Institution / Bank</span>
-                                                    <span className="text-xs font-bold text-primary mt-1 block truncate">
-                                                        {currentHolding.institution_name || <span className="text-text-muted/60 font-normal italic">Not specified</span>}
-                                                    </span>
+                                            {isEditingRecords ? (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+                                                            Institution / Bank
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={editInstitutionName}
+                                                            onChange={(e) => setEditInstitutionName(e.target.value)}
+                                                            placeholder="e.g. Axis Bank / Groww / SBI"
+                                                            className="w-full px-3 py-2 rounded-xl bg-surface/90 border border-border-subtle text-xs font-semibold text-primary focus:outline-none focus:border-emerald-500 transition-colors"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+                                                            Folio / Account / Ref #
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={editAccountNumber}
+                                                            onChange={(e) => setEditAccountNumber(e.target.value)}
+                                                            placeholder="e.g. 9210100... / Folio No."
+                                                            className="w-full px-3 py-2 rounded-xl bg-surface/90 border border-border-subtle text-xs font-semibold text-primary focus:outline-none focus:border-emerald-500 transition-colors"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+                                                            Registered Nominee
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={editNomineeName}
+                                                            onChange={(e) => setEditNomineeName(e.target.value)}
+                                                            placeholder="e.g. Tarun Kumar Dey"
+                                                            className="w-full px-3 py-2 rounded-xl bg-surface/90 border border-border-subtle text-xs font-semibold text-primary focus:outline-none focus:border-emerald-500 transition-colors"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+                                                            Remarks & Location
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={editRemarks}
+                                                            onChange={(e) => setEditRemarks(e.target.value)}
+                                                            placeholder="e.g. Branch, locker, or notes"
+                                                            className="w-full px-3 py-2 rounded-xl bg-surface/90 border border-border-subtle text-xs font-semibold text-primary focus:outline-none focus:border-emerald-500 transition-colors"
+                                                        />
+                                                    </div>
                                                 </div>
-                                                <div className="bg-surface/60 rounded-xl p-3 border border-border-subtle/50">
-                                                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Folio / Account / Ref #</span>
-                                                    <span className="text-xs font-bold text-primary mt-1 block truncate">
-                                                        {currentHolding.account_number_or_folio || <span className="text-text-muted/60 font-normal italic">Not specified</span>}
-                                                    </span>
+                                            ) : (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                                    <div className="bg-surface/60 rounded-xl p-3 border border-border-subtle/50">
+                                                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Institution / Bank</span>
+                                                        <span className="text-xs font-bold text-primary mt-1 block truncate">
+                                                            {currentHolding.institution_name || <span className="text-text-muted/60 font-normal italic">Not specified</span>}
+                                                        </span>
+                                                    </div>
+                                                    <div className="bg-surface/60 rounded-xl p-3 border border-border-subtle/50">
+                                                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Folio / Account / Ref #</span>
+                                                        <span className="text-xs font-bold text-primary mt-1 block truncate">
+                                                            {currentHolding.account_number_or_folio || <span className="text-text-muted/60 font-normal italic">Not specified</span>}
+                                                        </span>
+                                                    </div>
+                                                    <div className="bg-surface/60 rounded-xl p-3 border border-border-subtle/50">
+                                                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Registered Nominee</span>
+                                                        <span className="text-xs font-bold text-primary mt-1 block truncate">
+                                                            {currentHolding.nominee_name || <span className="text-text-muted/60 font-normal italic">Not specified</span>}
+                                                        </span>
+                                                    </div>
+                                                    <div className="bg-surface/60 rounded-xl p-3 border border-border-subtle/50">
+                                                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Remarks & Location</span>
+                                                        <span className="text-xs font-bold text-primary mt-1 block truncate" title={currentHolding.remarks}>
+                                                            {currentHolding.remarks || <span className="text-text-muted/60 font-normal italic">No notes added</span>}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <div className="bg-surface/60 rounded-xl p-3 border border-border-subtle/50">
-                                                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Registered Nominee</span>
-                                                    <span className="text-xs font-bold text-primary mt-1 block truncate">
-                                                        {currentHolding.nominee_name || <span className="text-text-muted/60 font-normal italic">Not specified</span>}
-                                                    </span>
-                                                </div>
-                                                <div className="bg-surface/60 rounded-xl p-3 border border-border-subtle/50">
-                                                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Remarks & Location</span>
-                                                    <span className="text-xs font-bold text-primary mt-1 block truncate" title={currentHolding.remarks}>
-                                                        {currentHolding.remarks || <span className="text-text-muted/60 font-normal italic">No notes added</span>}
-                                                    </span>
-                                                </div>
-                                            </div>
+                                            )}
                                         </div>
                                     </>
                                 ) : (

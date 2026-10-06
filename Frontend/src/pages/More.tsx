@@ -44,7 +44,6 @@ const FEATURE_CARDS = [
     { id: 'categories', label: 'Categories', icon: LayoutGrid, action: 'OPEN_CATEGORIES', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'backup', label: 'Backup CSV', icon: Download, action: 'BACKUP_DATA', color: 'text-primary', bgColor: 'bg-surface-subtle' },
-    { id: 'statement', label: 'Portfolio Statement', icon: FileSpreadsheet, action: 'EXPORT_STATEMENT', color: 'text-emerald-400', bgColor: 'bg-surface-subtle' },
     { id: 'vault', label: 'Vault', icon: Target, path: '/credit-cards', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'settle-up', label: 'Settle Up', icon: ArrowUpRight, path: '/settle-up', color: 'text-primary', bgColor: 'bg-surface-subtle' },
 ];
