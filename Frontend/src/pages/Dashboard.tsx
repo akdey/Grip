@@ -89,14 +89,14 @@ const Dashboard: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen text-white p-6 pb-24 overflow-x-hidden relative">
+        <div className="min-h-screen text-primary p-4 sm:p-6 pb-24 overflow-x-hidden relative">
             {/* Header */}
             <header className="flex items-center justify-between mb-8 relative z-50">
                 <div className="flex flex-col">
-                    <h1 className="text-4xl font-black tracking-tighter text-white pb-1 heading-apple">
+                    <h1 className="text-4xl font-black tracking-tighter text-primary pb-1 heading-apple">
                         {import.meta.env.VITE_APP_NAME || 'GRIP'}
                     </h1>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px] mt-0.5">
+                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">
                         {import.meta.env.VITE_APP_TAGLINE}
                     </p>
 
@@ -104,7 +104,7 @@ const Dashboard: React.FC = () => {
                     <div className="relative mt-6">
                         <button
                             onClick={() => setShowScopeMenu(!showScopeMenu)}
-                            className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors min-w-[100px]"
+                            className="flex items-center gap-1.5 text-[10px] font-bold text-text-muted uppercase tracking-widest hover:text-primary transition-colors min-w-[100px]"
                             aria-label="Change dashboard scope"
                             aria-expanded={showScopeMenu}
                         >
@@ -141,9 +141,9 @@ const Dashboard: React.FC = () => {
 
                     <button
                         onClick={togglePrivacy}
-                        className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all shadow-2xl ${showSensitive
+                        className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all shadow-md ${showSensitive
                             ? 'bg-accent-subtle border-accent-border text-accent-text'
-                            : 'bg-white/[0.03] border-white/[0.08] text-gray-400'
+                            : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary'
                             }`}
                         aria-label={showSensitive ? "Hide sensitive data" : "Show sensitive data"}
                     >
@@ -151,7 +151,7 @@ const Dashboard: React.FC = () => {
                     </button>
                     <button
                         onClick={() => navigate('/transactions?view=custom')}
-                        className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-gray-400 active:scale-90 transition-all shadow-2xl"
+                        className="w-12 h-12 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-md"
                         aria-label="Search transactions"
                     >
                         <Search size={22} />
