@@ -310,6 +310,19 @@ html[data-theme="light"] {
   --color-status-info-solid-hover:    #2563EB;
   --color-status-info-text:           #1D4ED8;
 
+  /* Brand Accent Tokens for Light Theme — darkened for WCAG AAA readability */
+  --brand-accent:             #0891b2;
+  --brand-accent-hover:       #0e7490;
+  --brand-accent-subtle:      rgba(8, 145, 178, 0.10);
+  --brand-accent-border:      rgba(8, 145, 178, 0.25);
+  --brand-accent-text:        #0e7490;
+  --color-accent:             var(--brand-accent);
+  --color-accent-hover:       var(--brand-accent-hover);
+  --color-accent-subtle:      var(--brand-accent-subtle);
+  --color-accent-border:      var(--brand-accent-border);
+  --color-accent-text:        var(--brand-accent-text);
+  --color-metric-frozen-text: var(--brand-accent-text);
+
   /* Metric tokens */
   --color-metric-obligations-bg:     rgba(185, 28, 28, 0.08);
   --color-metric-obligations-border: rgba(185, 28, 28, 0.2);
