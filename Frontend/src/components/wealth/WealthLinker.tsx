@@ -180,26 +180,26 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                     className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[90vh] bg-page border-t border-border-subtle rounded-t-[3rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto"
                 >
                     {/* Header */}
-                    <div className="p-6 sm:p-10 border-b border-border-subtle flex justify-between items-center bg-surface-subtle shrink-0">
+                    <div className="p-4 sm:p-8 border-b border-border-subtle flex justify-between items-center bg-surface-subtle shrink-0">
                         <div>
-                            <h3 className="text-2xl font-black text-primary tracking-tighter uppercase italic flex items-center gap-3">
-                                <LinkIcon className="text-primary" size={28} />
+                            <h3 className="text-xl sm:text-2xl font-black text-primary tracking-tighter uppercase italic flex items-center gap-2.5 sm:gap-3">
+                                <LinkIcon className="text-primary" size={24} />
                                 Asset Linker
                             </h3>
-                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-[4px] mt-1">Transaction-to-Asset Mapping Engine</p>
+                            <p className="text-[9px] sm:text-[10px] text-text-muted font-bold uppercase tracking-[3px] sm:tracking-[4px] mt-0.5 sm:mt-1">Transaction-to-Asset Mapping Engine</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={onClose}
-                                className="w-14 h-14 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-xl group"
+                                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-md group"
                             >
-                                <ChevronDown size={28} className="group-hover:translate-y-0.5 transition-transform" />
+                                <ChevronDown size={22} className="group-hover:translate-y-0.5 transition-transform" />
                             </button>
                         </div>
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 overflow-hidden p-6 sm:p-10 flex flex-col">
+                    <div className="flex-1 overflow-hidden p-4 sm:p-8 flex flex-col">
 
                         {step === 'SELECT_TXN' ? (
                             <>
@@ -255,10 +255,10 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                             return (
                                                 <div
                                                     key={group.key}
-                                                    className="p-4 rounded-xl border border-border-subtle bg-surface-subtle hover:bg-surface-hover transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-3"
+                                                    className="p-3.5 sm:p-4 rounded-2xl border border-border-subtle bg-surface-subtle hover:bg-surface-hover transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
                                                 >
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
+                                                    <div className="min-w-0 flex-1 w-full sm:w-auto">
+                                                        <div className="flex flex-wrap items-center gap-2">
                                                             <span className="font-bold text-primary font-mono text-base">₹{group.amount.toLocaleString('en-IN')}</span>
                                                             {group.dayOfMonth && (
                                                                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent font-semibold">
@@ -266,28 +266,33 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                                                 </span>
                                                             )}
                                                             <span className="text-xs text-text-muted">
-                                                                • {group.count} debits (₹{group.totalAmount.toLocaleString('en-IN')})
+                                                                • {group.count} debit{group.count === 1 ? '' : 's'} (₹{group.totalAmount.toLocaleString('en-IN')})
                                                             </span>
                                                         </div>
-                                                        <p className="text-xs text-text-muted mt-1">{group.merchant}</p>
+                                                        <p className="text-xs text-text-muted mt-1 truncate">{group.merchant}</p>
                                                     </div>
 
-                                                    <div className="flex items-center gap-2 w-full md:w-auto">
-                                                        <select
-                                                            value={selectedId}
-                                                            onChange={(e) => setBatchHoldingSelections(prev => ({ ...prev, [group.key]: e.target.value }))}
-                                                            className="bg-surface border border-border-subtle text-xs text-primary rounded-lg px-2.5 py-1.5 flex-1 md:w-56 focus:outline-none"
-                                                        >
-                                                            <option value="">Select Asset...</option>
-                                                            {holdings.map(h => (
-                                                                <option key={h.id} value={h.id}>{h.name} ({h.asset_type})</option>
-                                                            ))}
-                                                        </select>
+                                                    <div className="flex items-center gap-2 w-full sm:w-auto min-w-0 shrink-0">
+                                                        <div className="relative flex-1 sm:w-56 min-w-0">
+                                                            <select
+                                                                value={selectedId}
+                                                                onChange={(e) => setBatchHoldingSelections(prev => ({ ...prev, [group.key]: e.target.value }))}
+                                                                className="w-full bg-surface border border-border-subtle text-xs text-primary rounded-xl px-2.5 py-2 pr-7 focus:outline-none focus:border-border-default truncate appearance-none cursor-pointer"
+                                                            >
+                                                                <option value="">Select Asset...</option>
+                                                                {holdings.map(h => (
+                                                                    <option key={h.id} value={h.id} className="bg-surface text-primary">
+                                                                        {h.name} ({h.asset_type})
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                                                        </div>
 
                                                         <button
                                                             onClick={() => handleBatchLink(group, selectedId)}
                                                             disabled={!selectedId || loading}
-                                                            className="px-3 py-1.5 rounded-lg bg-primary text-page font-semibold text-xs hover:opacity-90 transition-all disabled:opacity-40 whitespace-nowrap active:scale-95"
+                                                            className="px-3.5 py-2 rounded-xl bg-primary text-text-inverse font-bold text-xs hover:opacity-90 transition-all disabled:opacity-40 whitespace-nowrap active:scale-95 shrink-0 flex items-center justify-center shadow-sm"
                                                         >
                                                             Link All {group.count}
                                                         </button>
@@ -301,48 +306,50 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                         {transactions.map(txn => (
                                             <div
                                                 key={txn.id}
-                                                className="p-3.5 rounded-xl border border-border-subtle bg-surface-subtle hover:bg-surface-hover transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 group"
+                                                className="p-3.5 rounded-2xl border border-border-subtle bg-surface-subtle hover:bg-surface-hover transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 group"
                                             >
                                                 <div 
                                                     onClick={() => { setSelectedTxn(txn); setStep('SELECT_HOLDING'); }}
-                                                    className="cursor-pointer flex-1"
+                                                    className="cursor-pointer flex-1 min-w-0"
                                                 >
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-semibold text-primary text-sm">{txn.merchant_name || "Investment"}</p>
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <p className="font-semibold text-primary text-sm truncate">{txn.merchant_name || "Investment"}</p>
                                                         {txn.sub_category && (
                                                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface border border-border-subtle text-text-muted">
                                                                 {txn.sub_category}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <div className="flex items-center gap-2 mt-1">
+                                                    <div className="flex flex-wrap items-center gap-2 mt-1">
                                                         <p className="text-xs text-text-muted">{txn.transaction_date ? new Date(txn.transaction_date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : ""}</p>
                                                         {txn.remarks && (
-                                                            <span className="text-xs text-text-secondary italic">
+                                                            <span className="text-xs text-text-secondary italic truncate max-w-[200px]">
                                                                 • "{txn.remarks}"
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-3 self-end sm:self-center">
+                                                <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end shrink-0 pt-1 sm:pt-0 border-t border-border-subtle/40 sm:border-t-0">
                                                     <p className="text-primary font-mono font-bold text-sm">₹{Math.abs(txn.amount).toLocaleString('en-IN')}</p>
                                                     
-                                                    {txn.suggested_holding_id && (
-                                                        <button
-                                                            onClick={() => handleLink(txn.suggested_holding_id, txn.id)}
-                                                            className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-all flex items-center gap-1 active:scale-95"
-                                                        >
-                                                            <Check size={12} /> Map: {txn.suggested_holding_name}
-                                                        </button>
-                                                    )}
+                                                    <div className="flex items-center gap-2">
+                                                        {txn.suggested_holding_id && (
+                                                            <button
+                                                                onClick={() => handleLink(txn.suggested_holding_id, txn.id)}
+                                                                className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap"
+                                                            >
+                                                                <Check size={12} /> Map: {txn.suggested_holding_name}
+                                                            </button>
+                                                        )}
 
-                                                    <button
-                                                        onClick={() => { setSelectedTxn(txn); setStep('SELECT_HOLDING'); }}
-                                                        className="px-2.5 py-1.5 rounded-lg bg-surface hover:bg-surface-hover border border-border-subtle text-xs text-text-muted hover:text-primary transition-colors"
-                                                    >
-                                                        Choose Asset →
-                                                    </button>
+                                                        <button
+                                                            onClick={() => { setSelectedTxn(txn); setStep('SELECT_HOLDING'); }}
+                                                            className="px-2.5 py-1.5 rounded-lg bg-surface hover:bg-surface-hover border border-border-subtle text-xs text-text-muted hover:text-primary transition-colors whitespace-nowrap"
+                                                        >
+                                                            Choose Asset →
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
