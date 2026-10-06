@@ -612,17 +612,19 @@ class WealthService:
 
             else:
                 # --- RETIREMENT / SAVINGS (PF, APY, PLI, GRATUITY, OTHER) ---
-                total_invested = sum(float(s.amount_invested_delta or 0.0) for s in snapshots)
+                total_invested = 0.0
                 running_val = 0.0
                 for snap in snapshots:
                     delta = float(snap.amount_invested_delta or 0.0)
+                    total_invested += delta
                     running_val += delta
                     snap.price_per_unit = 1.0
-                    snap.units_held = max(snap.total_value or 0.0, running_val)
-                    snap.total_value = snap.units_held
+                    snap.units_held = running_val
+                    snap.total_value = running_val
 
-                holding.total_invested = max(total_invested, holding.total_invested or 0.0)
-                holding.current_value = max(snapshots[-1].total_value, holding.total_invested)
+                holding.total_invested = total_invested
+                holding.current_value = running_val
+                holding.xirr = holding.interest_rate
                 holding.last_updated_at = datetime.now()
 
         else:
