@@ -585,7 +585,11 @@ class WealthService:
                     snap.total_value = current_val
 
                 holding.total_invested = total_invested
-                holding.current_value = snapshots[-1].total_value
+                if holding.current_value and holding.current_value >= total_invested:
+                    snapshots[-1].total_value = holding.current_value
+                    snapshots[-1].units_held = holding.current_value
+                else:
+                    holding.current_value = snapshots[-1].total_value
                 holding.xirr = holding.interest_rate
                 holding.last_updated_at = datetime.now()
 
@@ -606,7 +610,11 @@ class WealthService:
                     snap.total_value = current_val
 
                 holding.total_invested = principal
-                holding.current_value = snapshots[-1].total_value
+                if holding.current_value and holding.current_value >= principal:
+                    snapshots[-1].total_value = holding.current_value
+                    snapshots[-1].units_held = holding.current_value
+                else:
+                    holding.current_value = snapshots[-1].total_value
                 holding.xirr = holding.interest_rate
                 holding.last_updated_at = datetime.now()
 
