@@ -14,8 +14,12 @@ import {
     ArrowUpDown,
     Layers,
     Calendar,
-    X
+    X,
+    Eye,
+    EyeOff
 } from 'lucide-react';
+import { usePrivacyStore } from '../lib/store';
+const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
 import {
     format,
     startOfMonth,
@@ -62,6 +66,8 @@ const Transactions: React.FC = () => {
     });
     const [isFilterOpen, setFilterOpen] = useState(false);
     const [isSortOpen, setIsSortOpen] = useState(false);
+    const { showSensitive, setShowSensitive } = usePrivacyStore();
+    const [showAuthModal, setShowAuthModal] = useState(false);
 
     useEffect(() => {
         const d = searchParams.get('date');
@@ -108,6 +114,22 @@ const Transactions: React.FC = () => {
             currency: 'INR',
             maximumFractionDigits: 0
         }).format(amount);
+
+    const formatCalendarAmount = (amount: number) => {
+        const abs = Math.abs(amount);
+        if (abs >= 100000) {
+            const l = abs / 100000;
+            return `₹${l >= 10 ? Math.round(l) : l.toFixed(1)}L`;
+        }
+        if (abs >= 10000) {
+            return `₹${Math.round(abs / 1000)}k`;
+        }
+        if (abs >= 1000) {
+            const k = abs / 1000;
+            return `₹${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
+        }
+        return `₹${Math.round(abs)}`;
+    };
 
     // Derive filters for the API Hook from URL Params directly
     const queryFilters = useMemo(() => {
@@ -404,7 +426,7 @@ const Transactions: React.FC = () => {
                     </div>
                     <div className="space-y-3">
                         {pendingTransactions.map(txn => (
-                            <TransactionItem key={txn.id} txn={{ ...txn, status: 'PENDING' }} formatCurrency={formatCurrency} />
+                            <TransactionItem key={txn.id} txn={{ ...txn, status: 'PENDING' }} formatCurrency={formatCurrency} showSensitive={showSensitive} />
                         ))}
                     </div>
                     <div className="h-px w-full bg-border-subtle mx-2" />
@@ -445,17 +467,37 @@ const Transactions: React.FC = () => {
                             <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-surface-hover text-text-muted hover:text-primary transition-colors">
                                 <ChevronLeft size={20} />
                             </button>
-                            <span className="font-bold text-sm uppercase tracking-widest text-primary">{format(currentMonth, 'MMMM yyyy')}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm uppercase tracking-widest text-primary">{format(currentMonth, 'MMMM yyyy')}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (showSensitive) {
+                                            setShowSensitive(false);
+                                        } else {
+                                            setShowAuthModal(true);
+                                        }
+                                    }}
+                                    className={`p-1.5 rounded-xl border flex items-center justify-center transition-all ${
+                                        showSensitive
+                                            ? 'bg-accent-subtle border-accent-border text-accent-text'
+                                            : 'bg-surface-card border-border-subtle text-text-muted hover:text-primary'
+                                    }`}
+                                    title={showSensitive ? "Hide sensitive data" : "Show sensitive data"}
+                                >
+                                    {showSensitive ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                            </div>
                             <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-3 rounded-2xl hover:bg-surface-hover text-text-muted hover:text-primary transition-colors">
                                 <ChevronRight size={20} />
                             </button>
                         </div>
 
                         {/* Liquid Calendar Grid */}
-                        <div className="glass-card rounded-[2.5rem] p-4">
-                            <div className="grid grid-cols-7 mb-4">
+                        <div className="glass-card rounded-[2.5rem] p-3.5 sm:p-4">
+                            <div className="grid grid-cols-7 mb-3">
                                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-                                    <div key={d} className="text-center text-[9px] font-black text-text-muted uppercase py-2">{d}</div>
+                                    <div key={d} className="text-center text-[9px] font-black text-text-muted uppercase py-1.5">{d}</div>
                                 ))}
                             </div>
                             <div className="grid grid-cols-7 gap-1.5">
@@ -475,18 +517,18 @@ const Transactions: React.FC = () => {
                                                 setSearchParams(newParams);
                                             }}
                                             className={`
-                                                aspect-[3/4.5] p-1 border border-border-subtle flex flex-col items-center justify-between py-2 rounded-2xl transition-all
+                                                aspect-[3/4.2] min-h-[50px] p-1 border border-border-subtle flex flex-col items-center justify-between py-1.5 rounded-2xl transition-all
                                                 ${!isCurrentMonth ? 'opacity-20 cursor-default' : 'cursor-pointer hover:border-accent-border hover:bg-surface-hover active:scale-95'}
                                                 ${isToday(day) ? 'bg-accent-subtle border-accent-border text-accent-text font-black ring-1 ring-accent-border shadow-sm' : 'bg-surface-subtle'}
                                             `}
                                             title={isCurrentMonth ? `${format(day, 'EEE, dd MMM yyyy')}: ${dailyTotal !== 0 ? (dailyTotal > 0 ? `+₹${dailyTotal}` : `-₹${Math.abs(dailyTotal)}`) : 'No transactions'}` : undefined}
                                         >
-                                            <span className={`text-[10px] font-black ${isCurrentMonth ? (isToday(day) ? 'text-accent-text' : 'text-primary') : 'text-text-disabled'}`}>
+                                            <span className={`text-[10px] font-black leading-none ${isCurrentMonth ? (isToday(day) ? 'text-accent-text' : 'text-primary') : 'text-text-disabled'}`}>
                                                 {format(day, 'd')}
                                             </span>
                                             {dailyTotal !== 0 ? (
-                                                <div className={`w-full ${dailyTotal > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'} px-0 py-1.5 rounded-lg text-[8px] font-black leading-tight border text-center font-mono`}>
-                                                    ₹{Math.abs(dailyTotal) >= 1000 ? `${(Math.abs(dailyTotal) / 1000).toFixed(1)}k` : Math.abs(dailyTotal).toFixed(0)}
+                                                <div className={`w-full max-w-full min-w-0 ${dailyTotal > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'} px-0.5 py-1 rounded-lg text-[7.5px] font-bold leading-tight border text-center truncate tracking-tight`}>
+                                                    {showSensitive ? formatCalendarAmount(dailyTotal) : '***'}
                                                 </div>
                                             ) : (
                                                 <div className="w-1 h-1 rounded-full bg-border-subtle/50 mb-1" />
@@ -523,14 +565,14 @@ const Transactions: React.FC = () => {
                                         </div>
                                         {groupBy === 'category' && group.total !== undefined && (
                                             <span className={`text-xs font-black tracking-tight ${group.total >= 0 ? 'text-emerald-500' : 'text-primary'}`}>
-                                                {formatCurrency(group.total)}
+                                                {showSensitive ? formatCurrency(group.total) : '••••'}
                                             </span>
                                         )}
                                     </div>
                                     {groupBy !== 'category' && <div className="h-px w-full bg-border-subtle" />}
                                     <div className="space-y-3">
                                         {group.items.map(txn => (
-                                            <TransactionItem key={txn.id} txn={txn} formatCurrency={formatCurrency} />
+                                            <TransactionItem key={txn.id} txn={txn} formatCurrency={formatCurrency} showSensitive={showSensitive} />
                                         ))}
                                     </div>
                                 </div>
@@ -571,14 +613,14 @@ const Transactions: React.FC = () => {
                                         </div>
                                         {groupBy === 'category' && group.total !== undefined && (
                                             <span className={`text-xs font-black tracking-tight ${group.total >= 0 ? 'text-emerald-500' : 'text-primary'}`}>
-                                                {formatCurrency(group.total)}
+                                                {showSensitive ? formatCurrency(group.total) : '••••'}
                                             </span>
                                         )}
                                     </div>
                                     {groupBy !== 'category' && <div className="h-px w-full bg-border-subtle" />}
                                     <div className="space-y-3">
                                         {group.items.map((txn) => (
-                                            <TransactionItem key={txn.id} txn={txn} formatCurrency={formatCurrency} />
+                                            <TransactionItem key={txn.id} txn={txn} formatCurrency={formatCurrency} showSensitive={showSensitive} />
                                         ))}
                                     </div>
                                 </div>
@@ -898,11 +940,22 @@ const Transactions: React.FC = () => {
                     </div>
                 </div>
             </Drawer>
+
+            <React.Suspense fallback={null}>
+                <PasswordVerifyModal
+                    isOpen={showAuthModal}
+                    onClose={() => setShowAuthModal(false)}
+                    onSuccess={() => {
+                        setShowAuthModal(false);
+                        setShowSensitive(true);
+                    }}
+                />
+            </React.Suspense>
         </div>
     );
 };
 
-const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: any }) => {
+const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: any, formatCurrency: any, showSensitive?: boolean }) => {
     const navigate = useNavigate();
     const deleteMutation = useDeleteTransaction();
     const verifyMutation = useVerifyTransaction();
@@ -1007,7 +1060,7 @@ const TransactionItem = ({ txn, formatCurrency }: { txn: any, formatCurrency: an
 
             <div className="text-right shrink-0">
                 <p className="font-black text-primary text-base leading-none tracking-tighter">
-                    {formatCurrency(txn.amount)}
+                    {showSensitive ? formatCurrency(txn.amount) : '••••'}
                 </p>
                 <div className="flex items-center justify-end gap-1 mt-1.5">
                     {txn.status === 'PENDING' ? (

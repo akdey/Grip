@@ -31,10 +31,11 @@ import { CardExposureDrawer } from '../features/dashboard/components/CardExposur
 
 import { Logo } from '../components/ui/Logo';
 import { haptics } from '../lib/haptics';
+import { usePrivacyStore } from '../lib/store';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
-    const [showSensitive, setShowSensitive] = useState(false);
+    const { showSensitive, setShowSensitive } = usePrivacyStore();
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showForecastDetails, setShowForecastDetails] = useState(false);
     const [showObligations, setShowObligations] = useState(false);

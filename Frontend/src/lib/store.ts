@@ -29,3 +29,16 @@ export const useAuthStore = create<AuthState>()(
         }
     )
 );
+
+interface PrivacyState {
+    showSensitive: boolean;
+    setShowSensitive: (show: boolean) => void;
+    toggleSensitive: () => void;
+}
+
+export const usePrivacyStore = create<PrivacyState>()((set) => ({
+    showSensitive: false,
+    setShowSensitive: (show: boolean) => set({ showSensitive: show }),
+    toggleSensitive: () => set((state) => ({ showSensitive: !state.showSensitive })),
+}));
+

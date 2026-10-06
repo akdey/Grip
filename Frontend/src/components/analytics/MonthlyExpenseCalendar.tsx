@@ -106,9 +106,18 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
 
     const formatBadge = (amount: number) => {
         const abs = Math.abs(amount);
-        if (abs >= 100000) return `₹${(abs / 100000).toFixed(1)}L`;
-        if (abs >= 1000) return `₹${(abs / 1000).toFixed(1)}k`;
-        return `₹${abs.toFixed(0)}`;
+        if (abs >= 100000) {
+            const l = abs / 100000;
+            return `₹${l >= 10 ? Math.round(l) : l.toFixed(1)}L`;
+        }
+        if (abs >= 10000) {
+            return `₹${Math.round(abs / 1000)}k`;
+        }
+        if (abs >= 1000) {
+            const k = abs / 1000;
+            return `₹${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
+        }
+        return `₹${Math.round(abs)}`;
     };
 
     const handleDayClick = (day: Date) => {
@@ -144,7 +153,7 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
                 </div>
             </div>
 
-            <div className="glass-card rounded-[2.5rem] p-5 sm:p-6 border border-border-subtle relative overflow-hidden">
+            <div className="glass-card rounded-[2.5rem] p-3.5 sm:p-6 border border-border-subtle relative overflow-hidden">
                 {/* 7-column Weekday Headers */}
                 <div className="grid grid-cols-7 mb-3">
                     {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((dayName, idx) => (
@@ -174,7 +183,7 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
                                 disabled={!isCurrentMonth || isLoading}
                                 onClick={() => isCurrentMonth && handleDayClick(day)}
                                 className={`
-                                    aspect-[3/4.2] sm:aspect-[3/3.8] p-1 border rounded-2xl flex flex-col items-center justify-between py-2 transition-all text-center
+                                    aspect-[3/4.2] sm:aspect-[3/3.8] min-h-[50px] p-1 border rounded-2xl flex flex-col items-center justify-between py-1.5 transition-all text-center
                                     ${!isCurrentMonth
                                         ? 'opacity-20 border-border-subtle/40 bg-surface-subtle/30 cursor-default'
                                         : 'border-border-subtle cursor-pointer hover:border-accent-border hover:bg-surface-hover active:scale-95'
@@ -200,7 +209,7 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
 
                                 {hasActivity ? (
                                     <div
-                                        className={`w-full px-0.5 py-1 rounded-lg text-[8px] font-black leading-tight border text-center font-mono tracking-tight truncate ${
+                                        className={`w-full max-w-full min-w-0 px-0.5 py-1 rounded-lg text-[7.5px] font-bold leading-tight border text-center truncate tracking-tight ${
                                             isNetIncome
                                                 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                                                 : isNetExpense
@@ -209,9 +218,7 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
                                         }`}
                                     >
                                         {showSensitive
-                                            ? (isNetIncome
-                                                ? `+${formatBadge(daySummary.total)}`
-                                                : `-${formatBadge(daySummary.expense || Math.abs(daySummary.total))}`)
+                                            ? formatBadge(isNetIncome ? daySummary.total : (daySummary.expense || Math.abs(daySummary.total)))
                                             : '***'
                                         }
                                     </div>

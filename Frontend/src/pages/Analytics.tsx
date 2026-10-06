@@ -25,11 +25,12 @@ const DEFAULT_CHART_PALETTE = [
 ];
 
 import { Logo } from '../components/ui/Logo';
+import { usePrivacyStore } from '../lib/store';
 
 const Analytics: React.FC = () => {
     const navigate = useNavigate();
     const [referenceDate, setReferenceDate] = useState(new Date());
-    const [showSensitive, setShowSensitive] = useState(false);
+    const { showSensitive, setShowSensitive } = usePrivacyStore();
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [trendFreq, setTrendFreq] = useState<'weekly' | 'monthly'>('monthly');
 
