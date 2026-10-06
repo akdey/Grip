@@ -4,6 +4,7 @@ import logging
 from typing import List, Optional, Tuple
 from datetime import date, datetime, timedelta
 import math
+import re
 import httpx
 import pandas as pd
 import numpy as np
@@ -411,10 +412,17 @@ class WealthService:
         search_text = f"{transaction.merchant_name} {transaction.remarks or ''}".lower()
         
         for rule in rules:
-            if rule.match_type == "CONTAINS" and rule.pattern.lower() in search_text:
-                matched_rule = rule
-                break
-            elif rule.match_type == "EXACT" and rule.pattern.lower() == search_text:
+            pat = rule.pattern.strip().lower()
+            if rule.match_type == "CONTAINS":
+                if len(pat) <= 3:
+                    # Enforce whole-word boundary for short acronyms like 'RD', 'FD', 'MF' to avoid false positives on 'order', 'card', etc.
+                    if re.search(rf"\b{re.escape(pat)}\b", search_text):
+                        matched_rule = rule
+                        break
+                elif pat in search_text:
+                    matched_rule = rule
+                    break
+            elif rule.match_type == "EXACT" and pat == search_text.strip():
                 matched_rule = rule
                 break
                 
@@ -428,11 +436,8 @@ class WealthService:
 
     async def add_transaction_to_holding(self, transaction: Transaction, holding_id: uuid.UUID):
         """
-        Calculates units and updates snapshot.
-        Transaction Amount < 0 => BUY (usually).
-        Transaction Amount > 0 => SELL.
-        Wait, standard logic: Debit (negative) -> Money leaves account -> Enters Investment -> Buy.
-        Credit (positive) -> Money enters account -> Leaves Investment -> Sell.
+        Calculates units / deposit impact and updates snapshot.
+        Debit (negative amount) -> Money enters Investment -> Invested delta > 0.
         """
         holding = await self.db.get(InvestmentHolding, holding_id)
         if not holding:
@@ -440,35 +445,54 @@ class WealthService:
 
         amount = transaction.amount
         txn_date = transaction.transaction_date or date.today()
-        
-        # Calculate Amount Invested Delta
-        # If Amount = -1000 (Debit), we invested 1000. Delta = +1000.
-        # If Amount = +1000 (Credit), we sold 1000. Delta = -1000? 
-        # Actually XIRR expects: Dates, Cashflow.
-        # Buy: -1000 cashflow for user. 
-        # But here 'amount_invested_delta' tracks what went INTO the asset.
         invested_delta = float(-amount)
-        
-        # Get Price
+        if invested_delta <= 0:
+            return
+
+        is_fixed_income = holding.asset_type in [
+            AssetType.FD, AssetType.RD, AssetType.PF,
+            AssetType.GRATUITY, AssetType.PLI, AssetType.APY, AssetType.OTHER
+        ]
+
+        if is_fixed_income:
+            # Fixed Income: Not unit-based. Price is 1.0, value accumulates with interest.
+            stmt = select(InvestmentSnapshot).where(
+                and_(
+                    InvestmentSnapshot.holding_id == holding_id,
+                    InvestmentSnapshot.captured_at == txn_date
+                )
+            )
+            existing = (await self.db.execute(stmt)).scalar_one_or_none()
+            if existing:
+                existing.amount_invested_delta += invested_delta
+                existing.price_per_unit = 1.0
+            else:
+                snap = InvestmentSnapshot(
+                    holding_id=holding_id,
+                    user_id=transaction.user_id,
+                    captured_at=txn_date,
+                    units_held=invested_delta,
+                    price_per_unit=1.0,
+                    total_value=invested_delta,
+                    amount_invested_delta=invested_delta
+                )
+                self.db.add(snap)
+
+            await self.recalculate_holding_history(holding_id)
+            await self.db.commit()
+            return
+
+        # Market-Linked Assets: Fetch NAV and calculate units
         try:
             price = await self.get_asset_price(holding, txn_date)
         except Exception as e:
             logger.error(f"Failed to fetch price for {holding.name}: {e}")
-            price = 1.0 # Fallback? Or fail?
+            price = 1.0
             
         units = 0.0
         if price > 0:
             units = invested_delta / price
             
-        # Create Snapshot for this specific transaction action
-        # Note: We might already have a snapshot for this day? 
-        # If so, update it? Or just insert new one?
-        # Prophet works better with daily aggregates. 
-        # But we also want to track the explicit "Buy" action.
-        # Let's see models: "captured_at" is Date. Unique index? 
-        # "Index heavily on (user_id, captured_at)" was requested.
-        # We should merge with existing snapshot if exists for that day.
-        
         stmt = select(InvestmentSnapshot).where(
             and_(
                 InvestmentSnapshot.holding_id == holding_id,
@@ -480,16 +504,9 @@ class WealthService:
         if existing:
             existing.units_held += units
             existing.amount_invested_delta += invested_delta
-            # Update total value based on new units * price (which we just fetched)
             existing.price_per_unit = price
             existing.total_value = existing.units_held * price
         else:
-            # We need to know previous units to add to?
-            # Or is this snapshot just the delta? 
-            # "Time-series table... total_value". It implies Cumulative State.
-            # So we need previous day's units.
-            
-            # Find closest previous snapshot
             prev_stmt = (
                 select(InvestmentSnapshot)
                 .where(
@@ -514,52 +531,119 @@ class WealthService:
             )
             self.db.add(snap)
             
-        # Also, if we added a transaction in the PAST, we must propagate unit changes to ALL future snapshots.
-        # This is complex. "Event sourcing" preferred but expensive.
-        # We can run a "recalculate_holding" task.
         await self.recalculate_holding_history(holding_id)
-        
         await self.db.commit()
 
     async def recalculate_holding_history(self, holding_id: uuid.UUID):
         """
-        Re-runs the chain of units from start to finish.
-        Used when inserting/updating a past transaction.
+        Re-calculates holding value and snapshot chain tailored to each investment type.
         """
+        holding = await self.db.get(InvestmentHolding, holding_id)
+        if not holding:
+            return
+
         snapshots_stmt = (
             select(InvestmentSnapshot)
             .where(InvestmentSnapshot.holding_id == holding_id)
             .order_by(InvestmentSnapshot.captured_at)
         )
         snapshots = (await self.db.execute(snapshots_stmt)).scalars().all()
-        
-        running_units = 0.0
-        total_invested = 0.0
-        
-        for snap in snapshots:
-            # We assume amount_invested_delta is the source of truth for "Activity" on that day
-            # If units were derived from price, we might need to preserve that ratio.
-            # But simpler: Re-calculate units from delta / price.
-            
-            if snap.price_per_unit <= 0: snap.price_per_unit = 1.0 # Safety
-            
-            # Re-derive units for this day's action (convert Decimal to float)
-            day_units = float(snap.amount_invested_delta) / float(snap.price_per_unit)
-            
-            running_units += day_units
-            total_invested += float(snap.amount_invested_delta)
-            
-            snap.units_held = running_units
-            snap.total_value = snap.units_held * float(snap.price_per_unit)
-            
-        # Update Holding Master Record
-        holding = await self.db.get(InvestmentHolding, holding_id)
-        if snapshots:
+        if not snapshots:
+            return
+
+        is_fixed_income = holding.asset_type in [
+            AssetType.FD, AssetType.RD, AssetType.PF,
+            AssetType.GRATUITY, AssetType.PLI, AssetType.APY, AssetType.OTHER
+        ]
+
+        if is_fixed_income:
+            rate = (holding.interest_rate or 0.0) / 100.0
+
+            if holding.asset_type == AssetType.RD:
+                # --- RECURRING DEPOSIT (RD) ---
+                # Each monthly installment earns quarterly compound interest:
+                # A_i(t) = D_i * (1 + rate / 4) ** (4 * days / 365)
+                total_invested = 0.0
+                deposits = []
+                for snap in snapshots:
+                    delta = float(snap.amount_invested_delta or 0.0)
+                    total_invested += delta
+                    if delta > 0:
+                        deposits.append((snap.captured_at, delta))
+
+                    accrued = 0.0
+                    for dep_date, dep_amt in deposits:
+                        days = max(0, (snap.captured_at - dep_date).days)
+                        if rate > 0 and days > 0:
+                            accrued += dep_amt * ((1.0 + rate / 4.0) ** (4.0 * days / 365.0))
+                        else:
+                            accrued += dep_amt
+
+                    current_val = max(accrued, total_invested)
+                    snap.price_per_unit = 1.0
+                    snap.units_held = current_val
+                    snap.total_value = current_val
+
+                holding.total_invested = total_invested
+                holding.current_value = snapshots[-1].total_value
+                holding.xirr = holding.interest_rate
+                holding.last_updated_at = datetime.now()
+
+            elif holding.asset_type == AssetType.FD:
+                # --- FIXED DEPOSIT (FD) ---
+                # Fixed lump-sum principal compounded quarterly
+                principal = float(holding.total_invested or (snapshots[0].amount_invested_delta if snapshots else 0.0))
+                start_date = snapshots[0].captured_at
+                for snap in snapshots:
+                    days = max(0, (snap.captured_at - start_date).days)
+                    if rate > 0 and days > 0:
+                        accrued = principal * ((1.0 + rate / 4.0) ** (4.0 * days / 365.0))
+                    else:
+                        accrued = principal
+                    current_val = max(accrued, principal)
+                    snap.price_per_unit = 1.0
+                    snap.units_held = current_val
+                    snap.total_value = current_val
+
+                holding.total_invested = principal
+                holding.current_value = snapshots[-1].total_value
+                holding.xirr = holding.interest_rate
+                holding.last_updated_at = datetime.now()
+
+            else:
+                # --- RETIREMENT / SAVINGS (PF, APY, PLI, GRATUITY, OTHER) ---
+                total_invested = sum(float(s.amount_invested_delta or 0.0) for s in snapshots)
+                running_val = 0.0
+                for snap in snapshots:
+                    delta = float(snap.amount_invested_delta or 0.0)
+                    running_val += delta
+                    snap.price_per_unit = 1.0
+                    snap.units_held = max(snap.total_value or 0.0, running_val)
+                    snap.total_value = snap.units_held
+
+                holding.total_invested = max(total_invested, holding.total_invested or 0.0)
+                holding.current_value = max(snapshots[-1].total_value, holding.total_invested)
+                holding.last_updated_at = datetime.now()
+
+        else:
+            # --- MARKET-LINKED ASSETS (MUTUAL_FUND, STOCK, GOLD, SIP) ---
+            running_units = 0.0
+            total_invested = 0.0
+
+            for snap in snapshots:
+                if snap.price_per_unit <= 0:
+                    snap.price_per_unit = 1.0
+
+                day_units = float(snap.amount_invested_delta) / float(snap.price_per_unit)
+                running_units += day_units
+                total_invested += float(snap.amount_invested_delta)
+
+                snap.units_held = running_units
+                snap.total_value = snap.units_held * float(snap.price_per_unit)
+
             holding.current_value = snapshots[-1].total_value
             holding.total_invested = total_invested
             holding.last_updated_at = datetime.now()
-            
-            # Trigger XIRR calc
             holding.xirr = self.calculate_xirr(snapshots)
 
     def calculate_xirr(self, snapshots: List[InvestmentSnapshot]) -> float:
