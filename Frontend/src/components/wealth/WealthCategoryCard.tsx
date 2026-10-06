@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronDown, ChevronUp, ChevronRight, TrendingUp, TrendingDown,
-    MoreHorizontal, Calculator, CalendarClock, PieChart
+    MoreHorizontal, Calculator, CalendarClock, PieChart, Loader2
 } from 'lucide-react';
 
 interface Holding {
@@ -26,6 +26,7 @@ interface WealthCategoryCardProps {
     onSimulate?: () => void;
     onAnalyze?: (holdingId?: string) => void;
     onHoldingClick: (id: string) => void;
+    loadingHoldingId?: string | null;
 }
 
 export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
@@ -35,7 +36,8 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
     holdings,
     onSimulate,
     onAnalyze,
-    onHoldingClick
+    onHoldingClick,
+    loadingHoldingId
 }) => {
     const [isExpanded, setIsExpanded] = useState(true);
 
@@ -138,10 +140,14 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                                     onClick={() => onHoldingClick(h.id)}
                                     role="button"
                                     tabIndex={0}
-                                    className="flex justify-between items-center p-3 rounded-xl border border-transparent hover:border-border-default/60 bg-surface/30 hover:bg-surface-hover/80 active:scale-[0.985] active:bg-surface-hover cursor-pointer transition-all duration-150 group shadow-none hover:shadow-sm"
+                                    className={`flex justify-between items-center p-3 rounded-xl border transition-all duration-150 group cursor-pointer shadow-none hover:shadow-sm ${
+                                        loadingHoldingId === h.id
+                                            ? 'border-accent/40 bg-accent-subtle/30 scale-[0.99]'
+                                            : 'border-transparent hover:border-border-default/60 bg-surface/30 hover:bg-surface-hover/80 active:scale-[0.985] active:bg-surface-hover'
+                                    }`}
                                 >
                                     <div className="min-w-0 pr-2">
-                                        <p className="text-sm font-semibold text-primary group-hover:text-accent-text transition-colors truncate">
+                                        <p className={`text-sm font-semibold transition-colors truncate ${loadingHoldingId === h.id ? 'text-accent-text' : 'text-primary group-hover:text-accent-text'}`}>
                                             {h.name}
                                         </p>
                                         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
@@ -160,7 +166,11 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                                                 {((h.current_value - h.total_invested) / h.total_invested * 100).toFixed(1)}%
                                             </div>
                                         </div>
-                                        <ChevronRight size={16} className="text-text-muted/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                                        {loadingHoldingId === h.id ? (
+                                            <Loader2 size={16} className="text-accent-text animate-spin shrink-0" />
+                                        ) : (
+                                            <ChevronRight size={16} className="text-text-muted/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+                                        )}
                                     </div>
                                 </div>
                             ))}

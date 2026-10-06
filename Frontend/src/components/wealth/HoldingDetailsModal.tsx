@@ -143,7 +143,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex justify-center pointer-events-none">
+                <div className="fixed inset-0 z-[100] flex justify-center pointer-events-none">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -170,7 +170,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                 haptics.selection();
                             }
                         }}
-                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[92vh] max-h-[92vh] glass-drawer rounded-t-[2.5rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.7)] overflow-hidden pointer-events-auto"
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[92vh] max-h-[92vh] glass-drawer rounded-t-[2.5rem] flex flex-col shadow-[0_-20px_100px_rgba(0,0,0,0.7)] overflow-hidden pointer-events-auto pb-safe"
                     >
                         {/* Grabber Pill */}
                         <div
@@ -383,7 +383,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                 </div>
                             )}
 
-                            <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar">
+                            <div className="flex-1 overflow-y-auto p-6 pb-28 sm:p-10 sm:pb-24 custom-scrollbar">
                                 {activeTab === 'performance' ? (
                                     <>
                                         {/* KPIS */}
@@ -564,7 +564,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                             </div>
 
                                             {isEditingRecords ? (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                     <div>
                                                         <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">
                                                             Institution / Bank
@@ -601,21 +601,21 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                             className="w-full px-3 py-2 rounded-xl bg-surface/90 border border-border-subtle text-xs font-semibold text-primary focus:outline-none focus:border-emerald-500 transition-colors"
                                                         />
                                                     </div>
-                                                    <div>
+                                                    <div className="col-span-1 sm:col-span-3">
                                                         <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">
-                                                            Remarks & Location
+                                                            Remarks & Document Location
                                                         </label>
-                                                        <input
-                                                            type="text"
+                                                        <textarea
+                                                            rows={3}
                                                             value={editRemarks}
                                                             onChange={(e) => setEditRemarks(e.target.value)}
-                                                            placeholder="e.g. Branch, locker, or notes"
-                                                            className="w-full px-3 py-2 rounded-xl bg-surface/90 border border-border-subtle text-xs font-semibold text-primary focus:outline-none focus:border-emerald-500 transition-colors"
+                                                            placeholder="e.g. Branch, locker, physical bond location, or notes"
+                                                            className="w-full px-3 py-2.5 rounded-xl bg-surface/90 border border-border-subtle text-xs font-semibold text-primary focus:outline-none focus:border-emerald-500 transition-colors resize-none leading-relaxed"
                                                         />
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                     <div className="bg-surface/60 rounded-xl p-3 border border-border-subtle/50">
                                                         <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Institution / Bank</span>
                                                         <span className="text-xs font-bold text-primary mt-1 block truncate">
@@ -634,11 +634,11 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                             {currentHolding.nominee_name || <span className="text-text-muted/60 font-normal italic">Not specified</span>}
                                                         </span>
                                                     </div>
-                                                    <div className="bg-surface/60 rounded-xl p-3 border border-border-subtle/50">
+                                                    <div className="col-span-1 sm:col-span-3 bg-surface/60 rounded-xl p-3.5 border border-border-subtle/50">
                                                         <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Remarks & Location</span>
-                                                        <span className="text-xs font-bold text-primary mt-1 block truncate" title={currentHolding.remarks}>
+                                                        <p className="text-xs font-semibold text-primary mt-1 leading-relaxed break-words whitespace-pre-wrap">
                                                             {currentHolding.remarks || <span className="text-text-muted/60 font-normal italic">No notes added</span>}
-                                                        </span>
+                                                        </p>
                                                     </div>
                                                 </div>
                                             )}

@@ -48,6 +48,8 @@ const Wealth: React.FC = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedHolding, setSelectedHolding] = useState<any | null>(null);
 
+    const [loadingHoldingId, setLoadingHoldingId] = useState<string | null>(null);
+
     const handleExportStatement = async () => {
         setExportingStatement(true);
         haptics.impact('medium');
@@ -72,11 +74,21 @@ const Wealth: React.FC = () => {
     };
 
     const fetchHoldingDetails = async (id: string) => {
+        // 1. Optimistic render: instantly show modal with existing holding data!
+        const local = holdings.find(h => h.id === id);
+        if (local) {
+            setSelectedHolding(local);
+        }
+        setLoadingHoldingId(id);
+        haptics.impact('light');
+
         try {
             const res = await api.get(`/wealth/holdings/${id}`);
             setSelectedHolding(res.data);
         } catch (e) {
             console.error("Failed to fetch holding details", e);
+        } finally {
+            setLoadingHoldingId(null);
         }
     };
 
@@ -393,6 +405,7 @@ const Wealth: React.FC = () => {
                             icon={<TrendingUp size={20} className="text-primary" />}
                             holdings={groupedHoldings.stocks}
                             onHoldingClick={fetchHoldingDetails}
+                            loadingHoldingId={loadingHoldingId}
                         />
                     )}
 
@@ -404,6 +417,7 @@ const Wealth: React.FC = () => {
                             icon={<PieChart size={20} className="text-primary" />}
                             holdings={groupedHoldings.mutualFunds}
                             onHoldingClick={fetchHoldingDetails}
+                            loadingHoldingId={loadingHoldingId}
                         />
                     )}
 
@@ -415,6 +429,7 @@ const Wealth: React.FC = () => {
                             icon={<Repeat size={20} className="text-primary" />}
                             holdings={groupedHoldings.recurringDeposits}
                             onHoldingClick={fetchHoldingDetails}
+                            loadingHoldingId={loadingHoldingId}
                         />
                     )}
 
@@ -426,6 +441,7 @@ const Wealth: React.FC = () => {
                             icon={<Landmark size={20} className="text-primary" />}
                             holdings={groupedHoldings.fixedDeposits}
                             onHoldingClick={fetchHoldingDetails}
+                            loadingHoldingId={loadingHoldingId}
                         />
                     )}
 
@@ -437,6 +453,7 @@ const Wealth: React.FC = () => {
                             icon={<ShieldCheck size={20} className="text-primary" />}
                             holdings={groupedHoldings.govtPensions}
                             onHoldingClick={fetchHoldingDetails}
+                            loadingHoldingId={loadingHoldingId}
                         />
                     )}
 
@@ -448,6 +465,7 @@ const Wealth: React.FC = () => {
                             icon={<Coins size={20} className="text-primary" />}
                             holdings={groupedHoldings.goldAndOther}
                             onHoldingClick={fetchHoldingDetails}
+                            loadingHoldingId={loadingHoldingId}
                         />
                     )}
                 </div>
