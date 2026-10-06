@@ -42,6 +42,12 @@ class InvestmentHolding(Base):
     maturity_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     maturity_amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     
+    # Family Handover / Identification details
+    institution_name: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. "Axis Bank", "Groww", "EPFO"
+    account_number_or_folio: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. Folio #, Deposit #, UAN, PRAN, Policy #
+    nominee_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    remarks: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Arbitrary notes, locker location, physical document location
+    
     # Computed/Cached fields
     current_value: Mapped[float] = mapped_column(Float, default=0.0)
     total_invested: Mapped[float] = mapped_column(Float, default=0.0)

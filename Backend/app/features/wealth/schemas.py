@@ -34,6 +34,10 @@ class InvestmentHoldingBase(BaseModel):
     interest_rate: Optional[float] = None
     maturity_date: Optional[date] = None
     maturity_amount: Optional[float] = None
+    institution_name: Optional[str] = None
+    account_number_or_folio: Optional[str] = None
+    nominee_name: Optional[str] = None
+    remarks: Optional[str] = None
 
 class InvestmentHoldingCreate(InvestmentHoldingBase):
     # For onboarding with existing holdings
@@ -51,6 +55,10 @@ class InvestmentHoldingUpdate(BaseModel):
     interest_rate: Optional[float] = None
     maturity_date: Optional[date] = None
     maturity_amount: Optional[float] = None
+    institution_name: Optional[str] = None
+    account_number_or_folio: Optional[str] = None
+    nominee_name: Optional[str] = None
+    remarks: Optional[str] = None
     current_value: Optional[float] = None
     total_invested: Optional[float] = None
 

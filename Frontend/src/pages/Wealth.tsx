@@ -8,10 +8,11 @@ import { motion } from 'framer-motion';
 import {
     Wallet, Plus, RefreshCw, Link as LinkIcon,
     PieChart, Sparkles, Landmark, Repeat, ShieldCheck,
-    Coins, ArrowRight, BrainCircuit
+    Coins, ArrowRight, BrainCircuit, FileSpreadsheet
 } from 'lucide-react';
 
 import { api } from '../lib/api';
+import { haptics } from '../lib/haptics';
 
 // Types
 interface Holding {
@@ -25,6 +26,10 @@ interface Holding {
     interest_rate?: number | null;
     maturity_date?: string | null;
     maturity_amount?: number | null;
+    institution_name?: string | null;
+    account_number_or_folio?: string | null;
+    nominee_name?: string | null;
+    remarks?: string | null;
 }
 
 const Wealth: React.FC = () => {
@@ -35,11 +40,35 @@ const Wealth: React.FC = () => {
     const [unassignedTxns, setUnassignedTxns] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [autoDetecting, setAutoDetecting] = useState(false);
+    const [exportingStatement, setExportingStatement] = useState(false);
 
     // Modal States
     const [isLinkerOpen, setIsLinkerOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedHolding, setSelectedHolding] = useState<any | null>(null);
+
+    const handleExportStatement = async () => {
+        setExportingStatement(true);
+        haptics.impact('medium');
+        try {
+            const res = await api.get('/export/portfolio-statement', { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute('download', `Grip_Portfolio_Statement_${dateStr}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+            haptics.notification('success');
+        } catch (error) {
+            console.error("Statement export failed", error);
+            haptics.notification('error');
+            alert("Failed to export portfolio statement. Please try again.");
+        } finally {
+            setExportingStatement(false);
+        }
+    };
 
     const fetchHoldingDetails = async (id: string) => {
         try {
@@ -148,6 +177,17 @@ const Wealth: React.FC = () => {
                     >
                         <BrainCircuit size={14} />
                         Wealth Lab ↗
+                    </button>
+
+                    {/* Financial Portfolio Statement Export */}
+                    <button
+                        onClick={handleExportStatement}
+                        disabled={exportingStatement}
+                        className="px-3.5 py-2 rounded-xl bg-surface-subtle hover:bg-surface-hover text-emerald-400 text-xs font-bold border border-emerald-500/30 transition-all flex items-center gap-1.5 active:scale-95 shadow-sm"
+                        title="Export Comprehensive Financial Portfolio Statement (.xlsx)"
+                    >
+                        <FileSpreadsheet size={14} className={exportingStatement ? "animate-pulse" : ""} />
+                        {exportingStatement ? "Exporting..." : "Portfolio Statement"}
                     </button>
 
                     {/* Quick Linker Button */}

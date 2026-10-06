@@ -31,7 +31,11 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
         // For FD/RD
         interest_rate: '',
         maturity_date: '',
-        maturity_amount: ''
+        maturity_amount: '',
+        institution_name: '',
+        account_number_or_folio: '',
+        nominee_name: '',
+        remarks: ''
     });
 
     useEffect(() => {
@@ -69,6 +73,10 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                 interest_rate: formData.interest_rate ? parseFloat(formData.interest_rate) : null,
                 maturity_date: formData.maturity_date || null,
                 maturity_amount: formData.maturity_amount ? parseFloat(formData.maturity_amount) : null,
+                institution_name: formData.institution_name.trim() || null,
+                account_number_or_folio: formData.account_number_or_folio.trim() || null,
+                nominee_name: formData.nominee_name.trim() || null,
+                remarks: formData.remarks.trim() || null,
             };
 
             await api.post('/wealth/holdings', submitData);
@@ -85,7 +93,11 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                 investment_type: 'SIP',
                 interest_rate: '',
                 maturity_date: '',
-                maturity_amount: ''
+                maturity_amount: '',
+                institution_name: '',
+                account_number_or_folio: '',
+                nominee_name: '',
+                remarks: ''
             });
         } catch (error) {
             console.error("Failed to create holding", error);
@@ -495,6 +507,63 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                     )}
                                 </div>
                             )}
+
+                            {/* Account & Nominee Details (Optional) */}
+                            <div className="border-t border-border-subtle pt-4 mt-2">
+                                <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">
+                                    Account & Nominee Details (Optional)
+                                </p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-1">
+                                            Bank / Institution
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.institution_name}
+                                            onChange={e => setFormData({ ...formData, institution_name: e.target.value })}
+                                            placeholder="e.g. Axis Bank, Groww"
+                                            className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default text-primary"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-1">
+                                            Folio / Account / PRAN #
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.account_number_or_folio}
+                                            onChange={e => setFormData({ ...formData, account_number_or_folio: e.target.value })}
+                                            placeholder="e.g. Folio #, A/c #"
+                                            className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default text-primary"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-1">
+                                            Registered Nominee
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.nominee_name}
+                                            onChange={e => setFormData({ ...formData, nominee_name: e.target.value })}
+                                            placeholder="e.g. Spouse / Mother"
+                                            className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default text-primary"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-1">
+                                            Remarks & Notes
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.remarks}
+                                            onChange={e => setFormData({ ...formData, remarks: e.target.value })}
+                                            placeholder="e.g. Locker, Branch"
+                                            className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-border-default text-primary"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

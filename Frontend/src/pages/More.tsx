@@ -23,7 +23,9 @@ import {
     Sun,
     Moon,
     Settings,
-    LogOut
+    LogOut,
+    ShieldCheck,
+    FileSpreadsheet
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
@@ -41,7 +43,8 @@ const FEATURE_CARDS = [
     { id: 'goals', label: 'Goals', icon: Wallet, path: '/goals', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'categories', label: 'Categories', icon: LayoutGrid, action: 'OPEN_CATEGORIES', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-primary', bgColor: 'bg-surface-subtle' },
-    { id: 'backup', label: 'Backup Data', icon: Download, action: 'BACKUP_DATA', color: 'text-primary', bgColor: 'bg-surface-subtle' },
+    { id: 'backup', label: 'Backup CSV', icon: Download, action: 'BACKUP_DATA', color: 'text-primary', bgColor: 'bg-surface-subtle' },
+    { id: 'statement', label: 'Portfolio Statement', icon: FileSpreadsheet, action: 'EXPORT_STATEMENT', color: 'text-emerald-400', bgColor: 'bg-surface-subtle' },
     { id: 'vault', label: 'Vault', icon: Target, path: '/credit-cards', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'settle-up', label: 'Settle Up', icon: ArrowUpRight, path: '/settle-up', color: 'text-primary', bgColor: 'bg-surface-subtle' },
 ];
@@ -109,6 +112,7 @@ const More: React.FC = () => {
     const logout = useAuthStore((state) => state.logout);
     const { toggleTheme, isDark } = useTheme();
     const [isExporting, setIsExporting] = useState(false);
+    const [isExportingStatement, setIsExportingStatement] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -164,11 +168,33 @@ const More: React.FC = () => {
         }
     };
 
+    const handleExportStatement = async () => {
+        setIsExportingStatement(true);
+        try {
+            const response = await api.get('/export/portfolio-statement', { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute('download', `Grip_Portfolio_Statement_${dateStr}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+        } catch (error) {
+            console.error("Statement export failed", error);
+            alert("Failed to export portfolio statement. Please try again.");
+        } finally {
+            setIsExportingStatement(false);
+        }
+    };
+
     const handleFeatureClick = (card: any) => {
         if (card.action === 'OPEN_CATEGORIES') {
             navigate('/settings/categories');
         } else if (card.action === 'BACKUP_DATA') {
             handleBackup();
+        } else if (card.action === 'EXPORT_STATEMENT') {
+            handleExportStatement();
         } else if (card.path) {
             navigate(card.path);
         }
@@ -276,26 +302,29 @@ const More: React.FC = () => {
             <div className="px-3 space-y-8 animate-enter pb-10">
                 {/* Feature Grid - Compact */}
                 <div className="grid grid-cols-2 gap-2">
-                    {FEATURE_CARDS.map((card) => (
-                        <motion.button
-                            key={card.id}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => handleFeatureClick(card)}
-                            disabled={card.id === 'backup' && isExporting}
-                            className={`flex items-center gap-2.5 p-3 rounded-[1.2rem] bg-surface-subtle border border-border-subtle hover:bg-surface-hover hover:border-accent-border/40 transition-all text-left group ${card.id === 'backup' && isExporting ? 'opacity-50' : ''}`}
-                        >
-                            <div className="w-8 h-8 rounded-lg bg-surface-pill text-primary group-hover:bg-accent-subtle group-hover:text-accent-text group-hover:border group-hover:border-accent-border transition-colors flex items-center justify-center shadow-sm group-hover:scale-105 shrink-0">
-                                {card.id === 'backup' && isExporting ? (
-                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
-                                ) : (
-                                    <card.icon size={15} />
-                                )}
-                            </div>
-                            <span className="text-[11px] font-bold text-secondary group-hover:text-primary tracking-wide uppercase whitespace-nowrap transition-colors">
-                                {card.id === 'backup' && isExporting ? 'Exporting...' : card.label}
-                            </span>
-                        </motion.button>
-                    ))}
+                    {FEATURE_CARDS.map((card) => {
+                        const isCardLoading = (card.id === 'backup' && isExporting) || (card.id === 'statement' && isExportingStatement);
+                        return (
+                            <motion.button
+                                key={card.id}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleFeatureClick(card)}
+                                disabled={isCardLoading}
+                                className={`flex items-center gap-2.5 p-3 rounded-[1.2rem] bg-surface-subtle border border-border-subtle hover:bg-surface-hover hover:border-accent-border/40 transition-all text-left group ${isCardLoading ? 'opacity-50' : ''}`}
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-surface-pill text-primary group-hover:bg-accent-subtle group-hover:text-accent-text group-hover:border group-hover:border-accent-border transition-colors flex items-center justify-center shadow-sm group-hover:scale-105 shrink-0">
+                                    {isCardLoading ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+                                    ) : (
+                                        <card.icon size={15} className={card.color || 'text-primary'} />
+                                    )}
+                                </div>
+                                <span className="text-[11px] font-bold text-secondary group-hover:text-primary tracking-wide uppercase whitespace-nowrap transition-colors">
+                                    {isCardLoading ? 'Exporting...' : card.label}
+                                </span>
+                            </motion.button>
+                        );
+                    })}
                 </div>
 
                 {/* Smart Views Section */}
