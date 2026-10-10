@@ -61,13 +61,67 @@ def pop_challenge(key: str) -> Optional[bytes]:
 
 from urllib.parse import urlparse
 
+def _is_localhost_allowed() -> bool:
+    """Check if localhost is permitted explicitly by environment configuration."""
+    return bool(getattr(settings, "ALLOW_LOCALHOST_AUTH", False))
+
+
+def _is_trusted_origin(origin_url: str, request: Request) -> bool:
+    """Validate that the origin belongs to an authorized host."""
+    if not origin_url:
+        return False
+    try:
+        parsed = urlparse(origin_url)
+        hostname = (parsed.hostname or "").lower()
+        if not hostname:
+            return False
+
+        # 1. Localhost - only allowed if explicitly enabled via ALLOW_LOCALHOST_AUTH env var
+        if hostname in ("localhost", "127.0.0.1", "::1"):
+            return _is_localhost_allowed()
+
+        # 2. Configured frontend origin
+        if getattr(settings, "FRONTEND_ORIGIN", None):
+            fe_host = (urlparse(settings.FRONTEND_ORIGIN).hostname or "").lower()
+            if fe_host and (hostname == fe_host or hostname.endswith(f".{fe_host}")):
+                return True
+
+        # 3. Explicitly configured allowed origins in env
+        allowed_origins = getattr(settings, "ALLOWED_ORIGINS", []) or []
+        for allowed in allowed_origins:
+            parsed_allowed = (urlparse(allowed).hostname or allowed).strip().lower()
+            if parsed_allowed and (hostname == parsed_allowed or hostname.endswith(f".{parsed_allowed}")):
+                return True
+
+        # 4. Request host or reverse-proxy forwarded host (excluding localhost unless explicitly enabled)
+        req_host = (
+            request.headers.get("x-forwarded-host")
+            or request.headers.get("host")
+            or request.url.hostname
+            or ""
+        ).split(":")[0].strip().lower()
+        if req_host:
+            if req_host in ("localhost", "127.0.0.1", "::1") and not _is_localhost_allowed():
+                return False
+            if hostname == req_host or hostname.endswith(f".{req_host}"):
+                return True
+
+        # 5. Standard cloud deploy hosts (HF spaces, Vercel)
+        if hostname.endswith(".hf.space") or hostname.endswith(".vercel.app"):
+            return True
+
+        return False
+    except Exception:
+        return False
+
+
 def get_rp_info(request: Request) -> tuple[str, str]:
     """
     Extract rp_id and expected_origin dynamically from the incoming request.
     WebAuthn requires rp_id to match the client's web domain (Origin / Referer),
-    never the backend server's proxy hostname.
+    validated against trusted domains to prevent host/origin injection.
     """
-    # 1. Prefer client's Origin / Referer / custom X-Client-Origin header
+    # 1. Check client's Origin / Referer / custom X-Client-Origin header
     client_target = (
         request.headers.get("x-client-origin")
         or request.headers.get("origin")
@@ -75,27 +129,39 @@ def get_rp_info(request: Request) -> tuple[str, str]:
     )
 
     if client_target:
-        # Sanitize proxy multiple values if comma-separated
         if "," in client_target:
             client_target = client_target.split(",")[0].strip()
         parsed = urlparse(client_target)
-        if parsed.hostname:
+        if parsed.hostname and _is_trusted_origin(client_target, request):
             rp_id = parsed.hostname.replace(",", ".").strip()
             expected_origin = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
             return rp_id, expected_origin
 
-    # 2. Fallback to settings.FRONTEND_ORIGIN
+    # 2. Fallback to settings.FRONTEND_ORIGIN (if not localhost or if localhost is explicitly allowed)
     if getattr(settings, "FRONTEND_ORIGIN", None):
         parsed = urlparse(settings.FRONTEND_ORIGIN)
         if parsed.hostname:
-            return parsed.hostname.replace(",", ".").strip(), settings.FRONTEND_ORIGIN.rstrip("/")
+            fe_host = parsed.hostname.strip().lower()
+            if fe_host not in ("localhost", "127.0.0.1", "::1") or _is_localhost_allowed():
+                return fe_host.replace(",", "."), settings.FRONTEND_ORIGIN.rstrip("/")
 
     # 3. Fallback to request host
-    host_header = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.hostname or "localhost"
+    host_header = (
+        request.headers.get("x-forwarded-host")
+        or request.headers.get("host")
+        or request.url.hostname
+        or ""
+    )
     if "," in host_header:
         host_header = host_header.split(",")[0].strip()
 
-    hostname = host_header.split(":")[0].replace(",", ".").strip()
+    hostname = host_header.split(":")[0].replace(",", ".").strip().lower()
+    if not hostname or (hostname in ("localhost", "127.0.0.1", "::1") and not _is_localhost_allowed()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid relying party domain. Localhost is disabled."
+        )
+
     scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
     expected_origin = f"{scheme}://{host_header}".rstrip("/")
 
@@ -290,16 +356,20 @@ class WebAuthnService:
 
         allow_credentials = None
 
-        # 1. If explicit credential_id was provided from client device
+        # 1. If explicit credential_id was provided from the requesting client device (cached locally)
         if credential_id:
-            try:
-                allow_credentials = [
-                    PublicKeyCredentialDescriptor(id=base64url_to_bytes(credential_id))
-                ]
-            except Exception as e:
-                logger.warning(f"Could not parse credential_id {credential_id}: {e}")
+            cred_res = await db.execute(
+                select(PasskeyCredential.id).where(PasskeyCredential.id == credential_id)
+            )
+            if cred_res.scalar_one_or_none():
+                try:
+                    allow_credentials = [
+                        PublicKeyCredentialDescriptor(id=base64url_to_bytes(credential_id))
+                    ]
+                except Exception as e:
+                    logger.warning(f"Could not parse credential_id {credential_id}: {e}")
 
-        # 2. Or if email was provided
+        # 2. Or if email was provided (identifier-first authentication)
         if not allow_credentials and email:
             result = await db.execute(select(User).where(User.email == email.strip().lower()))
             user = result.scalar_one_or_none()
@@ -307,29 +377,19 @@ class WebAuthnService:
                 creds_res = await db.execute(select(PasskeyCredential).where(PasskeyCredential.user_id == user.id))
                 creds = creds_res.scalars().all()
                 if creds:
-                    allow_credentials = [
-                        PublicKeyCredentialDescriptor(id=base64url_to_bytes(c.id))
-                        for c in creds
-                    ]
+                    descriptors = []
+                    for c in creds:
+                        try:
+                            descriptors.append(PublicKeyCredentialDescriptor(id=base64url_to_bytes(c.id)))
+                        except Exception:
+                            pass
+                    if descriptors:
+                        allow_credentials = descriptors
 
-        # 3. If neither email nor credential_id provided, provide known active credentials
-        # so device authenticators with non-resident keys can match and trigger fingerprint
-        if not allow_credentials:
-            creds_res = await db.execute(
-                select(PasskeyCredential.id)
-                .order_by(PasskeyCredential.created_at.desc())
-                .limit(20)
-            )
-            known_ids = creds_res.scalars().all()
-            if known_ids:
-                descriptors = []
-                for cid in known_ids:
-                    try:
-                        descriptors.append(PublicKeyCredentialDescriptor(id=base64url_to_bytes(cid)))
-                    except Exception:
-                        pass
-                if descriptors:
-                    allow_credentials = descriptors
+        # 3. If neither credential_id nor email was provided:
+        # allow_credentials remains None, following the official W3C WebAuthn / FIDO2 specification
+        # for discoverable credentials (Passkeys). The client platform authenticator will
+        # look up the resident key for this rp_id. No other user credentials are ever exposed.
 
         options = generate_authentication_options(
             rp_id=rp_id,

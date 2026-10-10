@@ -429,6 +429,24 @@ Result: Prevents overspending before rent is due ✅
 - "You're 45% towards your iPhone fund!"
 - "Adjust Safe-to-Spend buffer to include goal savings"
 
+### 🤝 Settle Up (Peer-to-Peer Balances)
+
+**Track Shared Expenses & Borrowing**
+- Maintain running tabs with friends, roommates, and family
+- Record money lent (they owe you) and money borrowed (you owe them)
+- View consolidated net balances per person at a glance
+- Link specific P2P settlements to actual bank transactions for complete auditability
+- Add optional notes and timestamps for every exchange
+
+### 📑 Professional Export & Reporting
+
+**Consolidated Portfolio Statement**
+- **Executive-Ready Excel Export**: Generates a multi-tab, professionally styled workbook serving as a personal balance sheet and asset schedule.
+- **Detailed Asset Schedules**: Separate tabs for Bank Deposits (FD/RD), Market Investments (MFs/Stocks), Government/Retirement Schemes (PF/PPF/NPS), and Credit Facilities.
+- **Institutional References**: Includes PRAN, UAN, Folio numbers, and nominee allocations for legacy planning.
+- **Clean Formatting**: Complete with typography, zebra striping, currency formatting, and auto-adjusted columns.
+- **CSV Data Backup**: One-click export of your entire raw transaction ledger to CSV for independent processing.
+
 ### 📊 Advanced Analytics
 
 **Variance Analysis**
@@ -503,6 +521,7 @@ Masked:   "UPI: ****@paytm paid ****@phonepe"
 - ✅ UPI IDs (👤 <email> or <username> prefix masked)
 - ✅ Phone numbers (📱 middle 6 digits masked)
 **Security Architecture:**
+- **Biometric Device Fingerprint (WebAuthn / Passkeys)**: Native integration for Touch ID, Face ID, or Windows Hello. No passwords required after initial device enrollment. Hardware-backed security preventing phishing.
 - JWT authentication with bcrypt password hashing
 - Email verification with OTP (SMTP)
 - Read-only Gmail OAuth (can't send/modify emails)
@@ -797,6 +816,21 @@ GET  /api/v1/wealth/holdings/{id}/sip-analysis   # SIP date performance analysis
 GET /api/v1/analytics/safe-to-spend  # Real-time calculation
 GET /api/v1/analytics/variance       # Month-over-month
 GET /api/v1/analytics/monthly-summary # Monthly stats
+```
+
+#### Settle Up (Peer-to-Peer)
+```bash
+GET    /api/v1/settle-up/balances            # List all peer balances
+GET    /api/v1/settle-up/{peer_name}/history # Specific peer ledger
+POST   /api/v1/settle-up/                    # Add new P2P entry
+PUT    /api/v1/settle-up/{entry_id}          # Update entry
+DELETE /api/v1/settle-up/{entry_id}          # Delete entry
+```
+
+#### Export
+```bash
+GET /api/v1/export/csv                   # Export raw transactions
+GET /api/v1/export/portfolio-statement   # Export executive Excel statement
 ```
 
 #### Forecasting

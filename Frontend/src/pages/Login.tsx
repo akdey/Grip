@@ -52,7 +52,12 @@ const Login: React.FC = () => {
         } catch (err: any) {
             console.warn('Biometric login err:', err);
             if (!err?.message?.includes('cancel') && !err?.message?.includes('abort')) {
-                setError(err?.message || 'Biometric authentication failed. Please use your credentials.');
+                const msg = err?.message || '';
+                if (!email.trim() && (msg.toLowerCase().includes('passkey') || msg.toLowerCase().includes('credential') || msg.toLowerCase().includes('not recognized'))) {
+                    setError('No passkey found on this device. Please enter your email above to sign in with your fingerprint, or use your credentials.');
+                } else {
+                    setError(msg || 'Biometric authentication failed. Please use your credentials.');
+                }
             }
         } finally {
             setIsLoading(false);

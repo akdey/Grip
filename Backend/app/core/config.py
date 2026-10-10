@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = "postmessage"
     GMAIL_PUBSUB_TOPIC: Optional[str] = None
 
+    # Auth & Domain Security
+    ALLOW_LOCALHOST_AUTH: bool = False
+    ALLOWED_ORIGINS: list[str] = []
+
     
     # Firebase Settings
     FIREBASE_CREDENTIALS_PATH: str = "firebase_credentials.json"
