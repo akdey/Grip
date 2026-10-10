@@ -447,6 +447,12 @@ Result: Prevents overspending before rent is due ✅
 - **Clean Formatting**: Complete with typography, zebra striping, currency formatting, and auto-adjusted columns.
 - **CSV Data Backup**: One-click export of your entire raw transaction ledger to CSV for independent processing.
 
+**🛡️ Automated Contingency Asset Dispatch (7-Day Inactivity Switch)**
+- **Automated Emergency Dispatch**: If you do not access Grip for 7 days, an automated batch generates your latest comprehensive portfolio statement spreadsheet (`.xlsx`) and delivers it securely via email to your designated emergency contact or nominee.
+- **ZERO-Bloat Activity Tracking**: Maintains zero database bloat by recording activity on a single user profile timestamp with in-memory throttling (updated at most once every 2 hours). No explosive log tables or disk clutter.
+- **Scheduled Batch Execution**: Runs on a daily schedule via GitHub Actions (`.github/workflows/inactivity-contingency.yml`) and internal APScheduler. Supports one-click manual triggers from GitHub Actions UI.
+- **Self-Service Configuration**: Configure, update, or disable your designated emergency contact anytime directly from **More > Asset Dispatch** or the Settings popover in the UI.
+
 ### 📊 Advanced Analytics
 
 **Variance Analysis**
@@ -774,9 +780,11 @@ See **[Gmail Sync Setup Guide](GMAIL_SYNC_QUICKSTART.md)** for detailed instruct
 
 #### Authentication
 ```bash
-POST /api/v1/auth/register        # Register with OTP
-POST /api/v1/auth/verify-otp      # Verify OTP
-POST /api/v1/auth/token           # Login (JWT)
+POST /api/v1/auth/register                 # Register with OTP
+POST /api/v1/auth/verify-otp               # Verify OTP
+POST /api/v1/auth/token                    # Login (JWT)
+GET  /api/v1/auth/emergency-contact        # Get designated emergency contact & activity
+PUT  /api/v1/auth/emergency-contact        # Set/update emergency contact email
 ```
 
 #### Gmail Sync
