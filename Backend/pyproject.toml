@@ -31,4 +31,5 @@ dependencies = [
     "yfinance>=1.0",
     "bcrypt==4.0.1",
     "openpyxl>=3.1.5",
+    "webauthn>=3.0.1",
 ]

@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import String, Boolean, DateTime, JSON
+from sqlalchemy import String, Boolean, DateTime, JSON, ForeignKey, Integer, LargeBinary
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -21,3 +21,19 @@ class User(Base):
     
     credit_cards: Mapped[list["CreditCard"]] = relationship("CreditCard", back_populates="user")
     bills: Mapped[list["Bill"]] = relationship("Bill", back_populates="user")
+    passkeys: Mapped[list["PasskeyCredential"]] = relationship("PasskeyCredential", back_populates="user", cascade="all, delete-orphan")
+
+
+class PasskeyCredential(Base):
+    __tablename__ = "passkey_credentials"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)  # base64url credential_id
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    public_key: Mapped[bytes] = mapped_column(LargeBinary)
+    sign_count: Mapped[int] = mapped_column(Integer, default=0)
+    device_name: Mapped[str] = mapped_column(String, default="Biometric Sensor")
+    transports: Mapped[str] = mapped_column(String, nullable=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_used_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped["User"] = relationship("User", back_populates="passkeys")

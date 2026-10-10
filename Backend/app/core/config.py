@@ -28,6 +28,7 @@ class Settings(BaseSettings):
         "/api/v1/auth/token",
         "/api/v1/auth/google-login",
         "/api/v1/auth/google/one-tap",
+        "/api/v1/auth/biometrics/login",
         "/api/v1/sync/webhook",
         "/api/v1/internal/generate"  # Protected by X-Grip-Secret, not JWT
     ]

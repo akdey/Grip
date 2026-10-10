@@ -6,6 +6,8 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { api } from '../lib/api';
 import { Logo } from '../components/ui/Logo';
+import { Fingerprint } from 'lucide-react';
+import { checkBiometricsSupport, loginWithBiometrics } from '../lib/webauthn';
 
 // Declare google for typescript
 declare global {
@@ -26,6 +28,31 @@ const Login: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
+    const [hasBiometricSupport, setHasBiometricSupport] = useState(false);
+
+    // Check device biometrics on mount
+    useEffect(() => {
+        checkBiometricsSupport().then((res) => {
+            setHasBiometricSupport(res.platformAvailable);
+        }).catch(() => {});
+    }, []);
+
+    const handleBiometricLogin = async () => {
+        setIsLoading(true);
+        setError('');
+        try {
+            const res = await loginWithBiometrics(email.trim() || undefined);
+            login({ id: 'temp-id', email: res.email, is_active: true }, res.access_token);
+            navigate('/dashboard');
+        } catch (err: any) {
+            console.warn('Biometric login err:', err);
+            if (!err?.message?.includes('cancel') && !err?.message?.includes('abort')) {
+                setError(err?.message || 'Biometric authentication failed. Please use your credentials.');
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Initialize Google Login + Sync Fast Track
     useEffect(() => {
@@ -217,6 +244,18 @@ const Login: React.FC = () => {
                         <Button type="submit" className="w-full h-12 rounded-xl bg-white text-black font-black uppercase tracking-[2px] text-[10px] hover:bg-gray-200" isLoading={isLoading}>
                             {mode === 'LOGIN' ? 'Authorize' : mode === 'REGISTER' ? 'Register Unit' : 'Override & Sync'}
                         </Button>
+
+                        {mode === 'LOGIN' && hasBiometricSupport && (
+                            <button
+                                type="button"
+                                onClick={handleBiometricLogin}
+                                disabled={isLoading}
+                                className="w-full h-12 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-accent-border/60 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-sm touch-manipulation cursor-pointer"
+                            >
+                                <Fingerprint size={18} className="text-cyan-400" />
+                                <span>Sign in with Fingerprint</span>
+                            </button>
+                        )}
 
                         {mode !== 'OTP' && (
                             <div className="space-y-4">

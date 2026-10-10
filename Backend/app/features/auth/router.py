@@ -267,3 +267,110 @@ async def verify_user_password(
     if not verify_password(data.password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid password")
     return {"valid": True}
+
+
+# =========================================================================
+# BIOMETRICS & WEBAUTHN (FINGERPRINT / PASSKEYS)
+# =========================================================================
+from app.features.auth.webauthn_service import WebAuthnService
+from fastapi import Request
+
+@router.get("/biometrics/status")
+async def get_biometrics_status(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    result = await db.execute(
+        select(PasskeyCredential).where(PasskeyCredential.user_id == current_user.id)
+    )
+    creds = result.scalars().all()
+    return {
+        "has_biometrics": len(creds) > 0,
+        "count": len(creds),
+        "devices": [
+            {"id": c.id, "device_name": c.device_name, "created_at": c.created_at}
+            for c in creds
+        ]
+    }
+
+@router.post("/biometrics/register/options")
+async def get_biometrics_register_options(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    return await WebAuthnService.get_registration_options(current_user, request, db)
+
+class BiometricsRegisterVerifyPayload(BaseModel):
+    credential: dict
+    device_name: Optional[str] = "Fingerprint Sensor"
+
+@router.post("/biometrics/register/verify")
+async def verify_biometrics_registration(
+    payload: BiometricsRegisterVerifyPayload,
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    return await WebAuthnService.verify_registration(
+        current_user,
+        payload.credential,
+        payload.device_name or "Fingerprint Sensor",
+        request,
+        db
+    )
+
+@router.post("/biometrics/unlock/options")
+async def get_biometrics_unlock_options(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    return await WebAuthnService.get_unlock_options(current_user, request, db)
+
+class BiometricsAssertionPayload(BaseModel):
+    credential: dict
+
+@router.post("/biometrics/unlock/verify")
+async def verify_biometrics_unlock(
+    payload: BiometricsAssertionPayload,
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    return await WebAuthnService.verify_unlock(
+        current_user,
+        payload.credential,
+        request,
+        db
+    )
+
+class BiometricsLoginOptionsPayload(BaseModel):
+    email: Optional[str] = None
+
+@router.post("/biometrics/login/options")
+async def get_biometrics_login_options(
+    request: Request,
+    payload: Optional[BiometricsLoginOptionsPayload] = None,
+    db: Annotated[AsyncSession, Depends(get_db)] = None
+):
+    email = payload.email if payload else None
+    return await WebAuthnService.get_login_options(email, request, db)
+
+class BiometricsLoginVerifyPayload(BaseModel):
+    challenge_id: str
+    credential: dict
+
+@router.post("/biometrics/login/verify")
+async def verify_biometrics_login(
+    payload: BiometricsLoginVerifyPayload,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    return await WebAuthnService.verify_login(
+        payload.challenge_id,
+        payload.credential,
+        request,
+        db
+    )
+
