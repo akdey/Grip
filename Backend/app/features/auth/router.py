@@ -397,9 +397,15 @@ async def update_emergency_contact(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)]
 ):
-    current_user.emergency_contact_email = str(data.emergency_contact_email).strip().lower() if data.emergency_contact_email else None
+    from sqlalchemy import update
+    email_val = str(data.emergency_contact_email).strip().lower() if data.emergency_contact_email else None
+    await db.execute(
+        update(User)
+        .where(User.id == current_user.id)
+        .values(emergency_contact_email=email_val)
+    )
     await db.commit()
-    await db.refresh(current_user)
+    current_user.emergency_contact_email = email_val
     return {
         "emergency_contact_email": current_user.emergency_contact_email,
         "last_active_at": current_user.last_active_at.isoformat() if current_user.last_active_at else None,

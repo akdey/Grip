@@ -60,8 +60,14 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
         _user_activity_cache[email] = now
         try:
             from datetime import datetime, timezone
-            user.last_active_at = datetime.now(timezone.utc)
+            from sqlalchemy import update
+            await db.execute(
+                update(User)
+                .where(User.id == user.id)
+                .values(last_active_at=datetime.now(timezone.utc))
+            )
             await db.commit()
+            user.last_active_at = datetime.now(timezone.utc)
         except Exception:
             pass
 
