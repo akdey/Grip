@@ -47,12 +47,10 @@ const FEATURE_CARDS = [
     { id: 'pending', label: 'Action Center', icon: Sparkles, path: '/transactions?view=pending', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'transactions', label: 'History', icon: Receipt, path: '/transactions', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'sureties', label: 'Sureties', icon: CalendarClock, path: '/sureties', color: 'text-primary', bgColor: 'bg-surface-subtle' },
-    { id: 'statement', label: 'Asset Statement', icon: FileSpreadsheet, action: 'EXPORT_STATEMENT', color: 'text-primary', bgColor: 'bg-surface-subtle' },
-    { id: 'contingency', label: 'Asset Dispatch', icon: ShieldCheck, action: 'OPEN_CONTINGENCY', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'goals', label: 'Goals', icon: Wallet, path: '/goals', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'categories', label: 'Categories', icon: LayoutGrid, action: 'OPEN_CATEGORIES', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-primary', bgColor: 'bg-surface-subtle' },
-    { id: 'backup', label: 'Backup CSV', icon: Download, action: 'BACKUP_DATA', color: 'text-primary', bgColor: 'bg-surface-subtle' },
+    { id: 'export', label: 'Export Data', icon: Download, action: 'OPEN_EXPORTS', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'vault', label: 'Vault', icon: Target, path: '/credit-cards', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'settle-up', label: 'Settle Up', icon: ArrowUpRight, path: '/settle-up', color: 'text-primary', bgColor: 'bg-surface-subtle' },
 ];
@@ -121,27 +119,8 @@ const More: React.FC = () => {
     const { toggleTheme, isDark } = useTheme();
     const [isExporting, setIsExporting] = useState(false);
     const [isExportingStatement, setIsExportingStatement] = useState(false);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const popoverRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (
-                popoverRef.current &&
-                !popoverRef.current.contains(event.target as Node) &&
-                !(event.target as HTMLElement).closest('button[aria-label="Settings"]')
-            ) {
-                setIsSettingsOpen(false);
-            }
-        };
-
-        if (isSettingsOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isSettingsOpen]);
+    const [isExportOpen, setIsExportOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     const { data: daySummary } = useMonthlySummary(undefined, undefined, 'day');
     const { data: monthSummary } = useMonthlySummary(undefined, undefined, 'month');
@@ -157,7 +136,6 @@ const More: React.FC = () => {
     const userName = user?.email?.split('@')[0] || 'Infiltrator';
 
     // Contingency & Emergency Contact state
-    const [isContingencyOpen, setIsContingencyOpen] = useState(false);
     const [emergencyEmail, setEmergencyEmail] = useState('');
     const [lastActiveAt, setLastActiveAt] = useState<string | null>(null);
     const [isSavingContact, setIsSavingContact] = useState(false);
@@ -242,13 +220,8 @@ const More: React.FC = () => {
     const handleFeatureClick = (card: any) => {
         if (card.action === 'OPEN_CATEGORIES') {
             navigate('/settings/categories');
-        } else if (card.action === 'BACKUP_DATA') {
-            handleBackup();
-        } else if (card.action === 'EXPORT_STATEMENT') {
-            handleExportStatement();
-        } else if (card.action === 'OPEN_CONTINGENCY') {
-            fetchEmergencyContact();
-            setIsContingencyOpen(true);
+        } else if (card.action === 'OPEN_EXPORTS') {
+            setIsExportOpen(true);
         } else if (card.path) {
             navigate(card.path);
         }
@@ -258,119 +231,38 @@ const More: React.FC = () => {
         <div className="min-h-screen text-primary flex flex-col pb-20 overflow-x-hidden">
             {/* Minimal Header */}
             <header className="px-4 py-6 flex items-center justify-between relative">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center p-1 shadow-sm">
+                <div
+                    onClick={() => {
+                        fetchEmergencyContact();
+                        setIsProfileOpen(true);
+                    }}
+                    className="flex items-center gap-3 cursor-pointer group select-none active:scale-[0.98] transition-transform"
+                >
+                    <div className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center p-1 shadow-sm group-hover:border-primary/40 transition-colors">
                         <div className="w-full h-full rounded-full bg-surface-hover flex items-center justify-center">
-                            <CircleUserRound size={20} className="text-text-muted" />
+                            <CircleUserRound size={20} className="text-text-muted group-hover:text-primary transition-colors" />
                         </div>
                     </div>
                     <div>
-                        <h2 className="text-base font-black tracking-tight uppercase text-primary">{userName}</h2>
-                        <p className="text-[8px] text-text-muted tracking-[3px] uppercase font-bold mt-0.5">Intelligence Hub</p>
+                        <div className="flex items-center gap-1.5">
+                            <h2 className="text-base font-black tracking-tight uppercase text-primary">{userName}</h2>
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        </div>
+                        <p className="text-[8px] text-text-muted tracking-[3px] uppercase font-bold mt-0.5 group-hover:text-primary transition-colors">Profile & Settings →</p>
                     </div>
                 </div>
 
-                {/* Settings Gear & Popover */}
-                <div className="relative">
-                    <button
-                        onClick={() => setIsSettingsOpen((prev) => !prev)}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-95 border ${
-                            isSettingsOpen
-                                ? 'bg-accent-subtle text-accent-text border-accent-border shadow-md'
-                                : 'bg-surface-subtle text-secondary border-border-subtle hover:bg-surface-hover hover:text-primary shadow-sm'
-                        }`}
-                        aria-label="Settings"
-                        aria-expanded={isSettingsOpen}
-                    >
-                        <Settings size={18} className={`transition-transform duration-300 ${isSettingsOpen ? 'rotate-90' : ''}`} />
-                    </button>
-
-                    <AnimatePresence>
-                        {isSettingsOpen && (
-                            <motion.div
-                                ref={popoverRef}
-                                initial={{ opacity: 0, scale: 0.95, y: -6 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95, y: -6 }}
-                                transition={{ duration: 0.15, ease: 'easeOut' }}
-                                className="absolute right-0 top-11 z-50 w-64 p-3 rounded-2xl glass-card bg-surface/95 backdrop-blur-2xl border border-border-default shadow-2xl space-y-3"
-                            >
-                                {/* Theme Selector */}
-                                <div>
-                                    <p className="text-[9px] font-black uppercase tracking-[2px] text-text-muted px-2 mb-2">
-                                        Appearance
-                                    </p>
-                                    <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-surface-pill border border-border-subtle">
-                                        <button
-                                            onClick={() => {
-                                                if (!isDark) toggleTheme();
-                                            }}
-                                            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                                isDark
-                                                    ? 'bg-surface text-primary shadow-sm border border-border-subtle'
-                                                    : 'text-text-muted hover:text-primary'
-                                            }`}
-                                        >
-                                            <Moon size={14} className={isDark ? 'text-cyan-400' : ''} />
-                                            <span>Dark</span>
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                if (isDark) toggleTheme();
-                                            }}
-                                            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                                !isDark
-                                                    ? 'bg-surface text-primary shadow-sm border border-border-subtle'
-                                                    : 'text-text-muted hover:text-primary'
-                                            }`}
-                                        >
-                                            <Sun size={14} className={!isDark ? 'text-amber-500' : ''} />
-                                            <span>Light</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <p className="text-[9px] font-black uppercase tracking-[2px] text-text-muted px-2 mb-2">
-                                        Contingency
-                                    </p>
-                                    <button
-                                        onClick={() => {
-                                            setIsSettingsOpen(false);
-                                            fetchEmergencyContact();
-                                            setIsContingencyOpen(true);
-                                        }}
-                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-surface-pill border border-border-subtle hover:bg-surface-hover text-text-muted hover:text-primary transition-colors text-xs font-bold"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <ShieldCheck size={14} className="text-emerald-400" />
-                                            <span>Asset Dispatch</span>
-                                        </div>
-                                        <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">7 Days</span>
-                                    </button>
-                                </div>
-
-                                <div className="h-[1px] bg-border-subtle" />
-
-                                {/* Logout Option */}
-                                <button
-                                    onClick={() => {
-                                        setIsSettingsOpen(false);
-                                        logout();
-                                        navigate('/login');
-                                    }}
-                                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-rose-500/10 text-rose-400 transition-colors text-xs font-bold group"
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        <LogOut size={16} className="text-rose-400 group-hover:scale-105 transition-transform" />
-                                        <span>Sign Out</span>
-                                    </div>
-                                    <span className="text-[10px] text-rose-400/60 uppercase tracking-wider font-semibold">Exit</span>
-                                </button>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
+                {/* Settings Gear Button */}
+                <button
+                    onClick={() => {
+                        fetchEmergencyContact();
+                        setIsProfileOpen(true);
+                    }}
+                    className="w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-95 border bg-surface-subtle text-secondary border-border-subtle hover:bg-surface-hover hover:text-primary shadow-sm"
+                    aria-label="Profile and Settings"
+                >
+                    <Settings size={18} />
+                </button>
             </header>
 
             <div className="px-3 space-y-8 animate-enter pb-10">
