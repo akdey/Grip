@@ -363,7 +363,6 @@ const SettleUp: React.FC = () => {
                     ) : (
                         filteredBalances.map((peer) => {
                             const isOwed = peer.net_balance > 0; // Positive = they owe you
-                            const dateInfo = formatDateSafe(peer.last_activity_date);
                             const initial = peer.peer_name ? peer.peer_name.trim().charAt(0).toUpperCase() : '?';
 
                             return (
@@ -373,12 +372,12 @@ const SettleUp: React.FC = () => {
                                         haptics.selection();
                                         setSelectedPeer(peer.peer_name);
                                     }}
-                                    className="p-4 bg-surface-subtle hover:bg-surface-hover transition-all border border-border-subtle hover:border-border-default/60 rounded-2xl cursor-pointer active:scale-[0.985] group shadow-none hover:shadow-sm"
+                                    className="p-3.5 sm:p-4 bg-surface-subtle hover:bg-surface-hover transition-all border border-border-subtle hover:border-border-default/60 rounded-2xl cursor-pointer active:scale-[0.985] group shadow-none hover:shadow-sm"
                                 >
                                     <div className="flex items-center justify-between gap-3">
                                         <div className="flex items-center gap-3.5 min-w-0">
                                             {/* Avatar Initial */}
-                                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border shadow-inner ${
+                                            <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border shadow-inner ${
                                                 isOwed
                                                     ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500'
                                                     : 'bg-rose-500/15 border-rose-500/30 text-rose-500'
@@ -386,26 +385,9 @@ const SettleUp: React.FC = () => {
                                                 {initial}
                                             </div>
 
-                                            <div className="min-w-0">
-                                                <p className="font-bold text-primary text-sm truncate group-hover:text-accent-text transition-colors">
-                                                    {peer.peer_name}
-                                                </p>
-                                                {/* Prominent Date Display */}
-                                                <div className="flex items-center gap-1.5 mt-1 text-text-muted">
-                                                    <Calendar size={11} className="shrink-0 text-text-muted/70" />
-                                                    <span className="text-[10px] font-semibold text-text-muted truncate">
-                                                        {dateInfo.short}
-                                                    </span>
-                                                    {dateInfo.relative && (
-                                                        <>
-                                                            <span className="text-[9px] text-text-muted/40">•</span>
-                                                            <span className="text-[9px] text-text-muted/70 font-medium">
-                                                                {dateInfo.relative}
-                                                            </span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
+                                            <p className="font-bold text-primary text-sm sm:text-base truncate group-hover:text-accent-text transition-colors">
+                                                {peer.peer_name}
+                                            </p>
                                         </div>
 
                                         <div className="text-right shrink-0">
@@ -414,7 +396,7 @@ const SettleUp: React.FC = () => {
                                             }`}>
                                                 {isOwed ? `+${formatCurrency(peer.net_balance)}` : `-${formatCurrency(peer.net_balance)}`}
                                             </p>
-                                            <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mt-1 border ${
+                                            <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mt-0.5 border ${
                                                 isOwed
                                                     ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
                                                     : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
@@ -447,9 +429,9 @@ const SettleUp: React.FC = () => {
                 isOpen={showAddForm}
                 onClose={resetForm}
                 title={editingEntry ? "Edit Transaction Record" : "Add Settle Up Record"}
-                height="h-[92vh]"
+                height="max-h-[90vh] h-auto"
             >
-                <div className="space-y-5 pb-12 w-full max-w-lg mx-auto overflow-x-hidden">
+                <div className="space-y-5 pb-4 w-full max-w-lg mx-auto overflow-x-hidden">
                     {/* Info Note */}
                     <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-accent-subtle/50 border border-accent-border/60">
                         <Info size={16} className="text-accent-text mt-0.5 shrink-0" />
@@ -641,9 +623,9 @@ const PeerHistoryDrawer: React.FC<PeerHistoryDrawerProps> = ({
             isOpen={isOpen}
             onClose={handleClose}
             title={selectedEntry ? 'Transaction Details' : (peerName || 'Ledger History')}
-            height="h-[92vh]"
+            height={selectedEntry ? "max-h-[85vh] h-auto" : "max-h-[88vh] h-auto"}
         >
-            <div className="w-full max-w-lg mx-auto space-y-4 pb-12 overflow-x-hidden">
+            <div className="w-full max-w-lg mx-auto space-y-4 pb-2 sm:pb-4 overflow-x-hidden">
                 {selectedEntry && detailDateInfo ? (
                     /* Detailed Transaction View */
                     <div className="space-y-4 animate-fadeIn">

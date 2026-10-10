@@ -26,7 +26,7 @@ export const Drawer: React.FC<DrawerProps> = ({
     onClose,
     title,
     children,
-    height = 'h-[75vh]',
+    height = 'max-h-[88vh] h-auto',
     noPadding = false
 }) => {
     // Body scroll lock
@@ -147,7 +147,7 @@ export const Drawer: React.FC<DrawerProps> = ({
                         </div>
 
                         {/* Content Area */}
-                        <div className={`flex-1 flex flex-col min-h-0 select-text overflow-x-hidden ${noPadding ? '' : 'p-4 sm:p-6 pb-40 overflow-y-auto custom-scrollbar'}`}>
+                        <div className={`flex-1 flex flex-col min-h-0 select-text overflow-x-hidden ${noPadding ? '' : 'p-4 sm:p-6 pb-6 sm:pb-8 overflow-y-auto custom-scrollbar'}`}>
                             {children}
                         </div>
                     </motion.div>
