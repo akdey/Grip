@@ -2,23 +2,22 @@ import React, { memo, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronDown,
+    ChevronUp,
     Sparkles,
-    Calendar,
     Layers,
     Activity,
     TrendingUp,
     ShieldCheck,
-    AlertTriangle,
-    Clock,
-    CheckCircle2,
+    Repeat,
     ArrowUpRight,
     Info,
-    Flame
+    Flame,
+    Filter,
+    Check
 } from 'lucide-react';
-import { format, parseISO, isValid } from 'date-fns';
 import { haptics } from '../../../lib/haptics';
 import { CategoryIcon } from '../../../components/ui/CategoryIcon';
-import type { ForecastInfo, SafeToSpend, IdentifiedObligation } from '../hooks';
+import type { ForecastInfo, SafeToSpend } from '../hooks';
 
 interface ForecastIntelligenceDrawerProps {
     isOpen: boolean;
@@ -28,7 +27,24 @@ interface ForecastIntelligenceDrawerProps {
     formatCurrency: (amount: number) => string;
 }
 
-type ForecastViewMode = 'category' | 'date' | 'think';
+type ForecastViewMode = 'category' | 'subcategories' | 'think';
+
+interface SubcategoryItem {
+    subCategoryName: string;
+    categoryName: string;
+    amount: number;
+    percentageOfCategory: number;
+    percentageOfTotal: number;
+    reason: string;
+    isFixed: boolean;
+}
+
+interface CategoryGroup {
+    categoryName: string;
+    totalAmount: number;
+    percentageOfTotal: number;
+    subcategories: SubcategoryItem[];
+}
 
 export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProps> = memo(({
     isOpen,
@@ -38,69 +54,126 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
     formatCurrency
 }) => {
     const [viewMode, setViewMode] = useState<ForecastViewMode>('category');
+    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
+    const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
-    const totalBurden = forecast?.predicted_burden_30d || 0;
-    const dailyBurn = Math.round(totalBurden / 30);
+    const totalBurden = Number(forecast?.predicted_burden_30d || 0);
     const breakdown = forecast?.breakdown || [];
 
-    // Sort categories by highest predicted spend
-    const sortedBreakdown = useMemo(() => {
-        return [...breakdown].sort((a, b) => b.predicted_amount - a.predicted_amount);
-    }, [breakdown]);
+    // Group breakdown items by Category
+    const categoryGroups = useMemo<CategoryGroup[]>(() => {
+        const map = new Map<string, {
+            total: number;
+            items: Array<{
+                subCategoryName: string;
+                amount: number;
+                reason: string;
+                isFixed: boolean;
+            }>;
+        }>();
 
-    // Calculate Top 3 Concentration for the "Think" view
-    const concentrationStats = useMemo(() => {
-        if (!sortedBreakdown.length || totalBurden <= 0) {
-            return { topThreeTotal: 0, topThreePercentage: 0, topCategories: [] };
-        }
-        const topThree = sortedBreakdown.slice(0, 3);
-        const topThreeTotal = topThree.reduce((sum, item) => sum + item.predicted_amount, 0);
-        const topThreePercentage = Math.min(100, Math.round((topThreeTotal / totalBurden) * 100));
-        return {
-            topThreeTotal,
-            topThreePercentage,
-            topCategories: topThree
-        };
-    }, [sortedBreakdown, totalBurden]);
+        for (const rawItem of breakdown) {
+            const cat = (rawItem.category || 'Other').trim();
+            const sub = (rawItem.sub_category || 'General').trim();
+            const amt = Number(rawItem.predicted_amount) || 0;
+            const reason = rawItem.reason || '';
+            const isFixed = reason.toLowerCase().includes('fixed recurring') || reason.toLowerCase().includes('recurring');
 
-    // 4-phase monthly outflow distribution for "Date / Timeline" view
-    const timelinePhases = useMemo(() => {
-        return [
-            {
-                phase: 'Week 1 (Days 1–7)',
-                title: 'Fixed & Early-Month Commitments',
-                ratio: 0.35,
-                amount: Math.round(totalBurden * 0.35),
-                desc: 'Beginning-of-month fixed obligations, rent, EMIs, and initial essentials.'
-            },
-            {
-                phase: 'Week 2 (Days 8–14)',
-                title: 'Mid-Month Utilities & Staples',
-                ratio: 0.25,
-                amount: Math.round(totalBurden * 0.25),
-                desc: 'Recurring utilities, recurring grocery runs, and routine subscriptions.'
-            },
-            {
-                phase: 'Week 3 (Days 15–21)',
-                title: 'Lifestyle & Discretionary Burn',
-                ratio: 0.20,
-                amount: Math.round(totalBurden * 0.20),
-                desc: 'Dining out, leisure, discretionary shopping, and social expenses.'
-            },
-            {
-                phase: 'Week 4 (Days 22–30)',
-                title: 'End-of-Cycle Settling & Buffer',
-                ratio: 0.20,
-                amount: Math.round(totalBurden * 0.20),
-                desc: 'Month-end wrap, credit card settlements, and ad-hoc incidental costs.'
+            if (!map.has(cat)) {
+                map.set(cat, { total: 0, items: [] });
             }
-        ];
-    }, [totalBurden]);
+            const group = map.get(cat)!;
+            group.total += amt;
+            group.items.push({
+                subCategoryName: sub,
+                amount: amt,
+                reason,
+                isFixed
+            });
+        }
 
-    // Scheduled obligations from Safe-to-Spend
-    const scheduledObligations = safeToSpend?.frozen_funds?.obligations || [];
+        const groups: CategoryGroup[] = [];
+        map.forEach((value, cat) => {
+            const sortedItems = [...value.items].sort((a, b) => b.amount - a.amount);
+            groups.push({
+                categoryName: cat,
+                totalAmount: value.total,
+                percentageOfTotal: totalBurden > 0 ? (value.total / totalBurden) * 100 : 0,
+                subcategories: sortedItems.map(item => ({
+                    subCategoryName: item.subCategoryName,
+                    categoryName: cat,
+                    amount: item.amount,
+                    percentageOfCategory: value.total > 0 ? (item.amount / value.total) * 100 : 0,
+                    percentageOfTotal: totalBurden > 0 ? (item.amount / totalBurden) * 100 : 0,
+                    reason: item.reason,
+                    isFixed: item.isFixed
+                }))
+            });
+        });
 
-    // Confidence badge helpers
+        return groups.sort((a, b) => b.totalAmount - a.totalAmount);
+    }, [breakdown, totalBurden]);
+
+    // Flat list of all subcategories ranked by amount
+    const allRankedSubcategories = useMemo<SubcategoryItem[]>(() => {
+        const items: SubcategoryItem[] = [];
+        for (const group of categoryGroups) {
+            items.push(...group.subcategories);
+        }
+        return items.sort((a, b) => b.amount - a.amount);
+    }, [categoryGroups]);
+
+    // Filtered categories
+    const displayedCategoryGroups = useMemo(() => {
+        if (selectedCategoryFilter === 'all') return categoryGroups;
+        return categoryGroups.filter(g => g.categoryName.toLowerCase() === selectedCategoryFilter.toLowerCase());
+    }, [categoryGroups, selectedCategoryFilter]);
+
+    // Fixed vs Variable Split for Think View
+    const spendComposition = useMemo(() => {
+        let fixedTotal = 0;
+        let variableTotal = 0;
+
+        for (const item of allRankedSubcategories) {
+            if (item.isFixed) {
+                fixedTotal += item.amount;
+            } else {
+                variableTotal += item.amount;
+            }
+        }
+
+        const fixedPct = totalBurden > 0 ? Math.round((fixedTotal / totalBurden) * 100) : 0;
+        const variablePct = totalBurden > 0 ? Math.max(0, 100 - fixedPct) : 0;
+
+        return {
+            fixedTotal,
+            variableTotal,
+            fixedPct,
+            variablePct
+        };
+    }, [allRankedSubcategories, totalBurden]);
+
+    // Top 3 Concentration Stats
+    const topThreeConcentration = useMemo(() => {
+        const topThree = categoryGroups.slice(0, 3);
+        const topThreeSum = topThree.reduce((sum, g) => sum + g.totalAmount, 0);
+        const topThreePct = totalBurden > 0 ? Math.round((topThreeSum / totalBurden) * 100) : 0;
+        return {
+            categories: topThree,
+            sum: topThreeSum,
+            pct: topThreePct
+        };
+    }, [categoryGroups, totalBurden]);
+
+    const toggleCategoryCollapse = (catName: string) => {
+        haptics.selection();
+        setCollapsedCategories(prev => ({
+            ...prev,
+            [catName]: !prev[catName]
+        }));
+    };
+
+    // Confidence badge styling
     const confidenceBadge = useMemo(() => {
         const conf = (forecast?.confidence || 'medium').toLowerCase();
         if (conf === 'high') {
@@ -124,21 +197,11 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
         };
     }, [forecast?.confidence]);
 
-    const formatObligationDate = (dateStr: string) => {
-        try {
-            const parsed = parseISO(dateStr);
-            if (isValid(parsed)) return format(parsed, 'MMM dd');
-        } catch {
-            // fallback
-        }
-        return dateStr;
-    };
-
     return (
         <AnimatePresence>
             {isOpen && (
                 <div className="fixed inset-0 z-[2000] flex justify-center pointer-events-none">
-                    {/* Backdrop */}
+                    {/* Progressive Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -150,7 +213,7 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                         className="absolute inset-0 bg-overlay backdrop-blur-md pointer-events-auto"
                     />
 
-                    {/* Drawer Surface */}
+                    {/* Bottom Sheet Surface */}
                     <motion.div
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
@@ -169,7 +232,7 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                         }}
                         className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[92vh] max-h-[92vh] glass-drawer rounded-t-[32px] sm:rounded-t-[40px] flex flex-col shadow-2xl overflow-hidden pointer-events-auto z-[2000] select-none touch-none"
                     >
-                        {/* Apple-style Grabber Pill */}
+                        {/* Grabber Pill */}
                         <div
                             className="flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing"
                             onClick={() => {
@@ -191,7 +254,7 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                         Forecast Intelligence
                                     </h3>
                                     <p className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5 truncate">
-                                        {forecast?.time_frame || 'Next 30 Days'} • Predictive Engine
+                                        {forecast?.time_frame || 'Next 30 Days'} • Tabular ML Forecast
                                     </p>
                                 </div>
                             </div>
@@ -209,7 +272,7 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                             </button>
                         </div>
 
-                        {/* View Selector Controls */}
+                        {/* Top View Selector Tabs */}
                         <div className="px-5 sm:px-8 pt-3 pb-2 border-b border-border-subtle/50 shrink-0 bg-surface/20">
                             <div className="grid grid-cols-3 gap-1.5 p-1 bg-surface-subtle border border-border-subtle rounded-2xl">
                                 <button
@@ -224,21 +287,21 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                     }`}
                                 >
                                     <Layers size={13} />
-                                    <span className="truncate">Category</span>
+                                    <span className="truncate">By Category</span>
                                 </button>
                                 <button
                                     onClick={() => {
                                         haptics.selection();
-                                        setViewMode('date');
+                                        setViewMode('subcategories');
                                     }}
                                     className={`py-2 px-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
-                                        viewMode === 'date'
+                                        viewMode === 'subcategories'
                                             ? 'bg-primary text-text-inverse shadow-sm'
                                             : 'text-text-muted hover:text-primary hover:bg-surface-hover'
                                     }`}
                                 >
-                                    <Calendar size={13} />
-                                    <span className="truncate">Date & Cycle</span>
+                                    <TrendingUp size={13} />
+                                    <span className="truncate">Top Ranked</span>
                                 </button>
                                 <button
                                     onClick={() => {
@@ -257,25 +320,25 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                             </div>
                         </div>
 
-                        {/* Content Scroll Container */}
+                        {/* Content Area */}
                         <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-5 space-y-6 custom-scrollbar select-text overflow-x-hidden">
-                            {/* Top KPI Summary Strip */}
+                            {/* KPI Overview Strip */}
                             <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
                                 <div className="p-3.5 sm:p-4 rounded-2xl bg-surface-subtle border border-border-subtle">
                                     <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-text-muted block">
-                                        Total Exposure
+                                        Total Burden
                                     </span>
                                     <p className="text-base sm:text-xl font-black text-primary tracking-tight mt-1 truncate">
                                         {formatCurrency(totalBurden)}
                                     </p>
                                     <span className="text-[8px] font-semibold text-text-muted/80 block mt-0.5 truncate">
-                                        30-Day Predicted
+                                        30-Day Exposure
                                     </span>
                                 </div>
 
                                 <div className="p-3.5 sm:p-4 rounded-2xl bg-surface-subtle border border-border-subtle">
                                     <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-text-muted block">
-                                        Confidence
+                                        Model Accuracy
                                     </span>
                                     <div className="flex items-center gap-1.5 mt-1.5">
                                         <div className={`w-2 h-2 rounded-full shrink-0 ${confidenceBadge.dotClass}`} />
@@ -284,223 +347,251 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                         </span>
                                     </div>
                                     <span className="text-[8px] font-semibold text-text-muted/80 block mt-0.5 truncate">
-                                        Model Reliability
+                                        Reliability Index
                                     </span>
                                 </div>
 
                                 <div className="p-3.5 sm:p-4 rounded-2xl bg-surface-subtle border border-border-subtle">
                                     <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-text-muted block">
-                                        Daily Burn Rate
+                                        Categories
                                     </span>
                                     <p className="text-base sm:text-xl font-black text-primary tracking-tight mt-1 truncate">
-                                        {formatCurrency(dailyBurn)}
+                                        {categoryGroups.length}
                                     </p>
                                     <span className="text-[8px] font-semibold text-text-muted/80 block mt-0.5 truncate">
-                                        Projected / Day
+                                        {breakdown.length} Subcategories
                                     </span>
                                 </div>
                             </div>
 
-                            {/* View 1: Category Wise */}
+                            {/* View 1: Category with Subcategory Distribution (Core User Request) */}
                             {viewMode === 'category' && (
                                 <div className="space-y-4 animate-fadeIn">
-                                    <div className="flex items-center justify-between px-1">
-                                        <div className="flex items-center gap-2">
-                                            <Layers size={14} className="text-accent-text" />
-                                            <h4 className="text-[10px] font-black text-text-muted uppercase tracking-[3px]">
-                                                Category Allocations ({sortedBreakdown.length})
-                                            </h4>
-                                        </div>
-                                        <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">
-                                            Ranked by Burden
-                                        </span>
-                                    </div>
-
-                                    {sortedBreakdown.length === 0 ? (
-                                        <div className="p-12 rounded-3xl bg-surface-subtle border border-border-subtle text-center space-y-2 opacity-60">
-                                            <Layers size={32} className="mx-auto text-text-muted" />
-                                            <p className="text-xs font-bold uppercase tracking-wider text-text-muted">
-                                                No category predictions generated yet
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {sortedBreakdown.map((item, idx) => {
-                                                const percentage = totalBurden > 0
-                                                    ? Math.min(100, Math.round((item.predicted_amount / totalBurden) * 100))
-                                                    : 0;
-
-                                                return (
-                                                    <div
-                                                        key={`${item.category}-${item.sub_category || idx}`}
-                                                        className="p-4 sm:p-5 rounded-2xl bg-surface-subtle border border-border-subtle hover:border-border-default transition-all group"
-                                                    >
-                                                        <div className="flex items-start justify-between gap-3 mb-2.5">
-                                                            <div className="flex items-center gap-3 min-w-0">
-                                                                <div className="w-10 h-10 rounded-xl bg-surface border border-border-subtle flex items-center justify-center text-primary group-hover:border-accent-border transition-colors shrink-0 shadow-inner">
-                                                                    <CategoryIcon name={item.category.toLowerCase()} size={18} />
-                                                                </div>
-                                                                <div className="min-w-0">
-                                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                                        <span className="text-sm font-bold text-primary tracking-tight truncate">
-                                                                            {item.category}
-                                                                        </span>
-                                                                        {item.sub_category && (
-                                                                            <span className="text-[8.5px] font-bold px-2 py-0.5 rounded-full bg-accent-subtle border border-accent-border text-accent-text uppercase tracking-wider">
-                                                                                {item.sub_category}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider mt-0.5 block">
-                                                                        Rank #{idx + 1} • {percentage}% of total
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="text-right shrink-0">
-                                                                <p className="text-base sm:text-lg font-black text-primary tracking-tight">
-                                                                    {formatCurrency(item.predicted_amount)}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Distribution Progress Bar */}
-                                                        <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden mb-2.5 border border-border-subtle/40">
-                                                            <div
-                                                                className="h-full bg-accent-text/80 rounded-full transition-all duration-500"
-                                                                style={{ width: `${Math.max(4, percentage)}%` }}
-                                                            />
-                                                        </div>
-
-                                                        {/* AI Reasoning & Driver Text */}
-                                                        {item.reason && (
-                                                            <div className="p-2.5 rounded-xl bg-surface/50 border border-border-subtle/50 text-[11px] text-text-muted font-medium leading-relaxed">
-                                                                {item.reason}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* View 2: Date & Cycle-Wise Timeline */}
-                            {viewMode === 'date' && (
-                                <div className="space-y-6 animate-fadeIn">
-                                    {/* Phased 4-Week Distribution */}
-                                    <div className="space-y-3">
+                                    {/* Category Filter Chips */}
+                                    <div className="space-y-2">
                                         <div className="flex items-center justify-between px-1">
-                                            <div className="flex items-center gap-2">
-                                                <Clock size={14} className="text-accent-text" />
-                                                <h4 className="text-[10px] font-black text-text-muted uppercase tracking-[3px]">
-                                                    30-Day Phased Outflow Cycle
-                                                </h4>
-                                            </div>
-                                            <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">
-                                                {formatCurrency(dailyBurn)} / day avg
+                                            <span className="text-[9px] font-black uppercase tracking-[3px] text-text-muted flex items-center gap-1.5">
+                                                <Filter size={11} />
+                                                Filter Category
+                                            </span>
+                                            <span className="text-[9px] font-semibold text-text-muted">
+                                                Showing {displayedCategoryGroups.length} of {categoryGroups.length}
                                             </span>
                                         </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            {timelinePhases.map((phase, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex flex-col justify-between space-y-2.5"
+                                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                                            <button
+                                                onClick={() => {
+                                                    haptics.selection();
+                                                    setSelectedCategoryFilter('all');
+                                                }}
+                                                className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all border ${
+                                                    selectedCategoryFilter === 'all'
+                                                        ? 'bg-primary text-text-inverse border-primary shadow-sm'
+                                                        : 'bg-surface-subtle text-text-muted border-border-subtle hover:text-primary hover:bg-surface-hover'
+                                                }`}
+                                            >
+                                                All ({categoryGroups.length})
+                                            </button>
+                                            {categoryGroups.map(g => (
+                                                <button
+                                                    key={g.categoryName}
+                                                    onClick={() => {
+                                                        haptics.selection();
+                                                        setSelectedCategoryFilter(g.categoryName);
+                                                    }}
+                                                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all border flex items-center gap-1.5 ${
+                                                        selectedCategoryFilter.toLowerCase() === g.categoryName.toLowerCase()
+                                                            ? 'bg-primary text-text-inverse border-primary shadow-sm'
+                                                            : 'bg-surface-subtle text-text-muted border-border-subtle hover:text-primary hover:bg-surface-hover'
+                                                    }`}
                                                 >
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent-subtle border border-accent-border text-accent-text">
-                                                            {phase.phase}
-                                                        </span>
-                                                        <span className="text-sm font-black text-primary">
-                                                            {formatCurrency(phase.amount)}
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs font-bold text-primary">
-                                                            {phase.title}
-                                                        </p>
-                                                        <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
-                                                            {phase.desc}
-                                                        </p>
-                                                    </div>
-                                                </div>
+                                                    <span>{g.categoryName}</span>
+                                                    <span className="text-[8px] opacity-75 font-semibold">
+                                                        ({g.subcategories.length})
+                                                    </span>
+                                                </button>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Scheduled Due Dates from Safe-to-Spend Obligations */}
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between px-1">
-                                            <div className="flex items-center gap-2">
-                                                <Calendar size={14} className="text-accent-text" />
-                                                <h4 className="text-[10px] font-black text-text-muted uppercase tracking-[3px]">
-                                                    Scheduled Due Dates & Commitments ({scheduledObligations.length})
-                                                </h4>
-                                            </div>
-                                            <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">
-                                                Identified in Cycle
-                                            </span>
-                                        </div>
+                                    {/* Grouped Category Cards */}
+                                    <div className="space-y-3.5 pt-1">
+                                        {displayedCategoryGroups.map((group, groupIdx) => {
+                                            const isCollapsed = !!collapsedCategories[group.categoryName];
 
-                                        {scheduledObligations.length === 0 ? (
-                                            <div className="p-8 rounded-2xl bg-surface-subtle border border-border-subtle text-center space-y-1.5 opacity-70">
-                                                <CheckCircle2 size={24} className="mx-auto text-emerald-500" />
-                                                <p className="text-xs font-bold text-primary">
-                                                    No Pending Commitments
-                                                </p>
-                                                <p className="text-[10px] text-text-muted">
-                                                    No overdue or fixed bill deadlines detected in this active cycle.
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-2">
-                                                {scheduledObligations.map((obl) => (
+                                            return (
+                                                <div
+                                                    key={group.categoryName}
+                                                    className="rounded-3xl bg-surface-subtle border border-border-subtle overflow-hidden hover:border-border-default/60 transition-all shadow-none hover:shadow-sm"
+                                                >
+                                                    {/* Category Header Card */}
                                                     <div
-                                                        key={obl.id}
-                                                        className="p-3.5 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between gap-3"
+                                                        onClick={() => toggleCategoryCollapse(group.categoryName)}
+                                                        className="p-4 sm:p-5 cursor-pointer bg-surface/30 hover:bg-surface/60 transition-colors flex items-center justify-between gap-3"
                                                     >
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            <div className="w-10 h-10 rounded-xl bg-surface border border-border-subtle flex items-center justify-center font-bold text-xs text-primary shrink-0">
-                                                                <Calendar size={16} className="text-accent-text" />
+                                                        <div className="flex items-center gap-3.5 min-w-0">
+                                                            <div className="w-11 h-11 rounded-2xl bg-surface border border-border-subtle flex items-center justify-center text-primary shrink-0 shadow-inner">
+                                                                <CategoryIcon name={group.categoryName.toLowerCase()} size={20} />
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                                    <p className="text-xs font-bold text-primary truncate">
-                                                                        {obl.title}
-                                                                    </p>
-                                                                    <span className="text-[7.5px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-surface border border-border-subtle text-text-muted">
-                                                                        {obl.type}
+                                                                <div className="flex items-center gap-2">
+                                                                    <h4 className="text-sm sm:text-base font-bold text-primary truncate">
+                                                                        {group.categoryName}
+                                                                    </h4>
+                                                                    <span className="text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent-subtle border border-accent-border text-accent-text shrink-0">
+                                                                        {group.percentageOfTotal.toFixed(1)}% of budget
                                                                     </span>
                                                                 </div>
-                                                                <p className="text-[9px] font-semibold text-text-muted mt-0.5 truncate">
-                                                                    Due {formatObligationDate(obl.due_date)} • {obl.status}
+                                                                <p className="text-[10px] font-semibold text-text-muted mt-0.5 truncate">
+                                                                    Rank #{groupIdx + 1} • {group.subcategories.length} {group.subcategories.length === 1 ? 'subcategory' : 'subcategories'}
                                                                 </p>
                                                             </div>
                                                         </div>
 
-                                                        <div className="text-right shrink-0">
-                                                            <p className="text-xs sm:text-sm font-black text-primary">
-                                                                {formatCurrency(obl.amount)}
-                                                            </p>
-                                                            <span className={`inline-block text-[7.5px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded mt-0.5 border ${
-                                                                obl.status === 'OVERDUE'
-                                                                    ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                                                                    : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                                            }`}>
-                                                                {obl.status}
-                                                            </span>
+                                                        <div className="flex items-center gap-3 shrink-0">
+                                                            <div className="text-right">
+                                                                <p className="text-base sm:text-lg font-black text-primary tracking-tight">
+                                                                    {formatCurrency(group.totalAmount)}
+                                                                </p>
+                                                            </div>
+                                                            <div className="w-7 h-7 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary transition-colors">
+                                                                {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )}
+
+                                                    {/* Budget Share Progress Bar */}
+                                                    <div className="px-4 sm:px-5 pb-2">
+                                                        <div className="w-full h-1 bg-surface rounded-full overflow-hidden">
+                                                            <div
+                                                                className="h-full bg-accent-text/80 rounded-full transition-all duration-500"
+                                                                style={{ width: `${Math.max(3, group.percentageOfTotal)}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Subcategories Nested Distribution List */}
+                                                    {!isCollapsed && (
+                                                        <div className="p-3 sm:p-4 pt-1 border-t border-border-subtle/50 space-y-2 bg-surface/10">
+                                                            {group.subcategories.map((sub, subIdx) => (
+                                                                <div
+                                                                    key={`${group.categoryName}-${sub.subCategoryName}-${subIdx}`}
+                                                                    className="p-3 sm:p-3.5 rounded-2xl bg-surface border border-border-subtle/70 space-y-2 hover:border-border-default transition-all"
+                                                                >
+                                                                    <div className="flex items-start justify-between gap-3">
+                                                                        <div className="min-w-0">
+                                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                                <span className="text-xs sm:text-sm font-bold text-primary truncate">
+                                                                                    {sub.subCategoryName}
+                                                                                </span>
+                                                                                {sub.isFixed ? (
+                                                                                    <span className="text-[7.5px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center gap-1">
+                                                                                        <Repeat size={9} /> Fixed
+                                                                                    </span>
+                                                                                ) : (
+                                                                                    <span className="text-[7.5px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-accent-subtle text-accent-text border border-accent-border flex items-center gap-1">
+                                                                                        <Activity size={9} /> ML Trend
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <span className="text-[9px] text-text-muted font-semibold mt-0.5 block">
+                                                                                {sub.percentageOfCategory.toFixed(0)}% of {group.categoryName}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div className="text-right shrink-0">
+                                                                            <span className="text-sm sm:text-base font-black text-primary tracking-tight">
+                                                                                {formatCurrency(sub.amount)}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Intra-Category Proportion Bar */}
+                                                                    <div className="w-full h-1 bg-surface-subtle rounded-full overflow-hidden">
+                                                                        <div
+                                                                            className="h-full bg-primary/70 rounded-full transition-all duration-500"
+                                                                            style={{ width: `${Math.max(4, sub.percentageOfCategory)}%` }}
+                                                                        />
+                                                                    </div>
+
+                                                                    {/* Model Reasoning Quote */}
+                                                                    {sub.reason && (
+                                                                        <p className="text-[10px] text-text-muted font-medium leading-relaxed bg-surface-subtle/60 px-2.5 py-1.5 rounded-xl border border-border-subtle/40">
+                                                                            {sub.reason}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
 
-                            {/* View 3: Think & AI Insights */}
+                            {/* View 2: All Subcategories Ranked (Flat Leaderboard) */}
+                            {viewMode === 'subcategories' && (
+                                <div className="space-y-3.5 animate-fadeIn">
+                                    <div className="flex items-center justify-between px-1">
+                                        <div className="flex items-center gap-2">
+                                            <TrendingUp size={14} className="text-accent-text" />
+                                            <h4 className="text-[10px] font-black text-text-muted uppercase tracking-[3px]">
+                                                All Subcategories Ranked ({allRankedSubcategories.length})
+                                            </h4>
+                                        </div>
+                                        <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">
+                                            Highest to Lowest
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {allRankedSubcategories.map((item, idx) => (
+                                            <div
+                                                key={`${item.categoryName}-${item.subCategoryName}-${idx}`}
+                                                className="p-3.5 rounded-2xl bg-surface-subtle border border-border-subtle flex items-start justify-between gap-3 hover:border-border-default transition-all"
+                                            >
+                                                <div className="flex items-start gap-3 min-w-0">
+                                                    <div className="w-8 h-8 rounded-xl bg-surface border border-border-subtle flex items-center justify-center text-xs font-black text-text-muted shrink-0 mt-0.5">
+                                                        #{idx + 1}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <p className="text-xs sm:text-sm font-bold text-primary truncate">
+                                                                {item.subCategoryName}
+                                                            </p>
+                                                            <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-surface border border-border-subtle text-text-muted uppercase tracking-wider">
+                                                                {item.categoryName}
+                                                            </span>
+                                                            {item.isFixed && (
+                                                                <span className="text-[7px] font-black uppercase px-1 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                                                    Fixed
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-[9.5px] text-text-muted mt-0.5 line-clamp-1">
+                                                            {item.reason}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-sm font-black text-primary tracking-tight">
+                                                        {formatCurrency(item.amount)}
+                                                    </p>
+                                                    <span className="text-[8px] font-semibold text-text-muted">
+                                                        {item.percentageOfTotal.toFixed(1)}% total
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* View 3: Think & AI Intelligence */}
                             {viewMode === 'think' && (
                                 <div className="space-y-4 animate-fadeIn">
                                     {/* AI Context Hero Card */}
@@ -518,30 +609,91 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                         </p>
                                     </div>
 
+                                    {/* Fixed Commitments vs Variable Trend Split */}
+                                    <div className="p-4 sm:p-5 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Repeat size={16} className="text-emerald-500" />
+                                                <h4 className="text-xs font-bold text-primary">
+                                                    Fixed Commitments vs Variable Run-Rate
+                                                </h4>
+                                            </div>
+                                            <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">
+                                                Expense Type Split
+                                            </span>
+                                        </div>
+
+                                        {/* Split Bar */}
+                                        <div className="w-full h-2 bg-surface rounded-full overflow-hidden flex">
+                                            <div
+                                                className="h-full bg-emerald-500 transition-all duration-500"
+                                                style={{ width: `${spendComposition.fixedPct}%` }}
+                                                title={`Fixed: ${spendComposition.fixedPct}%`}
+                                            />
+                                            <div
+                                                className="h-full bg-accent-text transition-all duration-500"
+                                                style={{ width: `${spendComposition.variablePct}%` }}
+                                                title={`Variable: ${spendComposition.variablePct}%`}
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2.5 pt-1">
+                                            <div className="p-3 rounded-xl bg-surface border border-border-subtle">
+                                                <div className="flex items-center gap-1.5 mb-1">
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                    <span className="text-[8.5px] font-bold uppercase tracking-wider text-text-muted">
+                                                        Fixed / Recurring ({spendComposition.fixedPct}%)
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm font-black text-emerald-500">
+                                                    {formatCurrency(spendComposition.fixedTotal)}
+                                                </p>
+                                                <span className="text-[8px] text-text-muted">
+                                                    SIPs, EMIs, P2P loans, fixed dues
+                                                </span>
+                                            </div>
+
+                                            <div className="p-3 rounded-xl bg-surface border border-border-subtle">
+                                                <div className="flex items-center gap-1.5 mb-1">
+                                                    <div className="w-2 h-2 rounded-full bg-accent-text" />
+                                                    <span className="text-[8.5px] font-bold uppercase tracking-wider text-text-muted">
+                                                        Variable Trend ({spendComposition.variablePct}%)
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm font-black text-primary">
+                                                    {formatCurrency(spendComposition.variableTotal)}
+                                                </p>
+                                                <span className="text-[8px] text-text-muted">
+                                                    Living expenses, discretionary burn
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {/* Spend Concentration Insight */}
                                     <div className="p-4 sm:p-5 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <Flame size={16} className="text-amber-500" />
                                                 <h4 className="text-xs font-bold text-primary">
-                                                    Spend Concentration Analysis
+                                                    Top Category Concentration
                                                 </h4>
                                             </div>
                                             <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
-                                                {concentrationStats.topThreePercentage}% Burden
+                                                {topThreeConcentration.pct}% of Forecast
                                             </span>
                                         </div>
                                         <p className="text-xs text-text-muted leading-relaxed">
-                                            Your top 3 spending categories account for <strong className="text-primary">{concentrationStats.topThreePercentage}% ({formatCurrency(concentrationStats.topThreeTotal)})</strong> of your forecasted 30-day burden.
+                                            Your top 3 spending categories account for <strong className="text-primary">{topThreeConcentration.pct}% ({formatCurrency(topThreeConcentration.sum)})</strong> of your forecasted 30-day burden:
                                         </p>
                                         <div className="flex flex-wrap gap-2 pt-1">
-                                            {concentrationStats.topCategories.map((c, i) => (
+                                            {topThreeConcentration.categories.map((c, i) => (
                                                 <span
                                                     key={i}
                                                     className="px-2.5 py-1 rounded-xl bg-surface border border-border-subtle text-[10px] font-bold text-primary flex items-center gap-1.5"
                                                 >
-                                                    <span>{c.category}</span>
-                                                    <span className="text-accent-text font-black">{formatCurrency(c.predicted_amount)}</span>
+                                                    <span>{c.categoryName}</span>
+                                                    <span className="text-accent-text font-black">{formatCurrency(c.totalAmount)}</span>
                                                 </span>
                                             ))}
                                         </div>
@@ -589,7 +741,7 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                     <div className="p-4 rounded-2xl bg-surface-subtle/50 border border-border-subtle/60 flex items-start gap-3">
                                         <Info size={16} className="text-text-muted mt-0.5 shrink-0" />
                                         <div className="text-[10px] text-text-muted leading-relaxed">
-                                            <strong>Engine Details:</strong> Blended predictive ensemble combining gradient-boosted trees (LightGBM) with recency-gated exponential decay (EWMA) and cyclical month calendar encoding.
+                                            <strong>Engine Details:</strong> Hybrid deterministic recurring expense recognition blended with small-sample regularized LightGBM regression and 3-month continuous EWMA trend decay.
                                         </div>
                                     </div>
                                 </div>
