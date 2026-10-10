@@ -427,91 +427,232 @@ const More: React.FC = () => {
                 <SystemIntelligence />
             </div>
 
-            {/* Asset Contingency Bottom Sheet */}
+            {/* Consolidated Export Data Drawer */}
             <Drawer
-                isOpen={isContingencyOpen}
-                onClose={() => setIsContingencyOpen(false)}
-                title="Asset Contingency"
+                isOpen={isExportOpen}
+                onClose={() => setIsExportOpen(false)}
+                title="Export Data"
             >
-                <div className="p-5 space-y-6">
-                    {/* Hero Rule Card */}
-                    <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex items-start gap-3.5">
-                        <div className="w-10 h-10 rounded-xl bg-accent-subtle border border-accent-border flex items-center justify-center shrink-0 text-accent-text shadow-sm">
-                            <ShieldCheck size={20} />
+                <div className="p-5 space-y-4">
+                    <p className="text-xs text-text-muted leading-relaxed">
+                        Export your financial records or comprehensive portfolio statements in portable formats for offline backups and analysis.
+                    </p>
+
+                    {/* Transaction CSV Export Card */}
+                    <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle hover:border-primary/30 transition-colors">
+                        <div className="flex items-start gap-3.5 mb-3">
+                            <div className="w-10 h-10 rounded-xl bg-surface-pill text-primary flex items-center justify-center shrink-0 shadow-sm">
+                                <Receipt size={18} />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-sm font-black text-primary tracking-tight">Transaction History</h4>
+                                <p className="text-[11px] text-text-muted mt-0.5 leading-normal">
+                                    Raw CSV file containing all income, expenses, categories, tags, and account records.
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 className="text-sm font-black text-primary tracking-tight">7-Day Inactivity Contingency</h4>
-                            <p className="text-xs text-text-muted mt-1 leading-relaxed">
-                                If you do not access Grip for <span className="text-primary font-bold">7 days</span>, Grip's automated scheduler will securely generate your comprehensive portfolio statement spreadsheet (<span className="text-primary font-mono text-[11px]">.xlsx</span>) and dispatch it to your designated emergency contact.
-                            </p>
-                        </div>
+                        <Button
+                            onClick={handleBackup}
+                            disabled={isExporting}
+                            className="w-full py-2.5 text-xs font-black uppercase tracking-wider bg-surface-pill hover:bg-surface-hover text-primary border border-border-subtle flex items-center justify-center gap-2"
+                        >
+                            {isExporting ? (
+                                <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-current border-t-transparent" />
+                            ) : (
+                                <Download size={14} />
+                            )}
+                            <span>{isExporting ? 'Generating CSV...' : 'Download .CSV Backup'}</span>
+                        </Button>
                     </div>
 
-                    {/* Status Pill */}
-                    <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-surface-pill border border-border-subtle text-xs">
-                        <div className="flex items-center gap-2 text-text-muted">
-                            <Clock size={14} className="text-emerald-400" />
-                            <span className="text-[11px] font-bold uppercase tracking-wider">Your Grip Status</span>
+                    {/* Portfolio Statement XLSX Export Card */}
+                    <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle hover:border-primary/30 transition-colors">
+                        <div className="flex items-start gap-3.5 mb-3">
+                            <div className="w-10 h-10 rounded-xl bg-accent-subtle border border-accent-border text-accent-text flex items-center justify-center shrink-0 shadow-sm">
+                                <FileSpreadsheet size={18} />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-sm font-black text-primary tracking-tight">Portfolio Wealth Statement</h4>
+                                <p className="text-[11px] text-text-muted mt-0.5 leading-normal">
+                                    Formatted Excel spreadsheet with full net worth, bank accounts, mutual funds, gold, and sureties.
+                                </p>
+                            </div>
                         </div>
-                        <span className="font-bold text-emerald-400">
-                            {lastActiveAt ? `Active (${new Date(lastActiveAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})` : 'Active Now'}
+                        <Button
+                            onClick={handleExportStatement}
+                            disabled={isExportingStatement}
+                            className="w-full py-2.5 text-xs font-black uppercase tracking-wider bg-primary text-background hover:opacity-90 flex items-center justify-center gap-2"
+                        >
+                            {isExportingStatement ? (
+                                <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-current border-t-transparent" />
+                            ) : (
+                                <Download size={14} />
+                            )}
+                            <span>{isExportingStatement ? 'Generating Spreadsheet...' : 'Download .XLSX Statement'}</span>
+                        </Button>
+                    </div>
+                </div>
+            </Drawer>
+
+            {/* Profile & Settings Drawer */}
+            <Drawer
+                isOpen={isProfileOpen}
+                onClose={() => setIsProfileOpen(false)}
+                title="Profile & Settings"
+            >
+                <div className="p-5 space-y-6">
+                    {/* User Card */}
+                    <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-full bg-surface-pill border border-border-subtle flex items-center justify-center text-primary shadow-sm">
+                                <CircleUserRound size={24} />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-black text-primary tracking-tight uppercase">{userName}</h4>
+                                <p className="text-xs text-text-muted mt-0.5">{user?.email}</p>
+                            </div>
+                        </div>
+                        <span className="px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Active
                         </span>
                     </div>
 
-                    {/* Email Form */}
-                    <form onSubmit={handleSaveEmergencyContact} className="space-y-4">
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-[2px] text-text-muted px-1 flex items-center justify-between">
-                                <span>Designated Emergency / Nominee Email</span>
-                                <span className="text-[9px] text-text-muted/60 font-semibold lowercase">receives .xlsx schedule</span>
+                    {/* Appearance & Theme */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[2px] text-text-muted px-1">
+                            Appearance
+                        </label>
+                        <button
+                            onClick={toggleTheme}
+                            className="w-full p-3.5 rounded-2xl bg-surface-subtle border border-border-subtle hover:bg-surface-hover transition-colors flex items-center justify-between group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-surface-pill text-primary flex items-center justify-center">
+                                    {isDark ? <Moon size={15} /> : <Sun size={15} />}
+                                </div>
+                                <div className="text-left">
+                                    <span className="text-xs font-black text-primary uppercase tracking-wide block">
+                                        Interface Theme
+                                    </span>
+                                    <span className="text-[10px] text-text-muted block">
+                                        Currently using {isDark ? 'Dark' : 'Light'} theme
+                                    </span>
+                                </div>
+                            </div>
+                            <span className="text-xs font-bold text-text-muted group-hover:text-primary transition-colors">
+                                Toggle →
+                            </span>
+                        </button>
+                    </div>
+
+                    {/* Emergency Nominee Contingency Section */}
+                    <div className="space-y-3 pt-2 border-t border-border-subtle">
+                        <div className="flex items-center justify-between px-1">
+                            <label className="text-[10px] font-black uppercase tracking-[2px] text-text-muted">
+                                Contingency & Nominee
                             </label>
-                            <Input
-                                type="email"
-                                placeholder="nominee@example.com"
-                                value={emergencyEmail}
-                                onChange={(e) => setEmergencyEmail(e.target.value)}
-                                className="w-full text-sm font-medium"
-                            />
-                            <p className="text-[10px] text-text-muted px-1 mt-1 leading-normal">
-                                Enter the email of your trusted contact or nominee. Leave empty to disable automated dispatch.
-                            </p>
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-accent-text bg-accent-subtle px-2 py-0.5 rounded-full border border-accent-border">
+                                7-Day Rule
+                            </span>
                         </div>
 
-                        {saveSuccess && (
-                            <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
-                                <Check size={14} />
-                                <span>Emergency contact saved securely</span>
+                        <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-4">
+                            <div className="flex items-start gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-accent-subtle border border-accent-border text-accent-text flex items-center justify-center shrink-0 shadow-sm">
+                                    <ShieldCheck size={18} />
+                                </div>
+                                <div>
+                                    <h5 className="text-xs font-black text-primary uppercase tracking-wide">
+                                        Inactivity Asset Dispatch
+                                    </h5>
+                                    <p className="text-[11px] text-text-muted mt-1 leading-relaxed">
+                                        If you do not access Grip for <span className="text-primary font-bold">7 consecutive days</span>, Grip's automated scheduler will securely compile your complete portfolio statement (<span className="text-primary font-mono text-[10px]">.xlsx</span>) and email it to your designated nominee contact.
+                                    </p>
+                                </div>
                             </div>
-                        )}
 
-                        {saveError && (
-                            <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">
-                                <AlertCircle size={14} />
-                                <span>{saveError}</span>
+                            {/* Status Indicator */}
+                            <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-surface-pill border border-border-subtle text-[11px]">
+                                <div className="flex items-center gap-2 text-text-muted">
+                                    <Clock size={13} className="text-emerald-400" />
+                                    <span className="font-bold uppercase tracking-wider text-[10px]">Your Status</span>
+                                </div>
+                                <span className="font-bold text-emerald-400">
+                                    {lastActiveAt ? `Active (${new Date(lastActiveAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})` : 'Active Now'}
+                                </span>
                             </div>
-                        )}
 
-                        <div className="flex gap-2.5 pt-2">
-                            <Button
-                                type="submit"
-                                disabled={isSavingContact}
-                                className="flex-1 py-3 text-xs font-black uppercase tracking-wider bg-primary text-background hover:opacity-90"
-                            >
-                                {isSavingContact ? 'Saving...' : 'Save Contingency Rule'}
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                onClick={handleExportStatement}
-                                disabled={isExportingStatement}
-                                className="py-3 px-4 text-xs font-bold border-border-subtle text-text-muted hover:text-primary flex items-center gap-1.5"
-                                title="Download the spreadsheet that will be sent"
-                            >
-                                <FileSpreadsheet size={15} />
-                                <span className="hidden sm:inline">Preview XLS</span>
-                            </Button>
+                            {/* Nominee Email Form */}
+                            <form onSubmit={handleSaveEmergencyContact} className="space-y-3 pt-1">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted px-1 flex items-center justify-between">
+                                        <span>Nominee Email Address</span>
+                                        <span className="text-[9px] text-text-muted/60 lowercase font-normal">receives .xlsx statement</span>
+                                    </label>
+                                    <Input
+                                        type="email"
+                                        placeholder="nominee@example.com"
+                                        value={emergencyEmail}
+                                        onChange={(e) => setEmergencyEmail(e.target.value)}
+                                        className="w-full text-xs font-medium"
+                                    />
+                                    <p className="text-[10px] text-text-muted px-1 mt-0.5">
+                                        Leave empty to disable automated emergency statement dispatch.
+                                    </p>
+                                </div>
+
+                                {saveSuccess && (
+                                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
+                                        <Check size={14} />
+                                        <span>Nominee contact updated securely</span>
+                                    </div>
+                                )}
+
+                                {saveError && (
+                                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">
+                                        <AlertCircle size={14} />
+                                        <span>{saveError}</span>
+                                    </div>
+                                )}
+
+                                <div className="flex gap-2 pt-1">
+                                    <Button
+                                        type="submit"
+                                        disabled={isSavingContact}
+                                        className="flex-1 py-2.5 text-xs font-black uppercase tracking-wider bg-primary text-background hover:opacity-90"
+                                    >
+                                        {isSavingContact ? 'Saving...' : 'Save Nominee Rule'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={handleExportStatement}
+                                        disabled={isExportingStatement}
+                                        className="py-2.5 px-3 text-xs font-bold border-border-subtle text-text-muted hover:text-primary flex items-center gap-1.5"
+                                        title="Preview the exact portfolio statement"
+                                    >
+                                        <FileSpreadsheet size={14} />
+                                        <span>Preview</span>
+                                    </Button>
+                                </div>
+                            </form>
                         </div>
-                    </form>
+                    </div>
+
+                    {/* Sign Out Section */}
+                    <div className="pt-2 border-t border-border-subtle">
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                setIsProfileOpen(false);
+                                logout();
+                            }}
+                            className="w-full py-3 text-xs font-black uppercase tracking-wider text-rose-400 hover:text-rose-300 border-border-subtle hover:bg-rose-500/10 flex items-center justify-center gap-2"
+                        >
+                            <LogOut size={15} />
+                            <span>Sign Out of Grip</span>
+                        </Button>
+                    </div>
                 </div>
             </Drawer>
         </div>

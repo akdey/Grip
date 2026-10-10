@@ -39,6 +39,7 @@ class SyncService:
     _active_syncs = set()
     _trends_cache = {} # user_id -> (timestamp, data)
     TRENDS_CACHE_TTL = 600 # 10 minutes
+    _last_watch_renewal = {} # user_id -> timestamp (throttles renew_watch to once per 24h)
 
     def __init__(self,                  db: AsyncSession = Depends(get_db), 
                  transaction_service: TransactionService = Depends(),
@@ -493,12 +494,18 @@ class SyncService:
                 raise Exception("GMAIL_DISCONNECTED")
             raise
 
-    async def renew_watch(self, user_id: uuid.UUID):
+    async def renew_watch(self, user_id: uuid.UUID, force: bool = False):
         """
         Renew the Gmail watch subscription to keep push notifications alive.
-        Should be called periodically (e.g. during every sync).
+        Throttled to run at most once per 24 hours unless force=True.
         """
         if not settings.GMAIL_PUBSUB_TOPIC:
+            return
+
+        now = time.time()
+        last_renewal = SyncService._last_watch_renewal.get(user_id, 0)
+        # Gmail watches last 7 days. Only renew if more than 24h passed or forced.
+        if not force and (now - last_renewal) < 86400:
             return
 
         result = await self.db.execute(select(User).where(User.id == user_id))
@@ -542,6 +549,8 @@ class SyncService:
                 'topicName': settings.GMAIL_PUBSUB_TOPIC
             }
             watch_response = service.users().watch(userId='me', body=watch_request).execute()
+            SyncService._last_watch_renewal[user_id] = time.time()
+            logger.info(f"[Sync:{user_id}] Successfully renewed Gmail watch. historyId: {watch_response.get('historyId')}")
             
             # Persist refreshed token if it changed
             if creds.token != creds_data.get('token'):
@@ -626,8 +635,10 @@ class SyncService:
                 start_time = await self._get_last_sync_time(user_id)
                 logger.info(f"[Sync:{user_id}] Starting sync. source={source}, last_sync={start_time.isoformat() if start_time else 'FIRST_SYNC'}")
                 
-                # Renew watch proactively at the start of every sync
-                await self.renew_watch(user_id)
+                # Renew watch proactively on manual/scheduled syncs.
+                # Never renew on WEBHOOK triggers as watch() produces a new Pub/Sub message causing an infinite loop.
+                if source != "WEBHOOK":
+                    await self.renew_watch(user_id)
                 
                 import time
                 t_fetch_start = time.perf_counter()
