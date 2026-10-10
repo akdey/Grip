@@ -10,7 +10,7 @@ from google.auth.transport import requests as google_requests
 
 from app.core.database import get_db
 from app.core.security import create_access_token, get_password_hash, verify_password
-from app.features.auth.models import User
+from app.features.auth.models import User, PasskeyCredential
 from app.features.auth import schemas
 from app.core.config import get_settings
 from app.core.llm import get_llm_service

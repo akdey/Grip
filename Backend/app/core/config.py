@@ -19,6 +19,7 @@ class Settings(BaseSettings):
         "/",
         "/privacy",
         "/terms",
+        "/.well-known",
         "/docs", 
         "/redoc", 
         "/openapi.json", 

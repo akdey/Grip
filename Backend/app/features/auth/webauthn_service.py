@@ -58,33 +58,47 @@ def pop_challenge(key: str) -> Optional[bytes]:
     return None
 
 
+from urllib.parse import urlparse
+
 def get_rp_info(request: Request) -> tuple[str, str]:
     """
     Extract rp_id and expected_origin dynamically from the incoming request.
-    Works for localhost, IP addresses, and production domains.
+    WebAuthn requires rp_id to match the client's web domain (Origin / Referer),
+    never the backend server's proxy hostname.
     """
-    origin = request.headers.get("origin")
-    referer = request.headers.get("referer")
-    
-    # 1. Hostname for rp_id (must not contain port)
+    # 1. Prefer client's Origin / Referer / custom X-Client-Origin header
+    client_target = (
+        request.headers.get("x-client-origin")
+        or request.headers.get("origin")
+        or request.headers.get("referer")
+    )
+
+    if client_target:
+        # Sanitize proxy multiple values if comma-separated
+        if "," in client_target:
+            client_target = client_target.split(",")[0].strip()
+        parsed = urlparse(client_target)
+        if parsed.hostname:
+            rp_id = parsed.hostname.replace(",", ".").strip()
+            expected_origin = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+            return rp_id, expected_origin
+
+    # 2. Fallback to settings.FRONTEND_ORIGIN
+    if getattr(settings, "FRONTEND_ORIGIN", None):
+        parsed = urlparse(settings.FRONTEND_ORIGIN)
+        if parsed.hostname:
+            return parsed.hostname.replace(",", ".").strip(), settings.FRONTEND_ORIGIN.rstrip("/")
+
+    # 3. Fallback to request host
     host_header = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.hostname or "localhost"
-    hostname = host_header.split(":")[0]
-    
-    # In local development, normalize 127.0.0.1 to localhost if needed, or keep host
-    rp_id = hostname
+    if "," in host_header:
+        host_header = host_header.split(",")[0].strip()
 
-    # 2. Expected origin (full scheme + host + port)
-    if origin:
-        expected_origin = origin.rstrip("/")
-    elif referer:
-        # e.g. http://localhost:5173/dashboard -> http://localhost:5173
-        parts = referer.split("/")
-        expected_origin = f"{parts[0]}//{parts[2]}"
-    else:
-        scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
-        expected_origin = f"{scheme}://{host_header}"
+    hostname = host_header.split(":")[0].replace(",", ".").strip()
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    expected_origin = f"{scheme}://{host_header}".rstrip("/")
 
-    return rp_id, expected_origin
+    return hostname, expected_origin
 
 
 class WebAuthnService:

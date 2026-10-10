@@ -62,8 +62,11 @@ export async function getBiometricsStatus(): Promise<BiometricsStatus> {
  */
 export async function registerBiometricCredential(deviceName?: string): Promise<{ success: boolean; message?: string }> {
     try {
+        const clientOrigin = window.location.origin;
         // 1. Fetch registration options from backend
-        const optionsRes = await api.post('/auth/biometrics/register/options');
+        const optionsRes = await api.post('/auth/biometrics/register/options', {}, {
+            headers: { 'x-client-origin': clientOrigin }
+        });
         const options = optionsRes.data;
 
         // 2. Trigger native device fingerprint / biometrics prompt
@@ -77,10 +80,16 @@ export async function registerBiometricCredential(deviceName?: string): Promise<
             'Device Biometric Sensor'
         );
 
-        const verifyRes = await api.post('/auth/biometrics/register/verify', {
-            credential,
-            device_name: defaultName
-        });
+        const verifyRes = await api.post(
+            '/auth/biometrics/register/verify',
+            {
+                credential,
+                device_name: defaultName
+            },
+            {
+                headers: { 'x-client-origin': clientOrigin }
+            }
+        );
 
         localStorage.setItem('grip_biometrics_enrolled', 'true');
         return { success: true, message: verifyRes.data?.message || 'Enrolled successfully' };
@@ -95,15 +104,24 @@ export async function registerBiometricCredential(deviceName?: string): Promise<
  */
 export async function unlockWithBiometrics(): Promise<boolean> {
     try {
+        const clientOrigin = window.location.origin;
         // 1. Fetch unlock authentication options
-        const optionsRes = await api.post('/auth/biometrics/unlock/options');
+        const optionsRes = await api.post('/auth/biometrics/unlock/options', {}, {
+            headers: { 'x-client-origin': clientOrigin }
+        });
         const options = optionsRes.data;
 
         // 2. Trigger native fingerprint prompt
         const credential = await startAuthentication({ optionsJSON: options });
 
         // 3. Verify assertion with backend
-        const verifyRes = await api.post('/auth/biometrics/unlock/verify', { credential });
+        const verifyRes = await api.post(
+            '/auth/biometrics/unlock/verify',
+            { credential },
+            {
+                headers: { 'x-client-origin': clientOrigin }
+            }
+        );
         return !!verifyRes.data?.valid;
     } catch (err: any) {
         console.error('Biometric unlock failed:', err);
@@ -121,18 +139,31 @@ export async function loginWithBiometrics(email?: string): Promise<{
     full_name?: string;
 }> {
     try {
+        const clientOrigin = window.location.origin;
         // 1. Fetch login options
-        const optionsRes = await api.post('/auth/biometrics/login/options', { email: email || null });
+        const optionsRes = await api.post(
+            '/auth/biometrics/login/options',
+            { email: email || null },
+            {
+                headers: { 'x-client-origin': clientOrigin }
+            }
+        );
         const { options, challenge_id } = optionsRes.data;
 
         // 2. Trigger native fingerprint prompt
         const credential = await startAuthentication({ optionsJSON: options });
 
         // 3. Verify assertion & obtain access token
-        const verifyRes = await api.post('/auth/biometrics/login/verify', {
-            challenge_id,
-            credential
-        });
+        const verifyRes = await api.post(
+            '/auth/biometrics/login/verify',
+            {
+                challenge_id,
+                credential
+            },
+            {
+                headers: { 'x-client-origin': clientOrigin }
+            }
+        );
 
         return verifyRes.data;
     } catch (err: any) {
