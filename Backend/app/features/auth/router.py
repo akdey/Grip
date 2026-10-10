@@ -136,6 +136,7 @@ async def google_one_tap(
             "scopes": creds.scopes
         }
         user.is_active = True # Ensure they are active if they reconnect
+        user.last_active_at = datetime.now(timezone.utc)
 
         await db.commit()
         await db.refresh(user)
@@ -192,8 +193,8 @@ async def google_login(
             is_new_user = True
         elif not user.is_active:
             user.is_active = True
-            await db.commit()
-            is_new_user = True
+        user.last_active_at = datetime.now(timezone.utc)
+        await db.commit()
 
         if is_new_user:
             llm = get_llm_service()
@@ -225,6 +226,7 @@ async def verify_otp(
         raise HTTPException(status_code=400, detail="OTP expired")
 
     user.is_active = True
+    user.last_active_at = datetime.now(timezone.utc)
     user.verification_code = None
     user.verification_code_expires_at = None
     await db.commit()
@@ -254,6 +256,8 @@ async def login_for_access_token(
         )
     if not user.is_active:
         raise HTTPException(status_code=400, detail="User not verified")
+    user.last_active_at = datetime.now(timezone.utc)
+    await db.commit()
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
@@ -375,4 +379,29 @@ async def verify_biometrics_login(
         request,
         db
     )
+
+
+@router.get("/emergency-contact", response_model=schemas.EmergencyContactResponse)
+async def get_emergency_contact(
+    current_user: Annotated[User, Depends(get_current_user)]
+):
+    return {
+        "emergency_contact_email": current_user.emergency_contact_email,
+        "last_active_at": current_user.last_active_at.isoformat() if current_user.last_active_at else None,
+    }
+
+
+@router.put("/emergency-contact", response_model=schemas.EmergencyContactResponse)
+async def update_emergency_contact(
+    data: schemas.EmergencyContactUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    current_user.emergency_contact_email = str(data.emergency_contact_email).strip().lower() if data.emergency_contact_email else None
+    await db.commit()
+    await db.refresh(current_user)
+    return {
+        "emergency_contact_email": current_user.emergency_contact_email,
+        "last_active_at": current_user.last_active_at.isoformat() if current_user.last_active_at else None,
+    }
 

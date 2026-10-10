@@ -462,6 +462,8 @@ class WebAuthnService:
         from datetime import datetime, timezone
         passkey.sign_count = verified.new_sign_count
         passkey.last_used_at = datetime.now(timezone.utc)
+        if passkey.user:
+            passkey.user.last_active_at = datetime.now(timezone.utc)
         await db.commit()
 
         # Generate JWT Token for user

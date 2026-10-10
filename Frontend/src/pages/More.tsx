@@ -25,7 +25,11 @@ import {
     Settings,
     LogOut,
     ShieldCheck,
-    FileSpreadsheet
+    FileSpreadsheet,
+    Check,
+    AlertCircle,
+    Clock,
+    Lock
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
@@ -33,6 +37,9 @@ import { useSyncTrends } from '../features/sync/hooks';
 import { useMonthlySummary } from '../features/dashboard/hooks';
 import { SyncTrendChart } from '../components/sync/SyncTrendChart';
 import { Card } from '../components/ui/Card';
+import { Drawer } from '../components/ui/Drawer';
+import { Input } from '../components/ui/Input';
+import { Button } from '../components/ui/Button';
 import { useTheme } from '../lib/theme';
 
 const FEATURE_CARDS = [
@@ -40,6 +47,8 @@ const FEATURE_CARDS = [
     { id: 'pending', label: 'Action Center', icon: Sparkles, path: '/transactions?view=pending', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'transactions', label: 'History', icon: Receipt, path: '/transactions', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'sureties', label: 'Sureties', icon: CalendarClock, path: '/sureties', color: 'text-primary', bgColor: 'bg-surface-subtle' },
+    { id: 'statement', label: 'Asset Statement', icon: FileSpreadsheet, action: 'EXPORT_STATEMENT', color: 'text-primary', bgColor: 'bg-surface-subtle' },
+    { id: 'contingency', label: 'Asset Dispatch', icon: ShieldCheck, action: 'OPEN_CONTINGENCY', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'goals', label: 'Goals', icon: Wallet, path: '/goals', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'categories', label: 'Categories', icon: LayoutGrid, action: 'OPEN_CATEGORIES', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-primary', bgColor: 'bg-surface-subtle' },
@@ -147,6 +156,49 @@ const More: React.FC = () => {
 
     const userName = user?.email?.split('@')[0] || 'Infiltrator';
 
+    // Contingency & Emergency Contact state
+    const [isContingencyOpen, setIsContingencyOpen] = useState(false);
+    const [emergencyEmail, setEmergencyEmail] = useState('');
+    const [lastActiveAt, setLastActiveAt] = useState<string | null>(null);
+    const [isSavingContact, setIsSavingContact] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+    const [saveError, setSaveError] = useState('');
+
+    const fetchEmergencyContact = async () => {
+        try {
+            const res = await api.get('/auth/emergency-contact');
+            if (res.data) {
+                setEmergencyEmail(res.data.emergency_contact_email || '');
+                setLastActiveAt(res.data.last_active_at || null);
+            }
+        } catch (err) {
+            console.warn('Failed to fetch emergency contact:', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchEmergencyContact();
+    }, []);
+
+    const handleSaveEmergencyContact = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSavingContact(true);
+        setSaveSuccess(false);
+        setSaveError('');
+        try {
+            const res = await api.put('/auth/emergency-contact', {
+                emergency_contact_email: emergencyEmail.trim() || null
+            });
+            setEmergencyEmail(res.data.emergency_contact_email || '');
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (err: any) {
+            setSaveError(err?.response?.data?.detail || 'Failed to save emergency contact');
+        } finally {
+            setIsSavingContact(false);
+        }
+    };
+
     const handleBackup = async () => {
         setIsExporting(true);
         try {
@@ -194,6 +246,9 @@ const More: React.FC = () => {
             handleBackup();
         } else if (card.action === 'EXPORT_STATEMENT') {
             handleExportStatement();
+        } else if (card.action === 'OPEN_CONTINGENCY') {
+            fetchEmergencyContact();
+            setIsContingencyOpen(true);
         } else if (card.path) {
             navigate(card.path);
         }
@@ -273,6 +328,26 @@ const More: React.FC = () => {
                                             <span>Light</span>
                                         </button>
                                     </div>
+                                </div>
+
+                                <div>
+                                    <p className="text-[9px] font-black uppercase tracking-[2px] text-text-muted px-2 mb-2">
+                                        Contingency
+                                    </p>
+                                    <button
+                                        onClick={() => {
+                                            setIsSettingsOpen(false);
+                                            fetchEmergencyContact();
+                                            setIsContingencyOpen(true);
+                                        }}
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-surface-pill border border-border-subtle hover:bg-surface-hover text-text-muted hover:text-primary transition-colors text-xs font-bold"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <ShieldCheck size={14} className="text-emerald-400" />
+                                            <span>Asset Dispatch</span>
+                                        </div>
+                                        <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">7 Days</span>
+                                    </button>
                                 </div>
 
                                 <div className="h-[1px] bg-border-subtle" />
@@ -459,6 +534,94 @@ const More: React.FC = () => {
 
                 <SystemIntelligence />
             </div>
+
+            {/* Asset Contingency Bottom Sheet */}
+            <Drawer
+                isOpen={isContingencyOpen}
+                onClose={() => setIsContingencyOpen(false)}
+                title="Asset Contingency"
+            >
+                <div className="p-5 space-y-6">
+                    {/* Hero Rule Card */}
+                    <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex items-start gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-accent-subtle border border-accent-border flex items-center justify-center shrink-0 text-accent-text shadow-sm">
+                            <ShieldCheck size={20} />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-black text-primary tracking-tight">7-Day Inactivity Contingency</h4>
+                            <p className="text-xs text-text-muted mt-1 leading-relaxed">
+                                If you do not access Grip for <span className="text-primary font-bold">7 days</span>, Grip's automated scheduler will securely generate your comprehensive portfolio statement spreadsheet (<span className="text-primary font-mono text-[11px]">.xlsx</span>) and dispatch it to your designated emergency contact.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Status Pill */}
+                    <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-surface-pill border border-border-subtle text-xs">
+                        <div className="flex items-center gap-2 text-text-muted">
+                            <Clock size={14} className="text-emerald-400" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider">Your Grip Status</span>
+                        </div>
+                        <span className="font-bold text-emerald-400">
+                            {lastActiveAt ? `Active (${new Date(lastActiveAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})` : 'Active Now'}
+                        </span>
+                    </div>
+
+                    {/* Email Form */}
+                    <form onSubmit={handleSaveEmergencyContact} className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-[2px] text-text-muted px-1 flex items-center justify-between">
+                                <span>Designated Emergency / Nominee Email</span>
+                                <span className="text-[9px] text-text-muted/60 font-semibold lowercase">receives .xlsx schedule</span>
+                            </label>
+                            <Input
+                                type="email"
+                                placeholder="nominee@example.com"
+                                value={emergencyEmail}
+                                onChange={(e) => setEmergencyEmail(e.target.value)}
+                                className="w-full text-sm font-medium"
+                            />
+                            <p className="text-[10px] text-text-muted px-1 mt-1 leading-normal">
+                                Enter the email of your trusted contact or nominee. Leave empty to disable automated dispatch.
+                            </p>
+                        </div>
+
+                        {saveSuccess && (
+                            <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
+                                <Check size={14} />
+                                <span>Emergency contact saved securely</span>
+                            </div>
+                        )}
+
+                        {saveError && (
+                            <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">
+                                <AlertCircle size={14} />
+                                <span>{saveError}</span>
+                            </div>
+                        )}
+
+                        <div className="flex gap-2.5 pt-2">
+                            <Button
+                                type="submit"
+                                disabled={isSavingContact}
+                                className="flex-1 py-3 text-xs font-black uppercase tracking-wider bg-primary text-background hover:opacity-90"
+                            >
+                                {isSavingContact ? 'Saving...' : 'Save Contingency Rule'}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={handleExportStatement}
+                                disabled={isExportingStatement}
+                                className="py-3 px-4 text-xs font-bold border-border-subtle text-text-muted hover:text-primary flex items-center gap-1.5"
+                                title="Download the spreadsheet that will be sent"
+                            >
+                                <FileSpreadsheet size={15} />
+                                <span className="hidden sm:inline">Preview XLS</span>
+                            </Button>
+                        </div>
+                    </form>
+                </div>
+            </Drawer>
         </div>
     );
 };

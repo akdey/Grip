@@ -28,3 +28,11 @@ class PasswordVerification(BaseModel):
 class VerifyOTP(BaseModel):
     email: EmailStr
     otp: str
+
+class EmergencyContactUpdate(BaseModel):
+    emergency_contact_email: Optional[EmailStr] = None
+
+class EmergencyContactResponse(BaseModel):
+    emergency_contact_email: Optional[str] = None
+    last_active_at: Optional[str] = None
+

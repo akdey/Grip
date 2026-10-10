@@ -1,0 +1,52 @@
+name: Inactivity Contingency Asset Dispatch
+
+on:
+  schedule:
+    # Runs at 3:00 AM UTC (8:30 AM IST) daily
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allows manual trigger anytime from GitHub Actions UI
+
+jobs:
+  check-inactivity:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd Backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run Inactivity Contingency Dispatch
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          FROM_NAME: ${{ secrets.FROM_NAME }}
+          EMAIL_RELAY_URL: ${{ secrets.EMAIL_RELAY_URL }}
+          EMAIL_RELAY_SECRET: ${{ secrets.EMAIL_RELAY_SECRET }}
+          ENVIRONMENT: production
+        run: |
+          cd Backend
+          python -c "
+          import asyncio
+          from app.core.scheduler import run_inactivity_contingency_check
+
+          async def main():
+              print('Starting Inactivity Contingency Check...')
+              await run_inactivity_contingency_check()
+              print('Inactivity Contingency Check finished.')
+
+          asyncio.run(main())
+          "

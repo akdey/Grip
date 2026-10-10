@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     
     USE_AI_FORECASTING: bool = True
     ENABLE_SCHEDULER: bool = True  # Set to False when using external cron (e.g., GitHub Actions)
+    INACTIVITY_THRESHOLD_DAYS: int = 7  # Contingency asset dispatch if user inactive for X days
     
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.1-8b-instant"

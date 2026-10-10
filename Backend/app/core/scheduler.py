@@ -365,6 +365,102 @@ async def run_gmail_sync():
                 
     logger.info("Gmail Sync Completed.")
 
+async def run_inactivity_contingency_check():
+    """
+    Check for users who haven't accessed the app for INACTIVITY_THRESHOLD_DAYS (e.g. 7 days)
+    and have a designated emergency/backup contact email.
+    Generates and emails the comprehensive portfolio statement Excel (.xlsx) schedule.
+    """
+    logger.info("Starting Inactivity Contingency Check...")
+    from app.features.auth.models import User
+    from app.features.export.service import generate_portfolio_statement_excel
+    from app.core.email import send_email
+    import zoneinfo
+    from datetime import datetime, timezone, timedelta
+    
+    threshold_days = settings.INACTIVITY_THRESHOLD_DAYS
+    tz = zoneinfo.ZoneInfo(settings.APP_TIMEZONE)
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=threshold_days)
+    
+    async with AsyncSessionLocal() as db:
+        stmt = select(User).where(
+            User.is_active == True,
+            User.emergency_contact_email.isnot(None),
+            (
+                (User.last_active_at.isnot(None) & (User.last_active_at < cutoff)) |
+                (User.last_active_at.is_(None) & (User.created_at < cutoff))
+            )
+        )
+        res = await db.execute(stmt)
+        users = res.scalars().all()
+        
+        logger.info(f"Inactivity check: Found {len(users)} users inactive for >{threshold_days} days with emergency contact.")
+        
+        for user in users:
+            try:
+                dest_email = (user.emergency_contact_email or "").strip()
+                if not dest_email:
+                    continue
+                
+                logger.info(f"Generating portfolio statement XLS for inactive user {user.email} -> {dest_email}")
+                excel_stream = await generate_portfolio_statement_excel(db, user)
+                excel_bytes = excel_stream.getvalue()
+                
+                user_name = user.full_name or user.email.split('@')[0].replace('.', ' ').title()
+                today_str = datetime.now(tz).strftime("%Y-%m-%d")
+                clean_email_prefix = user.email.split('@')[0]
+                filename = f"Grip_Asset_Schedule_{clean_email_prefix}_{today_str}.xlsx"
+                
+                subject = f"Confidential Asset Portfolio Statement for {user_name} [Grip Contingency]"
+                html_body = f"""
+                <html>
+                    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.6; margin: 0; padding: 24px; background-color: #f8fafc;">
+                        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 24px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+                            <div style="background: #090a0f; padding: 32px; color: #ffffff;">
+                                <span style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em; color: #ffffff;">GRIP</span>
+                                <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; margin-left: 12px;">Asset Contingency</span>
+                                <h2 style="color: #ffffff; margin: 20px 0 0 0; font-size: 20px; font-weight: 800;">Secure Financial Asset Schedule</h2>
+                            </div>
+                            <div style="padding: 32px;">
+                                <p style="font-size: 15px; color: #334155; margin-top: 0;">
+                                    Hello,
+                                </p>
+                                <p style="font-size: 14px; color: #475569;">
+                                    You are listed as the designated backup / emergency contact for <strong>{user_name}</strong> ({user.email}) on <strong>Grip</strong>.
+                                </p>
+                                <div style="background: #f1f5f9; padding: 20px; border-radius: 14px; margin: 24px 0; border: 1px solid #e2e8f0;">
+                                    <p style="margin: 0; font-size: 13px; color: #334155; font-weight: 600;">
+                                        Contingency Notice:
+                                    </p>
+                                    <p style="margin: 6px 0 0 0; font-size: 13px; color: #64748b;">
+                                        {user_name} has not accessed Grip in the last {threshold_days} days. As per their contingency preference, an updated, confidential portfolio & asset statement spreadsheet has been generated and attached to this email.
+                                    </p>
+                                </div>
+                                <p style="font-size: 13px; color: #475569;">
+                                    The attached Excel spreadsheet (<strong>{filename}</strong>) contains the consolidated financial asset schedule, including accounts, holdings, and liabilities recorded in Grip.
+                                </p>
+                                <p style="font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; margin-top: 30px;">
+                                    This automated message was sent securely by Grip Automated Systems as instructed by {user_name}.
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                </html>
+                """
+                
+                send_email(
+                    to_email=dest_email,
+                    subject=subject,
+                    html_content=html_body,
+                    attachment_bytes=excel_bytes,
+                    attachment_filename=filename,
+                    attachment_mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+                logger.info(f"Contingency asset email sent to {dest_email} for user {user.email}")
+            except Exception as e:
+                logger.error(f"Failed to process inactivity contingency for user {user.email}: {e}", exc_info=True)
+
 def start_scheduler():
     """
     Start the scheduler if ENABLE_SCHEDULER is True.
@@ -390,6 +486,10 @@ def start_scheduler():
     # Run Weekly Insights on Sunday at 10:00 AM IST (4:30 AM UTC)
     insight_trigger = CronTrigger(day_of_week='sun', hour=4, minute=30)
     scheduler.add_job(run_weekly_insights, insight_trigger)
+
+    # Run Inactivity Contingency Check daily at 8:00 AM IST (2:30 AM UTC)
+    inactivity_trigger = CronTrigger(hour=2, minute=30)
+    scheduler.add_job(run_inactivity_contingency_check, inactivity_trigger)
     
     scheduler.start()
     logger.info("Scheduler started. Jobs scheduled.")

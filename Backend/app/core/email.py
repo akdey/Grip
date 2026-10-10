@@ -8,11 +8,22 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 import httpx
+from typing import Optional
+import base64
+from email.mime.base import MIMEBase
+from email import encoders
 
-def send_email(to_email: str, subject: str, html_content: str):
+def send_email(
+    to_email: str,
+    subject: str,
+    html_content: str,
+    attachment_bytes: Optional[bytes] = None,
+    attachment_filename: Optional[str] = None,
+    attachment_mime: Optional[str] = None
+):
     """
     Sends an email using either a Vercel Microservice relay (Approach C)
-    or standard SMTP if configured.
+    or standard SMTP if configured, optionally attaching a file.
     """
     # External Relay (Recommended for cloud hosting like HF Spaces as required ports are blocked)
     if settings.EMAIL_RELAY_URL and settings.EMAIL_RELAY_SECRET:
@@ -23,12 +34,20 @@ def send_email(to_email: str, subject: str, html_content: str):
                 "html_content": html_content,
                 "from_name": settings.FROM_NAME
             }
+            if attachment_bytes and attachment_filename:
+                payload["attachments"] = [
+                    {
+                        "filename": attachment_filename,
+                        "content": base64.b64encode(attachment_bytes).decode("utf-8"),
+                        "type": attachment_mime or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    }
+                ]
             headers = {"X-Grip-Secret": settings.EMAIL_RELAY_SECRET}
             
             # Using synchronous request for simplicity in background tasks, 
             # though async is generally better.
             with httpx.Client() as client:
-                resp = client.post(settings.EMAIL_RELAY_URL, json=payload, headers=headers, timeout=15.0)
+                resp = client.post(settings.EMAIL_RELAY_URL, json=payload, headers=headers, timeout=20.0)
                 if resp.status_code == 200:
                     return True
                 else:
@@ -47,13 +66,28 @@ def send_email(to_email: str, subject: str, html_content: str):
         return False
 
     try:
-        message = MIMEMultipart("alternative")
-        message["Subject"] = subject
-        message["From"] = f"{settings.FROM_NAME} <{settings.FROM_EMAIL}>"
-        message["To"] = to_email
+        if attachment_bytes and attachment_filename:
+            message = MIMEMultipart("mixed")
+            message["Subject"] = subject
+            message["From"] = f"{settings.FROM_NAME} <{settings.FROM_EMAIL}>"
+            message["To"] = to_email
 
-        part = MIMEText(html_content, "html")
-        message.attach(part)
+            body_part = MIMEText(html_content, "html")
+            message.attach(body_part)
+
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(attachment_bytes)
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', f'attachment; filename="{attachment_filename}"')
+            message.attach(part)
+        else:
+            message = MIMEMultipart("alternative")
+            message["Subject"] = subject
+            message["From"] = f"{settings.FROM_NAME} <{settings.FROM_EMAIL}>"
+            message["To"] = to_email
+
+            part = MIMEText(html_content, "html")
+            message.attach(part)
 
         # Use SMTP_SSL for port 465, otherwise standard SMTP + starttls
         if settings.SMTP_PORT == 465:
