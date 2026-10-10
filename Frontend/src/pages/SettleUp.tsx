@@ -17,7 +17,8 @@ import {
     Sparkles,
     Filter,
     X,
-    Handshake
+    Handshake,
+    ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -193,25 +194,25 @@ const SettleUp: React.FC = () => {
     if (isLoading) return <Loader fullPage text="Loading balances" />;
 
     return (
-        <div className="min-h-screen text-primary pb-28">
+        <div className="min-h-screen text-primary pb-28 w-full max-w-full overflow-x-hidden">
             {/* Header */}
-            <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-page/85 backdrop-blur-3xl z-30 border-b border-border-subtle">
-                <div className="flex items-center gap-4">
+            <header className="px-4 py-3.5 sm:px-6 sm:py-4 flex items-center justify-between sticky top-0 bg-page/85 backdrop-blur-3xl z-30 border-b border-border-subtle w-full max-w-full">
+                <div className="flex items-center gap-3 min-w-0">
                     <button
                         onClick={() => {
                             haptics.selection();
                             navigate(-1);
                         }}
-                        className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-sm"
+                        className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-sm"
                         title="Go back"
                     >
-                        <ArrowLeft size={20} />
+                        <ArrowLeft size={18} />
                     </button>
-                    <div>
-                        <h1 className="text-xl font-black tracking-tight text-primary flex items-center gap-2">
+                    <div className="min-w-0">
+                        <h1 className="text-lg sm:text-xl font-black tracking-tight text-primary truncate">
                             Settle Up
                         </h1>
-                        <p className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">
+                        <p className="text-[9px] text-text-muted font-bold uppercase tracking-[1.5px] truncate mt-0.5">
                             {balances?.length || 0} active contacts
                         </p>
                     </div>
@@ -222,70 +223,70 @@ const SettleUp: React.FC = () => {
                         resetForm();
                         setShowAddForm(true);
                     }}
-                    className="h-10 px-4 rounded-full bg-primary text-text-inverse font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all shadow-md"
+                    className="h-9 px-3.5 sm:h-10 sm:px-4 shrink-0 rounded-full bg-primary text-text-inverse font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all shadow-md ml-2"
                 >
-                    <Plus size={16} />
+                    <Plus size={15} />
                     <span>Add Record</span>
                 </button>
             </header>
 
-            <div className="max-w-4xl mx-auto px-4 py-5 space-y-6">
+            <div className="w-full max-w-lg mx-auto px-4 py-4 space-y-4">
                 {/* KPI Overview Strip */}
-                <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-3.5 sm:p-4 text-center">
-                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-text-muted block">
+                <div className="grid grid-cols-3 gap-2 w-full min-w-0">
+                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-2.5 sm:p-3 text-center min-w-0 overflow-hidden">
+                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-text-muted block truncate">
                             Net Balance
                         </span>
-                        <p className={`text-base sm:text-lg font-black tracking-tight mt-1 truncate ${
+                        <p className={`text-xs sm:text-base font-black tracking-tight mt-1 truncate ${
                             netPosition > 0 ? 'text-emerald-500' : netPosition < 0 ? 'text-rose-500' : 'text-primary'
                         }`}>
                             {netPosition > 0 ? `+${formatCurrency(netPosition)}` : netPosition < 0 ? `-${formatCurrency(netPosition)}` : '₹0'}
                         </p>
-                        <span className="text-[7.5px] font-bold text-text-muted/70 uppercase tracking-tighter mt-0.5 block truncate">
+                        <span className="text-[7px] sm:text-[8px] font-bold text-text-muted/70 uppercase tracking-tighter mt-0.5 block truncate">
                             {netPosition > 0 ? 'Net Receivable' : netPosition < 0 ? 'Net Payable' : 'Balanced'}
                         </span>
                     </div>
 
-                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-3.5 sm:p-4 text-center">
-                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-emerald-500 block">
+                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-2.5 sm:p-3 text-center min-w-0 overflow-hidden">
+                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-emerald-500 block truncate">
                             To Collect
                         </span>
-                        <p className="text-base sm:text-lg font-black text-emerald-500 tracking-tight mt-1 truncate">
+                        <p className="text-xs sm:text-base font-black text-emerald-500 tracking-tight mt-1 truncate">
                             {formatCurrency(totalToCollect)}
                         </p>
-                        <span className="text-[7.5px] font-bold text-emerald-500/70 uppercase tracking-tighter mt-0.5 block truncate">
+                        <span className="text-[7px] sm:text-[8px] font-bold text-emerald-500/70 uppercase tracking-tighter mt-0.5 block truncate">
                             They Owe You
                         </span>
                     </div>
 
-                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-3.5 sm:p-4 text-center">
-                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-rose-500 block">
+                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-2.5 sm:p-3 text-center min-w-0 overflow-hidden">
+                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-rose-500 block truncate">
                             To Pay
                         </span>
-                        <p className="text-base sm:text-lg font-black text-rose-500 tracking-tight mt-1 truncate">
+                        <p className="text-xs sm:text-base font-black text-rose-500 tracking-tight mt-1 truncate">
                             {formatCurrency(totalToPay)}
                         </p>
-                        <span className="text-[7.5px] font-bold text-rose-500/70 uppercase tracking-tighter mt-0.5 block truncate">
+                        <span className="text-[7px] sm:text-[8px] font-bold text-rose-500/70 uppercase tracking-tighter mt-0.5 block truncate">
                             You Owe Them
                         </span>
                     </div>
                 </div>
 
                 {/* Search & Filter Controls */}
-                <div className="space-y-3">
-                    <div className="relative">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                <div className="space-y-2.5 w-full min-w-0">
+                    <div className="relative w-full">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" size={15} />
                         <input
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder="Search person or merchant..."
-                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-10 pr-10 py-3 text-xs font-semibold text-primary focus:outline-none focus:border-border-default placeholder:text-text-muted/60 transition-colors"
+                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-10 pr-9 py-2.5 text-xs font-semibold text-primary focus:outline-none focus:border-border-default placeholder:text-text-muted/60 transition-colors"
                         />
                         {searchTerm && (
                             <button
                                 onClick={() => setSearchTerm('')}
-                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary p-1"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary p-1"
                             >
                                 <X size={14} />
                             </button>
@@ -293,10 +294,10 @@ const SettleUp: React.FC = () => {
                     </div>
 
                     {/* Filter Pills */}
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 w-full">
                         <button
                             onClick={() => { haptics.selection(); setFilterMode('all'); }}
-                            className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border shrink-0 ${
                                 filterMode === 'all'
                                     ? 'bg-primary text-text-inverse border-primary shadow-sm'
                                     : 'bg-surface-subtle text-text-muted border-border-subtle hover:text-primary hover:bg-surface-hover'
@@ -306,7 +307,7 @@ const SettleUp: React.FC = () => {
                         </button>
                         <button
                             onClick={() => { haptics.selection(); setFilterMode('collect'); }}
-                            className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border shrink-0 ${
                                 filterMode === 'collect'
                                     ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
                                     : 'bg-surface-subtle text-emerald-500/80 border-border-subtle hover:text-emerald-500 hover:bg-surface-hover'
@@ -316,7 +317,7 @@ const SettleUp: React.FC = () => {
                         </button>
                         <button
                             onClick={() => { haptics.selection(); setFilterMode('pay'); }}
-                            className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border shrink-0 ${
                                 filterMode === 'pay'
                                     ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
                                     : 'bg-surface-subtle text-rose-500/80 border-border-subtle hover:text-rose-500 hover:bg-surface-hover'
@@ -328,14 +329,14 @@ const SettleUp: React.FC = () => {
                 </div>
 
                 {/* Balances List */}
-                <div className="space-y-3">
+                <div className="space-y-2 w-full min-w-0">
                     {filteredBalances.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-24 bg-surface-subtle/40 border border-border-subtle rounded-3xl p-6 text-center space-y-4">
-                            <div className="w-16 h-16 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted/40">
-                                <Handshake size={32} />
+                        <div className="flex flex-col items-center justify-center py-20 bg-surface-subtle/40 border border-border-subtle rounded-3xl p-6 text-center space-y-3">
+                            <div className="w-14 h-14 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted/40">
+                                <Handshake size={28} />
                             </div>
                             <div>
-                                <p className="font-black uppercase tracking-[3px] text-xs text-primary">
+                                <p className="font-black uppercase tracking-[2px] text-xs text-primary">
                                     {searchTerm ? 'No Matching Contacts' : 'All Settled Up'}
                                 </p>
                                 <p className="text-[11px] text-text-muted mt-1 max-w-xs">
@@ -359,7 +360,6 @@ const SettleUp: React.FC = () => {
                     ) : (
                         filteredBalances.map((peer) => {
                             const isOwed = peer.net_balance > 0; // Positive = they owe you
-                            const dateInfo = formatDateSafe(peer.last_activity_date);
                             const initial = peer.peer_name ? peer.peer_name.trim().charAt(0).toUpperCase() : '?';
 
                             return (
@@ -369,55 +369,40 @@ const SettleUp: React.FC = () => {
                                         haptics.selection();
                                         setSelectedPeer(peer.peer_name);
                                     }}
-                                    className="p-4 bg-surface-subtle hover:bg-surface-hover transition-all border border-border-subtle hover:border-border-default/60 rounded-2xl cursor-pointer active:scale-[0.985] group shadow-none hover:shadow-sm"
+                                    className="px-3.5 py-3 sm:px-4 sm:py-3.5 bg-surface-subtle hover:bg-surface-hover active:bg-surface-hover/80 transition-all border border-border-subtle hover:border-border-default/60 rounded-2xl cursor-pointer active:scale-[0.985] group flex items-center justify-between gap-3 w-full min-w-0 shadow-none hover:shadow-sm"
                                 >
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div className="flex items-center gap-3.5 min-w-0">
-                                            {/* Avatar Initial */}
-                                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border shadow-inner ${
-                                                isOwed
-                                                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500'
-                                                    : 'bg-rose-500/15 border-rose-500/30 text-rose-500'
-                                            }`}>
-                                                {initial}
-                                            </div>
-
-                                            <div className="min-w-0">
-                                                <p className="font-bold text-primary text-sm truncate group-hover:text-accent-text transition-colors">
-                                                    {peer.peer_name}
-                                                </p>
-                                                {/* Prominent Date Display */}
-                                                <div className="flex items-center gap-1.5 mt-1 text-text-muted">
-                                                    <Calendar size={11} className="shrink-0 text-text-muted/70" />
-                                                    <span className="text-[10px] font-semibold text-text-muted truncate">
-                                                        {dateInfo.short}
-                                                    </span>
-                                                    {dateInfo.relative && (
-                                                        <>
-                                                            <span className="text-[9px] text-text-muted/40">•</span>
-                                                            <span className="text-[9px] text-text-muted/70 font-medium">
-                                                                {dateInfo.relative}
-                                                            </span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
+                                    {/* Left: Avatar & Name */}
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shrink-0 border ${
+                                            isOwed
+                                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500'
+                                                : 'bg-rose-500/15 border-rose-500/30 text-rose-500'
+                                        }`}>
+                                            {initial}
                                         </div>
 
-                                        <div className="text-right shrink-0">
-                                            <p className={`font-black text-base tracking-tight ${
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-primary text-sm truncate group-hover:text-accent-text transition-colors">
+                                                {peer.peer_name}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Amount, Compact Status & Chevron */}
+                                    <div className="flex items-center gap-2.5 shrink-0">
+                                        <div className="text-right">
+                                            <p className={`font-black text-sm sm:text-base tracking-tight ${
                                                 isOwed ? 'text-emerald-500' : 'text-rose-500'
                                             }`}>
                                                 {isOwed ? `+${formatCurrency(peer.net_balance)}` : `-${formatCurrency(peer.net_balance)}`}
                                             </p>
-                                            <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mt-1 border ${
-                                                isOwed
-                                                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
-                                                    : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+                                            <p className={`text-[9.5px] font-bold ${
+                                                isOwed ? 'text-emerald-500/80' : 'text-rose-500/80'
                                             }`}>
-                                                {isOwed ? 'They owe you' : 'You owe them'}
-                                            </span>
+                                                {isOwed ? 'They owe' : 'You owe'}
+                                            </p>
                                         </div>
+                                        <ChevronRight size={16} className="text-text-muted/40 group-hover:text-text-muted transition-colors shrink-0" />
                                     </div>
                                 </div>
                             );
