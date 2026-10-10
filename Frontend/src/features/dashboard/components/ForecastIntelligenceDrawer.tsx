@@ -391,7 +391,7 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                     }`}
                                 >
                                     <Sparkles size={15} />
-                                    <span>AI Insights</span>
+                                    <span>Insights</span>
                                 </button>
                             </div>
                         </div>
@@ -605,7 +605,7 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                 </div>
                             )}
 
-                            {/* View 2: AI Insights & Rationale */}
+                            {/* View 2: Insights & Rationale */}
                             {viewMode === 'insights' && (
                                 <div className="space-y-3.5 animate-fadeIn">
                                     {/* Model Rationale Quote */}
