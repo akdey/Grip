@@ -7,7 +7,7 @@ import { Card } from '../components/ui/Card';
 import { api } from '../lib/api';
 import { Logo } from '../components/ui/Logo';
 import { Fingerprint } from 'lucide-react';
-import { checkBiometricsSupport, loginWithBiometrics } from '../lib/webauthn';
+import { checkBiometricsSupport, loginWithBiometrics, getDeviceBiometricName } from '../lib/webauthn';
 
 // Declare google for typescript
 declare global {
@@ -197,6 +197,28 @@ const Login: React.FC = () => {
 
                     <form onSubmit={mode === 'LOGIN' ? handleLogin : mode === 'REGISTER' ? handleRegister : handleVerifyOtp} className="space-y-6">
 
+                        {mode === 'LOGIN' && hasBiometricSupport && localStorage.getItem('grip_biometrics_enrolled') === 'true' && (
+                            <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between gap-3 animate-fadeIn">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                                        <Fingerprint size={22} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-bold text-white truncate">Fast Sign-In</p>
+                                        <p className="text-[10px] text-gray-400 truncate">Use {getDeviceBiometricName()}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleBiometricLogin}
+                                    disabled={isLoading}
+                                    className="px-3.5 py-2 rounded-xl bg-cyan-500 text-black font-black text-[10px] uppercase tracking-wider hover:bg-cyan-400 active:scale-95 transition-all shrink-0 cursor-pointer"
+                                >
+                                    Unlock
+                                </button>
+                            </div>
+                        )}
+
                         {mode !== 'OTP' && (
                             <div className="space-y-4">
                                 <Input
@@ -250,10 +272,10 @@ const Login: React.FC = () => {
                                 type="button"
                                 onClick={handleBiometricLogin}
                                 disabled={isLoading}
-                                className="w-full h-12 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-accent-border/60 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-sm touch-manipulation cursor-pointer"
+                                className="w-full h-12 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-cyan-500/50 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-sm touch-manipulation cursor-pointer"
                             >
                                 <Fingerprint size={18} className="text-cyan-400" />
-                                <span>Sign in with Fingerprint</span>
+                                <span>Sign in with {getDeviceBiometricName()}</span>
                             </button>
                         )}
 

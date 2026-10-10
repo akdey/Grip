@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, X, Loader2, KeyRound, Fingerprint, Sparkles, CheckCircle2 } from 'lucide-react';
 import { api } from '../../lib/api';
@@ -25,18 +25,30 @@ export const PasswordVerifyModal: React.FC<PasswordVerifyModalProps> = ({ isOpen
     const [enableBiometricsOnPass, setEnableBiometricsOnPass] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [shakeKey, setShakeKey] = useState(0);
+    const autoTriggeredRef = useRef(false);
 
-    // Check biometrics capability & enrollment when modal opens
+    // Check biometrics capability & auto-trigger native fingerprint sensor when modal opens
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {
+            autoTriggeredRef.current = false;
+            return;
+        }
         setError(null);
         setPassword('');
 
         let isMounted = true;
         getBiometricsStatus().then((status) => {
-            if (isMounted) {
-                setBioStatus(status);
-                // If user has biometrics registered, automatically focus or offer 1-tap
+            if (!isMounted) return;
+            setBioStatus(status);
+
+            // Auto-detect and pop native biometric prompt if enrolled on this device
+            if (status.hasBiometrics && status.platformAvailable && !autoTriggeredRef.current) {
+                autoTriggeredRef.current = true;
+                setTimeout(() => {
+                    if (isMounted) {
+                        handleBiometricUnlock();
+                    }
+                }, 160);
             }
         }).catch(() => {
             // Graceful fallback to password
@@ -223,7 +235,7 @@ export const PasswordVerifyModal: React.FC<PasswordVerifyModalProps> = ({ isOpen
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="text-sm font-bold text-primary truncate">
-                                                    {isBioLoading ? 'Scanning Sensor...' : 'Unlock with Fingerprint'}
+                                                    {isBioLoading ? 'Scanning Sensor...' : `Unlock with ${bioStatus?.deviceType || 'Fingerprint'}`}
                                                 </p>
                                                 <p className="text-[10px] text-text-muted font-medium mt-0.5 truncate">
                                                     Touch sensor to authenticate
@@ -232,7 +244,7 @@ export const PasswordVerifyModal: React.FC<PasswordVerifyModalProps> = ({ isOpen
                                         </div>
 
                                         <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-surface border border-border-subtle text-accent-text shrink-0 shadow-xs">
-                                            1-Tap
+                                            Auto
                                         </span>
                                     </button>
 
@@ -286,7 +298,7 @@ export const PasswordVerifyModal: React.FC<PasswordVerifyModalProps> = ({ isOpen
                                         <div className="min-w-0 flex items-center gap-1.5">
                                             <Fingerprint size={14} className="text-accent-text shrink-0" />
                                             <span className="text-[11px] font-bold text-text-secondary truncate">
-                                                Enable Fingerprint Unlock for this device
+                                                Enable {bioStatus?.deviceType || 'Fingerprint'} Unlock for this device
                                             </span>
                                         </div>
                                     </label>
@@ -321,7 +333,7 @@ export const PasswordVerifyModal: React.FC<PasswordVerifyModalProps> = ({ isOpen
                                         className="inline-flex items-center gap-1.5 text-[11px] font-bold text-accent-text hover:underline active:scale-95 transition-all"
                                     >
                                         <Fingerprint size={13} />
-                                        <span>Set up Fingerprint sensor now</span>
+                                        <span>Set up {bioStatus?.deviceType || 'Fingerprint'} sensor now</span>
                                     </button>
                                 </div>
                             )}

@@ -10,7 +10,29 @@ export interface BiometricsStatus {
     supported: boolean;
     platformAvailable: boolean;
     hasBiometrics: boolean;
+    deviceType: string;
     devices?: Array<{ id: string; device_name: string; created_at: string }>;
+}
+
+/**
+ * Detects the device platform and returns the intuitive biometric label
+ * (e.g. "Touch ID", "Face ID", "Fingerprint", "Windows Hello")
+ */
+export function getDeviceBiometricName(): string {
+    const ua = navigator.userAgent;
+    if (/iPhone|iPad|iPod/.test(ua)) {
+        return 'Face ID / Touch ID';
+    }
+    if (/Macintosh|Mac OS X/.test(ua)) {
+        return 'Touch ID';
+    }
+    if (/Android/.test(ua)) {
+        return 'Fingerprint';
+    }
+    if (/Windows/.test(ua)) {
+        return 'Windows Hello';
+    }
+    return 'Fingerprint';
 }
 
 /**
@@ -33,8 +55,9 @@ export async function checkBiometricsSupport(): Promise<{ supported: boolean; pl
  */
 export async function getBiometricsStatus(): Promise<BiometricsStatus> {
     const support = await checkBiometricsSupport();
+    const deviceType = getDeviceBiometricName();
     if (!support.platformAvailable) {
-        return { ...support, hasBiometrics: false };
+        return { ...support, hasBiometrics: false, deviceType };
     }
 
     try {
@@ -46,13 +69,15 @@ export async function getBiometricsStatus(): Promise<BiometricsStatus> {
         return {
             ...support,
             hasBiometrics,
+            deviceType,
             devices: response.data?.devices || []
         };
     } catch {
         const localEnrolled = localStorage.getItem('grip_biometrics_enrolled') === 'true';
         return {
             ...support,
-            hasBiometrics: localEnrolled
+            hasBiometrics: localEnrolled,
+            deviceType
         };
     }
 }
