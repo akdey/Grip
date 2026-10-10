@@ -5,7 +5,7 @@ import { useTransactions } from '../features/transactions/hooks';
 import {
     ArrowUpRight,
     ArrowDownRight,
-    Search,
+    History,
     Lock,
     Eye,
     EyeOff,
@@ -153,9 +153,10 @@ const Dashboard: React.FC = () => {
                     <button
                         onClick={() => navigate('/transactions?view=custom')}
                         className="w-12 h-12 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-md"
-                        aria-label="Search transactions"
+                        aria-label="Transaction history"
+                        title="Transaction History"
                     >
-                        <Search size={22} />
+                        <History size={22} />
                     </button>
                 </div>
             </header >

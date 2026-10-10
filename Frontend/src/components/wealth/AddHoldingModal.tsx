@@ -148,7 +148,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                             onClose();
                         }}
                     >
-                        <div className="w-10 h-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95" />
+                        <div className="w-10 h-1.5 bg-border-default hover:bg-text-muted rounded-full transition-colors active:scale-95" />
                     </div>
 
                     {/* Fixed Header */}
@@ -261,19 +261,19 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                                                                     setSearchTerm(s.schemeName);
                                                                     setShowDropdown(false);
                                                                 }}
-                                                                className="w-full text-left px-4 py-3 hover:bg-white/5 border-b border-white/5 last:border-0 text-xs transition-colors group"
+                                                                className="w-full text-left px-4 py-3 hover:bg-surface-hover border-b border-border-subtle/50 last:border-0 text-xs transition-colors group"
                                                             >
-                                                                <p className="font-bold text-gray-200 group-hover:text-white">{s.schemeName}</p>
-                                                                <p className="text-[10px] text-gray-500 mt-0.5">Code: {s.schemeCode}</p>
+                                                                <p className="font-bold text-primary group-hover:text-accent-text">{s.schemeName}</p>
+                                                                <p className="text-[10px] text-text-muted mt-0.5">Code: {s.schemeCode}</p>
                                                             </button>
                                                         ))}
                                                     {schemes.filter(s => s.schemeName.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
-                                                        <div className="p-4 text-center text-xs text-gray-500">No schemes found</div>
+                                                        <div className="p-4 text-center text-xs text-text-muted">No schemes found</div>
                                                     )}
                                                 </div>
                                             )}
                                             {formData.ticker_symbol && (
-                                                <p className="text-[10px] text-white/70 mt-1 font-mono">
+                                                <p className="text-[10px] text-accent-text mt-1 font-mono font-bold">
                                                     ✓ Code: {formData.ticker_symbol}
                                                 </p>
                                             )}
@@ -568,7 +568,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                     </div>
 
                     {/* Fixed Footer with Submit Button */}
-                    <div className="p-6 border-t border-white/5 bg-white/[0.01] flex-shrink-0">
+                    <div className="p-6 border-t border-border-subtle bg-surface-subtle/30 flex-shrink-0">
                         <button
                             type="submit"
                             onClick={handleSubmit}

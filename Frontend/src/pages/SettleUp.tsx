@@ -1,10 +1,53 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Plus, ArrowDownLeft, ArrowUpRight, Info, Trash2 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import {
+    ArrowLeft,
+    Plus,
+    ArrowDownLeft,
+    ArrowUpRight,
+    Info,
+    Trash2,
+    Calendar,
+    Search,
+    Check,
+    Pencil,
+    User,
+    Clock,
+    CheckCircle2,
+    Loader2,
+    Sparkles,
+    Filter,
+    X,
+    Handshake
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { usePeerBalances, usePeerHistory, useAddLedgerEntry, useUpdateSettleUpEntry, useDeleteSettleUpEntry } from '../features/settle-up/hooks';
+import {
+    usePeerBalances,
+    usePeerHistory,
+    useAddLedgerEntry,
+    useUpdateSettleUpEntry,
+    useDeleteSettleUpEntry,
+    type PeerBalance,
+    type LedgerEntry
+} from '../features/settle-up/hooks';
 import { Loader } from '../components/ui/Loader';
 import { Drawer } from '../components/ui/Drawer';
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import { format, formatDistanceToNow, parseISO, isValid } from 'date-fns';
+import { haptics } from '../lib/haptics';
+
+const formatDateSafe = (dateStr?: string | null) => {
+    if (!dateStr) return { full: 'No date recorded', short: 'No date', relative: '' };
+    try {
+        const parsed = parseISO(dateStr);
+        if (!isValid(parsed)) return { full: dateStr, short: dateStr, relative: '' };
+        return {
+            full: format(parsed, 'EEE, dd MMM yyyy'),
+            short: format(parsed, 'dd MMM yyyy'),
+            relative: formatDistanceToNow(parsed, { addSuffix: true })
+        };
+    } catch {
+        return { full: dateStr, short: dateStr, relative: '' };
+    }
+};
 
 const SettleUp: React.FC = () => {
     const navigate = useNavigate();
@@ -12,12 +55,17 @@ const SettleUp: React.FC = () => {
     const [selectedPeer, setSelectedPeer] = useState<string | null>(null);
     const [showAddForm, setShowAddForm] = useState(false);
 
+    // Filter & Search State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterMode, setFilterMode] = useState<'all' | 'collect' | 'pay'>('all');
+
     // Add/Edit Entry State
-    const [editingEntry, setEditingEntry] = useState<any | null>(null);
+    const [editingEntry, setEditingEntry] = useState<LedgerEntry | null>(null);
     const [newPeerName, setNewPeerName] = useState('');
     const [newAmount, setNewAmount] = useState('');
+    const [newDate, setNewDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
     const [newRemarks, setNewRemarks] = useState('');
-    const [newType, setNewType] = useState<'expense' | 'income'>('expense');
+    const [newType, setNewType] = useState<'lent' | 'received'>('lent');
 
     const addMutation = useAddLedgerEntry();
     const updateMutation = useUpdateSettleUpEntry();
@@ -30,30 +78,70 @@ const SettleUp: React.FC = () => {
             maximumFractionDigits: 0
         }).format(Math.abs(amount));
 
+    // Calculate High-level KPIs
+    const { totalToCollect, totalToPay, netPosition } = useMemo(() => {
+        let collect = 0;
+        let pay = 0;
+        balances?.forEach(p => {
+            const val = Number(p.net_balance);
+            if (val > 0) collect += val;
+            else if (val < 0) pay += Math.abs(val);
+        });
+        return {
+            totalToCollect: collect,
+            totalToPay: pay,
+            netPosition: collect - pay
+        };
+    }, [balances]);
+
+    // Filtered Balances List
+    const filteredBalances = useMemo(() => {
+        if (!balances) return [];
+        return balances.filter(p => {
+            const matchesSearch = p.peer_name.toLowerCase().includes(searchTerm.toLowerCase());
+            if (!matchesSearch) return false;
+            if (filterMode === 'collect') return p.net_balance > 0;
+            if (filterMode === 'pay') return p.net_balance < 0;
+            return true;
+        });
+    }, [balances, searchTerm, filterMode]);
+
     const handleSaveEntry = () => {
         if (!newPeerName.trim() || !newAmount.trim()) return;
 
         const amount = parseFloat(newAmount);
         if (isNaN(amount) || amount <= 0) return;
 
-        const finalAmount = newType === 'expense' ? -amount : amount;
+        haptics.impact('medium');
+        // Backend: Positive = They owe you (You lent), Negative = You owe them (You borrowed / received)
+        const finalAmount = newType === 'lent' ? amount : -amount;
 
         if (editingEntry) {
             updateMutation.mutate({
                 id: editingEntry.id,
                 peer_name: newPeerName.trim(),
                 amount: finalAmount,
+                date: newDate || format(new Date(), 'yyyy-MM-dd'),
                 remarks: newRemarks.trim() || undefined,
             }, {
-                onSuccess: () => resetForm()
+                onSuccess: () => {
+                    haptics.notification('success');
+                    resetForm();
+                },
+                onError: () => haptics.notification('error')
             });
         } else {
             addMutation.mutate({
                 peer_name: newPeerName.trim(),
                 amount: finalAmount,
+                date: newDate || format(new Date(), 'yyyy-MM-dd'),
                 remarks: newRemarks.trim() || undefined,
             }, {
-                onSuccess: () => resetForm()
+                onSuccess: () => {
+                    haptics.notification('success');
+                    resetForm();
+                },
+                onError: () => haptics.notification('error')
             });
         }
     };
@@ -61,190 +149,442 @@ const SettleUp: React.FC = () => {
     const resetForm = () => {
         setNewPeerName('');
         setNewAmount('');
+        setNewDate(format(new Date(), 'yyyy-MM-dd'));
         setNewRemarks('');
-        setNewType('expense');
+        setNewType('lent');
         setEditingEntry(null);
         setShowAddForm(false);
     };
 
-    const handleEdit = (entry: any) => {
+    const handleEdit = (entry: LedgerEntry) => {
+        haptics.selection();
         setEditingEntry(entry);
         setNewPeerName(entry.peer_name);
         setNewAmount(Math.abs(entry.amount).toString());
-        setNewType(entry.amount < 0 ? 'expense' : 'income');
+        setNewDate(entry.date ? entry.date.split('T')[0] : format(new Date(), 'yyyy-MM-dd'));
+        // Positive = Lent, Negative = Received
+        setNewType(entry.amount >= 0 ? 'lent' : 'received');
         setNewRemarks(entry.remarks || '');
         setShowAddForm(true);
     };
 
     const handleDelete = (id: string) => {
+        haptics.impact('medium');
         if (confirm('Are you sure you want to delete this record?')) {
-            deleteMutation.mutate(id);
+            deleteMutation.mutate(id, {
+                onSuccess: () => haptics.notification('success'),
+                onError: () => haptics.notification('error')
+            });
         }
+    };
+
+    const handleQuickSettle = (peerName: string, netBalance: number) => {
+        haptics.impact('medium');
+        setNewPeerName(peerName);
+        setNewAmount(Math.abs(netBalance).toString());
+        setNewDate(format(new Date(), 'yyyy-MM-dd'));
+        setNewRemarks('Settlement payment');
+        // If they owe you (netBalance > 0), to settle you record "received" (-)
+        // If you owe them (netBalance < 0), to settle you record "lent/paid" (+)
+        setNewType(netBalance > 0 ? 'received' : 'lent');
+        setShowAddForm(true);
     };
 
     if (isLoading) return <Loader fullPage text="Loading balances" />;
 
     return (
-        <div className="min-h-screen text-primary pb-24">
+        <div className="min-h-screen text-primary pb-28">
             {/* Header */}
-            <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-page/80 backdrop-blur-3xl z-30 border-b border-border-subtle">
+            <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-page/85 backdrop-blur-3xl z-30 border-b border-border-subtle">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all">
+                    <button
+                        onClick={() => {
+                            haptics.selection();
+                            navigate(-1);
+                        }}
+                        className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-sm"
+                        title="Go back"
+                    >
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight text-primary">Settle Up</h1>
+                        <h1 className="text-xl font-black tracking-tight text-primary flex items-center gap-2">
+                            Settle Up
+                        </h1>
                         <p className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">
-                            {balances?.length || 0} active peers
+                            {balances?.length || 0} active contacts
                         </p>
                     </div>
                 </div>
                 <button
-                    onClick={() => setShowAddForm(true)}
-                    className="w-10 h-10 rounded-full bg-primary text-text-inverse flex items-center justify-center active:scale-90 transition-all shadow-md"
+                    onClick={() => {
+                        haptics.selection();
+                        resetForm();
+                        setShowAddForm(true);
+                    }}
+                    className="h-10 px-4 rounded-full bg-primary text-text-inverse font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all shadow-md"
                 >
-                    <Plus size={20} />
+                    <Plus size={16} />
+                    <span>Add Record</span>
                 </button>
             </header>
 
-            {/* Balances List */}
-            <div className="px-4 py-6 space-y-3">
-                {(!balances || balances.length === 0) ? (
-                    <div className="flex flex-col items-center justify-center py-40 opacity-10 space-y-6">
-                        <ArrowUpRight size={80} strokeWidth={1} />
-                        <p className="font-black uppercase tracking-[4px] text-[10px] text-center px-10">
-                            No active balances
+            <div className="max-w-4xl mx-auto px-4 py-5 space-y-6">
+                {/* KPI Overview Strip */}
+                <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-3.5 sm:p-4 text-center">
+                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-text-muted block">
+                            Net Balance
+                        </span>
+                        <p className={`text-base sm:text-lg font-black tracking-tight mt-1 truncate ${
+                            netPosition > 0 ? 'text-emerald-500' : netPosition < 0 ? 'text-rose-500' : 'text-primary'
+                        }`}>
+                            {netPosition > 0 ? `+${formatCurrency(netPosition)}` : netPosition < 0 ? `-${formatCurrency(netPosition)}` : '₹0'}
                         </p>
+                        <span className="text-[7.5px] font-bold text-text-muted/70 uppercase tracking-tighter mt-0.5 block truncate">
+                            {netPosition > 0 ? 'Net Receivable' : netPosition < 0 ? 'Net Payable' : 'Balanced'}
+                        </span>
                     </div>
-                ) : (
-                    balances.map((peer) => {
-                        const isOwed = peer.net_balance < 0; // Negative = they owe you
-                        return (
-                            <div
-                                key={peer.peer_name}
-                                onClick={() => setSelectedPeer(peer.peer_name)}
-                                className="flex items-center justify-between p-4 bg-surface-subtle hover:bg-surface-hover transition-all border border-border-subtle rounded-2xl cursor-pointer active:scale-[0.98]"
+
+                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-3.5 sm:p-4 text-center">
+                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-emerald-500 block">
+                            To Collect
+                        </span>
+                        <p className="text-base sm:text-lg font-black text-emerald-500 tracking-tight mt-1 truncate">
+                            {formatCurrency(totalToCollect)}
+                        </p>
+                        <span className="text-[7.5px] font-bold text-emerald-500/70 uppercase tracking-tighter mt-0.5 block truncate">
+                            They Owe You
+                        </span>
+                    </div>
+
+                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-3.5 sm:p-4 text-center">
+                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-rose-500 block">
+                            To Pay
+                        </span>
+                        <p className="text-base sm:text-lg font-black text-rose-500 tracking-tight mt-1 truncate">
+                            {formatCurrency(totalToPay)}
+                        </p>
+                        <span className="text-[7.5px] font-bold text-rose-500/70 uppercase tracking-tighter mt-0.5 block truncate">
+                            You Owe Them
+                        </span>
+                    </div>
+                </div>
+
+                {/* Search & Filter Controls */}
+                <div className="space-y-3">
+                    <div className="relative">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Search person or merchant..."
+                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-10 pr-10 py-3 text-xs font-semibold text-primary focus:outline-none focus:border-border-default placeholder:text-text-muted/60 transition-colors"
+                        />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary p-1"
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border border-border-subtle ${isOwed ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                                        {isOwed ? <ArrowDownLeft size={22} /> : <ArrowUpRight size={22} />}
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-primary text-sm">{peer.peer_name}</p>
-                                        <p className="text-[9px] text-text-muted font-bold uppercase tracking-widest mt-1">
-                                            {peer.last_activity_date
-                                                ? formatDistanceToNow(parseISO(peer.last_activity_date), { addSuffix: true })
-                                                : 'No activity'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className={`font-black text-base tracking-tighter ${isOwed ? 'text-emerald-400' : 'text-red-400'}`}>
-                                        {formatCurrency(peer.net_balance)}
-                                    </p>
-                                    <p className={`text-[8px] font-black uppercase tracking-widest mt-0.5 ${isOwed ? 'text-emerald-500/60' : 'text-red-500/60'}`}>
-                                        {isOwed ? 'They owe you' : 'You owe them'}
-                                    </p>
-                                </div>
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Filter Pills */}
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                        <button
+                            onClick={() => { haptics.selection(); setFilterMode('all'); }}
+                            className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                                filterMode === 'all'
+                                    ? 'bg-primary text-text-inverse border-primary shadow-sm'
+                                    : 'bg-surface-subtle text-text-muted border-border-subtle hover:text-primary hover:bg-surface-hover'
+                            }`}
+                        >
+                            All ({balances?.length || 0})
+                        </button>
+                        <button
+                            onClick={() => { haptics.selection(); setFilterMode('collect'); }}
+                            className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                                filterMode === 'collect'
+                                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                                    : 'bg-surface-subtle text-emerald-500/80 border-border-subtle hover:text-emerald-500 hover:bg-surface-hover'
+                            }`}
+                        >
+                            To Collect ({balances?.filter(b => b.net_balance > 0).length || 0})
+                        </button>
+                        <button
+                            onClick={() => { haptics.selection(); setFilterMode('pay'); }}
+                            className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                                filterMode === 'pay'
+                                    ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
+                                    : 'bg-surface-subtle text-rose-500/80 border-border-subtle hover:text-rose-500 hover:bg-surface-hover'
+                            }`}
+                        >
+                            To Pay ({balances?.filter(b => b.net_balance < 0).length || 0})
+                        </button>
+                    </div>
+                </div>
+
+                {/* Balances List */}
+                <div className="space-y-3">
+                    {filteredBalances.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-24 bg-surface-subtle/40 border border-border-subtle rounded-3xl p-6 text-center space-y-4">
+                            <div className="w-16 h-16 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted/40">
+                                <Handshake size={32} />
                             </div>
-                        );
-                    })
-                )}
+                            <div>
+                                <p className="font-black uppercase tracking-[3px] text-xs text-primary">
+                                    {searchTerm ? 'No Matching Contacts' : 'All Settled Up'}
+                                </p>
+                                <p className="text-[11px] text-text-muted mt-1 max-w-xs">
+                                    {searchTerm
+                                        ? `No records found matching "${searchTerm}". Try another name.`
+                                        : 'You have no outstanding debts or receivables with friends or merchants.'}
+                                </p>
+                            </div>
+                            {!searchTerm && (
+                                <button
+                                    onClick={() => {
+                                        haptics.selection();
+                                        setShowAddForm(true);
+                                    }}
+                                    className="px-4 py-2 rounded-xl bg-primary text-text-inverse font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
+                                >
+                                    <Plus size={14} /> Add First Record
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        filteredBalances.map((peer) => {
+                            const isOwed = peer.net_balance > 0; // Positive = they owe you
+                            const dateInfo = formatDateSafe(peer.last_activity_date);
+                            const initial = peer.peer_name ? peer.peer_name.trim().charAt(0).toUpperCase() : '?';
+
+                            return (
+                                <div
+                                    key={peer.peer_name}
+                                    onClick={() => {
+                                        haptics.selection();
+                                        setSelectedPeer(peer.peer_name);
+                                    }}
+                                    className="p-4 bg-surface-subtle hover:bg-surface-hover transition-all border border-border-subtle hover:border-border-default/60 rounded-2xl cursor-pointer active:scale-[0.985] group shadow-none hover:shadow-sm"
+                                >
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3.5 min-w-0">
+                                            {/* Avatar Initial */}
+                                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border shadow-inner ${
+                                                isOwed
+                                                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500'
+                                                    : 'bg-rose-500/15 border-rose-500/30 text-rose-500'
+                                            }`}>
+                                                {initial}
+                                            </div>
+
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-primary text-sm truncate group-hover:text-accent-text transition-colors">
+                                                    {peer.peer_name}
+                                                </p>
+                                                {/* Prominent Date Display */}
+                                                <div className="flex items-center gap-1.5 mt-1 text-text-muted">
+                                                    <Calendar size={11} className="shrink-0 text-text-muted/70" />
+                                                    <span className="text-[10px] font-semibold text-text-muted truncate">
+                                                        {dateInfo.short}
+                                                    </span>
+                                                    {dateInfo.relative && (
+                                                        <>
+                                                            <span className="text-[9px] text-text-muted/40">•</span>
+                                                            <span className="text-[9px] text-text-muted/70 font-medium">
+                                                                {dateInfo.relative}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-right shrink-0">
+                                            <p className={`font-black text-base tracking-tight ${
+                                                isOwed ? 'text-emerald-500' : 'text-rose-500'
+                                            }`}>
+                                                {isOwed ? `+${formatCurrency(peer.net_balance)}` : `-${formatCurrency(peer.net_balance)}`}
+                                            </p>
+                                            <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mt-1 border ${
+                                                isOwed
+                                                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
+                                                    : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+                                            }`}>
+                                                {isOwed ? 'They owe you' : 'You owe them'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
             </div>
 
             {/* Peer History Drawer */}
             <PeerHistoryDrawer
                 peerName={selectedPeer}
+                peerBalance={balances?.find(b => b.peer_name === selectedPeer)?.net_balance || 0}
                 isOpen={!!selectedPeer}
                 onClose={() => setSelectedPeer(null)}
                 formatCurrency={formatCurrency}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onQuickSettle={handleQuickSettle}
             />
 
-            {/* Add/Edit Entry Drawer */}
+            {/* Add / Edit Entry Drawer */}
             <Drawer
                 isOpen={showAddForm}
                 onClose={resetForm}
-                title={editingEntry ? "Edit Record" : "Add Record"}
-                height="h-[90vh]"
+                title={editingEntry ? "Edit Transaction Record" : "Add Settle Up Record"}
+                height="h-[92vh]"
             >
-                <div className="space-y-6 px-2 pb-10">
+                <div className="space-y-5 px-3 pb-12 max-w-lg mx-auto">
                     {/* Info Note */}
-                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-accent-subtle border border-accent-border">
+                    <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-accent-subtle/50 border border-accent-border/60">
                         <Info size={16} className="text-accent-text mt-0.5 shrink-0" />
-                        <p className="text-[10px] text-text-secondary leading-relaxed">
-                            Manual entries added here only update peer balances and <strong className="text-accent-text">will not affect your main expense tracking</strong>.
+                        <p className="text-[11px] text-text-muted leading-relaxed">
+                            Peer debt ledger entries adjust obligations between you and merchants/friends without affecting your bank statement ledger.
                         </p>
                     </div>
 
-                    {/* Type Toggle */}
-                    <div className="grid grid-cols-2 gap-2 p-1.5 bg-surface-subtle border border-border-subtle rounded-2xl">
-                        <button
-                            onClick={() => setNewType('expense')}
-                            className={`py-3.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${newType === 'expense'
-                                ? 'bg-status-success-bg text-status-success-text border border-status-success-border shadow-sm'
-                                : 'text-text-muted hover:text-primary'
+                    {/* Direction Toggle */}
+                    <div className="space-y-1.5">
+                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] ml-1">
+                            Transaction Direction
+                        </label>
+                        <div className="grid grid-cols-2 gap-2 p-1 bg-surface-subtle border border-border-subtle rounded-2xl">
+                            <button
+                                type="button"
+                                onClick={() => { haptics.selection(); setNewType('lent'); }}
+                                className={`py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                                    newType === 'lent'
+                                        ? 'bg-emerald-500 text-white shadow-sm'
+                                        : 'text-text-muted hover:text-primary hover:bg-surface-hover'
                                 }`}
-                        >
-                            I Lent
-                        </button>
-                        <button
-                            onClick={() => setNewType('income')}
-                            className={`py-3.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${newType === 'income'
-                                ? 'bg-status-danger-bg text-status-danger-text border border-status-danger-border shadow-sm'
-                                : 'text-text-muted hover:text-primary'
+                            >
+                                <ArrowUpRight size={15} />
+                                <span>I Lent / Paid</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { haptics.selection(); setNewType('received'); }}
+                                className={`py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                                    newType === 'received'
+                                        ? 'bg-rose-500 text-white shadow-sm'
+                                        : 'text-text-muted hover:text-primary hover:bg-surface-hover'
                                 }`}
-                        >
-                            I Borrowed
-                        </button>
+                            >
+                                <ArrowDownLeft size={15} />
+                                <span>I Borrowed</span>
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-text-muted/80 ml-1 italic font-medium">
+                            {newType === 'lent'
+                                ? '✓ Increases what they owe you (+ balance)'
+                                : '✓ Decreases what they owe you or increases debt (- balance)'}
+                        </p>
                     </div>
 
-                    {/* Peer Name */}
-                    <div className="space-y-2">
-                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-[3px] ml-1">Person</label>
+                    {/* Person / Merchant Name */}
+                    <div className="space-y-1.5">
+                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] ml-1">
+                            Person / Merchant Name
+                        </label>
                         <input
                             type="text"
                             value={newPeerName}
                             onChange={(e) => setNewPeerName(e.target.value)}
-                            placeholder="e.g. John Doe"
-                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-primary focus:outline-none focus:border-border-default placeholder-text-muted/50"
+                            placeholder="e.g. Rahul Sharma, Swiggy, Landlord"
+                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-3 text-sm font-semibold text-primary focus:outline-none focus:border-border-default placeholder:text-text-muted/50 transition-colors"
+                        />
+                    </div>
+
+                    {/* Date Picker Input (Requested by user) */}
+                    <div className="space-y-1.5">
+                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] ml-1 flex items-center gap-1">
+                            <Calendar size={12} /> Transaction Date
+                        </label>
+                        <input
+                            type="date"
+                            value={newDate}
+                            onChange={(e) => setNewDate(e.target.value)}
+                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-3 text-sm font-semibold text-primary focus:outline-none focus:border-border-default transition-colors"
                         />
                     </div>
 
                     {/* Amount */}
-                    <div className="space-y-2">
-                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-[3px] ml-1">Amount</label>
+                    <div className="space-y-1.5">
+                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] ml-1">
+                            Amount (₹)
+                        </label>
                         <div className="relative">
-                            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted font-bold">₹</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted font-bold text-base">₹</span>
                             <input
                                 type="number"
+                                step="any"
                                 value={newAmount}
                                 onChange={(e) => setNewAmount(e.target.value)}
                                 placeholder="0"
-                                className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-10 pr-5 py-4 text-sm font-bold text-primary focus:outline-none focus:border-border-default placeholder-text-muted/50"
+                                className="w-full bg-surface-subtle border border-border-subtle rounded-2xl pl-9 pr-4 py-3 text-base font-black text-primary focus:outline-none focus:border-border-default placeholder:text-text-muted/50 transition-colors"
                             />
+                        </div>
+
+                        {/* Quick Amount Chips */}
+                        <div className="flex gap-1.5 pt-1 overflow-x-auto no-scrollbar">
+                            {[100, 500, 1000, 2000, 5000].map(amt => (
+                                <button
+                                    key={amt}
+                                    type="button"
+                                    onClick={() => {
+                                        haptics.selection();
+                                        setNewAmount(amt.toString());
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-surface border border-border-subtle text-[10px] font-bold text-text-muted hover:text-primary hover:border-border-default transition-all whitespace-nowrap"
+                                >
+                                    +₹{amt}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Remarks */}
-                    <div className="space-y-2">
-                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-[3px] ml-1">Note (Optional)</label>
+                    {/* Note / Remarks */}
+                    <div className="space-y-1.5">
+                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] ml-1">
+                            Remarks & Details (Optional)
+                        </label>
                         <input
                             type="text"
                             value={newRemarks}
                             onChange={(e) => setNewRemarks(e.target.value)}
-                            placeholder="e.g. Dinner split"
-                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-5 py-4 text-sm font-bold text-primary focus:outline-none focus:border-border-default placeholder-text-muted/50"
+                            placeholder="e.g. Dinner bill, Trip cab, Advance payment"
+                            className="w-full bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-3 text-sm font-semibold text-primary focus:outline-none focus:border-border-default placeholder:text-text-muted/50 transition-colors"
                         />
                     </div>
 
+                    {/* Submit Button */}
                     <button
                         onClick={handleSaveEntry}
                         disabled={addMutation.isPending || updateMutation.isPending || !newPeerName.trim() || !newAmount.trim()}
-                        className="w-full py-5 rounded-[2rem] bg-primary text-text-inverse font-black text-lg shadow-2xl active:scale-95 transition-all disabled:opacity-30 disabled:scale-100"
+                        className="w-full py-4 mt-2 rounded-2xl bg-primary text-text-inverse font-black text-sm uppercase tracking-wider shadow-xl active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
                     >
-                        {addMutation.isPending || updateMutation.isPending ? 'Saving...' : (editingEntry ? 'Update Record' : 'Add Record')}
+                        {(addMutation.isPending || updateMutation.isPending) ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
+                                <span>Saving Record...</span>
+                            </>
+                        ) : (
+                            <>
+                                <Check size={16} />
+                                <span>{editingEntry ? 'Update Record' : 'Save Record'}</span>
+                            </>
+                        )}
                     </button>
                 </div>
             </Drawer>
@@ -253,86 +593,171 @@ const SettleUp: React.FC = () => {
 };
 
 // Sub-component: Peer History Drawer
-const PeerHistoryDrawer = ({
+interface PeerHistoryDrawerProps {
+    peerName: string | null;
+    peerBalance: number;
+    isOpen: boolean;
+    onClose: () => void;
+    formatCurrency: (n: number) => string;
+    onEdit: (entry: LedgerEntry) => void;
+    onDelete: (id: string) => void;
+    onQuickSettle: (peerName: string, balance: number) => void;
+}
+
+const PeerHistoryDrawer: React.FC<PeerHistoryDrawerProps> = ({
     peerName,
+    peerBalance,
     isOpen,
     onClose,
     formatCurrency,
     onEdit,
-    onDelete
-}: {
-    peerName: string | null;
-    isOpen: boolean;
-    onClose: () => void;
-    formatCurrency: (n: number) => string;
-    onEdit: (entry: any) => void;
-    onDelete: (id: string) => void;
+    onDelete,
+    onQuickSettle
 }) => {
     const { data: history, isLoading } = usePeerHistory(peerName || '');
+    const isOwed = peerBalance > 0;
 
     return (
-        <Drawer isOpen={isOpen} onClose={onClose} title={peerName || ''} height="h-[90vh]">
-            <div className="space-y-4 px-2 pb-10">
-                <p className="text-[9px] text-text-muted font-bold uppercase tracking-[3px] ml-1">Transaction History</p>
+        <Drawer isOpen={isOpen} onClose={onClose} title={peerName || 'Ledger History'} height="h-[92vh]">
+            <div className="space-y-4 px-3 pb-12 max-w-lg mx-auto">
+                {/* Balance & Quick Settle Banner */}
+                {peerName && (
+                    <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between gap-3">
+                        <div>
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted block">
+                                Current Standing
+                            </span>
+                            <p className={`text-lg font-black tracking-tight mt-0.5 ${
+                                peerBalance > 0 ? 'text-emerald-500' : peerBalance < 0 ? 'text-rose-500' : 'text-primary'
+                            }`}>
+                                {peerBalance > 0 ? `+${formatCurrency(peerBalance)}` : peerBalance < 0 ? `-${formatCurrency(peerBalance)}` : '₹0'}
+                            </p>
+                            <span className="text-[9px] font-semibold text-text-muted block mt-0.5">
+                                {peerBalance > 0 ? 'They owe you' : peerBalance < 0 ? 'You owe them' : 'Settled balance'}
+                            </span>
+                        </div>
+
+                        {peerBalance !== 0 && (
+                            <button
+                                onClick={() => onQuickSettle(peerName, peerBalance)}
+                                className="px-3.5 py-2 rounded-xl bg-accent-subtle border border-accent-border text-accent-text font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
+                            >
+                                <CheckCircle2 size={14} />
+                                <span>Settle Balance</span>
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Transaction History Heading */}
+                <div className="flex items-center justify-between px-1 pt-1">
+                    <p className="text-[10px] font-black uppercase tracking-[2px] text-text-muted flex items-center gap-1.5">
+                        <Clock size={13} />
+                        <span>Transaction Ledger ({history?.length || 0})</span>
+                    </p>
+                </div>
 
                 {isLoading ? (
                     <div className="flex justify-center py-20">
-                        <Loader text="Loading history" />
+                        <Loader text="Loading ledger history..." />
                     </div>
                 ) : (!history || history.length === 0) ? (
-                    <div className="flex flex-col items-center py-20 opacity-20 space-y-4">
-                        <p className="text-[10px] font-black uppercase tracking-[4px]">No records yet</p>
+                    <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 opacity-60">
+                        <Handshake size={40} className="text-text-muted stroke-[1.5]" />
+                        <p className="text-xs font-bold uppercase tracking-wider text-text-muted">
+                            No ledger records found
+                        </p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                         {history.map((entry) => {
-                            const isDebit = entry.amount < 0; // You gave money
+                            const isLent = entry.amount >= 0; // Positive = Lent / Paid for them
+                            const dateInfo = formatDateSafe(entry.date || entry.created_at);
+
                             return (
                                 <div
                                     key={entry.id}
                                     onClick={() => onEdit(entry)}
-                                    className="group flex items-center justify-between p-3.5 bg-surface-subtle border border-border-subtle rounded-2xl relative overflow-hidden cursor-pointer hover:bg-surface-hover active:scale-[0.98] transition-all"
+                                    className="group p-3.5 bg-surface-subtle border border-border-subtle hover:border-border-default/60 rounded-2xl relative overflow-hidden cursor-pointer hover:bg-surface-hover active:scale-[0.99] transition-all"
                                 >
-                                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        <div className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center ${isDebit ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                                            {isDebit ? <ArrowUpRight size={14} /> : <ArrowDownLeft size={14} />}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-bold text-primary">
-                                                {isDebit ? 'You lent' : 'You received'}
-                                            </p>
-                                            {entry.remarks && (
-                                                <p className="text-[9px] text-text-muted mt-0.5 truncate">{entry.remarks}</p>
-                                            )}
-                                            <p className="text-[8px] text-text-muted/70 mt-0.5">
-                                                {formatDistanceToNow(parseISO(entry.date), { addSuffix: true })}
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-start gap-3 min-w-0">
+                                            {/* Direction Icon */}
+                                            <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center mt-0.5 border shadow-inner ${
+                                                isLent
+                                                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500'
+                                                    : 'bg-rose-500/15 border-rose-500/30 text-rose-500'
+                                            }`}>
+                                                {isLent ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
+                                            </div>
 
-                                    <div className="flex items-center gap-4 ml-3 flex-shrink-0">
-                                        <div className="text-right">
-                                            <div className="flex items-center justify-end gap-1 mb-0.5">
-                                                {entry.transaction_id && (
-                                                    <span className="text-[6px] px-1 py-0 rounded bg-accent-subtle border border-accent-border text-accent-text font-black uppercase tracking-tighter">
-                                                        Synced
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-xs font-bold text-primary">
+                                                        {isLent ? 'You Lent / Paid' : 'You Received / Borrowed'}
+                                                    </p>
+                                                    {entry.transaction_id && (
+                                                        <span className="text-[7px] px-1.5 py-0.2 rounded bg-accent-subtle border border-accent-border text-accent-text font-black uppercase tracking-tighter">
+                                                            Synced
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Prominent Exact Date with Calendar Icon */}
+                                                <div className="flex items-center gap-1.5 mt-1 text-text-muted">
+                                                    <Calendar size={11} className="text-text-muted/70 shrink-0" />
+                                                    <span className="text-[10px] font-bold text-text-primary">
+                                                        {dateInfo.full}
                                                     </span>
+                                                    {dateInfo.relative && (
+                                                        <span className="text-[9px] text-text-muted/60">
+                                                            ({dateInfo.relative})
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Notes / Remarks */}
+                                                {entry.remarks && (
+                                                    <p className="text-[11px] text-text-muted/90 mt-1.5 font-medium leading-relaxed bg-surface/60 px-2.5 py-1 rounded-lg border border-border-subtle/50 break-words">
+                                                        "{entry.remarks}"
+                                                    </p>
                                                 )}
-                                                <p className={`font-black text-sm tracking-tighter ${isDebit ? 'text-primary' : 'text-emerald-500'}`}>
-                                                    {isDebit ? '-' : '+'}{formatCurrency(entry.amount)}
-                                                </p>
                                             </div>
                                         </div>
 
-                                        <button
-                                            onClick={(e: React.MouseEvent) => {
-                                                e.stopPropagation(); // Prevent trigger onEdit
-                                                onDelete(entry.id);
-                                            }}
-                                            className="w-8 h-8 rounded-xl bg-red-500/5 border border-red-500/10 flex items-center justify-center text-red-500/40 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 active:scale-90 transition-all"
-                                        >
-                                            <Trash2 size={13} />
-                                        </button>
+                                        <div className="flex items-center gap-2.5 shrink-0 ml-2">
+                                            <div className="text-right">
+                                                <p className={`font-black text-sm sm:text-base tracking-tight ${
+                                                    isLent ? 'text-emerald-500' : 'text-rose-500'
+                                                }`}>
+                                                    {isLent ? `+${formatCurrency(entry.amount)}` : `-${formatCurrency(entry.amount)}`}
+                                                </p>
+                                            </div>
+
+                                            {/* Edit & Delete Action Buttons */}
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={(e: React.MouseEvent) => {
+                                                        e.stopPropagation();
+                                                        onEdit(entry);
+                                                    }}
+                                                    className="w-7 h-7 rounded-xl bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all"
+                                                    title="Edit Record"
+                                                >
+                                                    <Pencil size={12} />
+                                                </button>
+                                                <button
+                                                    onClick={(e: React.MouseEvent) => {
+                                                        e.stopPropagation();
+                                                        onDelete(entry.id);
+                                                    }}
+                                                    className="w-7 h-7 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 hover:bg-rose-500/20 active:scale-90 transition-all"
+                                                    title="Delete Record"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             );

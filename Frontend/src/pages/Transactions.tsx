@@ -16,9 +16,11 @@ import {
     Calendar,
     X,
     Eye,
-    EyeOff
+    EyeOff,
+    Loader2
 } from 'lucide-react';
 import { usePrivacyStore } from '../lib/store';
+import { haptics } from '../lib/haptics';
 const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
 import {
     format,
@@ -999,6 +1001,7 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
             if (!proceed) return;
         }
 
+        haptics.impact('medium');
         verifyMutation.mutate({
             id: txn.id,
             data: {
@@ -1007,13 +1010,30 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
                 sub_category: txn.sub_category || 'Uncategorized',
                 merchant_name: (txn.merchant_name || 'Unknown').trim()
             }
+        }, {
+            onSuccess: () => {
+                haptics.notification('success');
+            },
+            onError: (err) => {
+                haptics.notification('error');
+                console.error("Failed to approve transaction", err);
+            }
         });
     };
 
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (window.confirm("Are you sure you want to delete this transaction?")) {
-            deleteMutation.mutate(txn.id);
+        haptics.impact('medium');
+        if (window.confirm("Are you sure you want to discard this transaction?")) {
+            deleteMutation.mutate(txn.id, {
+                onSuccess: () => {
+                    haptics.notification('success');
+                },
+                onError: (err) => {
+                    haptics.notification('error');
+                    console.error("Failed to discard transaction", err);
+                }
+            });
         }
     };
 
@@ -1079,22 +1099,30 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
                         </span>
                     )}
                     {txn.status === 'PENDING' && (
-                        <div className="flex items-center gap-1 ml-2">
+                        <div className="flex items-center gap-1.5 ml-2">
                             <button
                                 onClick={handleDelete}
-                                disabled={deleteMutation.isPending}
-                                className="w-6 h-6 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 hover:bg-red-500/20 transition-all active:scale-95"
+                                disabled={deleteMutation.isPending || verifyMutation.isPending}
+                                className="w-7 h-7 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 hover:bg-red-500/20 transition-all active:scale-90 disabled:opacity-50"
                                 title="Discard"
                             >
-                                <Trash2 size={12} />
+                                {deleteMutation.isPending ? (
+                                    <Loader2 size={13} className="animate-spin text-red-500" />
+                                ) : (
+                                    <Trash2 size={13} />
+                                )}
                             </button>
                             <button
                                 onClick={handleApprove}
-                                disabled={verifyMutation.isPending}
-                                className="w-6 h-6 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-500 hover:bg-green-500/20 transition-all active:scale-95"
+                                disabled={verifyMutation.isPending || deleteMutation.isPending}
+                                className="w-7 h-7 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-500 hover:bg-green-500/20 transition-all active:scale-90 disabled:opacity-50"
                                 title="Approve"
                             >
-                                <Check size={12} />
+                                {verifyMutation.isPending ? (
+                                    <Loader2 size={13} className="animate-spin text-green-500" />
+                                ) : (
+                                    <Check size={13} />
+                                )}
                             </button>
                         </div>
                     )}
