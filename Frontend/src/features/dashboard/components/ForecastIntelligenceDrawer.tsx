@@ -5,18 +5,24 @@ import {
     ChevronUp,
     Sparkles,
     Layers,
-    Activity,
     TrendingUp,
-    ShieldCheck,
     Repeat,
-    ArrowUpRight,
-    Info,
+    CreditCard,
+    Home,
+    Utensils,
+    ShoppingBag,
+    Car,
+    Zap,
+    ShieldCheck,
     Flame,
-    Filter,
-    Check
+    ChevronsUpDown,
+    CheckCircle2,
+    Calendar,
+    ArrowDownRight,
+    PieChart,
+    Scale
 } from 'lucide-react';
 import { haptics } from '../../../lib/haptics';
-import { CategoryIcon } from '../../../components/ui/CategoryIcon';
 import type { ForecastInfo, SafeToSpend } from '../hooks';
 
 interface ForecastIntelligenceDrawerProps {
@@ -27,7 +33,7 @@ interface ForecastIntelligenceDrawerProps {
     formatCurrency: (amount: number) => string;
 }
 
-type ForecastViewMode = 'category' | 'subcategories' | 'think';
+type ForecastViewMode = 'categories' | 'insights';
 
 interface SubcategoryItem {
     subCategoryName: string;
@@ -43,8 +49,76 @@ interface CategoryGroup {
     categoryName: string;
     totalAmount: number;
     percentageOfTotal: number;
+    fixedAmount: number;
+    variableAmount: number;
     subcategories: SubcategoryItem[];
 }
+
+// Mobile-first robust category icon resolver with high-contrast color accents
+const getCategoryMeta = (categoryName: string) => {
+    const name = categoryName.toLowerCase();
+    if (name.includes('invest') || name.includes('mutual') || name.includes('sip') || name.includes('stock')) {
+        return {
+            icon: TrendingUp,
+            badgeBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
+            color: 'text-emerald-600 dark:text-emerald-400'
+        };
+    }
+    if (name.includes('debt') || name.includes('loan') || name.includes('emi') || name.includes('cc') || name.includes('card')) {
+        return {
+            icon: CreditCard,
+            badgeBg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/25',
+            color: 'text-purple-600 dark:text-purple-400'
+        };
+    }
+    if (name.includes('home') || name.includes('house') || name.includes('rent') || name.includes('build')) {
+        return {
+            icon: Home,
+            badgeBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25',
+            color: 'text-blue-600 dark:text-blue-400'
+        };
+    }
+    if (name.includes('food') || name.includes('dining') || name.includes('restaurant') || name.includes('grocery') || name.includes('eat')) {
+        return {
+            icon: Utensils,
+            badgeBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
+            color: 'text-amber-600 dark:text-amber-400'
+        };
+    }
+    if (name.includes('shop') || name.includes('cloth') || name.includes('store') || name.includes('purchase')) {
+        return {
+            icon: ShoppingBag,
+            badgeBg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/25',
+            color: 'text-pink-600 dark:text-pink-400'
+        };
+    }
+    if (name.includes('travel') || name.includes('cab') || name.includes('fuel') || name.includes('car') || name.includes('transport')) {
+        return {
+            icon: Car,
+            badgeBg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25',
+            color: 'text-indigo-600 dark:text-indigo-400'
+        };
+    }
+    if (name.includes('bill') || name.includes('utilit') || name.includes('electric') || name.includes('power') || name.includes('recharge')) {
+        return {
+            icon: Zap,
+            badgeBg: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/25',
+            color: 'text-yellow-600 dark:text-yellow-400'
+        };
+    }
+    if (name.includes('health') || name.includes('med') || name.includes('insur') || name.includes('doctor')) {
+        return {
+            icon: ShieldCheck,
+            badgeBg: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/25',
+            color: 'text-teal-600 dark:text-teal-400'
+        };
+    }
+    return {
+        icon: Layers,
+        badgeBg: 'bg-accent-subtle text-accent-text border-accent-border',
+        color: 'text-accent-text'
+    };
+};
 
 export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProps> = memo(({
     isOpen,
@@ -53,17 +127,20 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
     safeToSpend,
     formatCurrency
 }) => {
-    const [viewMode, setViewMode] = useState<ForecastViewMode>('category');
+    const [viewMode, setViewMode] = useState<ForecastViewMode>('categories');
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
-    const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+    // Map tracking category collapsed state: false means expanded, true means collapsed
+    const [collapsedState, setCollapsedState] = useState<Record<string, boolean>>({});
 
     const totalBurden = Number(forecast?.predicted_burden_30d || 0);
     const breakdown = forecast?.breakdown || [];
 
-    // Group breakdown items by Category
+    // Group breakdown items hierarchically by Category -> Subcategories
     const categoryGroups = useMemo<CategoryGroup[]>(() => {
         const map = new Map<string, {
             total: number;
+            fixedTotal: number;
+            variableTotal: number;
             items: Array<{
                 subCategoryName: string;
                 amount: number;
@@ -80,10 +157,13 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
             const isFixed = reason.toLowerCase().includes('fixed recurring') || reason.toLowerCase().includes('recurring');
 
             if (!map.has(cat)) {
-                map.set(cat, { total: 0, items: [] });
+                map.set(cat, { total: 0, fixedTotal: 0, variableTotal: 0, items: [] });
             }
             const group = map.get(cat)!;
             group.total += amt;
+            if (isFixed) group.fixedTotal += amt;
+            else group.variableTotal += amt;
+
             group.items.push({
                 subCategoryName: sub,
                 amount: amt,
@@ -98,6 +178,8 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
             groups.push({
                 categoryName: cat,
                 totalAmount: value.total,
+                fixedAmount: value.fixedTotal,
+                variableAmount: value.variableTotal,
                 percentageOfTotal: totalBurden > 0 ? (value.total / totalBurden) * 100 : 0,
                 subcategories: sortedItems.map(item => ({
                     subCategoryName: item.subCategoryName,
@@ -114,14 +196,37 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
         return groups.sort((a, b) => b.totalAmount - a.totalAmount);
     }, [breakdown, totalBurden]);
 
-    // Flat list of all subcategories ranked by amount
-    const allRankedSubcategories = useMemo<SubcategoryItem[]>(() => {
-        const items: SubcategoryItem[] = [];
-        for (const group of categoryGroups) {
-            items.push(...group.subcategories);
+    // Top categories expanded by default (indices 0 and 1)
+    const isCategoryCollapsed = (catName: string, index: number) => {
+        if (selectedCategoryFilter !== 'all') {
+            // When user explicitly filters to a specific category, always expand it
+            return false;
         }
-        return items.sort((a, b) => b.amount - a.amount);
-    }, [categoryGroups]);
+        if (catName in collapsedState) {
+            return collapsedState[catName];
+        }
+        // Expand the top 2 categories by default for high readability
+        return index >= 2;
+    };
+
+    const toggleCategory = (catName: string, index: number) => {
+        haptics.selection();
+        const currentCollapsed = isCategoryCollapsed(catName, index);
+        setCollapsedState(prev => ({
+            ...prev,
+            [catName]: !currentCollapsed
+        }));
+    };
+
+    const toggleExpandAll = () => {
+        haptics.selection();
+        const allAreCollapsed = categoryGroups.every((g, i) => isCategoryCollapsed(g.categoryName, i));
+        const nextState: Record<string, boolean> = {};
+        for (const g of categoryGroups) {
+            nextState[g.categoryName] = !allAreCollapsed;
+        }
+        setCollapsedState(nextState);
+    };
 
     // Filtered categories
     const displayedCategoryGroups = useMemo(() => {
@@ -129,17 +234,14 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
         return categoryGroups.filter(g => g.categoryName.toLowerCase() === selectedCategoryFilter.toLowerCase());
     }, [categoryGroups, selectedCategoryFilter]);
 
-    // Fixed vs Variable Split for Think View
+    // Spend composition: Fixed vs Variable
     const spendComposition = useMemo(() => {
         let fixedTotal = 0;
         let variableTotal = 0;
 
-        for (const item of allRankedSubcategories) {
-            if (item.isFixed) {
-                fixedTotal += item.amount;
-            } else {
-                variableTotal += item.amount;
-            }
+        for (const g of categoryGroups) {
+            fixedTotal += g.fixedAmount;
+            variableTotal += g.variableAmount;
         }
 
         const fixedPct = totalBurden > 0 ? Math.round((fixedTotal / totalBurden) * 100) : 0;
@@ -151,9 +253,9 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
             fixedPct,
             variablePct
         };
-    }, [allRankedSubcategories, totalBurden]);
+    }, [categoryGroups, totalBurden]);
 
-    // Top 3 Concentration Stats
+    // Top 3 Concentration
     const topThreeConcentration = useMemo(() => {
         const topThree = categoryGroups.slice(0, 3);
         const topThreeSum = topThree.reduce((sum, g) => sum + g.totalAmount, 0);
@@ -165,12 +267,10 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
         };
     }, [categoryGroups, totalBurden]);
 
-    const toggleCategoryCollapse = (catName: string) => {
-        haptics.selection();
-        setCollapsedCategories(prev => ({
-            ...prev,
-            [catName]: !prev[catName]
-        }));
+    // Format reason safely (replace raw $xxx with current formatted currency)
+    const formatReason = (reasonText: string) => {
+        if (!reasonText) return '';
+        return reasonText.replace(/\$(\d+(?:\.\d+)?)/g, (_, amt) => formatCurrency(Number(amt)));
     };
 
     // Confidence badge styling
@@ -178,22 +278,22 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
         const conf = (forecast?.confidence || 'medium').toLowerCase();
         if (conf === 'high') {
             return {
-                label: 'High Confidence',
-                pillClass: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-                dotClass: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                label: 'High Reliability',
+                pillClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
+                dotClass: 'bg-emerald-500'
             };
         }
         if (conf === 'low') {
             return {
-                label: 'Low Data',
-                pillClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-                dotClass: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
+                label: 'Limited History',
+                pillClass: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
+                dotClass: 'bg-amber-500'
             };
         }
         return {
-            label: 'Medium Model',
+            label: 'Standard ML',
             pillClass: 'bg-accent-subtle text-accent-text border-accent-border',
-            dotClass: 'bg-accent-text shadow-[0_0_8px_rgba(139,92,246,0.5)]'
+            dotClass: 'bg-accent-text'
         };
     }, [forecast?.confidence]);
 
@@ -201,7 +301,7 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
         <AnimatePresence>
             {isOpen && (
                 <div className="fixed inset-0 z-[2000] flex justify-center pointer-events-none">
-                    {/* Progressive Backdrop */}
+                    {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -213,28 +313,17 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                         className="absolute inset-0 bg-overlay backdrop-blur-md pointer-events-auto"
                     />
 
-                    {/* Bottom Sheet Surface */}
+                    {/* Bottom Sheet Surface (Mobile-First Container) */}
                     <motion.div
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 28, stiffness: 340, mass: 0.85 }}
-                        drag="y"
-                        dragConstraints={{ top: 0, bottom: 0 }}
-                        dragElastic={{ top: 0.14, bottom: 0.8 }}
-                        onDragEnd={(_, info) => {
-                            if (info.offset.y > 140 || info.velocity.y > 550) {
-                                haptics.impact('light');
-                                onClose();
-                            } else {
-                                haptics.selection();
-                            }
-                        }}
-                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[92vh] max-h-[92vh] glass-drawer rounded-t-[32px] sm:rounded-t-[40px] flex flex-col shadow-2xl overflow-hidden pointer-events-auto z-[2000] select-none touch-none"
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl h-[92vh] max-h-[92vh] glass-drawer rounded-t-[32px] flex flex-col shadow-2xl overflow-hidden pointer-events-auto z-[2000]"
                     >
-                        {/* Grabber Pill */}
+                        {/* Apple Grabber Handle Area (Dedicated Drag & Tap Dismiss) */}
                         <div
-                            className="flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing"
+                            className="flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing select-none"
                             onClick={() => {
                                 haptics.selection();
                                 onClose();
@@ -243,18 +332,18 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                             <div className="w-10 h-1.5 bg-border-strong rounded-full transition-colors active:scale-95" />
                         </div>
 
-                        {/* Drawer Header */}
-                        <div className="px-5 sm:px-8 py-3.5 sm:py-4 border-b border-border-subtle flex items-center justify-between shrink-0 bg-surface/40 backdrop-blur-md">
+                        {/* Mobile Header: Crisp Title & Subtitle + Close Chevron */}
+                        <div className="px-4 sm:px-6 py-3 border-b border-border-subtle flex items-center justify-between shrink-0 bg-surface/80 backdrop-blur-md">
                             <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-2xl bg-accent-subtle border border-accent-border flex items-center justify-center text-accent-text shrink-0 shadow-inner">
-                                    <Sparkles size={20} />
+                                <div className="w-9 h-9 rounded-xl bg-accent-subtle border border-accent-border flex items-center justify-center text-accent-text shrink-0 shadow-sm">
+                                    <Sparkles size={18} />
                                 </div>
                                 <div className="min-w-0">
-                                    <h3 className="text-lg sm:text-xl font-black text-primary tracking-tight truncate heading-apple">
+                                    <h3 className="text-base sm:text-lg font-black text-primary tracking-tight truncate heading-apple">
                                         Forecast Intelligence
                                     </h3>
-                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5 truncate">
-                                        {forecast?.time_frame || 'Next 30 Days'} • Tabular ML Forecast
+                                    <p className="text-[11px] text-text-muted font-bold tracking-wider truncate">
+                                        {forecast?.time_frame || 'Next 30 Days'}
                                     </p>
                                 </div>
                             </div>
@@ -265,130 +354,91 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                     haptics.selection();
                                     onClose();
                                 }}
-                                className="w-10 h-10 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-sm shrink-0"
-                                aria-label="Close forecast details"
+                                className="w-9 h-9 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-sm shrink-0"
+                                aria-label="Close"
                             >
                                 <ChevronDown size={20} />
                             </button>
                         </div>
 
-                        {/* Top View Selector Tabs */}
-                        <div className="px-5 sm:px-8 pt-3 pb-2 border-b border-border-subtle/50 shrink-0 bg-surface/20">
-                            <div className="grid grid-cols-3 gap-1.5 p-1 bg-surface-subtle border border-border-subtle rounded-2xl">
+                        {/* Top View Selector: 2 Spacious Full-Width Tabs */}
+                        <div className="px-4 sm:px-6 pt-2.5 pb-2 border-b border-border-subtle/50 shrink-0 bg-surface/30">
+                            <div className="grid grid-cols-2 gap-1.5 p-1 bg-surface-subtle border border-border-subtle rounded-2xl">
                                 <button
                                     onClick={() => {
                                         haptics.selection();
-                                        setViewMode('category');
+                                        setViewMode('categories');
                                     }}
-                                    className={`py-2 px-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
-                                        viewMode === 'category'
+                                    className={`py-2 px-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                                        viewMode === 'categories'
                                             ? 'bg-primary text-text-inverse shadow-sm'
-                                            : 'text-text-muted hover:text-primary hover:bg-surface-hover'
+                                            : 'text-text-muted hover:text-primary'
                                     }`}
                                 >
-                                    <Layers size={13} />
-                                    <span className="truncate">By Category</span>
+                                    <Layers size={15} />
+                                    <span>Categories ({categoryGroups.length})</span>
                                 </button>
+
                                 <button
                                     onClick={() => {
                                         haptics.selection();
-                                        setViewMode('subcategories');
+                                        setViewMode('insights');
                                     }}
-                                    className={`py-2 px-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
-                                        viewMode === 'subcategories'
+                                    className={`py-2 px-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                                        viewMode === 'insights'
                                             ? 'bg-primary text-text-inverse shadow-sm'
-                                            : 'text-text-muted hover:text-primary hover:bg-surface-hover'
+                                            : 'text-text-muted hover:text-primary'
                                     }`}
                                 >
-                                    <TrendingUp size={13} />
-                                    <span className="truncate">Top Ranked</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        haptics.selection();
-                                        setViewMode('think');
-                                    }}
-                                    className={`py-2 px-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
-                                        viewMode === 'think'
-                                            ? 'bg-primary text-text-inverse shadow-sm'
-                                            : 'text-text-muted hover:text-primary hover:bg-surface-hover'
-                                    }`}
-                                >
-                                    <Sparkles size={13} />
-                                    <span className="truncate">Think & AI</span>
+                                    <Sparkles size={15} />
+                                    <span>AI Insights</span>
                                 </button>
                             </div>
                         </div>
 
-                        {/* Content Area */}
-                        <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-5 space-y-6 custom-scrollbar select-text overflow-x-hidden">
-                            {/* KPI Overview Strip */}
-                            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-                                <div className="p-3.5 sm:p-4 rounded-2xl bg-surface-subtle border border-border-subtle">
-                                    <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-text-muted block">
-                                        Total Burden
+                        {/* Scrollable Content Container (Smooth touch-pan-y, no scroll lock) */}
+                        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 custom-scrollbar touch-pan-y overscroll-contain">
+                            {/* Summary Card (Mobile-First: Big Bold Number, High Contrast) */}
+                            <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between gap-3 shadow-sm">
+                                <div className="min-w-0">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
+                                        Total Predicted 30-Day Burden
                                     </span>
-                                    <p className="text-base sm:text-xl font-black text-primary tracking-tight mt-1 truncate">
+                                    <p className="text-2xl sm:text-3xl font-black text-primary tracking-tight mt-0.5 truncate">
                                         {formatCurrency(totalBurden)}
                                     </p>
-                                    <span className="text-[8px] font-semibold text-text-muted/80 block mt-0.5 truncate">
-                                        30-Day Exposure
-                                    </span>
-                                </div>
-
-                                <div className="p-3.5 sm:p-4 rounded-2xl bg-surface-subtle border border-border-subtle">
-                                    <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-text-muted block">
-                                        Model Accuracy
-                                    </span>
-                                    <div className="flex items-center gap-1.5 mt-1.5">
-                                        <div className={`w-2 h-2 rounded-full shrink-0 ${confidenceBadge.dotClass}`} />
-                                        <span className="text-xs sm:text-sm font-black text-primary uppercase tracking-tight truncate">
-                                            {forecast?.confidence || 'High'}
-                                        </span>
-                                    </div>
-                                    <span className="text-[8px] font-semibold text-text-muted/80 block mt-0.5 truncate">
-                                        Reliability Index
-                                    </span>
-                                </div>
-
-                                <div className="p-3.5 sm:p-4 rounded-2xl bg-surface-subtle border border-border-subtle">
-                                    <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-text-muted block">
-                                        Categories
-                                    </span>
-                                    <p className="text-base sm:text-xl font-black text-primary tracking-tight mt-1 truncate">
-                                        {categoryGroups.length}
+                                    <p className="text-xs text-text-muted font-medium mt-1 truncate">
+                                        {categoryGroups.length} Categories • {breakdown.length} Subcategories
                                     </p>
-                                    <span className="text-[8px] font-semibold text-text-muted/80 block mt-0.5 truncate">
-                                        {breakdown.length} Subcategories
+                                </div>
+
+                                <div className="text-right shrink-0">
+                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${confidenceBadge.pillClass}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${confidenceBadge.dotClass}`} />
+                                        {confidenceBadge.label}
                                     </span>
+                                    <p className="text-xs font-bold text-text-secondary mt-1.5">
+                                        ~{formatCurrency(Math.round(totalBurden / 30))}/day
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* View 1: Category with Subcategory Distribution (Core User Request) */}
-                            {viewMode === 'category' && (
-                                <div className="space-y-4 animate-fadeIn">
-                                    {/* Category Filter Chips */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between px-1">
-                                            <span className="text-[9px] font-black uppercase tracking-[3px] text-text-muted flex items-center gap-1.5">
-                                                <Filter size={11} />
-                                                Filter Category
-                                            </span>
-                                            <span className="text-[9px] font-semibold text-text-muted">
-                                                Showing {displayedCategoryGroups.length} of {categoryGroups.length}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                            {/* View 1: Categories Breakdown (Hierarchical: Category -> Subcategories) */}
+                            {viewMode === 'categories' && (
+                                <div className="space-y-3.5 animate-fadeIn">
+                                    {/* Sub-header Controls: Category Filter Chips & Expand All Toggle */}
+                                    <div className="flex items-center justify-between gap-2">
+                                        {/* Horizontal Category Filter Pills */}
+                                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 touch-pan-x flex-1 min-w-0">
                                             <button
                                                 onClick={() => {
                                                     haptics.selection();
                                                     setSelectedCategoryFilter('all');
                                                 }}
-                                                className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all border ${
+                                                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
                                                     selectedCategoryFilter === 'all'
                                                         ? 'bg-primary text-text-inverse border-primary shadow-sm'
-                                                        : 'bg-surface-subtle text-text-muted border-border-subtle hover:text-primary hover:bg-surface-hover'
+                                                        : 'bg-surface-subtle text-text-muted border-border-subtle hover:text-primary'
                                                 }`}
                                             >
                                                 All ({categoryGroups.length})
@@ -400,109 +450,129 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                                         haptics.selection();
                                                         setSelectedCategoryFilter(g.categoryName);
                                                     }}
-                                                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all border flex items-center gap-1.5 ${
+                                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0 flex items-center gap-1.5 ${
                                                         selectedCategoryFilter.toLowerCase() === g.categoryName.toLowerCase()
                                                             ? 'bg-primary text-text-inverse border-primary shadow-sm'
-                                                            : 'bg-surface-subtle text-text-muted border-border-subtle hover:text-primary hover:bg-surface-hover'
+                                                            : 'bg-surface-subtle text-text-muted border-border-subtle hover:text-primary'
                                                     }`}
                                                 >
                                                     <span>{g.categoryName}</span>
-                                                    <span className="text-[8px] opacity-75 font-semibold">
+                                                    <span className="text-[10px] opacity-75 font-semibold">
                                                         ({g.subcategories.length})
                                                     </span>
                                                 </button>
                                             ))}
                                         </div>
+
+                                        {/* Expand/Collapse All Button */}
+                                        <button
+                                            onClick={toggleExpandAll}
+                                            className="px-2.5 py-1.5 rounded-xl bg-surface-subtle border border-border-subtle text-[11px] font-bold text-text-muted hover:text-primary flex items-center gap-1 shrink-0 active:scale-95 transition-all"
+                                            title="Toggle Expand All"
+                                        >
+                                            <ChevronsUpDown size={13} />
+                                            <span className="hidden sm:inline">Toggle All</span>
+                                        </button>
                                     </div>
 
-                                    {/* Grouped Category Cards */}
-                                    <div className="space-y-3.5 pt-1">
+                                    {/* Category Cards List */}
+                                    <div className="space-y-3">
                                         {displayedCategoryGroups.map((group, groupIdx) => {
-                                            const isCollapsed = !!collapsedCategories[group.categoryName];
+                                            const collapsed = isCategoryCollapsed(group.categoryName, groupIdx);
+                                            const meta = getCategoryMeta(group.categoryName);
+                                            const IconComp = meta.icon;
 
                                             return (
                                                 <div
                                                     key={group.categoryName}
-                                                    className="rounded-3xl bg-surface-subtle border border-border-subtle overflow-hidden hover:border-border-default/60 transition-all shadow-none hover:shadow-sm"
+                                                    className="rounded-2xl bg-surface-subtle border border-border-subtle overflow-hidden transition-all shadow-none"
                                                 >
-                                                    {/* Category Header Card */}
+                                                    {/* Category Header (Mobile-First: Dedicated Lines for Title and Details) */}
                                                     <div
-                                                        onClick={() => toggleCategoryCollapse(group.categoryName)}
-                                                        className="p-4 sm:p-5 cursor-pointer bg-surface/30 hover:bg-surface/60 transition-colors flex items-center justify-between gap-3"
+                                                        onClick={() => toggleCategory(group.categoryName, groupIdx)}
+                                                        className="p-3.5 sm:p-4 cursor-pointer bg-surface/40 hover:bg-surface/70 transition-colors select-none"
                                                     >
-                                                        <div className="flex items-center gap-3.5 min-w-0">
-                                                            <div className="w-11 h-11 rounded-2xl bg-surface border border-border-subtle flex items-center justify-center text-primary shrink-0 shadow-inner">
-                                                                <CategoryIcon name={group.categoryName.toLowerCase()} size={20} />
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <div className="flex items-center gap-2">
-                                                                    <h4 className="text-sm sm:text-base font-bold text-primary truncate">
-                                                                        {group.categoryName}
-                                                                    </h4>
-                                                                    <span className="text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent-subtle border border-accent-border text-accent-text shrink-0">
-                                                                        {group.percentageOfTotal.toFixed(1)}% of budget
-                                                                    </span>
+                                                        {/* Line 1: Icon + Big Readable Category Name on Left, Formatted Total on Right */}
+                                                        <div className="flex items-center justify-between gap-2.5">
+                                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${meta.badgeBg}`}>
+                                                                    <IconComp size={18} />
                                                                 </div>
-                                                                <p className="text-[10px] font-semibold text-text-muted mt-0.5 truncate">
-                                                                    Rank #{groupIdx + 1} • {group.subcategories.length} {group.subcategories.length === 1 ? 'subcategory' : 'subcategories'}
-                                                                </p>
+                                                                <h4 className="text-base sm:text-lg font-black text-primary truncate tracking-tight">
+                                                                    {group.categoryName}
+                                                                </h4>
                                                             </div>
-                                                        </div>
 
-                                                        <div className="flex items-center gap-3 shrink-0">
-                                                            <div className="text-right">
-                                                                <p className="text-base sm:text-lg font-black text-primary tracking-tight">
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                <span className="text-base sm:text-lg font-black text-primary tracking-tight">
                                                                     {formatCurrency(group.totalAmount)}
-                                                                </p>
-                                                            </div>
-                                                            <div className="w-7 h-7 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary transition-colors">
-                                                                {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                                                                </span>
+                                                                <div className="w-6 h-6 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted">
+                                                                    {collapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
 
-                                                    {/* Budget Share Progress Bar */}
-                                                    <div className="px-4 sm:px-5 pb-2">
-                                                        <div className="w-full h-1 bg-surface rounded-full overflow-hidden">
+                                                        {/* Line 2: Subtitle Info (Item Count & % of Total Budget) */}
+                                                        <div className="flex items-center justify-between gap-2 mt-2 pt-1">
+                                                            <span className="text-xs text-text-muted font-medium">
+                                                                {group.subcategories.length} {group.subcategories.length === 1 ? 'subcategory' : 'subcategories'}
+                                                                {group.fixedAmount > 0 && (
+                                                                    <span className="ml-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                                                                        • {formatCurrency(group.fixedAmount)} fixed
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                            <span className="text-xs font-bold text-accent-text shrink-0">
+                                                                {group.percentageOfTotal.toFixed(1)}% of total
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Line 3: Category Budget Share Visual Bar */}
+                                                        <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden mt-2">
                                                             <div
                                                                 className="h-full bg-accent-text/80 rounded-full transition-all duration-500"
-                                                                style={{ width: `${Math.max(3, group.percentageOfTotal)}%` }}
+                                                                style={{ width: `${Math.max(4, group.percentageOfTotal)}%` }}
                                                             />
                                                         </div>
                                                     </div>
 
-                                                    {/* Subcategories Nested Distribution List */}
-                                                    {!isCollapsed && (
-                                                        <div className="p-3 sm:p-4 pt-1 border-t border-border-subtle/50 space-y-2 bg-surface/10">
+                                                    {/* Nested Subcategories Breakdown (Indented hierarchically) */}
+                                                    {!collapsed && (
+                                                        <div className="p-3 space-y-2.5 border-t border-border-subtle/40 bg-surface/20">
+                                                            <div className="flex items-center justify-between text-[11px] font-bold text-text-muted uppercase tracking-wider px-1">
+                                                                <span>Subcategory Breakdown</span>
+                                                                <span>Share of {group.categoryName}</span>
+                                                            </div>
+
                                                             {group.subcategories.map((sub, subIdx) => (
                                                                 <div
                                                                     key={`${group.categoryName}-${sub.subCategoryName}-${subIdx}`}
-                                                                    className="p-3 sm:p-3.5 rounded-2xl bg-surface border border-border-subtle/70 space-y-2 hover:border-border-default transition-all"
+                                                                    className="p-3 rounded-xl bg-surface border border-border-subtle space-y-2 shadow-xs"
                                                                 >
-                                                                    <div className="flex items-start justify-between gap-3">
-                                                                        <div className="min-w-0">
-                                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                                <span className="text-xs sm:text-sm font-bold text-primary truncate">
-                                                                                    {sub.subCategoryName}
-                                                                                </span>
-                                                                                {sub.isFixed ? (
-                                                                                    <span className="text-[7.5px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center gap-1">
-                                                                                        <Repeat size={9} /> Fixed
-                                                                                    </span>
-                                                                                ) : (
-                                                                                    <span className="text-[7.5px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-accent-subtle text-accent-text border border-accent-border flex items-center gap-1">
-                                                                                        <Activity size={9} /> ML Trend
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                            <span className="text-[9px] text-text-muted font-semibold mt-0.5 block">
-                                                                                {sub.percentageOfCategory.toFixed(0)}% of {group.categoryName}
+                                                                    {/* Subcategory Row: Name + Commitment Badge on Left, Amount on Right */}
+                                                                    <div className="flex items-center justify-between gap-2">
+                                                                        <div className="flex items-center gap-2 min-w-0">
+                                                                            <span className="text-sm font-bold text-primary truncate">
+                                                                                {sub.subCategoryName}
                                                                             </span>
+                                                                            {sub.isFixed ? (
+                                                                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0 flex items-center gap-1">
+                                                                                    <Repeat size={10} /> Fixed
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-accent-subtle text-accent-text border border-accent-border shrink-0">
+                                                                                    Variable
+                                                                                </span>
+                                                                            )}
                                                                         </div>
 
                                                                         <div className="text-right shrink-0">
-                                                                            <span className="text-sm sm:text-base font-black text-primary tracking-tight">
+                                                                            <span className="text-sm font-black text-primary">
                                                                                 {formatCurrency(sub.amount)}
+                                                                            </span>
+                                                                            <span className="text-xs text-text-muted font-bold ml-1.5">
+                                                                                ({sub.percentageOfCategory.toFixed(0)}%)
                                                                             </span>
                                                                         </div>
                                                                     </div>
@@ -510,16 +580,19 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                                                     {/* Intra-Category Proportion Bar */}
                                                                     <div className="w-full h-1 bg-surface-subtle rounded-full overflow-hidden">
                                                                         <div
-                                                                            className="h-full bg-primary/70 rounded-full transition-all duration-500"
+                                                                            className="h-full bg-primary/70 rounded-full"
                                                                             style={{ width: `${Math.max(4, sub.percentageOfCategory)}%` }}
                                                                         />
                                                                     </div>
 
-                                                                    {/* Model Reasoning Quote */}
+                                                                    {/* ML Reason / Justification Callout */}
                                                                     {sub.reason && (
-                                                                        <p className="text-[10px] text-text-muted font-medium leading-relaxed bg-surface-subtle/60 px-2.5 py-1.5 rounded-xl border border-border-subtle/40">
-                                                                            {sub.reason}
-                                                                        </p>
+                                                                        <div className="text-xs text-text-secondary leading-relaxed bg-surface-subtle/80 px-2.5 py-1.5 rounded-lg border border-border-subtle/50 flex items-start gap-1.5">
+                                                                            <ArrowDownRight size={13} className="text-accent-text shrink-0 mt-0.5" />
+                                                                            <span className="min-w-0">
+                                                                                {formatReason(sub.reason)}
+                                                                            </span>
+                                                                        </div>
                                                                     )}
                                                                 </div>
                                                             ))}
@@ -532,239 +605,158 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                 </div>
                             )}
 
-                            {/* View 2: All Subcategories Ranked (Flat Leaderboard) */}
-                            {viewMode === 'subcategories' && (
+                            {/* View 2: AI Insights & Rationale */}
+                            {viewMode === 'insights' && (
                                 <div className="space-y-3.5 animate-fadeIn">
-                                    <div className="flex items-center justify-between px-1">
+                                    {/* Model Rationale Quote */}
+                                    <div className="p-4 sm:p-5 rounded-2xl bg-accent-subtle border border-accent-border space-y-2">
                                         <div className="flex items-center gap-2">
-                                            <TrendingUp size={14} className="text-accent-text" />
-                                            <h4 className="text-[10px] font-black text-text-muted uppercase tracking-[3px]">
-                                                All Subcategories Ranked ({allRankedSubcategories.length})
-                                            </h4>
-                                        </div>
-                                        <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">
-                                            Highest to Lowest
-                                        </span>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        {allRankedSubcategories.map((item, idx) => (
-                                            <div
-                                                key={`${item.categoryName}-${item.subCategoryName}-${idx}`}
-                                                className="p-3.5 rounded-2xl bg-surface-subtle border border-border-subtle flex items-start justify-between gap-3 hover:border-border-default transition-all"
-                                            >
-                                                <div className="flex items-start gap-3 min-w-0">
-                                                    <div className="w-8 h-8 rounded-xl bg-surface border border-border-subtle flex items-center justify-center text-xs font-black text-text-muted shrink-0 mt-0.5">
-                                                        #{idx + 1}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                                            <p className="text-xs sm:text-sm font-bold text-primary truncate">
-                                                                {item.subCategoryName}
-                                                            </p>
-                                                            <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-surface border border-border-subtle text-text-muted uppercase tracking-wider">
-                                                                {item.categoryName}
-                                                            </span>
-                                                            {item.isFixed && (
-                                                                <span className="text-[7px] font-black uppercase px-1 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                                                                    Fixed
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-[9.5px] text-text-muted mt-0.5 line-clamp-1">
-                                                            {item.reason}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="text-right shrink-0">
-                                                    <p className="text-sm font-black text-primary tracking-tight">
-                                                        {formatCurrency(item.amount)}
-                                                    </p>
-                                                    <span className="text-[8px] font-semibold text-text-muted">
-                                                        {item.percentageOfTotal.toFixed(1)}% total
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* View 3: Think & AI Intelligence */}
-                            {viewMode === 'think' && (
-                                <div className="space-y-4 animate-fadeIn">
-                                    {/* AI Context Hero Card */}
-                                    <div className="p-5 sm:p-6 rounded-3xl bg-accent-subtle border border-accent-border space-y-3">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="w-7 h-7 rounded-lg bg-primary text-text-inverse flex items-center justify-center">
-                                                <Sparkles size={14} />
-                                            </div>
-                                            <span className="text-xs font-black text-accent-text uppercase tracking-widest">
-                                                AI Context & Predictive Reasoning
+                                            <Sparkles size={16} className="text-accent-text" />
+                                            <span className="text-xs font-black text-accent-text uppercase tracking-wider">
+                                                Predictive Synthesis
                                             </span>
                                         </div>
                                         <p className="text-xs sm:text-sm font-medium text-primary leading-relaxed italic">
-                                            "{forecast?.description || "Analysis generated by LightGBM machine learning models analyzing recurring commitments, 3-month rolling EWMA trend, and seasonal cyclicality."}"
+                                            "{forecast?.description || "Analysis generated by LightGBM machine learning models looking at recurring commitments, 3-month rolling EWMA trend, and seasonal cyclicality."}"
                                         </p>
                                     </div>
 
-                                    {/* Fixed Commitments vs Variable Trend Split */}
-                                    <div className="p-4 sm:p-5 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3">
+                                    {/* Fixed vs Variable Split */}
+                                    <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-2.5">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <Repeat size={16} className="text-emerald-500" />
-                                                <h4 className="text-xs font-bold text-primary">
-                                                    Fixed Commitments vs Variable Run-Rate
-                                                </h4>
-                                            </div>
-                                            <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">
-                                                Expense Type Split
+                                            <span className="text-xs sm:text-sm font-bold text-primary">
+                                                Fixed Commitments vs Variable Trend
+                                            </span>
+                                            <span className="text-[10px] font-bold text-text-muted uppercase">
+                                                Breakdown
                                             </span>
                                         </div>
 
                                         {/* Split Bar */}
-                                        <div className="w-full h-2 bg-surface rounded-full overflow-hidden flex">
+                                        <div className="w-full h-2.5 bg-surface rounded-full overflow-hidden flex">
                                             <div
-                                                className="h-full bg-emerald-500 transition-all duration-500"
+                                                className="h-full bg-emerald-500"
                                                 style={{ width: `${spendComposition.fixedPct}%` }}
-                                                title={`Fixed: ${spendComposition.fixedPct}%`}
                                             />
                                             <div
-                                                className="h-full bg-accent-text transition-all duration-500"
+                                                className="h-full bg-accent-text"
                                                 style={{ width: `${spendComposition.variablePct}%` }}
-                                                title={`Variable: ${spendComposition.variablePct}%`}
                                             />
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-2.5 pt-1">
+                                        <div className="grid grid-cols-2 gap-2 pt-1">
                                             <div className="p-3 rounded-xl bg-surface border border-border-subtle">
-                                                <div className="flex items-center gap-1.5 mb-1">
-                                                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                                    <span className="text-[8.5px] font-bold uppercase tracking-wider text-text-muted">
-                                                        Fixed / Recurring ({spendComposition.fixedPct}%)
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm font-black text-emerald-500">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
+                                                    Fixed ({spendComposition.fixedPct}%)
+                                                </span>
+                                                <p className="text-sm sm:text-base font-black text-primary mt-0.5">
                                                     {formatCurrency(spendComposition.fixedTotal)}
                                                 </p>
-                                                <span className="text-[8px] text-text-muted">
-                                                    SIPs, EMIs, P2P loans, fixed dues
+                                                <span className="text-[10px] text-text-muted block mt-0.5">
+                                                    SIPs, EMIs, P2P dues
                                                 </span>
                                             </div>
 
                                             <div className="p-3 rounded-xl bg-surface border border-border-subtle">
-                                                <div className="flex items-center gap-1.5 mb-1">
-                                                    <div className="w-2 h-2 rounded-full bg-accent-text" />
-                                                    <span className="text-[8.5px] font-bold uppercase tracking-wider text-text-muted">
-                                                        Variable Trend ({spendComposition.variablePct}%)
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm font-black text-primary">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-accent-text block">
+                                                    Variable ({spendComposition.variablePct}%)
+                                                </span>
+                                                <p className="text-sm sm:text-base font-black text-primary mt-0.5">
                                                     {formatCurrency(spendComposition.variableTotal)}
                                                 </p>
-                                                <span className="text-[8px] text-text-muted">
-                                                    Living expenses, discretionary burn
+                                                <span className="text-[10px] text-text-muted block mt-0.5">
+                                                    Living & lifestyle spend
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Spend Concentration Insight */}
-                                    <div className="p-4 sm:p-5 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3">
+                                    {/* Top 3 Spend Concentration */}
+                                    <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-2.5">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1.5">
                                                 <Flame size={16} className="text-amber-500" />
-                                                <h4 className="text-xs font-bold text-primary">
-                                                    Top Category Concentration
-                                                </h4>
+                                                <span className="text-xs sm:text-sm font-bold text-primary">
+                                                    Top 3 Categories Concentration
+                                                </span>
                                             </div>
-                                            <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
-                                                {topThreeConcentration.pct}% of Forecast
+                                            <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25">
+                                                {topThreeConcentration.pct}% Burden
                                             </span>
                                         </div>
-                                        <p className="text-xs text-text-muted leading-relaxed">
-                                            Your top 3 spending categories account for <strong className="text-primary">{topThreeConcentration.pct}% ({formatCurrency(topThreeConcentration.sum)})</strong> of your forecasted 30-day burden:
+
+                                        <p className="text-xs text-text-secondary leading-relaxed">
+                                            Your top 3 categories account for <strong className="text-primary">{topThreeConcentration.pct}% ({formatCurrency(topThreeConcentration.sum)})</strong> of total upcoming burden:
                                         </p>
-                                        <div className="flex flex-wrap gap-2 pt-1">
+
+                                        <div className="flex flex-wrap gap-2 pt-0.5">
                                             {topThreeConcentration.categories.map((c, i) => (
                                                 <span
                                                     key={i}
-                                                    className="px-2.5 py-1 rounded-xl bg-surface border border-border-subtle text-[10px] font-bold text-primary flex items-center gap-1.5"
+                                                    className="px-3 py-1.5 rounded-xl bg-surface border border-border-subtle text-xs font-bold text-primary flex items-center gap-1.5"
                                                 >
-                                                    <span>{c.categoryName}</span>
+                                                    <span>{c.categoryName}:</span>
                                                     <span className="text-accent-text font-black">{formatCurrency(c.totalAmount)}</span>
                                                 </span>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Liquidity Cushion vs Forecast */}
-                                    <div className="p-4 sm:p-5 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3">
+                                    {/* Liquidity Assessment */}
+                                    <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-2.5">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <ShieldCheck size={16} className="text-emerald-500" />
-                                                <h4 className="text-xs font-bold text-primary">
-                                                    Liquidity Cushion & Safe-to-Spend
-                                                </h4>
-                                            </div>
-                                            <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">
-                                                Reserve Assessment
+                                            <span className="text-xs sm:text-sm font-bold text-primary">
+                                                Liquidity Reserve Check
+                                            </span>
+                                            <span className="text-[10px] font-bold text-text-muted uppercase">
+                                                Safe-to-Spend
                                             </span>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-2.5 pt-1">
+                                        <div className="grid grid-cols-2 gap-2 pt-0.5">
                                             <div className="p-3 rounded-xl bg-surface border border-border-subtle">
-                                                <span className="text-[8px] font-bold uppercase tracking-wider text-text-muted block">
-                                                    Current Liquid
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
+                                                    Current Balance
                                                 </span>
-                                                <p className="text-sm font-black text-primary mt-0.5">
+                                                <p className="text-sm sm:text-base font-black text-primary mt-0.5">
                                                     {formatCurrency(safeToSpend?.current_balance || 0)}
                                                 </p>
                                             </div>
                                             <div className="p-3 rounded-xl bg-surface border border-border-subtle">
-                                                <span className="text-[8px] font-bold uppercase tracking-wider text-text-muted block">
-                                                    Buffer Safety Cushion
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
+                                                    Buffer Reserve
                                                 </span>
-                                                <p className="text-sm font-black text-emerald-500 mt-0.5">
+                                                <p className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
                                                     {formatCurrency(safeToSpend?.buffer_amount || 0)}
                                                 </p>
                                             </div>
                                         </div>
 
-                                        <p className="text-[11px] text-text-muted leading-relaxed">
+                                        <p className="text-xs text-text-secondary leading-relaxed">
                                             {safeToSpend?.recommendation || "Maintain your planned liquidity buffer to cushion against ad-hoc cycle spikes."}
                                         </p>
-                                    </div>
-
-                                    {/* Model Architecture Transparency */}
-                                    <div className="p-4 rounded-2xl bg-surface-subtle/50 border border-border-subtle/60 flex items-start gap-3">
-                                        <Info size={16} className="text-text-muted mt-0.5 shrink-0" />
-                                        <div className="text-[10px] text-text-muted leading-relaxed">
-                                            <strong>Engine Details:</strong> Hybrid deterministic recurring expense recognition blended with small-sample regularized LightGBM regression and 3-month continuous EWMA trend decay.
-                                        </div>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* Drawer Bottom Bar */}
-                        <div className="px-5 sm:px-8 py-3.5 border-t border-border-subtle bg-surface/60 shrink-0 flex items-center justify-between">
+                        {/* Sticky Bottom Bar: Horizon & Limit Summary */}
+                        <div className="px-4 sm:px-6 py-3 border-t border-border-subtle bg-surface/80 backdrop-blur-md shrink-0 flex items-center justify-between">
                             <div>
-                                <span className="text-[9px] font-black text-text-muted uppercase tracking-[2px] block">
+                                <span className="text-[10px] font-black text-text-muted uppercase tracking-wider block">
                                     Next Cycle Horizon
                                 </span>
-                                <span className="text-xs font-bold text-primary">
+                                <span className="text-xs sm:text-sm font-bold text-primary">
                                     Grip Predictive Intelligence
                                 </span>
                             </div>
                             <div className="text-right">
-                                <span className="text-sm font-black text-primary tracking-tight">
+                                <span className="text-base sm:text-lg font-black text-primary tracking-tight block">
                                     {formatCurrency(totalBurden)}
                                 </span>
-                                <p className="text-[8px] text-accent-text font-black uppercase tracking-widest">
-                                    Projected Limit
-                                </p>
+                                <span className="text-[9px] text-accent-text font-black uppercase tracking-wider">
+                                    Projected 30-Day Exposure
+                                </span>
                             </div>
                         </div>
                     </motion.div>
