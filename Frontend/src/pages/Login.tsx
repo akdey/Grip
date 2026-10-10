@@ -21,7 +21,9 @@ const Login: React.FC = () => {
     const login = useAuthStore((state) => state.login);
     const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'OTP'>('LOGIN');
 
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState(() => {
+        return localStorage.getItem('grip_last_email') || localStorage.getItem('grip_enrolled_email') || '';
+    });
     const [password, setPassword] = useState('');
     const [otp, setOtp] = useState('');
 
@@ -42,6 +44,9 @@ const Login: React.FC = () => {
         setError('');
         try {
             const res = await loginWithBiometrics(email.trim() || undefined);
+            if (res.email) {
+                localStorage.setItem('grip_last_email', res.email);
+            }
             login({ id: 'temp-id', email: res.email, is_active: true }, res.access_token);
             navigate('/dashboard');
         } catch (err: any) {
@@ -115,6 +120,7 @@ const Login: React.FC = () => {
             });
 
             const { access_token } = response.data;
+            if (email) localStorage.setItem('grip_last_email', email.trim());
             login({ id: 'temp-id', email, is_active: true }, access_token);
             navigate('/dashboard');
         } catch (err: any) {
@@ -148,6 +154,7 @@ const Login: React.FC = () => {
         try {
             const response = await api.post('/auth/verify-otp', { email, otp });
             const { access_token } = response.data;
+            if (email) localStorage.setItem('grip_last_email', email.trim());
             login({ id: 'temp-id', email, is_active: true }, access_token);
             navigate('/dashboard');
         } catch (err: any) {

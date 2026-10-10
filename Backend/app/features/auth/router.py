@@ -347,6 +347,7 @@ async def verify_biometrics_unlock(
 
 class BiometricsLoginOptionsPayload(BaseModel):
     email: Optional[str] = None
+    credential_id: Optional[str] = None
 
 @router.post("/biometrics/login/options")
 async def get_biometrics_login_options(
@@ -355,7 +356,8 @@ async def get_biometrics_login_options(
     db: Annotated[AsyncSession, Depends(get_db)] = None
 ):
     email = payload.email if payload else None
-    return await WebAuthnService.get_login_options(email, request, db)
+    credential_id = payload.credential_id if payload else None
+    return await WebAuthnService.get_login_options(email, credential_id, request, db)
 
 class BiometricsLoginVerifyPayload(BaseModel):
     challenge_id: str

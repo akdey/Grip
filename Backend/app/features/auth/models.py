@@ -37,3 +37,12 @@ class PasskeyCredential(Base):
     last_used_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="passkeys")
+
+
+# Ensure related models are imported to resolve SQLAlchemy mapper relationships
+try:
+    import app.features.transactions.models  # noqa: F401
+    import app.features.credit_cards.models  # noqa: F401
+    import app.features.bills.models  # noqa: F401
+except Exception:
+    pass

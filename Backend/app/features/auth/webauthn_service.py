@@ -20,6 +20,7 @@ from webauthn.helpers.structs import (
     AuthenticatorAttachment,
     UserVerificationRequirement,
     PublicKeyCredentialDescriptor,
+    ResidentKeyRequirement,
 )
 from webauthn.helpers import base64url_to_bytes, bytes_to_base64url
 
@@ -126,7 +127,8 @@ class WebAuthnService:
             user_display_name=user.full_name or user.email,
             authenticator_selection=AuthenticatorSelectionCriteria(
                 authenticator_attachment=AuthenticatorAttachment.PLATFORM,  # Enforce built-in Touch ID / Fingerprint / Face ID
-                user_verification=UserVerificationRequirement.REQUIRED
+                user_verification=UserVerificationRequirement.REQUIRED,
+                resident_key=ResidentKeyRequirement.REQUIRED,  # Stores discoverable Passkey in device keychain/cloud
             ),
             exclude_credentials=exclude_credentials if exclude_credentials else None,
             timeout=60000
@@ -278,11 +280,27 @@ class WebAuthnService:
         return {"valid": True}
 
     @staticmethod
-    async def get_login_options(email: Optional[str], request: Request, db: AsyncSession) -> dict:
+    async def get_login_options(
+        email: Optional[str],
+        credential_id: Optional[str],
+        request: Request,
+        db: AsyncSession
+    ) -> dict:
         rp_id, _ = get_rp_info(request)
 
         allow_credentials = None
-        if email:
+
+        # 1. If explicit credential_id was provided from client device
+        if credential_id:
+            try:
+                allow_credentials = [
+                    PublicKeyCredentialDescriptor(id=base64url_to_bytes(credential_id))
+                ]
+            except Exception as e:
+                logger.warning(f"Could not parse credential_id {credential_id}: {e}")
+
+        # 2. Or if email was provided
+        if not allow_credentials and email:
             result = await db.execute(select(User).where(User.email == email.strip().lower()))
             user = result.scalar_one_or_none()
             if user:
@@ -293,6 +311,25 @@ class WebAuthnService:
                         PublicKeyCredentialDescriptor(id=base64url_to_bytes(c.id))
                         for c in creds
                     ]
+
+        # 3. If neither email nor credential_id provided, provide known active credentials
+        # so device authenticators with non-resident keys can match and trigger fingerprint
+        if not allow_credentials:
+            creds_res = await db.execute(
+                select(PasskeyCredential.id)
+                .order_by(PasskeyCredential.created_at.desc())
+                .limit(20)
+            )
+            known_ids = creds_res.scalars().all()
+            if known_ids:
+                descriptors = []
+                for cid in known_ids:
+                    try:
+                        descriptors.append(PublicKeyCredentialDescriptor(id=base64url_to_bytes(cid)))
+                    except Exception:
+                        pass
+                if descriptors:
+                    allow_credentials = descriptors
 
         options = generate_authentication_options(
             rp_id=rp_id,
@@ -362,7 +399,9 @@ class WebAuthnService:
                 detail=f"Fingerprint login failed: {str(e)}"
             )
 
+        from datetime import datetime, timezone
         passkey.sign_count = verified.new_sign_count
+        passkey.last_used_at = datetime.now(timezone.utc)
         await db.commit()
 
         # Generate JWT Token for user

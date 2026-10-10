@@ -65,6 +65,9 @@ export async function getBiometricsStatus(): Promise<BiometricsStatus> {
         const hasBiometrics = !!response.data?.has_biometrics;
         if (hasBiometrics) {
             localStorage.setItem('grip_biometrics_enrolled', 'true');
+            if (response.data?.devices && response.data.devices.length > 0) {
+                localStorage.setItem('grip_enrolled_credential_id', response.data.devices[0].id);
+            }
         }
         return {
             ...support,
@@ -117,6 +120,9 @@ export async function registerBiometricCredential(deviceName?: string): Promise<
         );
 
         localStorage.setItem('grip_biometrics_enrolled', 'true');
+        if (credential?.id) {
+            localStorage.setItem('grip_enrolled_credential_id', credential.id);
+        }
         return { success: true, message: verifyRes.data?.message || 'Enrolled successfully' };
     } catch (err: any) {
         console.error('Biometric enrollment failed:', err);
@@ -165,10 +171,17 @@ export async function loginWithBiometrics(email?: string): Promise<{
 }> {
     try {
         const clientOrigin = window.location.origin;
-        // 1. Fetch login options
+        const cachedEmail = localStorage.getItem('grip_enrolled_email') || localStorage.getItem('grip_last_email');
+        const cachedCredId = localStorage.getItem('grip_enrolled_credential_id');
+        const targetEmail = email?.trim() || cachedEmail || null;
+
+        // 1. Fetch login options with any known identifiers for non-resident and resident passkeys
         const optionsRes = await api.post(
             '/auth/biometrics/login/options',
-            { email: email || null },
+            {
+                email: targetEmail,
+                credential_id: cachedCredId || null
+            },
             {
                 headers: { 'x-client-origin': clientOrigin }
             }
@@ -189,6 +202,15 @@ export async function loginWithBiometrics(email?: string): Promise<{
                 headers: { 'x-client-origin': clientOrigin }
             }
         );
+
+        if (verifyRes.data?.email) {
+            localStorage.setItem('grip_last_email', verifyRes.data.email);
+            localStorage.setItem('grip_enrolled_email', verifyRes.data.email);
+            localStorage.setItem('grip_biometrics_enrolled', 'true');
+            if (credential?.id) {
+                localStorage.setItem('grip_enrolled_credential_id', credential.id);
+            }
+        }
 
         return verifyRes.data;
     } catch (err: any) {
