@@ -124,6 +124,8 @@ export const usePendingTransactions = () => {
             const { data } = await api.get<Transaction[]>('/transactions/pending');
             return data;
         },
+        staleTime: 15 * 1000,
+        refetchInterval: 30 * 1000,
     });
 };
 

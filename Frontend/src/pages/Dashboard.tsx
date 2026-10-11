@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSafeToSpend, useMonthlySummary, useForecast, useVariance } from '../features/dashboard/hooks';
 import RecentActivity from '../features/dashboard/components/RecentActivity';
-import { useTransactions } from '../features/transactions/hooks';
+import { useTransactions, usePendingTransactions } from '../features/transactions/hooks';
 import {
     ArrowUpRight,
     ArrowDownRight,
@@ -80,6 +80,8 @@ const Dashboard: React.FC = () => {
     const { data: forecast, isLoading: isForecastLoading } = useForecast();
     const { data: transactions, isLoading: isTxnLoading } = useTransactions(txnFilters);
     const { data: variance, isLoading: isVarianceLoading } = useVariance();
+    const { data: pendingTransactions } = usePendingTransactions();
+    const pendingCount = pendingTransactions?.length || 0;
 
     // Progressive loading - removed blocking loader
     // Blocking loader removed for progressive loading
@@ -152,12 +154,17 @@ const Dashboard: React.FC = () => {
                         {showSensitive ? <EyeOff size={22} /> : <Eye size={22} />}
                     </button>
                     <button
-                        onClick={() => navigate('/transactions?view=custom')}
-                        className="w-12 h-12 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-md"
-                        aria-label="Transaction history"
-                        title="Transaction History"
+                        onClick={() => navigate(pendingCount > 0 ? '/transactions?view=pending' : '/transactions?view=custom')}
+                        className="w-12 h-12 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-md relative group"
+                        aria-label={`Transaction history${pendingCount > 0 ? `, ${pendingCount} actions pending` : ''}`}
+                        title={pendingCount > 0 ? `${pendingCount} action${pendingCount > 1 ? 's' : ''} pending review` : "Transaction History"}
                     >
-                        <History size={22} />
+                        <History size={22} className="transition-transform group-hover:scale-105" />
+                        {pendingCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-lg shadow-rose-500/40 border-2 border-page leading-none tracking-tight animate-pulse">
+                                {pendingCount > 99 ? '99+' : pendingCount}
+                            </span>
+                        )}
                     </button>
                 </div>
             </header >

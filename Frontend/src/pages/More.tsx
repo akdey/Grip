@@ -35,6 +35,7 @@ import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
 import { useSyncTrends } from '../features/sync/hooks';
 import { useMonthlySummary } from '../features/dashboard/hooks';
+import { usePendingTransactions } from '../features/transactions/hooks';
 import { SyncTrendChart } from '../components/sync/SyncTrendChart';
 import { Card } from '../components/ui/Card';
 import { Drawer } from '../components/ui/Drawer';
@@ -125,6 +126,8 @@ const More: React.FC = () => {
     const { data: daySummary } = useMonthlySummary(undefined, undefined, 'day');
     const { data: monthSummary } = useMonthlySummary(undefined, undefined, 'month');
     const { data: yearSummary } = useMonthlySummary(undefined, undefined, 'year');
+    const { data: pendingTransactions } = usePendingTransactions();
+    const pendingCount = pendingTransactions?.length || 0;
 
     const formatCompact = (val: number) => {
         const abs = Math.abs(val || 0);
@@ -265,19 +268,25 @@ const More: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                     {FEATURE_CARDS.map((card) => {
                         const isCardLoading = (card.id === 'backup' && isExporting) || (card.id === 'statement' && isExportingStatement);
+                        const isActionTarget = card.id === 'transactions' || card.id === 'pending';
                         return (
                             <motion.button
                                 key={card.id}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => handleFeatureClick(card)}
                                 disabled={isCardLoading}
-                                className={`flex items-center gap-2.5 p-3 rounded-[1.2rem] bg-surface-subtle border border-border-subtle hover:bg-surface-hover hover:border-accent-border/40 transition-all text-left group ${isCardLoading ? 'opacity-50' : ''}`}
+                                className={`flex items-center gap-2.5 p-3 rounded-[1.2rem] bg-surface-subtle border border-border-subtle hover:bg-surface-hover hover:border-accent-border/40 transition-all text-left group relative ${isCardLoading ? 'opacity-50' : ''}`}
                             >
-                                <div className="w-8 h-8 rounded-lg bg-surface-pill text-primary group-hover:bg-accent-subtle group-hover:text-accent-text group-hover:border group-hover:border-accent-border transition-colors flex items-center justify-center shadow-sm group-hover:scale-105 shrink-0">
+                                <div className="w-8 h-8 rounded-lg bg-surface-pill text-primary group-hover:bg-accent-subtle group-hover:text-accent-text group-hover:border group-hover:border-accent-border transition-colors flex items-center justify-center shadow-sm group-hover:scale-105 shrink-0 relative">
                                     {isCardLoading ? (
                                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
                                     ) : (
                                         <card.icon size={15} className={card.color || 'text-primary'} />
+                                    )}
+                                    {isActionTarget && pendingCount > 0 && (
+                                        <span className="absolute -top-1.5 -right-1.5 min-w-[17px] h-[17px] px-1 bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-md shadow-rose-500/35 border border-surface leading-none tracking-tight animate-pulse">
+                                            {pendingCount > 99 ? '99+' : pendingCount}
+                                        </span>
                                     )}
                                 </div>
                                 <span className="text-[11px] font-bold text-secondary group-hover:text-primary tracking-wide uppercase whitespace-nowrap transition-colors">

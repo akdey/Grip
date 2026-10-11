@@ -13,6 +13,7 @@ import {
     Moon
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/store';
+import { usePendingTransactions } from '../../features/transactions/hooks';
 import { Button } from '../ui/Button';
 import { haptics } from '../../lib/haptics';
 import { useTheme } from '../../lib/theme';
@@ -20,6 +21,8 @@ import { useTheme } from '../../lib/theme';
 export const Sidebar: React.FC = () => {
     const logout = useAuthStore((state) => state.logout);
     const { isDark, toggleTheme } = useTheme();
+    const { data: pendingTransactions } = usePendingTransactions();
+    const pendingCount = pendingTransactions?.length || 0;
 
     const NAV_ITEMS = [
         { path: '/dashboard', label: 'Matrix', icon: Home },
@@ -58,11 +61,18 @@ export const Sidebar: React.FC = () => {
                     >
                         {({ isActive }) => (
                             <>
-                                <item.icon
-                                    size={19}
-                                    strokeWidth={isActive ? 2.5 : 2}
-                                    className={isActive ? 'text-accent-text' : 'text-text-muted group-hover:text-text-primary'}
-                                />
+                                <div className="relative">
+                                    <item.icon
+                                        size={19}
+                                        strokeWidth={isActive ? 2.5 : 2}
+                                        className={isActive ? 'text-accent-text' : 'text-text-muted group-hover:text-text-primary'}
+                                    />
+                                    {item.path === '/transactions' && pendingCount > 0 && (
+                                        <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] px-0.5 bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-md shadow-rose-500/40 border border-surface leading-none animate-pulse">
+                                            {pendingCount > 99 ? '99+' : pendingCount}
+                                        </span>
+                                    )}
+                                </div>
                                 <span className={`text-[13px] tracking-wide ${isActive ? 'font-semibold text-accent-text' : 'font-medium'}`}>{item.label}</span>
                             </>
                         )}
