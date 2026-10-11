@@ -8,11 +8,13 @@ import { motion } from 'framer-motion';
 import {
     Wallet, Plus, RefreshCw, Link as LinkIcon,
     PieChart, Sparkles, Landmark, Repeat, ShieldCheck,
-    Coins, ArrowRight, BrainCircuit, FileSpreadsheet, TrendingUp
+    Coins, ArrowRight, BrainCircuit, FileSpreadsheet, TrendingUp, Lock
 } from 'lucide-react';
 
 import { api } from '../lib/api';
 import { haptics } from '../lib/haptics';
+import { useWealthVaultStore } from '../lib/store';
+import { WealthVaultGate } from '../components/wealth/WealthVaultGate';
 
 // Types
 interface Holding {
@@ -34,6 +36,7 @@ interface Holding {
 
 const Wealth: React.FC = () => {
     const navigate = useNavigate();
+    const { isVaultUnlocked, lockVault } = useWealthVaultStore();
 
     // Data States
     const [holdings, setHoldings] = useState<Holding[]>([]);
@@ -127,8 +130,10 @@ const Wealth: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchHoldingsAndUnassigned();
-    }, []);
+        if (isVaultUnlocked) {
+            fetchHoldingsAndUnassigned();
+        }
+    }, [isVaultUnlocked]);
 
     // Derived Metrics
     const totalWealth = holdings.reduce((sum, h) => sum + h.current_value, 0);
@@ -159,7 +164,8 @@ const Wealth: React.FC = () => {
         new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
     return (
-        <div className="min-h-screen text-primary p-6 pb-24 overflow-x-hidden">
+        <WealthVaultGate>
+            <div className="min-h-screen text-primary p-6 pb-24 overflow-x-hidden">
             {/* Clean Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div className="flex flex-col">
@@ -223,6 +229,19 @@ const Wealth: React.FC = () => {
                         aria-label="Refresh wealth data"
                     >
                         <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+                    </button>
+
+                    {/* Lock Vault */}
+                    <button
+                        onClick={() => {
+                            haptics.impact('medium');
+                            lockVault();
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-surface-subtle hover:bg-surface-hover text-text-muted hover:text-rose-400 text-xs font-bold border border-border-subtle transition-all flex items-center gap-1.5 active:scale-95"
+                        title="Lock Wealth Vault"
+                    >
+                        <Lock size={14} />
+                        Lock
                     </button>
                 </div>
             </div>
@@ -515,7 +534,8 @@ const Wealth: React.FC = () => {
                 holding={selectedHolding}
                 onUpdated={fetchHoldingsAndUnassigned}
             />
-        </div>
+            </div>
+        </WealthVaultGate>
     );
 };
 

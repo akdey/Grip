@@ -42,3 +42,15 @@ export const usePrivacyStore = create<PrivacyState>()((set) => ({
     toggleSensitive: () => set((state) => ({ showSensitive: !state.showSensitive })),
 }));
 
+interface WealthVaultState {
+    isVaultUnlocked: boolean;
+    setVaultUnlocked: (unlocked: boolean) => void;
+    lockVault: () => void;
+}
+
+export const useWealthVaultStore = create<WealthVaultState>()((set) => ({
+    isVaultUnlocked: false,
+    setVaultUnlocked: (unlocked: boolean) => set({ isVaultUnlocked: unlocked }),
+    lockVault: () => set({ isVaultUnlocked: false }),
+}));
+

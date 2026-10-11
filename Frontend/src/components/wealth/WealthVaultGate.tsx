@@ -1,0 +1,152 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ShieldCheck, Fingerprint, Lock, KeyRound, Sparkles } from 'lucide-react';
+import { useWealthVaultStore } from '../../lib/store';
+import {
+    getDeviceBiometricName,
+    unlockWithBiometrics,
+    checkBiometricsSupport
+} from '../../lib/webauthn';
+import { haptics } from '../../lib/haptics';
+import { PasswordVerifyModal } from '../ui/PasswordVerifyModal';
+
+interface WealthVaultGateProps {
+    children: React.ReactNode;
+}
+
+export const WealthVaultGate: React.FC<WealthVaultGateProps> = ({ children }) => {
+    const { isVaultUnlocked, setVaultUnlocked } = useWealthVaultStore();
+    const [isAuthenticating, setIsAuthenticating] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [hasBiometricHardware, setHasBiometricHardware] = useState(true);
+    const autoTriggeredRef = useRef(false);
+
+    const biometricName = getDeviceBiometricName();
+
+    // Check hardware support once on mount
+    useEffect(() => {
+        checkBiometricsSupport().then((res) => {
+            setHasBiometricHardware(res.platformAvailable);
+        }).catch(() => {});
+    }, []);
+
+    // Fast-path: Auto-trigger biometric prompt immediately upon landing on Wealth
+    useEffect(() => {
+        if (isVaultUnlocked || autoTriggeredRef.current) return;
+
+        const isEnrolled = localStorage.getItem('grip_biometrics_enrolled') === 'true';
+        if (isEnrolled) {
+            autoTriggeredRef.current = true;
+            handleBiometricUnlock();
+        }
+    }, [isVaultUnlocked]);
+
+    const handleBiometricUnlock = async () => {
+        setError(null);
+        setIsAuthenticating(true);
+        haptics.impact('light');
+
+        try {
+            const success = await unlockWithBiometrics();
+            if (success) {
+                haptics.notification('success');
+                setVaultUnlocked(true);
+            } else {
+                setError('Biometric authentication failed. Please try again or use your password.');
+            }
+        } catch (err: any) {
+            console.warn('Vault biometric unlock error:', err);
+            if (err?.message?.includes('cancel') || err?.message?.includes('abort')) {
+                // User dismissed native prompt, keep the screen clean
+                setError(null);
+            } else {
+                setError(err?.message || 'Biometric check failed. You can unlock with your passphrase.');
+            }
+        } finally {
+            setIsAuthenticating(false);
+        }
+    };
+
+    if (isVaultUnlocked) {
+        return <>{children}</>;
+    }
+
+    return (
+        <div className="min-h-[85vh] flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="w-full max-w-md bg-surface-subtle border border-border-subtle rounded-3xl p-8 relative overflow-hidden shadow-2xl text-center"
+            >
+                {/* Background decorative gradient */}
+                <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col items-center space-y-5">
+                    {/* Vault Icon with Shield Badge */}
+                    <div className="relative">
+                        <div className="w-20 h-20 rounded-2xl bg-surface-pill border border-border-subtle flex items-center justify-center text-primary shadow-inner">
+                            <Lock size={36} className="text-accent-text" />
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-emerald-500 text-black flex items-center justify-center shadow-lg border-2 border-surface">
+                            <ShieldCheck size={16} strokeWidth={2.5} />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-subtle border border-accent-border/40 text-[9px] font-black uppercase tracking-widest text-accent-text mb-1">
+                            <Sparkles size={11} />
+                            Encrypted Financial Vault
+                        </div>
+                        <h2 className="text-2xl font-black text-primary tracking-tight heading-apple">
+                            Wealth Vault Locked
+                        </h2>
+                        <p className="text-xs text-text-muted leading-relaxed max-w-xs mx-auto">
+                            Your investment holdings, folios, and net worth calculations are protected under biometric security.
+                        </p>
+                    </div>
+
+                    {error && (
+                        <div className="w-full p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs text-center">
+                            {error}
+                        </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="w-full space-y-2.5 pt-2">
+                        {hasBiometricHardware && (
+                            <button
+                                onClick={handleBiometricUnlock}
+                                disabled={isAuthenticating}
+                                className="w-full h-12 rounded-xl bg-primary text-text-inverse font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] transition-all hover:opacity-90 disabled:opacity-50"
+                            >
+                                <Fingerprint size={18} className={isAuthenticating ? 'animate-pulse' : ''} />
+                                {isAuthenticating ? 'Scanning...' : `Unlock with ${biometricName}`}
+                            </button>
+                        )}
+
+                        <button
+                            onClick={() => setShowPasswordModal(true)}
+                            className="w-full h-11 rounded-xl bg-surface-subtle hover:bg-surface-hover text-secondary hover:text-primary font-bold text-xs uppercase tracking-wider border border-border-subtle flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                        >
+                            <KeyRound size={16} />
+                            Enter Passphrase
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* Passphrase Fallback Modal */}
+            <PasswordVerifyModal
+                isOpen={showPasswordModal}
+                onClose={() => setShowPasswordModal(false)}
+                onSuccess={() => {
+                    setShowPasswordModal(false);
+                    setVaultUnlocked(true);
+                }}
+            />
+        </div>
+    );
+};

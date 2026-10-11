@@ -13,6 +13,8 @@ import { api } from '../lib/api';
 import { InvestmentSimulatorModal } from '../components/wealth/InvestmentSimulatorModal';
 import { StatementImportModal } from '../components/wealth/StatementImportModal';
 import WealthIntelligence from '../components/wealth/WealthIntelligence';
+import { useWealthVaultStore } from '../lib/store';
+import { WealthVaultGate } from '../components/wealth/WealthVaultGate';
 
 interface ForecastPoint {
     date: string;
@@ -29,6 +31,7 @@ interface ForecastResponse {
 
 const WealthLab: React.FC = () => {
     const navigate = useNavigate();
+    const { isVaultUnlocked } = useWealthVaultStore();
 
     // Data States
     const [holdings, setHoldings] = useState<any[]>([]);
@@ -76,8 +79,10 @@ const WealthLab: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchHoldingsAndForecast();
-    }, []);
+        if (isVaultUnlocked) {
+            fetchHoldingsAndForecast();
+        }
+    }, [isVaultUnlocked]);
 
     // Format currency
     const formatCurrency = (val: number) =>
@@ -115,7 +120,8 @@ const WealthLab: React.FC = () => {
     }, [forecastData]);
 
     return (
-        <div className="min-h-screen text-primary p-6 pb-24 overflow-x-hidden">
+        <WealthVaultGate>
+            <div className="min-h-screen text-primary p-6 pb-24 overflow-x-hidden">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div className="flex items-center gap-4">
@@ -358,7 +364,8 @@ const WealthLab: React.FC = () => {
                 onClose={() => setIsStatementImportOpen(false)}
                 onSuccess={fetchHoldingsAndForecast}
             />
-        </div>
+            </div>
+        </WealthVaultGate>
     );
 };
 
