@@ -32,6 +32,7 @@ import {
 import { useCategories } from '../features/transactions/categoryHooks';
 import { SpendTrendChart } from '../components/analytics/SpendTrendChart';
 import { MonthlyExpenseCalendar } from '../components/analytics/MonthlyExpenseCalendar';
+import { CategoryTrendEvolution } from '../components/analytics/CategoryTrendEvolution';
 import { PasswordVerifyModal } from '../components/ui/PasswordVerifyModal';
 import { usePrivacyStore } from '../lib/store';
 import { haptics } from '../lib/haptics';
@@ -137,7 +138,6 @@ const Analytics: React.FC = () => {
     const navigate = useNavigate();
     const [referenceDate, setReferenceDate] = useState(new Date());
     const [mode, setMode] = useState<AnalyticsMode>('expenses');
-    const [categoryView, setCategoryView] = useState<'distribution' | 'growth'>('distribution');
     const [trendFreq, setTrendFreq] = useState<'weekly' | 'monthly'>('monthly');
     const { showSensitive, setShowSensitive } = usePrivacyStore();
     const [showAuthModal, setShowAuthModal] = useState(false);
@@ -230,19 +230,6 @@ const Analytics: React.FC = () => {
     // Total of currently filtered category list
     const filteredCategoryTotal = useMemo(() => {
         return categoryData.reduce((sum, item) => sum + item.value, 0);
-    }, [categoryData]);
-
-    // Month-on-Month Growth Insights (Top Surges & Reductions)
-    const momInsights = useMemo(() => {
-        if (!categoryData.length) return null;
-        const withHistory = categoryData.filter(c => Number(c.previous || 0) > 0 || Number(c.variance_percentage || 0) !== 0);
-        if (!withHistory.length) return null;
-
-        const sortedByGrowth = [...withHistory].sort((a, b) => (Number(b.variance_percentage) || 0) - (Number(a.variance_percentage) || 0));
-        const topSurge = sortedByGrowth[0]?.variance_percentage > 0 ? sortedByGrowth[0] : null;
-        const topReduction = sortedByGrowth[sortedByGrowth.length - 1]?.variance_percentage < 0 ? sortedByGrowth[sortedByGrowth.length - 1] : null;
-
-        return { topSurge, topReduction };
     }, [categoryData]);
 
     // Investment Portfolio Breakdown
@@ -509,8 +496,8 @@ const Analytics: React.FC = () => {
                             : 'text-text-muted hover:text-text-primary'
                     }`}
                 >
-                    <Layers size={14} />
-                    <span className="truncate">Combined</span>
+                    <TrendingUp size={14} />
+                    <span className="truncate">Multi-Month Trends</span>
                 </button>
             </div>
 
@@ -519,53 +506,22 @@ const Analytics: React.FC = () => {
                 <div className="space-y-6 animate-in fade-in duration-300">
                     {/* Donut Chart & Breakdown / MoM Growth */}
                     <div className="p-5 sm:p-6 rounded-[2rem] bg-surface-subtle border border-border-subtle space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-base font-bold text-text-primary tracking-tight">
-                                    {categoryView === 'distribution' ? 'Lifestyle Expense Distribution' : 'Month-on-Month Category Growth'}
+                                    Lifestyle Expense Distribution
                                 </h3>
                                 <p className="text-[11px] text-text-muted font-medium mt-0.5">
-                                    {categoryView === 'distribution'
-                                        ? `Total Living Consumption: ${formatCurrency(metrics.lifestyleBurn)}`
-                                        : 'Comparative spending shifts vs previous month'
-                                    }
+                                    Total Living Consumption: {formatCurrency(metrics.lifestyleBurn)}
                                 </p>
                             </div>
-
-                            {/* View Switcher: Distribution vs MoM Growth */}
-                            <div className="flex items-center gap-2 self-start sm:self-auto">
-                                <div className="flex bg-surface p-1 rounded-xl border border-border-subtle">
-                                    <button
-                                        onClick={() => setCategoryView('distribution')}
-                                        className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
-                                            categoryView === 'distribution'
-                                                ? 'bg-accent-subtle text-accent-text border border-accent-border shadow-xs'
-                                                : 'text-text-muted hover:text-text-primary'
-                                        }`}
-                                    >
-                                        Share
-                                    </button>
-                                    <button
-                                        onClick={() => setCategoryView('growth')}
-                                        className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
-                                            categoryView === 'growth'
-                                                ? 'bg-accent-subtle text-accent-text border border-accent-border shadow-xs'
-                                                : 'text-text-muted hover:text-text-primary'
-                                        }`}
-                                    >
-                                        MoM Shift
-                                    </button>
-                                </div>
-                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full badge-neutral">
-                                    {categoryData.length} Categories
-                                </span>
-                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full badge-neutral">
+                                {categoryData.length} Categories
+                            </span>
                         </div>
 
-                        {/* View 1: Donut Visualization & Shares */}
-                        {categoryView === 'distribution' && (
-                            <>
-                                {categoryData.length > 0 ? (
+                        {/* Donut Visualization */}
+                        {categoryData.length > 0 ? (
                                     <div className="h-[260px] sm:h-[300px] w-full relative">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
@@ -655,134 +611,7 @@ const Analytics: React.FC = () => {
                                         );
                                     })}
                                 </div>
-                            </>
-                        )}
-
-                        {/* View 2: Month-on-Month Growth & Shift Visualizer */}
-                        {categoryView === 'growth' && (
-                            <div className="space-y-4 pt-1">
-                                {/* Highlights Cards (Surge & Reduction) */}
-                                {momInsights && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                        {momInsights.topSurge && (
-                                            <div className="p-3 rounded-2xl bg-surface border border-border-subtle flex items-center justify-between gap-3">
-                                                <div>
-                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-status-danger-text flex items-center gap-1">
-                                                        <TrendingUp size={12} /> Biggest Spend Surge
-                                                    </span>
-                                                    <p className="text-sm font-bold text-text-primary mt-0.5">
-                                                        {momInsights.topSurge.name}
-                                                    </p>
-                                                    <p className="text-[10px] text-text-muted font-medium mt-0.5">
-                                                        +{formatCurrency(momInsights.topSurge.variance_amount)} vs last month
-                                                    </p>
-                                                </div>
-                                                <span className="px-2 py-1 rounded-xl badge-danger text-xs font-black">
-                                                    +{momInsights.topSurge.variance_percentage.toFixed(0)}%
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {momInsights.topReduction && (
-                                            <div className="p-3 rounded-2xl bg-surface border border-border-subtle flex items-center justify-between gap-3">
-                                                <div>
-                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-status-success-text flex items-center gap-1">
-                                                        <TrendingDown size={12} /> Biggest Reduction
-                                                    </span>
-                                                    <p className="text-sm font-bold text-text-primary mt-0.5">
-                                                        {momInsights.topReduction.name}
-                                                    </p>
-                                                    <p className="text-[10px] text-text-muted font-medium mt-0.5">
-                                                        {formatCurrency(momInsights.topReduction.variance_amount)} vs last month
-                                                    </p>
-                                                </div>
-                                                <span className="px-2 py-1 rounded-xl badge-success text-xs font-black">
-                                                    {momInsights.topReduction.variance_percentage.toFixed(0)}%
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Comparative Bars Breakdown */}
-                                <div className="space-y-2 pt-2 border-t border-border-subtle/60">
-                                    {categoryData.map((cat) => {
-                                        const prevAmt = Math.abs(Number(cat.previous || 0));
-                                        const curAmt = Math.abs(Number(cat.current || 0));
-                                        const maxAmt = Math.max(curAmt, prevAmt, 1);
-                                        const curWidth = Math.round((curAmt / maxAmt) * 100);
-                                        const prevWidth = Math.round((prevAmt / maxAmt) * 100);
-                                        const isIncreased = cat.variance_percentage > 0;
-                                        const isDecreased = cat.variance_percentage < 0;
-
-                                        return (
-                                            <div
-                                                key={cat.name}
-                                                onClick={() => handleCategoryClick(cat.name)}
-                                                className="p-3 sm:p-3.5 rounded-2xl bg-surface border border-border-subtle/80 space-y-2 cursor-pointer hover:bg-surface-hover active:scale-[0.99] transition-all shadow-xs"
-                                            >
-                                                <div className="flex items-center justify-between text-xs">
-                                                    <div className="flex items-center gap-2">
-                                                        <span
-                                                            className="w-2.5 h-2.5 rounded-full"
-                                                            style={{ backgroundColor: cat.color }}
-                                                        />
-                                                        <span className="font-bold text-text-primary text-sm truncate">
-                                                            {cat.name}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${
-                                                            isIncreased
-                                                                ? 'badge-danger'
-                                                                : isDecreased
-                                                                ? 'badge-success'
-                                                                : 'badge-neutral'
-                                                        }`}>
-                                                            {isIncreased ? '+' : ''}{cat.variance_percentage.toFixed(0)}%
-                                                        </span>
-                                                        <span className="font-black text-text-primary text-sm tabular-nums">
-                                                            {formatCurrency(curAmt)}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Comparative Bars: Current vs Previous */}
-                                                <div className="space-y-1 pt-1">
-                                                    {/* Current Month Bar */}
-                                                    <div className="flex items-center gap-2 text-[9px] text-text-muted">
-                                                        <span className="w-12 truncate font-semibold">This Mo</span>
-                                                        <div className="flex-1 h-2 bg-surface-pill rounded-full overflow-hidden">
-                                                            <div
-                                                                className={`h-full rounded-full transition-all duration-700 ${
-                                                                    isIncreased ? 'bg-status-danger-solid' : 'bg-status-success-solid'
-                                                                }`}
-                                                                style={{ width: `${curWidth}%` }}
-                                                            />
-                                                        </div>
-                                                        <span className="w-16 text-right tabular-nums font-semibold">{formatCurrency(curAmt)}</span>
-                                                    </div>
-
-                                                    {/* Previous Month Bar */}
-                                                    <div className="flex items-center gap-2 text-[9px] text-text-muted">
-                                                        <span className="w-12 truncate font-semibold">Last Mo</span>
-                                                        <div className="flex-1 h-1.5 bg-surface-pill rounded-full overflow-hidden">
-                                                            <div
-                                                                className="h-full bg-border-subtle/90 rounded-full transition-all duration-700"
-                                                                style={{ width: `${prevWidth}%` }}
-                                                            />
-                                                        </div>
-                                                        <span className="w-16 text-right tabular-nums">{formatCurrency(prevAmt)}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
                             </div>
-                        )}
-                    </div>
 
                     {/* Daily Expense Rhythm Calendar */}
                     <MonthlyExpenseCalendar
@@ -869,9 +698,12 @@ const Analytics: React.FC = () => {
                 </div>
             )}
 
-            {/* Mode 3: Combined Overview Mode */}
+            {/* Mode 3: Multi-Month Trends Mode */}
             {mode === 'combined' && (
                 <div className="space-y-6 animate-in fade-in duration-300">
+                    {/* All-Months Category Trajectory (Including Investment) */}
+                    <CategoryTrendEvolution showSensitive={showSensitive} />
+
                     {/* Burn vs Invest Ratio Card */}
                     <div className="p-5 sm:p-6 rounded-[2rem] bg-surface-subtle border border-border-subtle space-y-3.5 shadow-sm">
                         <div className="flex items-center justify-between">

@@ -20,7 +20,9 @@ from app.features.analytics.schemas import (
     LiquidityBreakdown,
     LiquiditySummary,
     AccrualBurnSummary,
-    AssetMovement
+    AssetMovement,
+    CategoryTrendMonth,
+    CategoryTrendsResponse
 )
 from app.features.bills.service import BillService
 from app.features.credit_cards.service import CreditCardService
@@ -695,3 +697,103 @@ class AnalyticsService:
             SpendTrendPoint(date=row.date if isinstance(row.date, date) else row.date.date(), amount=row.amount)
             for row in data_points
         ])
+
+    async def get_category_trends(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        months: int = 6
+    ) -> CategoryTrendsResponse:
+        """
+        Get category-by-category spending & investment trends across all recent months.
+        Includes all expense categories and investments.
+        """
+        today = self._get_today()
+        start_year = today.year
+        start_month = today.month - (months - 1)
+        while start_month <= 0:
+            start_month += 12
+            start_year -= 1
+        start_date = date(start_year, start_month, 1)
+
+        month_field = func.date_trunc('month', Transaction.transaction_date)
+        stmt = (
+            select(
+                month_field.label("month_dt"),
+                Transaction.category.label("category"),
+                func.sum(func.abs(Transaction.amount)).label("total")
+            )
+            .where(Transaction.user_id == user_id)
+            .where(Transaction.category.notin_(["Income", "Transfer"]))
+            .where(func.lower(Transaction.sub_category) != "credit card payment")
+            .where(Transaction.amount < 0)
+            .where(Transaction.transaction_date >= start_date)
+            .where(Transaction.transaction_date <= today)
+            .group_by(month_field, Transaction.category)
+            .order_by(month_field)
+        )
+
+        result = await db.execute(stmt)
+        rows = result.all()
+
+        # Build sequential list of month dates from start_date to today
+        month_keys = []
+        curr_y, curr_m = start_year, start_month
+        while (curr_y < today.year) or (curr_y == today.year and curr_m <= today.month):
+            month_keys.append((curr_y, curr_m))
+            curr_m += 1
+            if curr_m > 12:
+                curr_m = 1
+                curr_y += 1
+
+        data_map: Dict[str, Dict[str, Decimal]] = {}
+        all_categories = set()
+
+        for row in rows:
+            dt = row.month_dt
+            if hasattr(dt, 'date'):
+                dt = dt.date()
+            key = dt.strftime("%Y-%m")
+            cat = (row.category or "Other").strip()
+            amt = abs(Decimal(str(row.total or 0)))
+            if key not in data_map:
+                data_map[key] = {}
+            data_map[key][cat] = amt
+            all_categories.add(cat)
+
+        # Sort categories putting "Investment" first, then highest volume
+        category_totals: Dict[str, Decimal] = {}
+        for m_dict in data_map.values():
+            for c, a in m_dict.items():
+                category_totals[c] = category_totals.get(c, Decimal(0)) + a
+
+        sorted_categories = sorted(
+            list(all_categories),
+            key=lambda c: (0 if c.lower() == 'investment' else 1, -category_totals.get(c, Decimal(0)))
+        )
+
+        trends = []
+        month_labels = []
+
+        for y, m in month_keys:
+            d_obj = date(y, m, 1)
+            key = d_obj.strftime("%Y-%m")
+            label = d_obj.strftime("%b '%y")
+            month_labels.append(label)
+            cat_data = data_map.get(key, {})
+            m_total = sum(cat_data.values(), Decimal(0))
+
+            trends.append(
+                CategoryTrendMonth(
+                    month=key,
+                    month_label=label,
+                    categories={c: cat_data.get(c, Decimal(0)) for c in sorted_categories},
+                    total=m_total
+                )
+            )
+
+        return CategoryTrendsResponse(
+            months=month_labels,
+            categories=sorted_categories,
+            trends=trends
+        )

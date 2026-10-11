@@ -10,7 +10,8 @@ from app.features.analytics.schemas import (
     SafeToSpendResponse,
     MonthlySummaryResponse,
     SpendTrendResponse,
-    SpendTrendFrequency
+    SpendTrendFrequency,
+    CategoryTrendsResponse
 )
 from app.features.analytics.service import AnalyticsService
 
@@ -83,3 +84,15 @@ async def get_spend_trends(
     Get spending trends for the last N days with specific frequency.
     """
     return await service.get_spend_trends(db, current_user.id, days, frequency)
+
+@router.get("/trends/categories/", response_model=CategoryTrendsResponse)
+async def get_category_trends(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[AnalyticsService, Depends()],
+    months: int = Query(6, ge=3, le=24)
+):
+    """
+    Get category-by-category spending & investment trends across all recent months.
+    """
+    return await service.get_category_trends(db, current_user.id, months)

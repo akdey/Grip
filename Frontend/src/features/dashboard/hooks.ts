@@ -187,3 +187,26 @@ export const useSpendTrends = (days: number = 30, frequency: 'daily' | 'weekly' 
         },
     });
 };
+
+export interface CategoryTrendMonth {
+    month: string;
+    month_label: string;
+    categories: Record<string, number>;
+    total: number;
+}
+
+export interface CategoryTrendsResponse {
+    months: string[];
+    categories: string[];
+    trends: CategoryTrendMonth[];
+}
+
+export const useCategoryTrends = (months: number = 6) => {
+    return useQuery({
+        queryKey: ['category-trends', months],
+        queryFn: async () => {
+            const { data } = await api.get<CategoryTrendsResponse>(`/analytics/trends/categories/?months=${months}`);
+            return data;
+        },
+    });
+};

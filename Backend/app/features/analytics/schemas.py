@@ -113,3 +113,14 @@ class SpendTrendPoint(BaseModel):
 
 class SpendTrendResponse(BaseModel):
     trends: List[SpendTrendPoint]
+
+class CategoryTrendMonth(BaseModel):
+    month: str
+    month_label: str
+    categories: Dict[str, Decimal]
+    total: Decimal
+
+class CategoryTrendsResponse(BaseModel):
+    months: List[str]
+    categories: List[str]
+    trends: List[CategoryTrendMonth]
