@@ -316,7 +316,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                     </div>
                                     <div>
                                         <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Gain/Loss</p>
-                                        <p className={`font-mono text-sm ${result.absolute_return >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                        <p className={`font-mono text-sm ${result.absolute_return >= 0 ? 'text-status-success' : 'text-status-danger'}`}>
                                             {result.absolute_return >= 0 ? '+' : ''}₹{Math.round(result.absolute_return).toLocaleString()}
                                         </p>
                                     </div>

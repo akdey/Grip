@@ -74,8 +74,8 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
 
     if (error) {
         return (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6">
-                <p className="text-sm text-red-400">{error}</p>
+            <div className="badge-danger rounded-2xl p-6">
+                <p className="text-sm text-status-danger">{error}</p>
             </div>
         );
     }
@@ -104,7 +104,7 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
             {/* User's Performance */}
             <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <Target size={18} className="text-emerald-500" />
+                    <Target size={18} className="text-status-success" />
                     <h4 className="font-semibold text-primary">Your SIP Date: {analysis.user_sip_date}th of every month</h4>
                 </div>
 
@@ -115,11 +115,11 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
                     </div>
                     <div className="bg-surface rounded-xl p-4 border border-border-subtle">
                         <p className="text-xs text-text-muted mb-1">Current Value</p>
-                        <p className="text-lg font-bold text-emerald-500">{formatCurrency(analysis.user_performance.current_value)}</p>
+                        <p className="text-lg font-bold text-status-success">{formatCurrency(analysis.user_performance.current_value)}</p>
                     </div>
                     <div className="bg-surface rounded-xl p-4 border border-border-subtle">
                         <p className="text-xs text-text-muted mb-1">Returns</p>
-                        <p className={`text-lg font-bold ${analysis.user_performance.absolute_return >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        <p className={`text-lg font-bold ${analysis.user_performance.absolute_return >= 0 ? 'text-status-success' : 'text-status-danger'}`}>
                             {formatCurrency(analysis.user_performance.absolute_return)}
                         </p>
                         <p className="text-xs text-text-muted mt-0.5">
@@ -173,7 +173,7 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
 
                                 {/* Difference Indicator (Dot) */}
                                 {!isBestDate && !isUserDate && (
-                                    <div className={`w-1.5 h-1.5 rounded-full mt-1 ${diff > 0 ? 'bg-emerald-500' : diff < 0 ? 'bg-red-500/50' : 'bg-neutral-400'}`} />
+                                    <div className={`w-1.5 h-1.5 rounded-full mt-1 ${diff > 0 ? 'bg-status-success-solid' : diff < 0 ? 'bg-status-danger-solid' : 'bg-border-subtle'}`} />
                                 )}
 
                                 {/* Hover Tooltip */}
@@ -186,8 +186,8 @@ export const SIPDateAnalysis: React.FC<SIPDateAnalysisProps> = ({ holdingId }) =
                                         </p>
                                         <p className="text-xs text-text-muted flex justify-between">
                                             <span>Diff</span>
-                                            <span className={diff >= 0 ? 'text-emerald-500' : 'text-red-500'}>
-                                                {diff >= 0 ? '+' : ''}{Math.round(diff).toLocaleString()}
+                                            <span className={diff >= 0 ? 'text-status-success' : 'text-status-danger'}>
+                                                 {diff >= 0 ? '+' : ''}{Math.round(diff).toLocaleString()}
                                             </span>
                                         </p>
                                     </div>

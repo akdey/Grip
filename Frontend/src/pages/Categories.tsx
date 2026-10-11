@@ -181,7 +181,7 @@ const Categories: React.FC = () => {
                                                                     </button>
                                                                     <button
                                                                         onClick={() => deleteSubCategoryMutation.mutate(sub.id)}
-                                                                        className="p-2 text-text-muted hover:text-red-500 transition-all active:scale-90"
+                                                                        className="p-2 text-text-muted hover:text-status-danger transition-all active:scale-90"
                                                                     >
                                                                         <Trash2 size={16} />
                                                                     </button>
@@ -254,7 +254,7 @@ const Categories: React.FC = () => {
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); deleteCategoryMutation.mutate(cat.id); }}
-                                                                className="p-3 text-text-muted hover:text-red-500 transition-all active:scale-90"
+                                                                className="p-3 text-text-muted hover:text-status-danger transition-all active:scale-90"
                                                             >
                                                                 <Trash2 size={18} />
                                                             </button>

@@ -208,7 +208,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                     }}
                                     className={`px-4 py-2.5 rounded-full border text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 ${
                                         isEditing 
-                                            ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+                                            ? 'badge-danger' 
                                             : 'bg-surface border-border-subtle hover:bg-surface-hover text-primary'
                                     }`}
                                 >
@@ -437,7 +437,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                 </div>
                                                 <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
                                                     <p className="text-xs text-text-muted">Net Returns</p>
-                                                    <p className={`text-xl font-bold mt-1 ${(currentHolding.current_value - currentHolding.total_invested) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                                                    <p className={`text-xl font-bold mt-1 ${(currentHolding.current_value - currentHolding.total_invested) >= 0 ? "text-status-success" : "text-status-danger"}`}>
                                                         {formatCurrency(currentHolding.current_value - currentHolding.total_invested)}
                                                     </p>
                                                 </div>

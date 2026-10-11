@@ -197,7 +197,7 @@ const Goals: React.FC = () => {
                                     </div>
                                     <button
                                         onClick={() => deleteGoalMutation.mutate(goal.id)}
-                                        className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center hover:bg-red-500/20 transition-all text-red-500"
+                                        className="w-8 h-8 rounded-lg bg-status-danger-bg border border-status-danger-border flex items-center justify-center hover:opacity-80 transition-all text-status-danger-text"
                                     >
                                         <Trash2 size={14} />
                                     </button>

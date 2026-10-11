@@ -21,12 +21,12 @@ export const FrozenAllocation: React.FC<FrozenAllocationProps> = memo(({
         return (
             <div className="space-y-4 pt-2 animate-pulse">
                 <div className="flex items-center justify-between px-2">
-                    <div className="h-3 w-32 bg-white/[0.05] rounded" />
-                    <div className="h-6 w-16 bg-white/[0.05] rounded-full" />
+                    <div className="h-3 w-32 bg-surface-pill rounded" />
+                    <div className="h-6 w-16 bg-surface-pill rounded-full" />
                 </div>
                 <div className="grid grid-cols-1 gap-3">
-                    <div className="h-24 bg-white/[0.05] rounded-[2rem]" />
-                    <div className="h-24 bg-white/[0.05] rounded-[2rem]" />
+                    <div className="h-24 bg-surface-pill rounded-[2rem]" />
+                    <div className="h-24 bg-surface-pill rounded-[2rem]" />
                 </div>
             </div>
         );

@@ -164,10 +164,10 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
                     <div className="text-gray-400 text-sm">Crunching historical data...</div>
                 </div>
             ) : error ? (
-                <div className="h-64 flex flex-col items-center justify-center text-center p-6 border border-red-500/10 rounded-xl bg-red-500/5">
-                    <AlertCircle className="text-red-500 mb-2" size={32} />
-                    <p className="text-red-400 font-medium mb-1">Analysis Unavailable</p>
-                    <p className="text-xs text-gray-500 max-w-sm">{error}</p>
+                <div className="h-64 flex flex-col items-center justify-center text-center p-6 border border-status-danger-border rounded-xl bg-status-danger-bg">
+                    <AlertCircle className="text-status-danger-text mb-2" size={32} />
+                    <p className="text-status-danger-text font-medium mb-1">Analysis Unavailable</p>
+                    <p className="text-xs text-text-muted max-w-sm">{error}</p>
                 </div>
             ) : analysis ? (
                 <div className="space-y-6">
@@ -189,15 +189,15 @@ const TimingAlpha: React.FC<{ holdings: Holding[] }> = ({ holdings }) => {
                         <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
                             <p className="text-xs text-text-muted uppercase">Your Date</p>
                             <p className="text-xl font-bold mt-1 text-primary">{analysis.user_sip_date}<span className="text-xs font-normal text-text-muted align-top">th</span></p>
-                            <p className={`text-xs mt-1 ${analysis.user_performance.return_percentage >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                            <p className={`text-xs mt-1 ${analysis.user_performance.return_percentage >= 0 ? "text-status-success" : "text-status-danger"}`}>
                                 {analysis.user_performance.return_percentage.toFixed(2)}% Return
                             </p>
                         </div>
                         <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-4 opacity-5"><CheckCircle2 size={40} /></div>
                             <p className="text-xs text-text-muted uppercase">Best Date</p>
-                            <p className="text-xl font-bold mt-1 text-emerald-500">{analysis.best_alternative.date}<span className="text-xs font-normal text-emerald-500/70 align-top">th</span></p>
-                            <p className="text-xs text-emerald-500 mt-1">
+                            <p className="text-xl font-bold mt-1 text-status-success">{analysis.best_alternative.date}<span className="text-xs font-normal opacity-70 align-top">th</span></p>
+                            <p className="text-xs text-status-success mt-1">
                                 {(analysis.best_alternative.improvement || 0) >= 0 ? "+" : "-"}₹{Math.abs(analysis.best_alternative.improvement || 0).toFixed(0)} Total Extra Return
                             </p>
                         </div>
@@ -418,7 +418,7 @@ const InvestmentSimulator: React.FC = () => {
                 {loading ? <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : "Calculate Returns"}
             </button>
 
-            {error && <div className="p-3 bg-red-500/10 text-red-500 text-sm rounded-lg flex items-center gap-2 border border-red-500/20"><AlertCircle size={16} /> {error}</div>}
+            {error && <div className="p-3 badge-danger text-sm rounded-lg flex items-center gap-2"><AlertCircle size={16} /> {error}</div>}
 
             {result && (
                 <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-surface-subtle border border-border-subtle rounded-2xl p-6 mt-4 relative overflow-hidden">
@@ -431,18 +431,18 @@ const InvestmentSimulator: React.FC = () => {
                         </div>
                         <div className="sm:text-right">
                             <p className="text-text-muted text-xs uppercase tracking-wider font-semibold">Current Value</p>
-                            <h3 className={`text-4xl font-bold mt-1 ${result.absolute_return >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                            <h3 className={`text-4xl font-bold mt-1 ${result.absolute_return >= 0 ? "text-status-success" : "text-status-danger"}`}>
                                 ₹{result.current_value.toLocaleString()}
                             </h3>
-                            <div className={`inline-flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg text-sm font-bold ${result.absolute_return >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}>
+                            <div className={`inline-flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg text-sm font-bold ${result.absolute_return >= 0 ? "badge-success" : "badge-danger"}`}>
                                 {result.absolute_return >= 0 ? <TrendingUp size={16} /> : <TrendingUp size={16} className="rotate-180" />}
                                 {result.absolute_return >= 0 ? "+" : ""}{result.return_percentage.toFixed(2)}%
                             </div>
                         </div>
                     </div>
                     {result.notes && (
-                        <div className="mt-4 pt-4 border-t border-white/5">
-                            <p className="text-xs text-gray-500 font-mono">{result.notes}</p>
+                        <div className="mt-4 pt-4 border-t border-border-subtle">
+                            <p className="text-xs text-text-muted font-mono">{result.notes}</p>
                         </div>
                     )}
                 </motion.div>
