@@ -70,8 +70,8 @@ const Sync: React.FC = () => {
                 {!status?.connected ? (
                     <Card className="p-8 sm:p-10 space-y-8 bg-surface-subtle border-border-subtle relative overflow-hidden">
                         <div className="relative z-10 text-center space-y-6">
-                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-accent-subtle text-accent-text border border-accent-border shadow-inner group">
-                                <Mail size={36} strokeWidth={1.5} className="group-hover:scale-105 transition-transform duration-300" />
+                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-surface-pill text-primary border border-border-subtle shadow-inner group">
+                                <Mail size={36} strokeWidth={1.5} className="text-primary group-hover:scale-105 transition-transform duration-300" />
                             </div>
 
                             <div className="space-y-1">

@@ -74,8 +74,8 @@ const SystemIntelligence: React.FC = () => {
 
             <div className="flex items-center justify-between mb-8 relative z-10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-accent-subtle text-accent-text border border-accent-border flex items-center justify-center">
-                        <Brain size={22} />
+                    <div className="w-10 h-10 rounded-2xl bg-surface-pill text-primary border border-border-subtle flex items-center justify-center shadow-xs">
+                        <Brain size={20} className="text-primary" />
                     </div>
                     <div>
                         <h3 className="text-[10px] font-black uppercase tracking-[4px] text-text-muted">System Autopilot</h3>
@@ -92,8 +92,8 @@ const SystemIntelligence: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-8 mt-10 pt-8 border-t border-border-subtle">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-surface-subtle flex items-center justify-center text-text-muted">
-                        <Activity size={14} />
+                    <div className="w-8 h-8 rounded-lg bg-surface-pill border border-border-subtle flex items-center justify-center text-primary">
+                        <Activity size={14} className="text-primary" />
                     </div>
                     <div>
                         <p className="text-[8px] font-bold text-text-muted uppercase tracking-widest">Processed</p>
@@ -105,8 +105,8 @@ const SystemIntelligence: React.FC = () => {
                         <p className="text-[8px] font-bold text-text-muted uppercase tracking-widest">AI Handled</p>
                         <p className="text-lg font-black text-primary">{systemTxns}</p>
                     </div>
-                    <div className="w-8 h-8 rounded-lg bg-accent-subtle border border-accent-border flex items-center justify-center text-accent-text">
-                        <Sparkles size={14} />
+                    <div className="w-8 h-8 rounded-lg bg-surface-pill border border-border-subtle flex items-center justify-center text-primary">
+                        <Sparkles size={14} className="text-primary" />
                     </div>
                 </div>
             </div>
@@ -278,11 +278,11 @@ const More: React.FC = () => {
                                 disabled={isCardLoading}
                                 className={`flex items-center gap-2.5 p-3 rounded-[1.2rem] bg-surface-subtle border border-border-subtle hover:bg-surface-hover hover:border-accent-border/40 transition-all text-left group relative ${isCardLoading ? 'opacity-50' : ''}`}
                             >
-                                <div className="w-8 h-8 rounded-lg bg-surface-pill text-primary group-hover:bg-accent-subtle group-hover:text-accent-text group-hover:border group-hover:border-accent-border transition-colors flex items-center justify-center shadow-sm group-hover:scale-105 shrink-0 relative">
+                                <div className="w-8 h-8 rounded-lg bg-surface-pill text-primary border border-border-subtle group-hover:bg-surface-hover group-hover:text-primary transition-colors flex items-center justify-center shadow-xs group-hover:scale-105 shrink-0 relative">
                                     {isCardLoading ? (
                                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
                                     ) : (
-                                        <card.icon size={15} className={card.color || 'text-primary'} />
+                                        <card.icon size={15} className="text-primary" />
                                     )}
                                     {isActionTarget && pendingCount > 0 && (
                                         <span className="absolute -top-1.5 -right-1.5 min-w-[17px] h-[17px] px-1 bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-md shadow-rose-500/35 border border-surface leading-none tracking-tight animate-pulse">
@@ -470,11 +470,11 @@ const More: React.FC = () => {
                         className="w-full p-4 rounded-2xl bg-surface-subtle border border-border-subtle hover:bg-surface-hover active:scale-[0.99] transition-all flex items-center justify-between text-left group disabled:opacity-50"
                     >
                         <div className="flex items-center gap-3.5">
-                            <div className="w-10 h-10 rounded-xl bg-accent-subtle border border-accent-border text-accent-text flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-surface-pill border border-border-subtle text-primary flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
                                 {isExportingStatement ? (
                                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
                                 ) : (
-                                    <FileSpreadsheet size={18} />
+                                    <FileSpreadsheet size={18} className="text-primary" />
                                 )}
                             </div>
                             <div>
@@ -545,8 +545,8 @@ const More: React.FC = () => {
 
                         <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3">
                             <div className="flex items-start gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-accent-subtle text-accent-text border border-accent-border flex items-center justify-center shrink-0">
-                                    <ShieldCheck size={16} />
+                                <div className="w-8 h-8 rounded-lg bg-surface-pill text-primary border border-border-subtle flex items-center justify-center shrink-0">
+                                    <ShieldCheck size={16} className="text-primary" />
                                 </div>
                                 <div className="flex-1">
                                     <h5 className="text-xs font-bold text-primary">
