@@ -336,9 +336,13 @@ const Wealth: React.FC = () => {
                                 Portfolio Net Worth
                             </p>
                             <div className="flex items-center gap-3 mt-1">
-                                <h2 className="text-3xl sm:text-4xl font-black text-primary tracking-tight font-mono">
-                                    {showSensitive ? formatCurrency(totalWealth) : '••••••••'}
-                                </h2>
+                                {loading ? (
+                                    <div className="h-9 sm:h-10 w-48 bg-surface-pill rounded-xl animate-pulse" />
+                                ) : (
+                                    <h2 className="text-3xl sm:text-4xl font-black text-primary tracking-tight font-mono tabular-nums">
+                                        {showSensitive ? formatCurrency(totalWealth) : '••••••••'}
+                                    </h2>
+                                )}
                                 <button
                                     onClick={() => {
                                         haptics.impact('light');
@@ -355,18 +359,22 @@ const Wealth: React.FC = () => {
 
                         {/* Performance Metric Pill */}
                         <div className="flex items-center gap-2">
-                            <div className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 ${absoluteReturn >= 0
-                                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                                    : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                                }`}>
-                                {absoluteReturn >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                                <span>
-                                    {showSensitive
-                                        ? `${absoluteReturn >= 0 ? '+' : ''}${formatCurrency(absoluteReturn)} (${returnPercentage >= 0 ? '+' : ''}${returnPercentage.toFixed(1)}%)`
-                                        : '••••••'
-                                    }
-                                </span>
-                            </div>
+                            {loading ? (
+                                <div className="h-7 w-28 bg-surface-pill rounded-xl animate-pulse" />
+                            ) : (
+                                <div className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 ${absoluteReturn >= 0
+                                        ? 'badge-success'
+                                        : 'badge-danger'
+                                    }`}>
+                                    {absoluteReturn >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                                    <span>
+                                        {showSensitive
+                                            ? `${absoluteReturn >= 0 ? '+' : ''}${formatCurrency(absoluteReturn)} (${returnPercentage >= 0 ? '+' : ''}${returnPercentage.toFixed(1)}%)`
+                                            : '••••••'
+                                        }
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -374,21 +382,33 @@ const Wealth: React.FC = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 border-t border-border-subtle/50">
                         <div>
                             <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Total Invested</p>
-                            <p className="text-base font-bold text-primary font-mono mt-0.5">
-                                {showSensitive ? formatCurrency(totalInvested) : '••••••'}
-                            </p>
+                            {loading ? (
+                                <div className="h-5 w-24 bg-surface-pill rounded-md animate-pulse mt-1" />
+                            ) : (
+                                <p className="text-base font-bold text-primary font-mono tabular-nums mt-0.5">
+                                    {showSensitive ? formatCurrency(totalInvested) : '••••••'}
+                                </p>
+                            )}
                         </div>
                         <div>
                             <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Monthly Inflow (SIP)</p>
-                            <p className="text-base font-bold text-primary font-mono mt-0.5">
-                                {showSensitive ? formatCurrency(monthlyInvestmentOutflow) : '••••••'}
-                            </p>
+                            {loading ? (
+                                <div className="h-5 w-24 bg-surface-pill rounded-md animate-pulse mt-1" />
+                            ) : (
+                                <p className="text-base font-bold text-primary font-mono tabular-nums mt-0.5">
+                                    {showSensitive ? formatCurrency(monthlyInvestmentOutflow) : '••••••'}
+                                </p>
+                            )}
                         </div>
                         <div className="col-span-2 sm:col-span-1">
                             <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Holdings Tracked</p>
-                            <p className="text-base font-bold text-primary mt-0.5">
-                                {holdings.length} {holdings.length === 1 ? 'Asset' : 'Assets'}
-                            </p>
+                            {loading ? (
+                                <div className="h-5 w-16 bg-surface-pill rounded-md animate-pulse mt-1" />
+                            ) : (
+                                <p className="text-base font-bold text-primary mt-0.5">
+                                    {holdings.length} {holdings.length === 1 ? 'Asset' : 'Assets'}
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -513,7 +533,28 @@ const Wealth: React.FC = () => {
                 )}
 
                 {/* 5. Asset Category Cards Grid */}
-                {holdings.length === 0 && !loading ? (
+                {loading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                        {[1, 2, 3].map((n) => (
+                            <div key={n} className="bg-surface-subtle border border-border-subtle rounded-3xl p-6 space-y-4 animate-pulse">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-surface-pill" />
+                                        <div className="space-y-1.5">
+                                            <div className="h-4 w-32 bg-surface-pill rounded" />
+                                            <div className="h-3 w-16 bg-surface-pill rounded" />
+                                        </div>
+                                    </div>
+                                    <div className="h-6 w-20 bg-surface-pill rounded-lg" />
+                                </div>
+                                <div className="space-y-2 pt-2">
+                                    <div className="h-12 w-full bg-surface-pill/50 rounded-xl" />
+                                    <div className="h-12 w-full bg-surface-pill/50 rounded-xl" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : holdings.length === 0 ? (
                     <div className="py-16 text-center border border-dashed border-border-subtle rounded-3xl bg-surface-subtle p-8 max-w-xl mx-auto">
                         <div className="w-14 h-14 rounded-2xl bg-surface-pill border border-border-subtle text-primary flex items-center justify-center mx-auto mb-4">
                             <Wallet size={28} />

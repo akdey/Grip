@@ -13,13 +13,46 @@ import {
     ChevronDown,
     Receipt,
     Calendar,
-    Sparkles
+    Sparkles,
+    TrendingUp,
+    Repeat,
+    Target
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '../components/ui/Loader';
 import { PasswordVerifyModal } from '../components/ui/PasswordVerifyModal';
 import { startOfMonth, endOfMonth, startOfYear, endOfYear, format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const getObligationMeta = (type: string, status: string) => {
+    switch (type) {
+        case 'BILL':
+            return {
+                label: 'Bill Due',
+                icon: Receipt,
+                badgeClass: status === 'OVERDUE' ? 'badge-danger' : 'badge-neutral',
+            };
+        case 'SIP':
+            return {
+                label: 'SIP Investment',
+                icon: TrendingUp,
+                badgeClass: 'badge-accent',
+            };
+        case 'GOAL':
+            return {
+                label: 'Goal Target',
+                icon: Target,
+                badgeClass: 'badge-neutral',
+            };
+        case 'SURETY_TXN':
+        default:
+            return {
+                label: 'Recurring Surety',
+                icon: Repeat,
+                badgeClass: status === 'OVERDUE' ? 'badge-danger' : 'badge-warning',
+            };
+    }
+};
 
 import { formatCurrency } from '../lib/formatters';
 import { SummaryGrid } from '../features/dashboard/components/SummaryGrid';
@@ -280,69 +313,82 @@ const Dashboard: React.FC = () => {
                                 <div className="w-10 h-1.5 bg-border-strong rounded-full transition-colors active:scale-95" />
                             </div>
 
-                            <div className="p-6 sm:p-8 border-b border-border-subtle flex items-center justify-between bg-surface-subtle shrink-0">
+                            <div className="p-5 sm:p-6 border-b border-border-subtle flex items-center justify-between bg-surface-subtle shrink-0">
                                 <div className="flex-1">
-                                    <h2 className="text-2xl font-black text-text-primary tracking-tighter uppercase italic heading-apple">Obligation Ledger</h2>
-                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-[4px] mt-1">Identified commitments & surety</p>
+                                    <h2 className="text-xl sm:text-2xl font-black text-text-primary tracking-tight heading-apple">Obligation Ledger</h2>
+                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">Identified commitments & recurring surety</p>
                                 </div>
                                 <button
                                     onClick={() => {
                                         haptics.selection();
                                         setShowObligations(false);
                                     }}
-                                    className="w-12 h-12 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary active:scale-90 transition-all shadow-sm group touch-manipulation"
+                                    className="w-10 h-10 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary active:scale-90 transition-all shadow-xs group touch-manipulation"
                                     aria-label="Close obligations ledger"
                                 >
-                                    <ChevronDown size={24} className="group-hover:translate-y-0.5 transition-transform" />
+                                    <ChevronDown size={20} className="group-hover:translate-y-0.5 transition-transform" />
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-4 custom-scrollbar select-text">
+                            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-2.5 custom-scrollbar select-text">
                                 {safeToSpend?.frozen_funds?.obligations && safeToSpend.frozen_funds.obligations.length > 0 ? (
-                                    safeToSpend.frozen_funds.obligations.map((obl) => (
-                                        <div
-                                            key={obl.id}
-                                            className="p-4 rounded-3xl bg-surface-subtle border border-border-subtle flex items-center justify-between group hover:bg-surface-hover transition-all"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${obl.status === 'OVERDUE' ? 'bg-status-danger-bg text-status-danger-text border-status-danger-border' :
-                                                    'bg-metric-obligations-bg text-metric-obligations-text border-metric-obligations-border'
+                                    safeToSpend.frozen_funds.obligations.map((obl) => {
+                                        const meta = getObligationMeta(obl.type, obl.status);
+                                        const IconComp = meta.icon;
+                                        const isOverdue = obl.status === 'OVERDUE';
+
+                                        return (
+                                            <div
+                                                key={obl.id}
+                                                className="p-3 sm:p-3.5 rounded-2xl bg-surface/60 border border-border-subtle/80 flex items-center justify-between gap-3 group hover:bg-surface-hover transition-all"
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                                                        isOverdue
+                                                            ? 'bg-status-danger-bg text-status-danger-text border-status-danger-border'
+                                                            : 'bg-surface-pill text-text-secondary border-border-subtle'
                                                     }`}>
-                                                    <Calendar size={18} />
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-black text-text-primary uppercase tracking-tight">{obl.title}</p>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full badge-neutral">
-                                                            {obl.type}
-                                                        </span>
-                                                        <span className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">
-                                                            {format(new Date(obl.due_date), 'MMM dd')} • {obl.status}
-                                                        </span>
+                                                        <IconComp size={16} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold text-text-primary truncate">{obl.title}</p>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${meta.badgeClass}`}>
+                                                                {meta.label}
+                                                            </span>
+                                                            <span className="text-[11px] text-text-muted font-medium">
+                                                                {format(new Date(obl.due_date), 'MMM dd')}
+                                                            </span>
+                                                            {isOverdue && (
+                                                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-status-danger-text">
+                                                                    • Overdue
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-sm sm:text-base font-extrabold text-text-primary tracking-tight tabular-nums">{formatCurrency(obl.amount)}</p>
+                                                    <p className="text-[10px] text-text-muted font-medium mt-0.5">{obl.sub_category || obl.category || 'Recurring'}</p>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-sm font-black text-text-primary tracking-tight tabular-nums">{formatCurrency(obl.amount)}</p>
-                                                <p className="text-[10px] text-text-muted font-semibold uppercase tracking-wider mt-0.5">{obl.sub_category || obl.category || 'General'}</p>
-                                            </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
-                                    <div className="py-20 text-center">
-                                        <Receipt size={32} className="mx-auto text-text-muted mb-4 opacity-40" />
-                                        <p className="text-text-muted font-black uppercase tracking-[4px] text-xs">No obligations identified</p>
+                                    <div className="py-16 text-center">
+                                        <Receipt size={28} className="mx-auto text-text-muted mb-3 opacity-40" />
+                                        <p className="text-text-muted font-bold text-xs uppercase tracking-wider">No obligations identified</p>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="p-8 sm:p-12 bg-surface-subtle border-t border-border-subtle">
+                            <div className="p-4 sm:p-6 bg-surface-subtle border-t border-border-subtle shrink-0">
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-black text-text-muted uppercase tracking-[3px]">Total Active Burden</span>
-                                        <span className="text-xs text-text-muted font-semibold mt-0.5">Calculated across all streams</span>
+                                        <span className="text-[10px] font-extrabold text-text-muted uppercase tracking-[2px]">Total Active Burden</span>
+                                        <span className="text-xs text-text-muted font-medium mt-0.5">Calculated across all upcoming commitments</span>
                                     </div>
-                                    <span className="text-2xl font-black text-text-primary tracking-tight tabular-nums">
+                                    <span className="text-xl sm:text-2xl font-black text-text-primary tracking-tight tabular-nums">
                                         {formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills || 0) + Number(safeToSpend?.frozen_funds?.projected_surety || 0))}
                                     </span>
                                 </div>

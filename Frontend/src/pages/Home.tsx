@@ -24,10 +24,10 @@ const Home: React.FC = () => {
                     <div className="flex items-center gap-3">
                         <Logo size={32} />
                         <div className="flex flex-col">
-                            <span className="text-xl font-black tracking-tighter text-white">
+                            <span className="text-xl font-black tracking-tighter text-primary">
                                 {import.meta.env.VITE_APP_NAME || 'GRIP'}
                             </span>
-                            <span className="text-[8px] text-gray-500 font-bold uppercase tracking-[2px]">{import.meta.env.VITE_APP_TAGLINE || 'GRIP'}</span>
+                            <span className="text-[8px] text-text-muted font-bold uppercase tracking-[2px]">{import.meta.env.VITE_APP_TAGLINE || 'GRIP'}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-6">

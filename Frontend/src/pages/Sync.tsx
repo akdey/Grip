@@ -16,6 +16,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Loader } from '../components/ui/Loader';
 import { formatDistanceToNow } from 'date-fns';
+
 const Sync: React.FC = () => {
     const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
     const [expandedSync, setExpandedSync] = useState<number | null>(null);
@@ -56,55 +57,52 @@ const Sync: React.FC = () => {
     }
 
     return (
-        <div className="text-white pb-24 space-y-6">
+        <div className="text-text-primary pb-24 space-y-4">
             {/* Header */}
-            <header className="px-5 pt-10 pb-4">
-                <h1 className="text-3xl font-black tracking-tighter text-white mb-2 heading-apple">
+            <header className="px-5 pt-3 pb-1">
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-text-primary heading-apple">
                     Gmail Sync
                 </h1>
-                {/* <p className="text-sm text-gray-400">
-                    Automatically import transactions from your email
-                </p> */}
             </header>
 
-            <div className="px-5 space-y-6">
+            <div className="px-5 space-y-4">
                 {/* Connection Status Card */}
                 {!status?.connected ? (
-                    <Card className="p-10 space-y-10 bg-white/[0.02] border-white/[0.08] relative overflow-hidden">
-                        <div className="relative z-10 text-center space-y-8">
-                            <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2.5rem] bg-accent-subtle text-accent-text border border-accent-border shadow-inner group">
-                                <Mail size={42} strokeWidth={1.5} className="group-hover:scale-105 transition-transform duration-500" />
+                    <Card className="p-8 sm:p-10 space-y-8 bg-surface-subtle border-border-subtle relative overflow-hidden">
+                        <div className="relative z-10 text-center space-y-6">
+                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-accent-subtle text-accent-text border border-accent-border shadow-inner group">
+                                <Mail size={36} strokeWidth={1.5} className="group-hover:scale-105 transition-transform duration-300" />
                             </div>
 
-                            <div>
-                                <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">
+                            <div className="space-y-1">
+                                <h2 className="text-2xl sm:text-3xl font-black text-text-primary tracking-tight uppercase heading-apple">
                                     Sync Intelligence
                                 </h2>
-                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-[3px] max-w-xs mx-auto leading-relaxed opacity-60">
-                                    Autopilot for transaction tracking.
+                                <p className="text-text-muted text-[10px] font-bold uppercase tracking-[2px] max-w-xs mx-auto leading-relaxed">
+                                    Autopilot for transaction tracking
                                 </p>
                             </div>
 
                             <div className="space-y-3 text-left max-w-md mx-auto">
                                 <div className="flex items-start gap-3">
-                                    <CheckCircle size={20} className="text-status-success mt-0.5 shrink-0" />
+                                    <CheckCircle size={18} className="text-status-success-text mt-0.5 shrink-0" />
                                     <div>
-                                        <p className="text-sm text-primary font-medium">Automatic Transaction Detection</p>
-                                        <p className="text-xs text-text-muted">AI extracts amount, merchant, and category from spent alerts</p>
+                                        <p className="text-sm text-text-primary font-bold">Automatic Transaction Detection</p>
+                                        <p className="text-xs text-text-muted">Extracts amount, merchant, and category from spend alerts</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
-                                    <CheckCircle size={20} className="text-status-success mt-0.5 shrink-0" />
+                                    <CheckCircle size={18} className="text-status-success-text mt-0.5 shrink-0" />
                                     <div>
-                                        <p className="text-sm text-primary font-medium">Wealth Map Integration</p>
+                                        <p className="text-sm text-text-primary font-bold">Wealth Map Integration</p>
                                         <p className="text-xs text-text-muted">Auto-update SIPs and investments in your Wealth portfolio</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
-                                    <CheckCircle size={20} className="text-status-success mt-0.5 shrink-0" />
+                                    <CheckCircle size={18} className="text-status-success-text mt-0.5 shrink-0" />
                                     <div>
-                                        <p className="text-sm text-primary font-medium">Bin & Trash Intelligence</p>
-                                        <p className="text-xs text-text-muted">Nothing gets lost. We monitor deleted mail for missed alerts</p>
+                                        <p className="text-sm text-text-primary font-bold">Bin & Trash Intelligence</p>
+                                        <p className="text-xs text-text-muted">Monitors deleted mail for missed transaction alerts</p>
                                     </div>
                                 </div>
                             </div>
@@ -113,15 +111,15 @@ const Sync: React.FC = () => {
                                 onClick={handleConnect}
                                 isLoading={connectMutation.isPending}
                                 className="w-full max-w-md"
-                                icon={<Mail size={20} className="shrink-0" />}
+                                icon={<Mail size={18} className="shrink-0" />}
                             >
                                 Continue with Gmail
                             </Button>
 
                             {connectMutation.isError && (
-                                <div className="p-3 rounded-lg badge-danger text-sm">
-                                    <p className="flex items-center gap-2">
-                                        <AlertCircle size={16} />
+                                <div className="p-3 rounded-xl badge-danger text-xs font-semibold">
+                                    <p className="flex items-center justify-center gap-2">
+                                        <AlertCircle size={14} />
                                         Failed to connect. Please try again.
                                     </p>
                                 </div>
@@ -131,17 +129,17 @@ const Sync: React.FC = () => {
                 ) : (
                     <>
                         {/* Connected Status */}
-                        <Card className="p-6 bg-surface-subtle border-border-subtle">
+                        <Card className="p-5 sm:p-6 bg-surface-subtle border-border-subtle">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-status-success-bg border border-status-success-border flex items-center justify-center text-status-success-text">
-                                        <CheckCircle size={24} />
+                                    <div className="w-12 h-12 rounded-2xl bg-status-success-bg border border-status-success-border flex items-center justify-center text-status-success-text shrink-0">
+                                        <CheckCircle size={22} />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-primary mb-1">
+                                        <h3 className="text-lg font-bold text-text-primary mb-0.5">
                                             Gmail Connected
                                         </h3>
-                                        <p className="text-sm text-secondary mb-3">
+                                        <p className="text-sm text-text-secondary mb-3">
                                             {status.email}
                                         </p>
 
@@ -165,18 +163,18 @@ const Sync: React.FC = () => {
 
                                 <button
                                     onClick={() => setShowDisconnectConfirm(true)}
-                                    className="text-text-muted hover:text-status-danger transition-colors p-2"
+                                    className="text-text-muted hover:text-status-danger-text transition-colors p-2"
                                     title="Disconnect"
                                 >
-                                    <Unplug size={20} />
+                                    <Unplug size={18} />
                                 </button>
                             </div>
 
-                            <div className="flex gap-3 mt-6">
+                            <div className="flex gap-3 mt-5">
                                 <Button
                                     onClick={handleSync}
                                     isLoading={syncMutation.isPending}
-                                    icon={<RefreshCw size={18} />}
+                                    icon={<RefreshCw size={16} />}
                                     className="flex-1"
                                 >
                                     {syncMutation.isPending ? 'Syncing...' : 'Sync Now'}
@@ -184,9 +182,9 @@ const Sync: React.FC = () => {
                             </div>
 
                             {syncMutation.isSuccess && (
-                                <div className="mt-4 p-3 rounded-lg badge-success text-sm">
+                                <div className="mt-4 p-3 rounded-xl badge-success text-xs font-semibold">
                                     <p className="flex items-center gap-2">
-                                        <CheckCircle size={16} />
+                                        <CheckCircle size={14} />
                                         Sync started! Check history below for results.
                                     </p>
                                 </div>
@@ -195,12 +193,12 @@ const Sync: React.FC = () => {
 
                         {/* Sync History */}
                         {history && history.syncs.length > 0 && (
-                            <Card className="p-6">
-                                <h3 className="text-lg font-bold text-primary mb-4">
+                            <Card className="p-5 sm:p-6 bg-surface-subtle border-border-subtle">
+                                <h3 className="text-lg font-bold text-text-primary mb-4">
                                     Sync History
                                 </h3>
 
-                                <div className="space-y-3">
+                                <div className="space-y-2.5">
                                     {history.syncs.map((sync) => {
                                         const summary = sync.summary ? JSON.parse(sync.summary) : [];
                                         const isExpanded = expandedSync === sync.id;
@@ -209,16 +207,16 @@ const Sync: React.FC = () => {
                                             <div key={sync.id} className="space-y-2">
                                                 <div
                                                     onClick={() => summary.length > 0 && setExpandedSync(isExpanded ? null : sync.id)}
-                                                    className={`flex items-center justify-between p-4 rounded-2xl bg-surface-subtle border border-border-subtle hover:bg-surface-hover transition-colors cursor-pointer ${isExpanded ? 'bg-surface-hover border-border-strong' : ''}`}
+                                                    className={`flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-surface border border-border-subtle hover:bg-surface-hover transition-colors cursor-pointer ${isExpanded ? 'bg-surface-hover border-border-strong' : ''}`}
                                                 >
-                                                    <div className="flex items-center gap-4">
-                                                        <div className={`w-2 h-2 rounded-full ${sync.status === 'SUCCESS' ? 'bg-emerald-400' :
-                                                            sync.status === 'FAILED' ? 'bg-rose-400' :
-                                                                'bg-amber-400'
+                                                    <div className="flex items-center gap-3.5">
+                                                        <div className={`w-2 h-2 rounded-full ${sync.status === 'SUCCESS' ? 'bg-status-success-solid' :
+                                                            sync.status === 'FAILED' ? 'bg-status-danger-solid' :
+                                                                'bg-status-warning-solid'
                                                             }`} />
 
                                                         <div>
-                                                            <p className="text-sm font-medium text-primary">
+                                                            <p className="text-sm font-semibold text-text-primary">
                                                                 {sync.status === 'SUCCESS' && `${sync.records_processed} transactions synced`}
                                                                 {sync.status === 'FAILED' && 'Sync failed'}
                                                                 {sync.status === 'IN_PROGRESS' && 'Syncing...'}
@@ -227,42 +225,42 @@ const Sync: React.FC = () => {
                                                                 {formatDistanceToNow(new Date(sync.start_time), { addSuffix: true })} • {sync.trigger_source}
                                                             </p>
                                                             {sync.error_message && (
-                                                                <p className="text-xs text-status-danger mt-1">{sync.error_message}</p>
+                                                                <p className="text-xs text-status-danger-text mt-1">{sync.error_message}</p>
                                                             )}
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-2.5">
                                                         {sync.status === 'SUCCESS' && summary.length > 0 && (
                                                             <div className="text-text-muted">
-                                                                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                                             </div>
                                                         )}
-                                                        {sync.status === 'SUCCESS' && <CheckCircle size={18} className="text-status-success" />}
-                                                        {sync.status === 'FAILED' && <XCircle size={18} className="text-status-danger" />}
+                                                        {sync.status === 'SUCCESS' && <CheckCircle size={16} className="text-status-success-text" />}
+                                                        {sync.status === 'FAILED' && <XCircle size={16} className="text-status-danger-text" />}
                                                     </div>
                                                 </div>
 
                                                 {isExpanded && summary.length > 0 && (
-                                                    <div className="ml-6 pl-4 border-l border-border-subtle space-y-2 animate-in slide-in-from-top-2">
-                                                        <h4 className="text-[10px] font-black uppercase tracking-[2px] text-text-muted mb-2">Intelligence Feed</h4>
+                                                    <div className="ml-5 pl-4 border-l border-border-subtle space-y-2 animate-in slide-in-from-top-2">
+                                                        <h4 className="text-[10px] font-extrabold uppercase tracking-[2px] text-text-muted mb-2">Intelligence Feed</h4>
                                                         {summary.map((item: any, idx: number) => (
                                                             <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-surface border border-border-subtle">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className={`w-1.5 h-1.5 rounded-full ${item.amount < 0 ? 'bg-status-danger-solid' : 'bg-status-success-solid'}`} />
                                                                     <div>
-                                                                        <p className="text-xs font-bold text-primary">{item.merchant}</p>
+                                                                        <p className="text-xs font-bold text-text-primary">{item.merchant}</p>
                                                                         <p className="text-[10px] text-text-muted">{item.category}</p>
                                                                     </div>
                                                                 </div>
-                                                                <div className="flex items-center gap-4">
+                                                                <div className="flex items-center gap-3">
                                                                     {item.wealth_mapped && (
                                                                         <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent-subtle border border-accent-border">
                                                                             <TrendingUp size={10} className="text-accent-text" />
                                                                             <span className="text-[8px] font-black uppercase text-accent-text tracking-wider">Wealth Sync</span>
                                                                         </div>
                                                                     )}
-                                                                    <p className={`text-xs font-black ${item.amount < 0 ? 'text-primary' : 'text-status-success'}`}>
+                                                                    <p className={`text-xs font-bold ${item.amount < 0 ? 'text-text-primary' : 'text-status-success-text'}`}>
                                                                         {item.amount < 0 ? '-' : '+'}₹{Math.abs(item.amount).toLocaleString()}
                                                                     </p>
                                                                 </div>
@@ -282,23 +280,23 @@ const Sync: React.FC = () => {
 
             {/* Disconnect Confirmation Modal */}
             {showDisconnectConfirm && (
-                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-                    <Card className="w-full max-w-md p-6 space-y-4">
+                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-overlay backdrop-blur-md animate-in fade-in">
+                    <Card className="w-full max-w-md p-6 space-y-4 bg-raised border-border-default shadow-2xl rounded-2xl">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-400">
+                            <div className="w-10 h-10 rounded-xl bg-status-danger-bg border border-status-danger-border flex items-center justify-center text-status-danger-text">
                                 <AlertCircle size={20} />
                             </div>
-                            <h3 className="text-lg font-bold text-white">
+                            <h3 className="text-lg font-bold text-text-primary">
                                 Disconnect Gmail?
                             </h3>
                         </div>
 
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-text-secondary">
                             This will remove Gmail access. You'll need to reconnect to sync transactions again.
                             Your existing transactions won't be deleted.
                         </p>
 
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 pt-2">
                             <Button
                                 variant="secondary"
                                 onClick={() => setShowDisconnectConfirm(false)}
@@ -309,7 +307,7 @@ const Sync: React.FC = () => {
                             <Button
                                 onClick={handleDisconnect}
                                 isLoading={disconnectMutation.isPending}
-                                className="flex-1 bg-red-500 hover:bg-red-600"
+                                className="flex-1 bg-status-danger-solid hover:opacity-90 text-white"
                             >
                                 Disconnect
                             </Button>

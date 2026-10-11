@@ -1,5 +1,6 @@
 import React, { memo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { Wallet, CreditCard, TrendingUp } from 'lucide-react';
 
 interface OutflowLedgerProps {
     currentExpense: number;       // Accrual View: SUM(DIRECT_EXPENSE) + SUM(CREDIT_EXPENSE)
@@ -113,11 +114,12 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                         {/* Direct Lifestyle Expenses */}
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center text-[10px]">
-                                <span className="font-bold text-secondary tracking-wide">
+                                <span className="font-bold text-secondary tracking-wide flex items-center gap-1.5">
+                                    <Wallet size={12} className="text-text-muted" />
                                     Direct Lifestyle Expenses
-                                    <span className="text-[9px] text-text-muted ml-1.5 font-normal">({calcPct(resolvedDirect)})</span>
+                                    <span className="text-[9px] text-text-muted ml-1 font-semibold">({calcPct(resolvedDirect)})</span>
                                 </span>
-                                <span className="font-black text-primary">{formatCurrency(resolvedDirect)}</span>
+                                <span className="font-black text-primary tabular-nums">{formatCurrency(resolvedDirect)}</span>
                             </div>
                             <div className="h-1.5 w-full bg-surface-pill rounded-full overflow-hidden">
                                 <motion.div
@@ -132,18 +134,19 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                         {/* Prior Debt Settlement */}
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center text-[10px]">
-                                <span className="font-bold text-secondary tracking-wide">
+                                <span className="font-bold text-secondary tracking-wide flex items-center gap-1.5">
+                                    <CreditCard size={12} className="text-text-muted" />
                                     Credit Card Bills Paid
-                                    <span className="text-[9px] text-text-muted ml-1.5 font-normal">({calcPct(priorSettlement)})</span>
+                                    <span className="text-[9px] text-text-muted ml-1 font-semibold">({calcPct(priorSettlement)})</span>
                                 </span>
-                                <span className="font-black text-primary">{formatCurrency(priorSettlement)}</span>
+                                <span className="font-black text-primary tabular-nums">{formatCurrency(priorSettlement)}</span>
                             </div>
                             <div className="h-1.5 w-full bg-surface-pill rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ scaleX: 0 }}
                                     animate={{ scaleX: Math.min(1, priorSettlement / maxVal) }}
                                     style={{ transformOrigin: 'left' }}
-                                    className="h-full bg-secondary/40 rounded-full w-full"
+                                    className="h-full bg-accent rounded-full w-full"
                                 />
                             </div>
                         </div>
@@ -152,18 +155,19 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                         {resolvedInvestments > 0 && (
                             <div className="space-y-1.5">
                                 <div className="flex justify-between items-center text-[10px]">
-                                    <span className="font-bold text-secondary tracking-wide">
+                                    <span className="font-bold text-secondary tracking-wide flex items-center gap-1.5">
+                                        <TrendingUp size={12} className="text-text-muted" />
                                         Capital Investments (SIP / RD)
-                                        <span className="text-[9px] text-text-muted ml-1.5 font-normal">({calcPct(resolvedInvestments)})</span>
+                                        <span className="text-[9px] text-text-muted ml-1 font-semibold">({calcPct(resolvedInvestments)})</span>
                                     </span>
-                                    <span className="font-black text-primary">{formatCurrency(resolvedInvestments)}</span>
+                                    <span className="font-black text-primary tabular-nums">{formatCurrency(resolvedInvestments)}</span>
                                 </div>
                                 <div className="h-1.5 w-full bg-surface-pill rounded-full overflow-hidden">
                                     <motion.div
                                         initial={{ scaleX: 0 }}
                                         animate={{ scaleX: Math.min(1, resolvedInvestments / maxVal) }}
                                         style={{ transformOrigin: 'left' }}
-                                        className="h-full bg-status-success rounded-full w-full"
+                                        className="h-full bg-accent rounded-full w-full"
                                     />
                                 </div>
                             </div>
@@ -174,11 +178,12 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                         {/* Direct Lifestyle Expenses */}
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center text-[10px]">
-                                <span className="font-bold text-secondary tracking-wide">
+                                <span className="font-bold text-secondary tracking-wide flex items-center gap-1.5">
+                                    <Wallet size={12} className="text-text-muted" />
                                     Direct Lifestyle Expenses
-                                    <span className="text-[9px] text-text-muted ml-1.5 font-normal">({calcPct(resolvedDirect)})</span>
+                                    <span className="text-[9px] text-text-muted ml-1 font-semibold">({calcPct(resolvedDirect)})</span>
                                 </span>
-                                <span className="font-black text-primary">{formatCurrency(resolvedDirect)}</span>
+                                <span className="font-black text-primary tabular-nums">{formatCurrency(resolvedDirect)}</span>
                             </div>
                             <div className="h-1.5 w-full bg-surface-pill rounded-full overflow-hidden">
                                 <motion.div
@@ -193,18 +198,19 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                         {/* Credit Card Incurred */}
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center text-[10px]">
-                                <span className="font-bold text-secondary tracking-wide">
+                                <span className="font-bold text-secondary tracking-wide flex items-center gap-1.5">
+                                    <CreditCard size={12} className="text-text-muted" />
                                     Credit Card Swipes
-                                    <span className="text-[9px] text-text-muted ml-1.5 font-normal">({calcPct(resolvedCredit)})</span>
+                                    <span className="text-[9px] text-text-muted ml-1 font-semibold">({calcPct(resolvedCredit)})</span>
                                 </span>
-                                <span className="font-black text-primary">{formatCurrency(resolvedCredit)}</span>
+                                <span className="font-black text-primary tabular-nums">{formatCurrency(resolvedCredit)}</span>
                             </div>
                             <div className="h-1.5 w-full bg-surface-pill rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ scaleX: 0 }}
                                     animate={{ scaleX: Math.min(1, resolvedCredit / maxVal) }}
                                     style={{ transformOrigin: 'left' }}
-                                    className="h-full bg-secondary/50 rounded-full w-full"
+                                    className="h-full bg-accent rounded-full w-full"
                                 />
                             </div>
                         </div>

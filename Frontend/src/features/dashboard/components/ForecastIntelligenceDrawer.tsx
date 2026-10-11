@@ -514,7 +514,7 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                                         </div>
 
                                                         {/* Line 2: Subtitle Info (Item Count & % of Total Budget) */}
-                                                        <div className="flex items-center justify-between gap-2 mt-2 pt-1">
+                                                        <div className="flex items-center justify-between gap-2 mt-1.5">
                                                             <span className="text-xs text-text-muted font-medium">
                                                                 {group.subcategories.length} {group.subcategories.length === 1 ? 'subcategory' : 'subcategories'}
                                                                 {group.fixedAmount > 0 && (
@@ -527,22 +527,14 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                                                 {group.percentageOfTotal.toFixed(1)}% of total
                                                             </span>
                                                         </div>
-
-                                                        {/* Line 3: Category Budget Share Visual Bar */}
-                                                        <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden mt-2">
-                                                            <div
-                                                                className="h-full bg-accent-text/80 rounded-full transition-all duration-500"
-                                                                style={{ width: `${Math.max(4, group.percentageOfTotal)}%` }}
-                                                            />
-                                                        </div>
                                                     </div>
 
                                                     {/* Nested Subcategories Breakdown (Indented hierarchically) */}
                                                     {!collapsed && (
-                                                        <div className="p-3 space-y-2.5 border-t border-border-subtle/40 bg-surface/20">
+                                                        <div className="p-3 space-y-2 border-t border-border-subtle/40 bg-surface/20">
                                                             <div className="flex items-center justify-between text-[11px] font-bold text-text-muted uppercase tracking-wider px-1">
                                                                 <span>Subcategory Breakdown</span>
-                                                                <span>Share of {group.categoryName}</span>
+                                                                <span>Share</span>
                                                             </div>
 
                                                             {group.subcategories.map((sub, subIdx) => (
@@ -575,14 +567,6 @@ export const ForecastIntelligenceDrawer: React.FC<ForecastIntelligenceDrawerProp
                                                                                 ({sub.percentageOfCategory.toFixed(0)}%)
                                                                             </span>
                                                                         </div>
-                                                                    </div>
-
-                                                                    {/* Intra-Category Proportion Bar */}
-                                                                    <div className="w-full h-1 bg-surface-subtle rounded-full overflow-hidden">
-                                                                        <div
-                                                                            className="h-full bg-primary/70 rounded-full"
-                                                                            style={{ width: `${Math.max(4, sub.percentageOfCategory)}%` }}
-                                                                        />
                                                                     </div>
 
                                                                     {/* ML Reason / Justification Callout */}
