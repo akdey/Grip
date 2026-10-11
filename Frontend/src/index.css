@@ -44,6 +44,7 @@
   --color-red-900: #7f1d1d;
   --color-red-950: #320909;
 
+
   /* Status Ramp: Success (Emerald) */
   --color-emerald-50: #ecfdf5;
   --color-emerald-100: #d1fae5;
@@ -228,108 +229,108 @@
    ========================================================================== */
 html[data-theme="light"] {
   /* Surfaces */
-  --color-bg-page:           #F2F4F8;
-  --color-bg-surface:        #FFFFFF;
-  --color-bg-surface-hover:  #F8F9FB;
+  --color-bg-page: #F2F4F8;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-surface-hover: #F8F9FB;
   --color-bg-surface-subtle: rgba(0, 0, 0, 0.025);
-  --color-bg-surface-pill:   rgba(0, 0, 0, 0.05);
-  --color-bg-raised:         #FFFFFF;
-  --color-bg-sunken:         #E8EBF0;
-  --color-bg-overlay:        rgba(242, 244, 248, 0.94);
+  --color-bg-surface-pill: rgba(0, 0, 0, 0.05);
+  --color-bg-raised: #FFFFFF;
+  --color-bg-sunken: #E8EBF0;
+  --color-bg-overlay: rgba(242, 244, 248, 0.94);
 
   /* Shorthand utility tokens */
-  --color-page:           #F2F4F8;
-  --color-surface:        #FFFFFF;
-  --color-surface-hover:  #F8F9FB;
+  --color-page: #F2F4F8;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F8F9FB;
   --color-surface-subtle: rgba(0, 0, 0, 0.025);
-  --color-surface-pill:   rgba(0, 0, 0, 0.05);
-  --color-raised:         #FFFFFF;
-  --color-sunken:         #E8EBF0;
-  --color-overlay:        rgba(242, 244, 248, 0.94);
+  --color-surface-pill: rgba(0, 0, 0, 0.05);
+  --color-raised: #FFFFFF;
+  --color-sunken: #E8EBF0;
+  --color-overlay: rgba(242, 244, 248, 0.94);
 
   /* Neutral Badges */
-  --color-badge-neutral-bg:     rgba(0, 0, 0, 0.05);
+  --color-badge-neutral-bg: rgba(0, 0, 0, 0.05);
   --color-badge-neutral-border: rgba(0, 0, 0, 0.1);
-  --color-badge-neutral-text:   #0F1014;
+  --color-badge-neutral-text: #0F1014;
 
   /* Text */
-  --color-text-primary:  #0F1014;
+  --color-text-primary: #0F1014;
   --color-text-secondary: #3C4148;
-  --color-text-muted:    #6B7280;
+  --color-text-muted: #6B7280;
   --color-text-disabled: #9CA3AF;
-  --color-text-inverse:  #FFFFFF;
-  --color-inverse:       #FFFFFF;
-  --color-background:    #FFFFFF;
+  --color-text-inverse: #FFFFFF;
+  --color-inverse: #FFFFFF;
+  --color-background: #FFFFFF;
   --color-text-on-accent: #FFFFFF;
 
   /* Text shorthands */
-  --color-primary:   #0F1014;
+  --color-primary: #0F1014;
   --color-secondary: #3C4148;
-  --color-muted:     #6B7280;
-  --color-disabled:  #9CA3AF;
+  --color-muted: #6B7280;
+  --color-disabled: #9CA3AF;
 
   /* Borders */
-  --color-border-subtle:    rgba(0, 0, 0, 0.08);
-  --color-border-default:   rgba(0, 0, 0, 0.13);
-  --color-border-strong:    rgba(0, 0, 0, 0.24);
-  --color-border-focus:     #2563EB;
+  --color-border-subtle: rgba(0, 0, 0, 0.08);
+  --color-border-default: rgba(0, 0, 0, 0.13);
+  --color-border-strong: rgba(0, 0, 0, 0.24);
+  --color-border-focus: #2563EB;
   --color-border-separator: rgba(0, 0, 0, 0.06);
 
   /* Border shorthands */
-  --color-subtle:    rgba(0, 0, 0, 0.08);
+  --color-subtle: rgba(0, 0, 0, 0.08);
   --color-separator: rgba(0, 0, 0, 0.06);
 
   /* Status text — darken for readability on light bg */
-  --color-status-danger-bg:           rgba(225, 29, 72, 0.08);
-  --color-status-danger-border:       rgba(225, 29, 72, 0.22);
-  --color-status-danger-solid:        #BE123C;
-  --color-status-danger-solid-hover:  #E11D48;
-  --color-status-danger-text:         #BE123C;
+  --color-status-danger-bg: rgba(225, 29, 72, 0.08);
+  --color-status-danger-border: rgba(225, 29, 72, 0.22);
+  --color-status-danger-solid: #BE123C;
+  --color-status-danger-solid-hover: #E11D48;
+  --color-status-danger-text: #BE123C;
 
-  --color-status-success-bg:          rgba(6, 95, 70, 0.08);
-  --color-status-success-border:      rgba(6, 95, 70, 0.2);
-  --color-status-success-solid:       #065F46;
+  --color-status-success-bg: rgba(6, 95, 70, 0.08);
+  --color-status-success-border: rgba(6, 95, 70, 0.2);
+  --color-status-success-solid: #065F46;
   --color-status-success-solid-hover: #047857;
-  --color-status-success-text:        #065F46;
+  --color-status-success-text: #065F46;
 
-  --color-status-warning-bg:          rgba(146, 64, 14, 0.08);
-  --color-status-warning-border:      rgba(146, 64, 14, 0.2);
-  --color-status-warning-solid:       #92400E;
+  --color-status-warning-bg: rgba(146, 64, 14, 0.08);
+  --color-status-warning-border: rgba(146, 64, 14, 0.2);
+  --color-status-warning-solid: #92400E;
   --color-status-warning-solid-hover: #B45309;
-  --color-status-warning-text:        #92400E;
+  --color-status-warning-text: #92400E;
 
-  --color-status-info-bg:             rgba(29, 78, 216, 0.08);
-  --color-status-info-border:         rgba(29, 78, 216, 0.2);
-  --color-status-info-solid:          #1D4ED8;
-  --color-status-info-solid-hover:    #2563EB;
-  --color-status-info-text:           #1D4ED8;
+  --color-status-info-bg: rgba(29, 78, 216, 0.08);
+  --color-status-info-border: rgba(29, 78, 216, 0.2);
+  --color-status-info-solid: #1D4ED8;
+  --color-status-info-solid-hover: #2563EB;
+  --color-status-info-text: #1D4ED8;
 
   /* Brand Accent Tokens for Light Theme — Institutional Cobalt (Apple iOS Blue / Stripe Royal Blue) */
-  --brand-accent:             #2563EB;
-  --brand-accent-hover:       #1D4ED8;
-  --brand-accent-subtle:      rgba(37, 99, 235, 0.10);
-  --brand-accent-border:      rgba(37, 99, 235, 0.25);
-  --brand-accent-text:        #1D4ED8;
-  --color-accent:             var(--brand-accent);
-  --color-accent-hover:       var(--brand-accent-hover);
-  --color-accent-subtle:      var(--brand-accent-subtle);
-  --color-accent-border:      var(--brand-accent-border);
-  --color-accent-text:        var(--brand-accent-text);
+  --brand-accent: #2563EB;
+  --brand-accent-hover: #1D4ED8;
+  --brand-accent-subtle: rgba(37, 99, 235, 0.10);
+  --brand-accent-border: rgba(37, 99, 235, 0.25);
+  --brand-accent-text: #1D4ED8;
+  --color-accent: var(--brand-accent);
+  --color-accent-hover: var(--brand-accent-hover);
+  --color-accent-subtle: var(--brand-accent-subtle);
+  --color-accent-border: var(--brand-accent-border);
+  --color-accent-text: var(--brand-accent-text);
   --color-metric-frozen-text: var(--brand-accent-text);
 
   /* Metric tokens */
-  --color-metric-obligations-bg:     rgba(185, 28, 28, 0.08);
+  --color-metric-obligations-bg: rgba(185, 28, 28, 0.08);
   --color-metric-obligations-border: rgba(185, 28, 28, 0.2);
-  --color-metric-obligations-text:   #B91C1C;
-  --color-metric-obligations-hover:  rgba(185, 28, 28, 0.14);
+  --color-metric-obligations-text: #B91C1C;
+  --color-metric-obligations-hover: rgba(185, 28, 28, 0.14);
 
-  --color-metric-exposure-bg:     rgba(15, 23, 42, 0.05);
+  --color-metric-exposure-bg: rgba(15, 23, 42, 0.05);
   --color-metric-exposure-border: rgba(15, 23, 42, 0.12);
-  --color-metric-exposure-text:   #334155;
-  --color-metric-exposure-hover:  rgba(15, 23, 42, 0.08);
+  --color-metric-exposure-text: #334155;
+  --color-metric-exposure-hover: rgba(15, 23, 42, 0.08);
 
   /* Glass & bg shortcuts */
-  --glass-bg:     rgba(255, 255, 255, 0.78);
+  --glass-bg: rgba(255, 255, 255, 0.78);
   --glass-border: rgba(0, 0, 0, 0.08);
 
   /* Body gradient */
@@ -372,6 +373,7 @@ html[data-theme="light"] .glass-drawer {
 html[data-theme="light"] ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
 }
+
 html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.25);
 }
@@ -389,7 +391,10 @@ body {
 }
 
 /* Apple Typography: Optical sizing & tracking */
-h1, h2, h3, .heading-apple {
+h1,
+h2,
+h3,
+.heading-apple {
   letter-spacing: -0.022em;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
@@ -507,6 +512,7 @@ body::before {
     @apply relative overflow-hidden transition-transform duration-100 ease-out;
     touch-action: manipulation;
   }
+
   .btn-premium:active {
     transform: scale(0.97);
   }
@@ -515,6 +521,7 @@ body::before {
     @apply relative overflow-hidden px-8 py-4.5 rounded-[1.5rem] bg-primary text-text-inverse font-semibold uppercase text-[11px] tracking-widest shadow-xl border border-border-subtle hover:opacity-90 transition-transform duration-100 ease-out;
     touch-action: manipulation;
   }
+
   .glass-button:active {
     transform: scale(0.97);
   }
@@ -573,7 +580,10 @@ body::before {
 
 /* Accessibility - Reduced Motion & Transparency (Apple Design §14) */
 @media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
+
+  *,
+  ::before,
+  ::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -642,6 +652,7 @@ body::before {
 }
 
 @keyframes float {
+
   0%,
   100% {
     transform: translateY(0);
