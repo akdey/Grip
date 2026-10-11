@@ -163,7 +163,7 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                                         initial={{ scaleX: 0 }}
                                         animate={{ scaleX: Math.min(1, resolvedInvestments / maxVal) }}
                                         style={{ transformOrigin: 'left' }}
-                                        className="h-full bg-emerald-500/80 rounded-full w-full"
+                                        className="h-full bg-status-success rounded-full w-full"
                                     />
                                 </div>
                             </div>

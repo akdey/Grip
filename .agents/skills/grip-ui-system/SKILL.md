@@ -29,7 +29,7 @@ Color is reserved **strictly** for financial meaning. Zero neon accents or AI tr
 | **Losses / Negative** | Expenses, liabilities, debt, overdue bills, sync failure | `.badge-danger`, `.text-status-danger` |
 | **Pending / Warning** | Due soon, confirmation required, threshold warnings | `.badge-warning`, `.text-status-warning` |
 | **Structure / Neutral** | Surfaces, borders, category tags, filters, chips | `.badge-neutral`, `bg-surface-subtle`, `border-border-subtle` |
-| **Brand Accent** | Primary CTAs only. High-contrast monochrome (White in dark, Black in light) | `bg-accent-solid`, `text-text-on-accent` |
+| **Brand Accent** | Primary CTAs & hero capacity. Arctic Ice Steel (`#bfe5f7`) in dark; Nordic Marine Slate (`#0e4d66`) in light. Bridges B&W and cyan without neon AI tropes. | `bg-accent-solid`, `text-text-on-accent`, `bg-accent` |
 
 ---
 
@@ -40,7 +40,7 @@ Color is reserved **strictly** for financial meaning. Zero neon accents or AI tr
 | `bg-white/[0.02]`, `border-white/[0.08]` | `bg-surface-subtle`, `border-border-subtle` | Breaks in Light Mode |
 | `bg-emerald-500/10 text-emerald-400` | `.badge-success`, `.text-status-success` | Use central CSS tokens |
 | `bg-red-500/10 text-red-400` | `.badge-danger`, `.text-status-danger` | Use central CSS tokens |
-| Cyan / Purple / Neon accents | Monochrome (`bg-accent-solid`) | Avoids "AI / crypto vibe-coded" look |
+| Neon electric cyan / purple / glow | Arctic Ice Steel / Nordic Slate (`bg-accent`) | Avoids "AI / crypto vibe-coded" look |
 | Random icon sizes (`11`, `13`, `17`) | Standard 4-Tier Scale (`12`, `16`, `20`, `24`) | Visual consistency |
 | Micro fonts (`text-[7px]`, `text-[8.5px]`) | `text-[10px]` or `text-xs` | Readability & accessibility |
 

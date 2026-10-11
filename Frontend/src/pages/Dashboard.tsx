@@ -277,20 +277,20 @@ const Dashboard: React.FC = () => {
                                     setShowObligations(false);
                                 }}
                             >
-                                <div className="w-10 h-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95" />
+                                <div className="w-10 h-1.5 bg-border-strong rounded-full transition-colors active:scale-95" />
                             </div>
 
-                            <div className="p-6 sm:p-8 border-b border-white/[0.06] flex items-center justify-between bg-gradient-to-b from-white/[0.04] to-transparent shrink-0">
+                            <div className="p-6 sm:p-8 border-b border-border-subtle flex items-center justify-between bg-surface-subtle shrink-0">
                                 <div className="flex-1">
-                                    <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic heading-apple">Obligation Ledger</h2>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[4px] mt-1">Identified commitments & surety</p>
+                                    <h2 className="text-2xl font-black text-text-primary tracking-tighter uppercase italic heading-apple">Obligation Ledger</h2>
+                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-[4px] mt-1">Identified commitments & surety</p>
                                 </div>
                                 <button
                                     onClick={() => {
                                         haptics.selection();
                                         setShowObligations(false);
                                     }}
-                                    className="w-12 h-12 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center text-gray-400 hover:text-white active:scale-90 transition-all shadow-xl group touch-manipulation"
+                                    className="w-12 h-12 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary active:scale-90 transition-all shadow-sm group touch-manipulation"
                                     aria-label="Close obligations ledger"
                                 >
                                     <ChevronDown size={24} className="group-hover:translate-y-0.5 transition-transform" />
@@ -302,47 +302,47 @@ const Dashboard: React.FC = () => {
                                     safeToSpend.frozen_funds.obligations.map((obl) => (
                                         <div
                                             key={obl.id}
-                                            className="p-4 rounded-3xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between group hover:bg-white/[0.04] transition-all"
+                                            className="p-4 rounded-3xl bg-surface-subtle border border-border-subtle flex items-center justify-between group hover:bg-surface-hover transition-all"
                                         >
                                             <div className="flex items-center gap-4">
                                                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${obl.status === 'OVERDUE' ? 'bg-status-danger-bg text-status-danger-text border-status-danger-border' :
-                                                    'bg-white/[0.04] text-white/80 border-white/10'
+                                                    'bg-metric-obligations-bg text-metric-obligations-text border-metric-obligations-border'
                                                     }`}>
                                                     <Calendar size={18} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-black text-white uppercase tracking-tight">{obl.title}</p>
+                                                    <p className="text-sm font-black text-text-primary uppercase tracking-tight">{obl.title}</p>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-white/[0.05] text-white/70 border border-white/10">
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full badge-neutral">
                                                             {obl.type}
                                                         </span>
-                                                        <span className="text-[8px] text-gray-600 font-bold uppercase tracking-wider">
+                                                        <span className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">
                                                             {format(new Date(obl.due_date), 'MMM dd')} • {obl.status}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm font-black text-white tracking-tighter">{formatCurrency(obl.amount)}</p>
-                                                <p className="text-[7px] text-gray-700 font-bold uppercase tracking-widest mt-0.5">{obl.sub_category || obl.category || 'General'}</p>
+                                                <p className="text-sm font-black text-text-primary tracking-tight tabular-nums">{formatCurrency(obl.amount)}</p>
+                                                <p className="text-[10px] text-text-muted font-semibold uppercase tracking-wider mt-0.5">{obl.sub_category || obl.category || 'General'}</p>
                                             </div>
                                         </div>
                                     ))
                                 ) : (
                                     <div className="py-20 text-center">
-                                        <Receipt size={32} className="mx-auto text-gray-800 mb-4 opacity-20" />
-                                        <p className="text-gray-600 font-black uppercase tracking-[4px] text-xs">No obligations identified</p>
+                                        <Receipt size={32} className="mx-auto text-text-muted mb-4 opacity-40" />
+                                        <p className="text-text-muted font-black uppercase tracking-[4px] text-xs">No obligations identified</p>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="p-8 sm:p-12 bg-white/[0.02] border-t border-white/[0.05]">
+                            <div className="p-8 sm:p-12 bg-surface-subtle border-t border-border-subtle">
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[4px]">Total Active Burden</span>
-                                        <span className="text-[9px] text-gray-700 font-bold uppercase tracking-widest">Calculated across all streams</span>
+                                        <span className="text-[10px] font-black text-text-muted uppercase tracking-[3px]">Total Active Burden</span>
+                                        <span className="text-xs text-text-muted font-semibold mt-0.5">Calculated across all streams</span>
                                     </div>
-                                    <span className="text-2xl font-black text-white tracking-tighter">
+                                    <span className="text-2xl font-black text-text-primary tracking-tight tabular-nums">
                                         {formatCurrency(Number(safeToSpend?.frozen_funds?.unpaid_bills || 0) + Number(safeToSpend?.frozen_funds?.projected_surety || 0))}
                                     </span>
                                 </div>
