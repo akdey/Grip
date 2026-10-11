@@ -408,11 +408,21 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                     <p className="text-xl font-bold mt-1 text-cyan-400">
                                                         {currentHolding.maturity_amount ? formatCurrency(currentHolding.maturity_amount) : 'N/A'}
                                                     </p>
-                                                    {currentHolding.maturity_date && (
-                                                        <p className="text-[10px] text-text-muted mt-0.5">
-                                                            Matures: {new Date(currentHolding.maturity_date).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })}
-                                                        </p>
-                                                    )}
+                                                    {currentHolding.maturity_date && (() => {
+                                                        const isMatured = new Date(currentHolding.maturity_date).getTime() <= Date.now();
+                                                        return isMatured ? (
+                                                            <div className="mt-1">
+                                                                <span className="text-[10px] text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono font-semibold">
+                                                                    Matured on {new Date(currentHolding.maturity_date).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                                </span>
+                                                                <p className="text-[10px] text-emerald-400 mt-1">Ready for savings credit or renewal</p>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-[10px] text-text-muted mt-0.5">
+                                                                Matures: {new Date(currentHolding.maturity_date).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                            </p>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                         ) : (

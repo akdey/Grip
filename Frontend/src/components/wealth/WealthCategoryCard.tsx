@@ -154,7 +154,16 @@ export const WealthCategoryCard: React.FC<WealthCategoryCardProps> = ({
                                             {h.xirr && <span className="text-[10px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono font-bold">XIRR {h.xirr.toFixed(1)}%</span>}
                                             {h.interest_rate && <span className="text-[10px] text-accent-text bg-accent-subtle px-1.5 py-0.5 rounded font-mono font-bold">{h.interest_rate}% p.a.</span>}
                                             {h.maturity_amount && <span className="text-[10px] text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded font-mono font-semibold">Mat: {formatCurrency(h.maturity_amount)}</span>}
-                                            {h.maturity_date && <span className="text-[10px] text-text-muted">Matures {new Date(h.maturity_date).toLocaleDateString([], { month: 'short', year: '2-digit' })}</span>}
+                                            {h.maturity_date && (() => {
+                                                const isMatured = new Date(h.maturity_date).getTime() <= Date.now();
+                                                return isMatured ? (
+                                                    <span className="text-[10px] text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono font-semibold">
+                                                        Matured {new Date(h.maturity_date).toLocaleDateString([], { month: 'short', year: '2-digit' })}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] text-text-muted">Matures {new Date(h.maturity_date).toLocaleDateString([], { month: 'short', year: '2-digit' })}</span>
+                                                );
+                                            })()}
                                             <span className="text-[10px] text-text-muted">Inv: {formatCurrency(h.total_invested)}</span>
                                         </div>
                                     </div>

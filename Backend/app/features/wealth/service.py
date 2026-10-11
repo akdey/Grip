@@ -567,7 +567,15 @@ class WealthService:
         ]
 
         if is_fixed_income:
-            rate = (holding.interest_rate or 0.0) / 100.0
+            # 1. Rate normalization (e.g. 0.065 or 6.5 -> 0.065)
+            raw_rate = float(holding.interest_rate or 0.0)
+            if 0.0 < raw_rate <= 0.25:
+                raw_rate = raw_rate * 100.0
+            rate = raw_rate / 100.0
+
+            maturity_dt = holding.maturity_date
+            if isinstance(maturity_dt, datetime):
+                maturity_dt = maturity_dt.date()
 
             if holding.asset_type == AssetType.RD:
                 # --- RECURRING DEPOSIT (RD) ---
@@ -580,14 +588,33 @@ class WealthService:
                     total_invested += delta
                     if delta > 0:
                         deposits.append((snap.captured_at, delta))
+                    elif delta < 0 and deposits:
+                        # Handle partial withdrawal / reversal: reduce from recent deposits
+                        reduction = abs(delta)
+                        for i in range(len(deposits) - 1, -1, -1):
+                            dep_date, dep_amt = deposits[i]
+                            if dep_amt <= reduction:
+                                reduction -= dep_amt
+                                deposits[i] = (dep_date, 0.0)
+                            else:
+                                deposits[i] = (dep_date, dep_amt - reduction)
+                                reduction = 0.0
+                                break
+                        deposits = [d for d in deposits if d[1] > 0]
 
                     accrued = 0.0
                     for dep_date, dep_amt in deposits:
-                        days = max(0, (snap.captured_at - dep_date).days)
+                        # Cap compounding at maturity date if reached
+                        calc_end = min(snap.captured_at, maturity_dt) if maturity_dt else snap.captured_at
+                        days = max(0, (calc_end - dep_date).days)
                         if rate > 0 and days > 0:
                             accrued += dep_amt * ((1.0 + rate / 4.0) ** (4.0 * days / 365.0))
                         else:
                             accrued += dep_amt
+
+                    # Cap at maturity_amount if provided
+                    if holding.maturity_amount and holding.maturity_amount > total_invested:
+                        accrued = min(accrued, float(holding.maturity_amount))
 
                     current_val = max(accrued, total_invested)
                     snap.price_per_unit = 1.0
@@ -595,11 +622,7 @@ class WealthService:
                     snap.total_value = current_val
 
                 holding.total_invested = total_invested
-                if holding.current_value and holding.current_value >= total_invested:
-                    snapshots[-1].total_value = holding.current_value
-                    snapshots[-1].units_held = holding.current_value
-                else:
-                    holding.current_value = snapshots[-1].total_value
+                holding.current_value = snapshots[-1].total_value
                 holding.xirr = holding.interest_rate
                 holding.last_updated_at = datetime.now()
 
@@ -608,23 +631,31 @@ class WealthService:
                 # Fixed lump-sum principal compounded quarterly
                 principal = float(holding.total_invested or (snapshots[0].amount_invested_delta if snapshots else 0.0))
                 start_date = snapshots[0].captured_at
+                if hasattr(holding, 'created_at') and holding.created_at:
+                    c_date = holding.created_at.date() if isinstance(holding.created_at, datetime) else holding.created_at
+                    if c_date < start_date:
+                        start_date = c_date
+
                 for snap in snapshots:
-                    days = max(0, (snap.captured_at - start_date).days)
+                    # Cap compounding at maturity date if reached
+                    calc_end = min(snap.captured_at, maturity_dt) if maturity_dt else snap.captured_at
+                    days = max(0, (calc_end - start_date).days)
                     if rate > 0 and days > 0:
                         accrued = principal * ((1.0 + rate / 4.0) ** (4.0 * days / 365.0))
                     else:
                         accrued = principal
+
+                    # Cap at maturity_amount if specified
+                    if holding.maturity_amount and holding.maturity_amount > principal:
+                        accrued = min(accrued, float(holding.maturity_amount))
+
                     current_val = max(accrued, principal)
                     snap.price_per_unit = 1.0
                     snap.units_held = current_val
                     snap.total_value = current_val
 
                 holding.total_invested = principal
-                if holding.current_value and holding.current_value >= principal:
-                    snapshots[-1].total_value = holding.current_value
-                    snapshots[-1].units_held = holding.current_value
-                else:
-                    holding.current_value = snapshots[-1].total_value
+                holding.current_value = snapshots[-1].total_value
                 holding.xirr = holding.interest_rate
                 holding.last_updated_at = datetime.now()
 
