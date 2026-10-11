@@ -529,7 +529,7 @@ const Transactions: React.FC = () => {
                                                 {format(day, 'd')}
                                             </span>
                                             {dailyTotal !== 0 ? (
-                                                <div className={`w-full max-w-full min-w-0 ${dailyTotal > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'} px-0.5 py-1 rounded-lg text-[7.5px] font-bold leading-tight border text-center truncate tracking-tight`}>
+                                                <div className={`w-full max-w-full min-w-0 ${dailyTotal > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'} px-0.5 py-1 rounded-lg text-[7.5px] font-bold leading-tight border text-center truncate tracking-tight`}>
                                                     {showSensitive ? formatCalendarAmount(dailyTotal) : '***'}
                                                 </div>
                                             ) : (
@@ -1103,25 +1103,25 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
                             <button
                                 onClick={handleDelete}
                                 disabled={deleteMutation.isPending || verifyMutation.isPending}
-                                className="w-7 h-7 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 hover:bg-red-500/20 transition-all active:scale-90 disabled:opacity-50"
+                                className="w-7 h-7 rounded-full bg-status-danger-bg border border-status-danger-border flex items-center justify-center text-status-danger-text hover:opacity-80 transition-all active:scale-90 disabled:opacity-50"
                                 title="Discard"
                             >
                                 {deleteMutation.isPending ? (
-                                    <Loader2 size={13} className="animate-spin text-red-500" />
+                                    <Loader2 size={14} className="animate-spin text-status-danger-text" />
                                 ) : (
-                                    <Trash2 size={13} />
+                                    <Trash2 size={14} />
                                 )}
                             </button>
                             <button
                                 onClick={handleApprove}
                                 disabled={verifyMutation.isPending || deleteMutation.isPending}
-                                className="w-7 h-7 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-500 hover:bg-green-500/20 transition-all active:scale-90 disabled:opacity-50"
+                                className="w-7 h-7 rounded-full bg-status-success-bg border border-status-success-border flex items-center justify-center text-status-success-text hover:opacity-80 transition-all active:scale-90 disabled:opacity-50"
                                 title="Approve"
                             >
                                 {verifyMutation.isPending ? (
-                                    <Loader2 size={13} className="animate-spin text-green-500" />
+                                    <Loader2 size={14} className="animate-spin text-status-success-text" />
                                 ) : (
-                                    <Check size={13} />
+                                    <Check size={14} />
                                 )}
                             </button>
                         </div>

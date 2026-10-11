@@ -54,69 +54,69 @@ interface CategoryGroup {
     subcategories: SubcategoryItem[];
 }
 
-// Mobile-first robust category icon resolver with high-contrast color accents
+// Mobile-first robust category icon resolver driven directly from index.css semantic design tokens
 const getCategoryMeta = (categoryName: string) => {
     const name = categoryName.toLowerCase();
     if (name.includes('invest') || name.includes('mutual') || name.includes('sip') || name.includes('stock')) {
         return {
             icon: TrendingUp,
-            badgeBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
-            color: 'text-emerald-600 dark:text-emerald-400'
+            badgeBg: 'badge-success',
+            color: 'text-status-success'
         };
     }
     if (name.includes('debt') || name.includes('loan') || name.includes('emi') || name.includes('cc') || name.includes('card')) {
         return {
             icon: CreditCard,
-            badgeBg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/25',
-            color: 'text-purple-600 dark:text-purple-400'
+            badgeBg: 'badge-danger',
+            color: 'text-status-danger'
         };
     }
     if (name.includes('home') || name.includes('house') || name.includes('rent') || name.includes('build')) {
         return {
             icon: Home,
-            badgeBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25',
-            color: 'text-blue-600 dark:text-blue-400'
+            badgeBg: 'badge-neutral',
+            color: 'text-primary'
         };
     }
     if (name.includes('food') || name.includes('dining') || name.includes('restaurant') || name.includes('grocery') || name.includes('eat')) {
         return {
             icon: Utensils,
-            badgeBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
-            color: 'text-amber-600 dark:text-amber-400'
+            badgeBg: 'badge-neutral',
+            color: 'text-primary'
         };
     }
     if (name.includes('shop') || name.includes('cloth') || name.includes('store') || name.includes('purchase')) {
         return {
             icon: ShoppingBag,
-            badgeBg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/25',
-            color: 'text-pink-600 dark:text-pink-400'
+            badgeBg: 'badge-neutral',
+            color: 'text-primary'
         };
     }
     if (name.includes('travel') || name.includes('cab') || name.includes('fuel') || name.includes('car') || name.includes('transport')) {
         return {
             icon: Car,
-            badgeBg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25',
-            color: 'text-indigo-600 dark:text-indigo-400'
+            badgeBg: 'badge-neutral',
+            color: 'text-primary'
         };
     }
     if (name.includes('bill') || name.includes('utilit') || name.includes('electric') || name.includes('power') || name.includes('recharge')) {
         return {
             icon: Zap,
-            badgeBg: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/25',
-            color: 'text-yellow-600 dark:text-yellow-400'
+            badgeBg: 'badge-neutral',
+            color: 'text-primary'
         };
     }
     if (name.includes('health') || name.includes('med') || name.includes('insur') || name.includes('doctor')) {
         return {
             icon: ShieldCheck,
-            badgeBg: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/25',
-            color: 'text-teal-600 dark:text-teal-400'
+            badgeBg: 'badge-neutral',
+            color: 'text-primary'
         };
     }
     return {
         icon: Layers,
-        badgeBg: 'bg-accent-subtle text-accent-text border-accent-border',
-        color: 'text-accent-text'
+        badgeBg: 'badge-neutral',
+        color: 'text-primary'
     };
 };
 

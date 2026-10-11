@@ -210,9 +210,9 @@ const Login: React.FC = () => {
                     <form onSubmit={mode === 'LOGIN' ? handleLogin : mode === 'REGISTER' ? handleRegister : handleVerifyOtp} className="space-y-6">
 
                         {mode === 'LOGIN' && hasBiometricSupport && localStorage.getItem('grip_biometrics_enrolled') === 'true' && (
-                            <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between gap-3 animate-fadeIn">
+                            <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-between gap-3 animate-fadeIn">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
                                         <Fingerprint size={22} />
                                     </div>
                                     <div className="min-w-0">
@@ -224,7 +224,7 @@ const Login: React.FC = () => {
                                     type="button"
                                     onClick={handleBiometricLogin}
                                     disabled={isLoading}
-                                    className="px-3.5 py-2 rounded-xl bg-cyan-500 text-black font-black text-[10px] uppercase tracking-wider hover:bg-cyan-400 active:scale-95 transition-all shrink-0 cursor-pointer"
+                                    className="px-3.5 py-2 rounded-xl bg-white text-black font-black text-[10px] uppercase tracking-wider hover:bg-neutral-200 active:scale-95 transition-all shrink-0 cursor-pointer"
                                 >
                                     Unlock
                                 </button>
@@ -284,9 +284,9 @@ const Login: React.FC = () => {
                                 type="button"
                                 onClick={handleBiometricLogin}
                                 disabled={isLoading}
-                                className="w-full h-12 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-cyan-500/50 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-sm touch-manipulation cursor-pointer"
+                                className="w-full h-12 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/30 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-sm touch-manipulation cursor-pointer"
                             >
-                                <Fingerprint size={18} className="text-cyan-400" />
+                                <Fingerprint size={18} className="text-white" />
                                 <span>Sign in with {getDeviceBiometricName()}</span>
                             </button>
                         )}

@@ -15,7 +15,7 @@ const DEFAULT_CHART_PALETTE = [
     '#5E8C7D', // Muted Pine Sage
     '#687C99', // Muted Slate Navy
     '#A96F6F', // Dusty Cedar Rose
-    '#816F96', // Dusty Violet
+    '#64748B', // Muted Slate
     '#4E8A6D', // Deep Muted Emerald
     '#A38B52', // Antique Gold
     '#627D98', // Steel Slate Blue

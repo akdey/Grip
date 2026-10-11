@@ -80,23 +80,23 @@ export const WealthVaultGate: React.FC<WealthVaultGateProps> = ({ children }) =>
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 className="w-full max-w-md bg-surface-subtle border border-border-subtle rounded-3xl p-8 relative overflow-hidden shadow-2xl text-center"
             >
-                {/* Background decorative gradient */}
-                <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+                {/* Background subtle light accent */}
+                <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/[0.02] rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-white/[0.02] rounded-full blur-3xl pointer-events-none" />
 
                 <div className="relative z-10 flex flex-col items-center space-y-5">
                     {/* Vault Icon with Shield Badge */}
                     <div className="relative">
                         <div className="w-20 h-20 rounded-2xl bg-surface-pill border border-border-subtle flex items-center justify-center text-primary shadow-inner">
-                            <Lock size={36} className="text-accent-text" />
+                            <Lock size={34} className="text-primary" />
                         </div>
-                        <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-emerald-500 text-black flex items-center justify-center shadow-lg border-2 border-surface">
-                            <ShieldCheck size={16} strokeWidth={2.5} />
+                        <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white text-black flex items-center justify-center shadow-lg border-2 border-surface">
+                            <ShieldCheck size={15} strokeWidth={2.5} />
                         </div>
                     </div>
 
                     <div className="space-y-1.5">
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-subtle border border-accent-border/40 text-[9px] font-black uppercase tracking-widest text-accent-text mb-1">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-pill border border-border-subtle text-[9px] font-bold uppercase tracking-widest text-text-muted mb-1">
                             <Sparkles size={11} />
                             Encrypted Financial Vault
                         </div>

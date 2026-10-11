@@ -89,17 +89,17 @@ const RecentActivity: React.FC<RecentActivityProps & { isLoading?: boolean }> = 
                 {isLoading ? (
                     // Skeleton Loader
                     [...Array(3)].map((_, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/[0.05] rounded-[1.8rem] animate-pulse">
+                        <div key={i} className="flex items-center justify-between p-4 bg-surface-subtle border border-border-subtle rounded-[1.8rem] animate-pulse">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-white/[0.05]" />
+                                <div className="w-12 h-12 rounded-2xl bg-surface-pill" />
                                 <div className="space-y-2">
-                                    <div className="h-3 w-24 bg-white/[0.05] rounded" />
-                                    <div className="h-2 w-16 bg-white/[0.05] rounded" />
+                                    <div className="h-3 w-24 bg-surface-pill rounded" />
+                                    <div className="h-2 w-16 bg-surface-pill rounded" />
                                 </div>
                             </div>
                             <div className="space-y-2 flex flex-col items-end">
-                                <div className="h-3 w-16 bg-white/[0.05] rounded" />
-                                <div className="h-2 w-10 bg-white/[0.05] rounded" />
+                                <div className="h-3 w-16 bg-surface-pill rounded" />
+                                <div className="h-2 w-10 bg-surface-pill rounded" />
                             </div>
                         </div>
                     ))

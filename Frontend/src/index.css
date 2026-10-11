@@ -147,12 +147,12 @@
   --color-accent-border: var(--brand-accent-border);
   --color-accent-text: var(--brand-accent-text);
 
-  /* Status: Danger */
-  --color-status-danger-bg: rgba(239, 68, 68, 0.14);
-  --color-status-danger-border: rgba(239, 68, 68, 0.3);
-  --color-status-danger-solid: #dc2626;
-  --color-status-danger-solid-hover: #ef4444;
-  --color-status-danger-text: #f87171;
+  /* Status: Danger (Rose) */
+  --color-status-danger-bg: rgba(244, 63, 94, 0.14);
+  --color-status-danger-border: rgba(244, 63, 94, 0.28);
+  --color-status-danger-solid: #e11d48;
+  --color-status-danger-solid-hover: #f43f5e;
+  --color-status-danger-text: #fb7185;
 
   /* Status: Success */
   --color-status-success-bg: rgba(16, 185, 129, 0.14);
@@ -185,10 +185,10 @@
   --color-metric-obligations-text: #fda4af;
   --color-metric-obligations-hover: rgba(244, 63, 94, 0.20);
 
-  --color-metric-exposure-bg: rgba(168, 85, 247, 0.12);
-  --color-metric-exposure-border: rgba(168, 85, 247, 0.24);
-  --color-metric-exposure-text: #d8b4fe;
-  --color-metric-exposure-hover: rgba(168, 85, 247, 0.20);
+  --color-metric-exposure-bg: rgba(148, 163, 184, 0.08);
+  --color-metric-exposure-border: rgba(148, 163, 184, 0.16);
+  --color-metric-exposure-text: #cbd5e1;
+  --color-metric-exposure-hover: rgba(148, 163, 184, 0.14);
 }
 
 :root {
@@ -286,11 +286,11 @@ html[data-theme="light"] {
   --color-separator: rgba(0, 0, 0, 0.06);
 
   /* Status text — darken for readability on light bg */
-  --color-status-danger-bg:           rgba(185, 28, 28, 0.08);
-  --color-status-danger-border:       rgba(185, 28, 28, 0.22);
-  --color-status-danger-solid:        #B91C1C;
-  --color-status-danger-solid-hover:  #DC2626;
-  --color-status-danger-text:         #B91C1C;
+  --color-status-danger-bg:           rgba(225, 29, 72, 0.08);
+  --color-status-danger-border:       rgba(225, 29, 72, 0.22);
+  --color-status-danger-solid:        #BE123C;
+  --color-status-danger-solid-hover:  #E11D48;
+  --color-status-danger-text:         #BE123C;
 
   --color-status-success-bg:          rgba(6, 95, 70, 0.08);
   --color-status-success-border:      rgba(6, 95, 70, 0.2);
@@ -329,10 +329,10 @@ html[data-theme="light"] {
   --color-metric-obligations-text:   #B91C1C;
   --color-metric-obligations-hover:  rgba(185, 28, 28, 0.14);
 
-  --color-metric-exposure-bg:     rgba(109, 40, 217, 0.08);
-  --color-metric-exposure-border: rgba(109, 40, 217, 0.2);
-  --color-metric-exposure-text:   #6D28D9;
-  --color-metric-exposure-hover:  rgba(109, 40, 217, 0.14);
+  --color-metric-exposure-bg:     rgba(15, 23, 42, 0.05);
+  --color-metric-exposure-border: rgba(15, 23, 42, 0.12);
+  --color-metric-exposure-text:   #334155;
+  --color-metric-exposure-hover:  rgba(15, 23, 42, 0.08);
 
   /* Glass & bg shortcuts */
   --glass-bg:     rgba(255, 255, 255, 0.78);
@@ -537,6 +537,43 @@ body::before {
   .interactive-cell {
     @apply transition-transform duration-100 ease-out active:scale-[0.98];
     touch-action: manipulation;
+  }
+
+  /* Semantic status badges driven directly from CSS tokens */
+  .badge-success {
+    background-color: var(--color-status-success-bg);
+    color: var(--color-status-success-text);
+    border: 1px solid var(--color-status-success-border);
+  }
+
+  .badge-danger {
+    background-color: var(--color-status-danger-bg);
+    color: var(--color-status-danger-text);
+    border: 1px solid var(--color-status-danger-border);
+  }
+
+  .badge-warning {
+    background-color: var(--color-status-warning-bg);
+    color: var(--color-status-warning-text);
+    border: 1px solid var(--color-status-warning-border);
+  }
+
+  .badge-neutral {
+    background-color: var(--color-surface-pill);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border-subtle);
+  }
+
+  .text-status-success {
+    color: var(--color-status-success-text);
+  }
+
+  .text-status-danger {
+    color: var(--color-status-danger-text);
+  }
+
+  .text-status-warning {
+    color: var(--color-status-warning-text);
   }
 }
 

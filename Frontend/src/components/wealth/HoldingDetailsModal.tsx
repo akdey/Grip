@@ -196,7 +196,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                         <span className="text-emerald-400 font-semibold">• {currentHolding.interest_rate}% p.a.</span>
                                     )}
                                     {isFixedIncome && currentHolding.maturity_amount && (
-                                        <span className="text-cyan-400 font-semibold">• Mat: {formatCurrency(currentHolding.maturity_amount)}</span>
+                                        <span className="text-primary font-mono font-semibold">• Mat: {formatCurrency(currentHolding.maturity_amount)}</span>
                                     )}
                                 </div>
                             </div>
@@ -405,14 +405,14 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                 </div>
                                                 <div className="bg-surface-subtle rounded-xl p-4 border border-border-subtle">
                                                     <p className="text-xs text-text-muted">Maturity Amount</p>
-                                                    <p className="text-xl font-bold mt-1 text-cyan-400">
+                                                    <p className="text-xl font-bold mt-1 text-primary font-mono">
                                                         {currentHolding.maturity_amount ? formatCurrency(currentHolding.maturity_amount) : 'N/A'}
                                                     </p>
                                                     {currentHolding.maturity_date && (() => {
                                                         const isMatured = new Date(currentHolding.maturity_date).getTime() <= Date.now();
                                                         return isMatured ? (
                                                             <div className="mt-1">
-                                                                <span className="text-[10px] text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono font-semibold">
+                                                                <span className="text-[10px] text-text-secondary bg-surface-pill border border-border-default px-1.5 py-0.5 rounded font-mono font-semibold">
                                                                     Matured on {new Date(currentHolding.maturity_date).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })}
                                                                 </span>
                                                                 <p className="text-[10px] text-emerald-400 mt-1">Ready for savings credit or renewal</p>
@@ -462,7 +462,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                         <span className="text-text-muted">Current Value</span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5">
-                                                        <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 inline-block" />
+                                                        <span className="w-2.5 h-2.5 rounded-full bg-neutral-400 inline-block" />
                                                         <span className="text-text-muted">Capital Invested</span>
                                                     </div>
                                                 </div>
@@ -476,8 +476,8 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                                 <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                                             </linearGradient>
                                                             <linearGradient id="colorInv" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2} />
-                                                                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                                                                <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.2} />
+                                                                <stop offset="95%" stopColor="#94a3b8" stopOpacity={0} />
                                                             </linearGradient>
                                                         </defs>
                                                         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle, #222)" vertical={false} />
@@ -490,7 +490,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                         <Area
                                                             type="monotone"
                                                             dataKey="invested"
-                                                            stroke="#06b6d4"
+                                                            stroke="#94a3b8"
                                                             strokeWidth={2}
                                                             fillOpacity={1}
                                                             fill="url(#colorInv)"
