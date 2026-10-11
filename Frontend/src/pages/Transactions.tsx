@@ -1123,6 +1123,11 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
                             Offset
                         </span>
                     )}
+                    {(txn.category || '').toLowerCase() === 'investment' && (
+                        <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-border-subtle text-text-muted bg-surface-pill uppercase tracking-tighter">
+                            Wealth
+                        </span>
+                    )}
                     {txn.status === 'PENDING' && (
                         <div className="flex items-center gap-1.5 ml-2">
                             <button

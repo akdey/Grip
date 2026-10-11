@@ -122,6 +122,7 @@ const AddEntry: React.FC = () => {
             setTime(format(txnDate, 'HH:mm'));
 
             if (existingTxn.amount > 0) setType('INCOME');
+            else if ((existingTxn.category || '').toLowerCase() === 'investment') setType('INVESTMENT');
             else setType('EXPENSE');
         }
     }, [existingTxn, id]);
@@ -168,7 +169,7 @@ const AddEntry: React.FC = () => {
 
     const mutation = useMutation({
         mutationFn: async () => {
-            const finalAmount = type === 'EXPENSE' ? -Math.abs(Number(amount)) : Math.abs(Number(amount));
+            const finalAmount = type === 'INCOME' ? Math.abs(Number(amount)) : -Math.abs(Number(amount));
             const payload = {
                 amount: finalAmount,
                 merchant_name: (merchantName || category || 'Unspecified').trim(),
@@ -229,7 +230,7 @@ const AddEntry: React.FC = () => {
 
     const handleApprove = () => {
         if (!validateAndConfirm()) return;
-        const finalAmount = type === 'EXPENSE' ? -Math.abs(Number(amount)) : Math.abs(Number(amount));
+        const finalAmount = type === 'INCOME' ? Math.abs(Number(amount)) : -Math.abs(Number(amount));
         const fullDateTime = `${date}T${time}:00`;
         const mappedAccountType = accountType === 'ACCOUNT' ? 'SAVINGS' : accountType;
 
@@ -366,7 +367,7 @@ const AddEntry: React.FC = () => {
                                             category: category || 'Uncategorized',
                                             sub_category: subCategory || 'Uncategorized',
                                             merchant_name: merchantName,
-                                            amount: type === 'EXPENSE' ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
+                                            amount: type === 'INCOME' ? Math.abs(Number(amount)) : -Math.abs(Number(amount)),
                                             approved: false
                                         }
                                     }, { onSuccess: () => navigate(-1) });
@@ -382,7 +383,7 @@ const AddEntry: React.FC = () => {
                 <div className="flex-1 space-y-6 animate-enter p-5">
                     {/* Magnitude & Mode */}
                     <div className="flex gap-2 p-1 bg-surface-subtle rounded-2xl border border-border-subtle relative h-12">
-                        {['EXPENSE', 'INCOME'].map((t) => (
+                        {['EXPENSE', 'INVESTMENT', 'INCOME'].map((t) => (
                             <button
                                 key={t}
                                 onClick={() => setType(t as any)}
@@ -757,9 +758,7 @@ const AddEntry: React.FC = () => {
                                 <div className="flex-1 overflow-y-auto space-y-2 p-6 pt-0 pb-10 custom-scrollbar">
                                     {view === 'CATEGORIES' ? (
                                         categories?.filter(c => {
-                                            const matchesType = type === 'EXPENSE'
-                                                ? (c.type === 'EXPENSE' || c.type === 'INVESTMENT')
-                                                : c.type === type;
+                                            const matchesType = c.type === type;
                                             return matchesType && c.name.toLowerCase().includes(searchQuery.toLowerCase());
                                         }).sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
                                             <div
