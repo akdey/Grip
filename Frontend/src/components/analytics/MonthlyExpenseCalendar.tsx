@@ -175,8 +175,21 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
                 </div>
 
                 {/* Day Cells Grid */}
-                <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-                    {calendarDays.map((day, i) => {
+                {isLoading ? (
+                    <div className="grid grid-cols-7 gap-1.5 sm:gap-2 animate-pulse">
+                        {Array.from({ length: 35 }).map((_, i) => (
+                            <div
+                                key={i}
+                                className="aspect-[3/4.2] sm:aspect-[3/3.8] min-h-[50px] p-1 border border-border-subtle/50 rounded-2xl bg-surface-subtle/40 flex flex-col items-center justify-between py-1.5"
+                            >
+                                <div className="w-4 h-3 rounded-md bg-border-subtle/60" />
+                                <div className="w-8 h-3 rounded-md bg-border-subtle/40" />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                        {calendarDays.map((day, i) => {
                         const dateKey = format(day, 'yyyy-MM-dd');
                         const daySummary = dailySummaryMap.get(dateKey);
                         const isCurrentMonth = isSameMonth(day, currentMonth);
@@ -246,9 +259,30 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
                         );
                     })}
                 </div>
+                )}
+
+                {/* Calendar Legend */}
+                <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 pt-3 pb-1 text-[9px] font-semibold text-text-muted border-t border-border-subtle/50">
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2 rounded-xs bg-rose-500/20 border border-rose-500/40" />
+                        <span>Lifestyle Expense</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-cyan-400 ring-1 ring-cyan-500/40" />
+                        <span>Investment Dot (Wealth on Same Day)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2 rounded-xs bg-cyan-500/20 border border-cyan-500/40" />
+                        <span>Pure Investment Day</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2 rounded-xs bg-emerald-500/20 border border-emerald-500/40" />
+                        <span>Income Inflow</span>
+                    </div>
+                </div>
 
                 {/* Monthly Velocity & Insights Strip */}
-                <div className="mt-5 pt-4 border-t border-border-subtle grid grid-cols-3 gap-2 text-center">
+                <div className="mt-4 pt-3 border-t border-border-subtle grid grid-cols-3 gap-2 text-center">
                     <div className="bg-surface-subtle/60 p-2.5 rounded-2xl border border-border-subtle">
                         <span className="block text-[7px] text-text-muted font-black uppercase tracking-wider">
                             Peak Spend Day

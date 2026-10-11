@@ -51,10 +51,93 @@ const DEFAULT_CHART_PALETTE = [
     '#858F9E', // Slate Graphite
 ];
 
+const AnalyticsSkeleton: React.FC = () => {
+    return (
+        <div className="min-h-screen text-text-primary p-4 sm:p-6 pb-24 overflow-x-hidden space-y-6 animate-pulse">
+            {/* Header Skeleton */}
+            <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                    <div className="h-8 w-36 rounded-xl bg-border-subtle/50" />
+                    <div className="h-3 w-52 rounded-md bg-border-subtle/30" />
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-border-subtle/40" />
+            </div>
+
+            {/* Month Navigator Skeleton */}
+            <div className="h-12 rounded-2xl bg-surface-subtle/50 border border-border-subtle/40 flex items-center justify-between px-3">
+                <div className="w-8 h-8 rounded-xl bg-border-subtle/50" />
+                <div className="w-28 h-4 rounded-md bg-border-subtle/40" />
+                <div className="w-8 h-8 rounded-xl bg-border-subtle/50" />
+            </div>
+
+            {/* Executive Cashflow Bar Skeleton */}
+            <div className="p-5 sm:p-6 rounded-[2rem] bg-surface-subtle border border-border-subtle/60 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-2">
+                        <div className="w-32 h-3 rounded-md bg-border-subtle/40" />
+                        <div className="w-48 h-8 rounded-xl bg-border-subtle/60" />
+                        <div className="w-40 h-3 rounded-md bg-border-subtle/30" />
+                    </div>
+                    <div className="flex gap-2">
+                        <div className="w-24 h-11 rounded-xl bg-border-subtle/40" />
+                        <div className="w-24 h-11 rounded-xl bg-border-subtle/40" />
+                    </div>
+                </div>
+
+                <div className="w-full h-2.5 rounded-full bg-border-subtle/50" />
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="p-3 rounded-xl bg-surface border border-border-subtle/50 space-y-1.5">
+                            <div className="w-16 h-2 rounded bg-border-subtle/40" />
+                            <div className="w-20 h-4 rounded bg-border-subtle/60" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Mode Switcher Skeleton */}
+            <div className="h-11 rounded-2xl bg-surface-subtle border border-border-subtle/50 grid grid-cols-3 p-1 gap-1">
+                <div className="rounded-xl bg-border-subtle/60" />
+                <div className="rounded-xl bg-border-subtle/30" />
+                <div className="rounded-xl bg-border-subtle/30" />
+            </div>
+
+            {/* Main Content Skeleton */}
+            <div className="p-5 sm:p-6 rounded-[2rem] bg-surface-subtle border border-border-subtle/60 space-y-4">
+                <div className="flex justify-between items-center">
+                    <div className="w-40 h-4 rounded bg-border-subtle/50" />
+                    <div className="w-24 h-6 rounded-full bg-border-subtle/40" />
+                </div>
+                <div className="h-56 flex items-center justify-center">
+                    <div className="w-36 h-36 rounded-full border-8 border-border-subtle/40 flex items-center justify-center">
+                        <div className="w-16 h-4 rounded bg-border-subtle/40" />
+                    </div>
+                </div>
+                <div className="space-y-2 pt-2">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="p-3.5 rounded-2xl bg-surface border border-border-subtle/40 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-3 h-8 rounded-full bg-border-subtle/50" />
+                                <div className="space-y-1.5">
+                                    <div className="w-24 h-3.5 rounded bg-border-subtle/50" />
+                                    <div className="w-32 h-2 rounded bg-border-subtle/30" />
+                                </div>
+                            </div>
+                            <div className="w-16 h-4 rounded bg-border-subtle/50" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const Analytics: React.FC = () => {
     const navigate = useNavigate();
     const [referenceDate, setReferenceDate] = useState(new Date());
     const [mode, setMode] = useState<AnalyticsMode>('expenses');
+    const [categoryView, setCategoryView] = useState<'distribution' | 'growth'>('distribution');
     const [trendFreq, setTrendFreq] = useState<'weekly' | 'monthly'>('monthly');
     const { showSensitive, setShowSensitive } = usePrivacyStore();
     const [showAuthModal, setShowAuthModal] = useState(false);
@@ -76,6 +159,8 @@ const Analytics: React.FC = () => {
     const { data: investments, isLoading: isInvestLoading } = useInvestments(monthNum, yearNum);
     const { data: spendTrends, isLoading: isTrendsLoading } = useSpendTrends(30, trendFreq);
     const { data: safeToSpend } = useSafeToSpend();
+
+    const isInitialLoading = (isVarianceLoading && !variance) || (isSummaryLoading && !summary);
 
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
@@ -134,7 +219,7 @@ const Analytics: React.FC = () => {
                 };
             })
             .filter(item => {
-                if (item.value <= 0) return false;
+                if (item.value <= 0 && (!item.previous || item.previous <= 0)) return false;
                 if (mode === 'expenses') return !item.isInvestment;
                 if (mode === 'investments') return item.isInvestment;
                 return true;
@@ -145,6 +230,19 @@ const Analytics: React.FC = () => {
     // Total of currently filtered category list
     const filteredCategoryTotal = useMemo(() => {
         return categoryData.reduce((sum, item) => sum + item.value, 0);
+    }, [categoryData]);
+
+    // Month-on-Month Growth Insights (Top Surges & Reductions)
+    const momInsights = useMemo(() => {
+        if (!categoryData.length) return null;
+        const withHistory = categoryData.filter(c => Number(c.previous || 0) > 0 || Number(c.variance_percentage || 0) !== 0);
+        if (!withHistory.length) return null;
+
+        const sortedByGrowth = [...withHistory].sort((a, b) => (Number(b.variance_percentage) || 0) - (Number(a.variance_percentage) || 0));
+        const topSurge = sortedByGrowth[0]?.variance_percentage > 0 ? sortedByGrowth[0] : null;
+        const topReduction = sortedByGrowth[sortedByGrowth.length - 1]?.variance_percentage < 0 ? sortedByGrowth[sortedByGrowth.length - 1] : null;
+
+        return { topSurge, topReduction };
     }, [categoryData]);
 
     // Investment Portfolio Breakdown
@@ -169,6 +267,10 @@ const Analytics: React.FC = () => {
         const end = format(endOfMonth(referenceDate), 'yyyy-MM-dd');
         navigate(`/transactions?view=custom&category=${encodeURIComponent(categoryName)}&start_date=${start}&end_date=${end}`);
     };
+
+    if (isInitialLoading) {
+        return <AnalyticsSkeleton />;
+    }
 
     return (
         <div className="min-h-screen text-text-primary p-4 sm:p-6 pb-24 overflow-x-hidden relative space-y-6">
@@ -227,7 +329,7 @@ const Analytics: React.FC = () => {
                 </button>
             </div>
 
-            {/* Executive Cashflow Bar (Requested Hero Metric) */}
+            {/* Executive Cashflow Bar (Net Cashflow + Total Outflow Segregation) */}
             <div className="p-5 sm:p-6 rounded-[2rem] bg-surface-subtle border border-border-subtle space-y-4 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
@@ -247,10 +349,21 @@ const Analytics: React.FC = () => {
                                 </>
                             ) : '••••••'}
                         </p>
+                        <p className="text-[11px] text-text-muted font-medium mt-0.5">
+                            {showSensitive ? (
+                                <>
+                                    Inflow: <span className="font-bold text-text-primary">{formatCurrency(metrics.income)}</span>
+                                    {' • '}
+                                    Total Outflow: <span className="font-bold text-text-primary">{formatCurrency(metrics.rawOutflow)}</span>
+                                </>
+                            ) : (
+                                'Inflow: •••• • Total Outflow: ••••'
+                            )}
+                        </p>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <div className="px-3 py-1 rounded-xl bg-surface border border-border-subtle text-right">
+                        <div className="px-3 py-1.5 rounded-xl bg-surface border border-border-subtle text-right">
                             <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted block">
                                 Savings Rate
                             </span>
@@ -258,7 +371,7 @@ const Analytics: React.FC = () => {
                                 {metrics.income > 0 ? `${metrics.savingsRate}%` : 'N/A'}
                             </span>
                         </div>
-                        <div className="px-3 py-1 rounded-xl bg-surface border border-border-subtle text-right">
+                        <div className="px-3 py-1.5 rounded-xl bg-surface border border-border-subtle text-right">
                             <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted block">
                                 Capital Deployed
                             </span>
@@ -300,14 +413,29 @@ const Analytics: React.FC = () => {
                         )}
                     </div>
 
-                    {/* 3-Column Ticker Breakdown */}
-                    <div className="grid grid-cols-3 gap-2 pt-1 text-center sm:text-left">
+                    {/* 4-Metric Ticker Breakdown (Total Outflow + Burn + Wealth) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center sm:text-left">
                         <div className="p-2 sm:p-2.5 rounded-xl bg-surface border border-border-subtle">
                             <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted block">
-                                Income Inflow
+                                Gross Inflow
                             </span>
                             <span className="text-xs sm:text-sm font-black text-text-primary tabular-nums">
                                 {showSensitive ? formatCurrency(metrics.income) : '••••'}
+                            </span>
+                            <span className="text-[8px] font-medium text-text-muted block mt-0.5">
+                                Period Income
+                            </span>
+                        </div>
+
+                        <div className="p-2 sm:p-2.5 rounded-xl bg-surface border border-border-subtle">
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-text-primary block">
+                                Total Outflow
+                            </span>
+                            <span className="text-xs sm:text-sm font-black text-text-primary tabular-nums">
+                                {showSensitive ? formatCurrency(metrics.rawOutflow) : '••••'}
+                            </span>
+                            <span className="text-[8px] font-medium text-text-muted block mt-0.5">
+                                Burn + Wealth
                             </span>
                         </div>
 
@@ -316,7 +444,10 @@ const Analytics: React.FC = () => {
                                 Lifestyle Burn
                             </span>
                             <span className="text-xs sm:text-sm font-black text-text-primary tabular-nums">
-                                {formatCurrency(metrics.lifestyleBurn)}
+                                {showSensitive ? formatCurrency(metrics.lifestyleBurn) : '••••'}
+                            </span>
+                            <span className="text-[8px] font-medium text-text-muted block mt-0.5">
+                                Pure Living Costs
                             </span>
                         </div>
 
@@ -325,14 +456,17 @@ const Analytics: React.FC = () => {
                                 Capital Invested
                             </span>
                             <span className="text-xs sm:text-sm font-black text-text-primary tabular-nums">
-                                {formatCurrency(metrics.investedAmount)}
+                                {showSensitive ? formatCurrency(metrics.investedAmount) : '••••'}
+                            </span>
+                            <span className="text-[8px] font-medium text-text-muted block mt-0.5">
+                                Wealth Building
                             </span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Mode Segregation Switcher (Requested Toggle) */}
+            {/* Mode Segregation Switcher */}
             <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-surface-subtle border border-border-subtle">
                 <button
                     onClick={() => {
@@ -383,113 +517,271 @@ const Analytics: React.FC = () => {
             {/* Mode 1: Lifestyle Expenses Mode */}
             {mode === 'expenses' && (
                 <div className="space-y-6 animate-in fade-in duration-300">
-                    {/* Donut Chart & Breakdown */}
+                    {/* Donut Chart & Breakdown / MoM Growth */}
                     <div className="p-5 sm:p-6 rounded-[2rem] bg-surface-subtle border border-border-subtle space-y-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                             <div>
                                 <h3 className="text-base font-bold text-text-primary tracking-tight">
-                                    Lifestyle Expense Distribution
+                                    {categoryView === 'distribution' ? 'Lifestyle Expense Distribution' : 'Month-on-Month Category Growth'}
                                 </h3>
                                 <p className="text-[11px] text-text-muted font-medium mt-0.5">
-                                    Total Living Consumption: {formatCurrency(metrics.lifestyleBurn)}
+                                    {categoryView === 'distribution'
+                                        ? `Total Living Consumption: ${formatCurrency(metrics.lifestyleBurn)}`
+                                        : 'Comparative spending shifts vs previous month'
+                                    }
                                 </p>
                             </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full badge-neutral">
-                                {categoryData.length} Categories
-                            </span>
+
+                            {/* View Switcher: Distribution vs MoM Growth */}
+                            <div className="flex items-center gap-2 self-start sm:self-auto">
+                                <div className="flex bg-surface p-1 rounded-xl border border-border-subtle">
+                                    <button
+                                        onClick={() => setCategoryView('distribution')}
+                                        className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
+                                            categoryView === 'distribution'
+                                                ? 'bg-accent-subtle text-accent-text border border-accent-border shadow-xs'
+                                                : 'text-text-muted hover:text-text-primary'
+                                        }`}
+                                    >
+                                        Share
+                                    </button>
+                                    <button
+                                        onClick={() => setCategoryView('growth')}
+                                        className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
+                                            categoryView === 'growth'
+                                                ? 'bg-accent-subtle text-accent-text border border-accent-border shadow-xs'
+                                                : 'text-text-muted hover:text-text-primary'
+                                        }`}
+                                    >
+                                        MoM Shift
+                                    </button>
+                                </div>
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full badge-neutral">
+                                    {categoryData.length} Categories
+                                </span>
+                            </div>
                         </div>
 
-                        {/* Donut Visualization */}
-                        {categoryData.length > 0 ? (
-                            <div className="h-[260px] sm:h-[300px] w-full relative">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={categoryData}
-                                            innerRadius={65}
-                                            outerRadius={95}
-                                            paddingAngle={4}
-                                            dataKey="value"
-                                            stroke="none"
-                                            onClick={(data) => handleCategoryClick(data.name)}
-                                            className="cursor-pointer focus:outline-none"
-                                        >
-                                            {categoryData.map((entry) => (
-                                                <Cell
-                                                    key={entry.name}
-                                                    fill={entry.color}
-                                                    style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.12))' }}
+                        {/* View 1: Donut Visualization & Shares */}
+                        {categoryView === 'distribution' && (
+                            <>
+                                {categoryData.length > 0 ? (
+                                    <div className="h-[260px] sm:h-[300px] w-full relative">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={categoryData}
+                                                    innerRadius={65}
+                                                    outerRadius={95}
+                                                    paddingAngle={4}
+                                                    dataKey="value"
+                                                    stroke="none"
+                                                    onClick={(data) => handleCategoryClick(data.name)}
+                                                    className="cursor-pointer focus:outline-none"
+                                                >
+                                                    {categoryData.map((entry) => (
+                                                        <Cell
+                                                            key={entry.name}
+                                                            fill={entry.color}
+                                                            style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.12))' }}
+                                                        />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip
+                                                    contentStyle={{
+                                                        backgroundColor: 'var(--color-bg-surface)',
+                                                        borderRadius: '1rem',
+                                                        border: '1px solid var(--color-border-subtle)',
+                                                        backdropFilter: 'blur(20px)',
+                                                        padding: '8px 12px',
+                                                        color: 'var(--color-text-primary)'
+                                                    }}
+                                                    itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}
+                                                    formatter={(value) => formatCurrency(Number(value))}
                                                 />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: 'var(--color-bg-surface)',
-                                                borderRadius: '1rem',
-                                                border: '1px solid var(--color-border-subtle)',
-                                                backdropFilter: 'blur(20px)',
-                                                padding: '8px 12px',
-                                                color: 'var(--color-text-primary)'
-                                            }}
-                                            itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}
-                                            formatter={(value) => formatCurrency(Number(value))}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                                            </PieChart>
+                                        </ResponsiveContainer>
 
-                                {/* Centered Donut Total Badge */}
-                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-text-muted">
-                                        Burn Total
-                                    </span>
-                                    <span className="text-lg sm:text-xl font-black text-text-primary tabular-nums mt-0.5">
-                                        {formatCurrency(filteredCategoryTotal)}
-                                    </span>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="py-12 text-center text-text-muted text-xs font-bold uppercase tracking-wider">
-                                No expense transactions recorded for this period
-                            </div>
-                        )}
-
-                        {/* Category Rows */}
-                        <div className="space-y-2 pt-2 border-t border-border-subtle/60">
-                            {categoryData.map((cat) => {
-                                const sharePct = filteredCategoryTotal > 0 ? ((cat.value / filteredCategoryTotal) * 100).toFixed(1) : '0';
-                                return (
-                                    <div
-                                        key={cat.name}
-                                        onClick={() => handleCategoryClick(cat.name)}
-                                        className="p-3 sm:p-3.5 rounded-2xl bg-surface border border-border-subtle/80 flex items-center justify-between gap-3 cursor-pointer hover:bg-surface-hover active:scale-[0.99] transition-all shadow-xs"
-                                    >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div
-                                                className="w-3 h-8 rounded-full shrink-0"
-                                                style={{ backgroundColor: cat.color }}
-                                            />
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-bold text-text-primary truncate">
-                                                    {cat.name}
-                                                </p>
-                                                <p className="text-[10px] text-text-muted font-medium mt-0.5">
-                                                    {sharePct}% of burn • Growth: {cat.variance_percentage > 0 ? '+' : ''}{cat.variance_percentage.toFixed(0)}%
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="text-right shrink-0">
-                                            <p className="text-sm sm:text-base font-extrabold text-text-primary tabular-nums">
-                                                {formatCurrency(cat.current)}
-                                            </p>
-                                            <span className="text-[10px] font-bold text-text-muted flex items-center justify-end gap-0.5">
-                                                Details <ChevronRight size={12} />
+                                        {/* Centered Donut Total Badge */}
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-text-muted">
+                                                Burn Total
+                                            </span>
+                                            <span className="text-lg sm:text-xl font-black text-text-primary tabular-nums mt-0.5">
+                                                {formatCurrency(filteredCategoryTotal)}
                                             </span>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
+                                ) : (
+                                    <div className="py-12 text-center text-text-muted text-xs font-bold uppercase tracking-wider">
+                                        No expense transactions recorded for this period
+                                    </div>
+                                )}
+
+                                {/* Category Share Rows */}
+                                <div className="space-y-2 pt-2 border-t border-border-subtle/60">
+                                    {categoryData.map((cat) => {
+                                        const sharePct = filteredCategoryTotal > 0 ? ((cat.value / filteredCategoryTotal) * 100).toFixed(1) : '0';
+                                        return (
+                                            <div
+                                                key={cat.name}
+                                                onClick={() => handleCategoryClick(cat.name)}
+                                                className="p-3 sm:p-3.5 rounded-2xl bg-surface border border-border-subtle/80 flex items-center justify-between gap-3 cursor-pointer hover:bg-surface-hover active:scale-[0.99] transition-all shadow-xs"
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div
+                                                        className="w-3 h-8 rounded-full shrink-0"
+                                                        style={{ backgroundColor: cat.color }}
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold text-text-primary truncate">
+                                                            {cat.name}
+                                                        </p>
+                                                        <p className="text-[10px] text-text-muted font-medium mt-0.5">
+                                                            {sharePct}% of burn • Growth: {cat.variance_percentage > 0 ? '+' : ''}{cat.variance_percentage.toFixed(0)}%
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-sm sm:text-base font-extrabold text-text-primary tabular-nums">
+                                                        {formatCurrency(cat.current)}
+                                                    </p>
+                                                    <span className="text-[10px] font-bold text-text-muted flex items-center justify-end gap-0.5">
+                                                        Details <ChevronRight size={12} />
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+
+                        {/* View 2: Month-on-Month Growth & Shift Visualizer */}
+                        {categoryView === 'growth' && (
+                            <div className="space-y-4 pt-1">
+                                {/* Highlights Cards (Surge & Reduction) */}
+                                {momInsights && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                        {momInsights.topSurge && (
+                                            <div className="p-3 rounded-2xl bg-surface border border-border-subtle flex items-center justify-between gap-3">
+                                                <div>
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-status-danger-text flex items-center gap-1">
+                                                        <TrendingUp size={12} /> Biggest Spend Surge
+                                                    </span>
+                                                    <p className="text-sm font-bold text-text-primary mt-0.5">
+                                                        {momInsights.topSurge.name}
+                                                    </p>
+                                                    <p className="text-[10px] text-text-muted font-medium mt-0.5">
+                                                        +{formatCurrency(momInsights.topSurge.variance_amount)} vs last month
+                                                    </p>
+                                                </div>
+                                                <span className="px-2 py-1 rounded-xl badge-danger text-xs font-black">
+                                                    +{momInsights.topSurge.variance_percentage.toFixed(0)}%
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {momInsights.topReduction && (
+                                            <div className="p-3 rounded-2xl bg-surface border border-border-subtle flex items-center justify-between gap-3">
+                                                <div>
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-status-success-text flex items-center gap-1">
+                                                        <TrendingDown size={12} /> Biggest Reduction
+                                                    </span>
+                                                    <p className="text-sm font-bold text-text-primary mt-0.5">
+                                                        {momInsights.topReduction.name}
+                                                    </p>
+                                                    <p className="text-[10px] text-text-muted font-medium mt-0.5">
+                                                        {formatCurrency(momInsights.topReduction.variance_amount)} vs last month
+                                                    </p>
+                                                </div>
+                                                <span className="px-2 py-1 rounded-xl badge-success text-xs font-black">
+                                                    {momInsights.topReduction.variance_percentage.toFixed(0)}%
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Comparative Bars Breakdown */}
+                                <div className="space-y-2 pt-2 border-t border-border-subtle/60">
+                                    {categoryData.map((cat) => {
+                                        const prevAmt = Math.abs(Number(cat.previous || 0));
+                                        const curAmt = Math.abs(Number(cat.current || 0));
+                                        const maxAmt = Math.max(curAmt, prevAmt, 1);
+                                        const curWidth = Math.round((curAmt / maxAmt) * 100);
+                                        const prevWidth = Math.round((prevAmt / maxAmt) * 100);
+                                        const isIncreased = cat.variance_percentage > 0;
+                                        const isDecreased = cat.variance_percentage < 0;
+
+                                        return (
+                                            <div
+                                                key={cat.name}
+                                                onClick={() => handleCategoryClick(cat.name)}
+                                                className="p-3 sm:p-3.5 rounded-2xl bg-surface border border-border-subtle/80 space-y-2 cursor-pointer hover:bg-surface-hover active:scale-[0.99] transition-all shadow-xs"
+                                            >
+                                                <div className="flex items-center justify-between text-xs">
+                                                    <div className="flex items-center gap-2">
+                                                        <span
+                                                            className="w-2.5 h-2.5 rounded-full"
+                                                            style={{ backgroundColor: cat.color }}
+                                                        />
+                                                        <span className="font-bold text-text-primary text-sm truncate">
+                                                            {cat.name}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${
+                                                            isIncreased
+                                                                ? 'badge-danger'
+                                                                : isDecreased
+                                                                ? 'badge-success'
+                                                                : 'badge-neutral'
+                                                        }`}>
+                                                            {isIncreased ? '+' : ''}{cat.variance_percentage.toFixed(0)}%
+                                                        </span>
+                                                        <span className="font-black text-text-primary text-sm tabular-nums">
+                                                            {formatCurrency(curAmt)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Comparative Bars: Current vs Previous */}
+                                                <div className="space-y-1 pt-1">
+                                                    {/* Current Month Bar */}
+                                                    <div className="flex items-center gap-2 text-[9px] text-text-muted">
+                                                        <span className="w-12 truncate font-semibold">This Mo</span>
+                                                        <div className="flex-1 h-2 bg-surface-pill rounded-full overflow-hidden">
+                                                            <div
+                                                                className={`h-full rounded-full transition-all duration-700 ${
+                                                                    isIncreased ? 'bg-status-danger-solid' : 'bg-status-success-solid'
+                                                                }`}
+                                                                style={{ width: `${curWidth}%` }}
+                                                            />
+                                                        </div>
+                                                        <span className="w-16 text-right tabular-nums font-semibold">{formatCurrency(curAmt)}</span>
+                                                    </div>
+
+                                                    {/* Previous Month Bar */}
+                                                    <div className="flex items-center gap-2 text-[9px] text-text-muted">
+                                                        <span className="w-12 truncate font-semibold">Last Mo</span>
+                                                        <div className="flex-1 h-1.5 bg-surface-pill rounded-full overflow-hidden">
+                                                            <div
+                                                                className="h-full bg-border-subtle/90 rounded-full transition-all duration-700"
+                                                                style={{ width: `${prevWidth}%` }}
+                                                            />
+                                                        </div>
+                                                        <span className="w-16 text-right tabular-nums">{formatCurrency(prevAmt)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Daily Expense Rhythm Calendar */}
