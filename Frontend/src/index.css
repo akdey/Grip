@@ -131,7 +131,7 @@
   --color-border-subtle: rgba(255, 255, 255, 0.08);
   --color-border-default: rgba(255, 255, 255, 0.14);
   --color-border-strong: rgba(255, 255, 255, 0.25);
-  --color-border-focus: #22d3ee;
+  --color-border-focus: #3b82f6;
   --color-border-separator: rgba(255, 255, 255, 0.08);
 
   /* Border utility shorthands */
@@ -194,23 +194,17 @@
 :root {
   /* ==========================================================================
      GLOBAL THEME CONTROLS ("Somewhere Between" - Single Source of Truth)
-     Change --brand-hue here to instantly re-theme the entire application!
-     Examples:
-       196 = Electric Cyan / Azure (Grip Signature)
-       215 = Apple iOS Cobalt Blue
-       160 = Mint Emerald
-       270 = Royal Violet
-       38  = Amber Gold
+     Institutional Cobalt (Apple iOS Blue / Stripe Royal Blue)
      ========================================================================== */
-  --brand-hue: 196;
-  --brand-chroma: 0.14;
+  --brand-hue: 250;
+  --brand-chroma: 0.18;
 
-  --brand-accent: oklch(0.68 var(--brand-chroma) var(--brand-hue));
-  --brand-accent-hover: oklch(0.74 var(--brand-chroma) var(--brand-hue));
-  --brand-accent-subtle: oklch(0.68 var(--brand-chroma) var(--brand-hue) / 0.12);
-  --brand-accent-border: oklch(0.68 var(--brand-chroma) var(--brand-hue) / 0.28);
-  --brand-accent-text: oklch(0.85 calc(var(--brand-chroma) * 0.9) var(--brand-hue));
-  --brand-accent-glow: oklch(0.68 var(--brand-chroma) var(--brand-hue) / 0.25);
+  --brand-accent: oklch(0.64 var(--brand-chroma) var(--brand-hue));
+  --brand-accent-hover: oklch(0.70 var(--brand-chroma) var(--brand-hue));
+  --brand-accent-subtle: oklch(0.64 var(--brand-chroma) var(--brand-hue) / 0.14);
+  --brand-accent-border: oklch(0.64 var(--brand-chroma) var(--brand-hue) / 0.30);
+  --brand-accent-text: oklch(0.82 calc(var(--brand-chroma) * 0.8) var(--brand-hue));
+  --brand-accent-glow: oklch(0.64 var(--brand-chroma) var(--brand-hue) / 0.22);
 
   /* Backwards compatibility & CSS custom property seam */
   --color-bg-primary: var(--color-bg-page);
@@ -278,7 +272,7 @@ html[data-theme="light"] {
   --color-border-subtle:    rgba(0, 0, 0, 0.08);
   --color-border-default:   rgba(0, 0, 0, 0.13);
   --color-border-strong:    rgba(0, 0, 0, 0.24);
-  --color-border-focus:     #0891b2;
+  --color-border-focus:     #2563EB;
   --color-border-separator: rgba(0, 0, 0, 0.06);
 
   /* Border shorthands */
@@ -310,12 +304,12 @@ html[data-theme="light"] {
   --color-status-info-solid-hover:    #2563EB;
   --color-status-info-text:           #1D4ED8;
 
-  /* Brand Accent Tokens for Light Theme — darkened for WCAG AAA readability */
-  --brand-accent:             #0891b2;
-  --brand-accent-hover:       #0e7490;
-  --brand-accent-subtle:      rgba(8, 145, 178, 0.10);
-  --brand-accent-border:      rgba(8, 145, 178, 0.25);
-  --brand-accent-text:        #0e7490;
+  /* Brand Accent Tokens for Light Theme — Institutional Cobalt (Apple iOS Blue / Stripe Royal Blue) */
+  --brand-accent:             #2563EB;
+  --brand-accent-hover:       #1D4ED8;
+  --brand-accent-subtle:      rgba(37, 99, 235, 0.10);
+  --brand-accent-border:      rgba(37, 99, 235, 0.25);
+  --brand-accent-text:        #1D4ED8;
   --color-accent:             var(--brand-accent);
   --color-accent-hover:       var(--brand-accent-hover);
   --color-accent-subtle:      var(--brand-accent-subtle);

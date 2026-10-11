@@ -245,10 +245,10 @@ const Wealth: React.FC = () => {
                             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-primary heading-apple">
                                 Wealth
                             </h1>
-                            <span className="px-2 py-0.5 rounded-full bg-surface-pill border border-border-subtle text-[10px] font-semibold text-text-muted flex items-center gap-1">
+                            {/* <span className="px-2 py-0.5 rounded-full bg-surface-pill border border-border-subtle text-[10px] font-semibold text-text-muted flex items-center gap-1">
                                 <ShieldCheck size={11} className="text-emerald-400" />
                                 Vault Secured
-                            </span>
+                            </span> */}
                         </div>
                         <p className="text-xs text-text-muted mt-0.5">
                             Asset Portfolio & Capital Holdings
@@ -355,11 +355,10 @@ const Wealth: React.FC = () => {
 
                         {/* Performance Metric Pill */}
                         <div className="flex items-center gap-2">
-                            <div className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 ${
-                                absoluteReturn >= 0
+                            <div className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 ${absoluteReturn >= 0
                                     ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
                                     : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                            }`}>
+                                }`}>
                                 {absoluteReturn >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                                 <span>
                                     {showSensitive
@@ -420,9 +419,8 @@ const Wealth: React.FC = () => {
                                     <button
                                         key={seg.id}
                                         onClick={() => setSelectedClassFilter(selectedClassFilter === seg.id ? 'ALL' : seg.id)}
-                                        className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
-                                            selectedClassFilter === seg.id ? 'text-primary font-bold' : 'hover:text-primary'
-                                        }`}
+                                        className={`flex items-center gap-1.5 transition-colors cursor-pointer ${selectedClassFilter === seg.id ? 'text-primary font-bold' : 'hover:text-primary'
+                                            }`}
                                     >
                                         <span className={`w-2 h-2 rounded-full ${seg.bgClass}`} />
                                         <span>{seg.label}</span>
@@ -455,11 +453,10 @@ const Wealth: React.FC = () => {
                                     haptics.selection();
                                     setSelectedClassFilter(tab.key);
                                 }}
-                                className={`px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all cursor-pointer ${
-                                    selectedClassFilter === tab.key
+                                className={`px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all cursor-pointer ${selectedClassFilter === tab.key
                                         ? 'bg-white text-black font-bold shadow-sm'
                                         : 'bg-surface-pill hover:bg-surface-hover text-text-muted hover:text-primary border border-border-subtle'
-                                }`}
+                                    }`}
                             >
                                 {tab.label}
                             </button>

@@ -62,7 +62,7 @@ export const AIForecast: React.FC<AIForecastProps> = memo(({
                         </span>
                     ) : (
                         <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent-subtle text-accent-text border border-accent-border">
-                            Model
+                            {/* Model */}
                         </span>
                     )}
                 </div>
