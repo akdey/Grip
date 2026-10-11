@@ -76,21 +76,19 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                 <div className="flex items-center bg-surface-pill p-1 rounded-xl border border-border-subtle shrink-0">
                     <button
                         onClick={() => setViewMode('CASH')}
-                        className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-lg transition-all ${
-                            isCash
+                        className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-lg transition-all ${isCash
                                 ? 'bg-accent-subtle text-accent-text border border-accent-border font-semibold shadow-sm'
                                 : 'text-text-muted hover:text-primary'
-                        }`}
+                            }`}
                     >
                         Cash Drain
                     </button>
                     <button
                         onClick={() => setViewMode('ACCRUAL')}
-                        className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-lg transition-all ${
-                            !isCash
+                        className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-lg transition-all ${!isCash
                                 ? 'bg-accent-subtle text-accent-text border border-accent-border font-semibold shadow-sm'
                                 : 'text-text-muted hover:text-primary'
-                        }`}
+                            }`}
                     >
                         Accrual
                     </button>
@@ -102,7 +100,7 @@ export const OutflowLedger: React.FC<OutflowLedgerProps> = memo(({
                 <span className="text-[9px] font-black text-text-muted uppercase tracking-widest">
                     {isCash ? 'Total Liquid Outflow' : 'Total Incurred Spend'}
                 </span>
-                <span className="text-lg font-black text-primary tracking-tight">
+                <span className="text-sm font-black text-primary tracking-tight">
                     {formatCurrency(activeTotal)}
                 </span>
             </div>
