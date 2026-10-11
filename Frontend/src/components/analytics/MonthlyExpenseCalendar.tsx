@@ -44,23 +44,31 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
     }, [currentMonth]);
 
     const dailySummaryMap = useMemo(() => {
-        const map = new Map<string, { total: number; expense: number; income: number; count: number }>();
+        const map = new Map<string, { total: number; expense: number; income: number; investment: number; count: number }>();
         if (!transactions) return map;
 
         transactions.forEach(t => {
             if (t.status === 'PENDING') return;
             const dateStr = format(t.transaction_date ? parseISO(t.transaction_date) : new Date(t.created_at), 'yyyy-MM-dd');
             const amt = Number(t.amount || 0);
+            const isInv = (t.category || '').toLowerCase() === 'investment';
 
             if (!map.has(dateStr)) {
-                map.set(dateStr, { total: 0, expense: 0, income: 0, count: 0 });
+                map.set(dateStr, { total: 0, expense: 0, income: 0, investment: 0, count: 0 });
             }
             const item = map.get(dateStr)!;
-            item.total += amt;
-            if (amt < 0) {
+
+            if (isInv && amt < 0) {
+                // Capital investment: track separately, do not pollute lifestyle expense
+                item.investment += Math.abs(amt);
+            } else if (amt < 0) {
+                // True lifestyle expense
                 item.expense += Math.abs(amt);
+                item.total += amt;
             } else {
+                // Income
                 item.income += amt;
+                item.total += amt;
             }
             item.count += 1;
         });
@@ -173,8 +181,9 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
                         const daySummary = dailySummaryMap.get(dateKey);
                         const isCurrentMonth = isSameMonth(day, currentMonth);
                         const hasActivity = daySummary && daySummary.count > 0;
-                        const isNetExpense = daySummary && daySummary.total < 0;
-                        const isNetIncome = daySummary && daySummary.total > 0;
+                        const hasExpense = daySummary && daySummary.expense > 0;
+                        const hasIncome = daySummary && daySummary.income > 0;
+                        const hasInvestment = daySummary && daySummary.investment > 0;
 
                         return (
                             <button
@@ -183,7 +192,7 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
                                 disabled={!isCurrentMonth || isLoading}
                                 onClick={() => isCurrentMonth && handleDayClick(day)}
                                 className={`
-                                    aspect-[3/4.2] sm:aspect-[3/3.8] min-h-[50px] p-1 border rounded-2xl flex flex-col items-center justify-between py-1.5 transition-all text-center
+                                    aspect-[3/4.2] sm:aspect-[3/3.8] min-h-[50px] p-1 border rounded-2xl flex flex-col items-center justify-between py-1.5 transition-all text-center relative
                                     ${!isCurrentMonth
                                         ? 'opacity-20 border-border-subtle/40 bg-surface-subtle/30 cursor-default'
                                         : 'border-border-subtle cursor-pointer hover:border-accent-border hover:bg-surface-hover active:scale-95'
@@ -195,7 +204,7 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
                                 `}
                                 title={
                                     isCurrentMonth
-                                        ? `${format(day, 'EEE, dd MMM yyyy')}${daySummary ? `: Out ₹${daySummary.expense}, In ₹${daySummary.income}` : ': No activity'}`
+                                        ? `${format(day, 'EEE, dd MMM yyyy')}${daySummary ? `${hasExpense ? ` | Expense: ₹${daySummary.expense}` : ''}${hasInvestment ? ` | Invested: ₹${daySummary.investment}` : ''}${hasIncome ? ` | Inflow: ₹${daySummary.income}` : ''}` : ': No activity'}`
                                         : undefined
                                 }
                             >
@@ -208,19 +217,27 @@ export const MonthlyExpenseCalendar: React.FC<MonthlyExpenseCalendarProps> = ({
                                 </span>
 
                                 {hasActivity ? (
-                                    <div
-                                        className={`w-full max-w-full min-w-0 px-0.5 py-1 rounded-lg text-[7.5px] font-bold leading-tight border text-center truncate tracking-tight ${
-                                            isNetIncome
-                                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                                : isNetExpense
-                                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                                                : 'bg-surface-pill text-text-muted border-border-subtle'
-                                        }`}
-                                    >
-                                        {showSensitive
-                                            ? formatBadge(isNetIncome ? daySummary.total : (daySummary.expense || Math.abs(daySummary.total)))
-                                            : '***'
-                                        }
+                                    <div className="w-full relative">
+                                        <div
+                                            className={`w-full max-w-full min-w-0 px-0.5 py-1 rounded-lg text-[7.5px] font-bold leading-tight border text-center truncate tracking-tight ${
+                                                hasExpense
+                                                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                                    : hasInvestment
+                                                    ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
+                                                    : hasIncome
+                                                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                                    : 'bg-surface-pill text-text-muted border-border-subtle'
+                                            }`}
+                                        >
+                                            {showSensitive
+                                                ? formatBadge(hasExpense ? daySummary.expense : hasInvestment ? daySummary.investment : daySummary.income)
+                                                : '***'
+                                            }
+                                        </div>
+                                        {/* If day has both lifestyle expense and investment, show indicator */}
+                                        {hasExpense && hasInvestment && (
+                                            <span className="absolute -top-1 -right-0.5 w-1.5 h-1.5 rounded-full bg-cyan-400 ring-1 ring-page" title={`Invested: ₹${daySummary.investment}`} />
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="w-1 h-1 rounded-full bg-border-subtle/50 mb-1" />

@@ -301,8 +301,23 @@ const Transactions: React.FC = () => {
     const getDailyTotal = (date: Date) => {
         if (!transactions) return 0;
         return transactions
-            .filter(t => isSameDay(t.transaction_date ? parseISO(t.transaction_date) : new Date(t.created_at), date))
+            .filter(t => {
+                const isInv = (t.category || '').toLowerCase() === 'investment';
+                if (isInv) return false;
+                return isSameDay(t.transaction_date ? parseISO(t.transaction_date) : new Date(t.created_at), date);
+            })
             .reduce((sum, t) => sum + Number(t.amount), 0);
+    };
+
+    const getDailyInvestment = (date: Date) => {
+        if (!transactions) return 0;
+        return transactions
+            .filter(t => {
+                const isInv = (t.category || '').toLowerCase() === 'investment';
+                if (!isInv) return false;
+                return isSameDay(t.transaction_date ? parseISO(t.transaction_date) : new Date(t.created_at), date);
+            })
+            .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
     };
 
     // Helper to get subcategories for selected categories in drawer
@@ -505,7 +520,11 @@ const Transactions: React.FC = () => {
                             <div className="grid grid-cols-7 gap-1.5">
                                 {calendarDays.map((day, i) => {
                                     const dailyTotal = getDailyTotal(day);
+                                    const dailyInv = getDailyInvestment(day);
                                     const isCurrentMonth = isSameMonth(day, currentMonth);
+                                    const hasExpense = dailyTotal < 0;
+                                    const hasIncome = dailyTotal > 0;
+                                    const hasInv = dailyInv > 0;
 
                                     return (
                                         <button
@@ -519,18 +538,24 @@ const Transactions: React.FC = () => {
                                                 setSearchParams(newParams);
                                             }}
                                             className={`
-                                                aspect-[3/4.2] min-h-[50px] p-1 border border-border-subtle flex flex-col items-center justify-between py-1.5 rounded-2xl transition-all
+                                                aspect-[3/4.2] min-h-[50px] p-1 border border-border-subtle flex flex-col items-center justify-between py-1.5 rounded-2xl transition-all relative
                                                 ${!isCurrentMonth ? 'opacity-20 cursor-default' : 'cursor-pointer hover:border-accent-border hover:bg-surface-hover active:scale-95'}
                                                 ${isToday(day) ? 'bg-accent-subtle border-accent-border text-accent-text font-black ring-1 ring-accent-border shadow-sm' : 'bg-surface-subtle'}
                                             `}
-                                            title={isCurrentMonth ? `${format(day, 'EEE, dd MMM yyyy')}: ${dailyTotal !== 0 ? (dailyTotal > 0 ? `+₹${dailyTotal}` : `-₹${Math.abs(dailyTotal)}`) : 'No transactions'}` : undefined}
+                                            title={isCurrentMonth ? `${format(day, 'EEE, dd MMM yyyy')}: ${hasExpense ? `Expense -₹${Math.abs(dailyTotal)}` : ''}${hasInv ? ` | Invested ₹${dailyInv}` : ''}${hasIncome ? ` | Inflow +₹${dailyTotal}` : ''}${!hasExpense && !hasInv && !hasIncome ? 'No activity' : ''}` : undefined}
                                         >
                                             <span className={`text-[10px] font-black leading-none ${isCurrentMonth ? (isToday(day) ? 'text-accent-text' : 'text-primary') : 'text-text-disabled'}`}>
                                                 {format(day, 'd')}
                                             </span>
-                                            {dailyTotal !== 0 ? (
-                                                <div className={`w-full max-w-full min-w-0 ${dailyTotal > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'} px-0.5 py-1 rounded-lg text-[7.5px] font-bold leading-tight border text-center truncate tracking-tight`}>
-                                                    {showSensitive ? formatCalendarAmount(dailyTotal) : '***'}
+                                            {hasExpense || hasIncome || hasInv ? (
+                                                <div className="w-full relative">
+                                                    <div className={`w-full max-w-full min-w-0 ${hasIncome ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : hasExpense ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'} px-0.5 py-1 rounded-lg text-[7.5px] font-bold leading-tight border text-center truncate tracking-tight`}>
+                                                        {showSensitive ? formatCalendarAmount(hasExpense || hasIncome ? dailyTotal : dailyInv) : '***'}
+                                                    </div>
+                                                    {/* If day has both lifestyle expense and investment, show indicator */}
+                                                    {hasExpense && hasInv && (
+                                                        <span className="absolute -top-1 -right-0.5 w-1.5 h-1.5 rounded-full bg-cyan-400 ring-1 ring-page" title={`Invested: ₹${dailyInv}`} />
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <div className="w-1 h-1 rounded-full bg-border-subtle/50 mb-1" />
