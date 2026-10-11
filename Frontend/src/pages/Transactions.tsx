@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { usePrivacyStore } from '../lib/store';
 import { haptics } from '../lib/haptics';
-const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
+import { PasswordVerifyModal } from '../components/ui/PasswordVerifyModal';
 import {
     format,
     startOfMonth,

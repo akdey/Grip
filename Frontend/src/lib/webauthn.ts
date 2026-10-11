@@ -35,19 +35,27 @@ export function getDeviceBiometricName(): string {
     return 'Fingerprint';
 }
 
+let cachedSupportPromise: Promise<{ supported: boolean; platformAvailable: boolean }> | null = null;
+
 /**
  * Checks whether the current device supports hardware biometrics (Touch ID / Face ID / Fingerprint)
  */
 export async function checkBiometricsSupport(): Promise<{ supported: boolean; platformAvailable: boolean }> {
-    try {
-        const supported = browserSupportsWebAuthn();
-        if (!supported) return { supported: false, platformAvailable: false };
-
-        const platformAvailable = await platformAuthenticatorIsAvailable();
-        return { supported, platformAvailable };
-    } catch {
-        return { supported: false, platformAvailable: false };
+    if (cachedSupportPromise) {
+        return cachedSupportPromise;
     }
+    cachedSupportPromise = (async () => {
+        try {
+            const supported = browserSupportsWebAuthn();
+            if (!supported) return { supported: false, platformAvailable: false };
+
+            const platformAvailable = await platformAuthenticatorIsAvailable();
+            return { supported, platformAvailable };
+        } catch {
+            return { supported: false, platformAvailable: false };
+        }
+    })();
+    return cachedSupportPromise;
 }
 
 /**

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '../components/ui/Loader';
-const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
+import { PasswordVerifyModal } from '../components/ui/PasswordVerifyModal';
 import { startOfMonth, endOfMonth, startOfYear, endOfYear, format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 

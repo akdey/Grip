@@ -27,51 +27,6 @@ export const PasswordVerifyModal: React.FC<PasswordVerifyModalProps> = ({ isOpen
     const [shakeKey, setShakeKey] = useState(0);
     const autoTriggeredRef = useRef(false);
 
-    // Check biometrics capability & auto-trigger native fingerprint sensor when modal opens
-    useEffect(() => {
-        if (!isOpen) {
-            autoTriggeredRef.current = false;
-            return;
-        }
-        setError(null);
-        setPassword('');
-
-        let isMounted = true;
-        getBiometricsStatus().then((status) => {
-            if (!isMounted) return;
-            setBioStatus(status);
-
-            // Auto-detect and pop native biometric prompt if enrolled on this device
-            if (status.hasBiometrics && status.platformAvailable && !autoTriggeredRef.current) {
-                autoTriggeredRef.current = true;
-                setTimeout(() => {
-                    if (isMounted) {
-                        handleBiometricUnlock();
-                    }
-                }, 160);
-            }
-        }).catch(() => {
-            // Graceful fallback to password
-        });
-
-        return () => {
-            isMounted = false;
-        };
-    }, [isOpen]);
-
-    // Escape key dismiss
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                haptics.selection();
-                onClose();
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, onClose]);
-
     // Handle Native Fingerprint / Biometric Unlock
     const handleBiometricUnlock = async () => {
         setError(null);
@@ -100,6 +55,57 @@ export const PasswordVerifyModal: React.FC<PasswordVerifyModalProps> = ({ isOpen
             setIsBioLoading(false);
         }
     };
+
+    // Check biometrics capability & auto-trigger native fingerprint sensor when modal opens
+    useEffect(() => {
+        if (!isOpen) {
+            autoTriggeredRef.current = false;
+            return;
+        }
+        setError(null);
+        setPassword('');
+
+        let isMounted = true;
+        const isEnrolledLocally = localStorage.getItem('grip_biometrics_enrolled') === 'true';
+
+        // Instant fast-path: If biometrics are enrolled on this device, trigger sensor immediately
+        // Zero arbitrary delays and zero waiting for serial /status network round-trip
+        if (isEnrolledLocally && !autoTriggeredRef.current) {
+            autoTriggeredRef.current = true;
+            handleBiometricUnlock();
+        }
+
+        // Concurrently fetch/refresh status for device details & fallback
+        getBiometricsStatus().then((status) => {
+            if (!isMounted) return;
+            setBioStatus(status);
+
+            // Fallback trigger if not caught by local fast-path
+            if (status.hasBiometrics && status.platformAvailable && !autoTriggeredRef.current) {
+                autoTriggeredRef.current = true;
+                handleBiometricUnlock();
+            }
+        }).catch(() => {
+            // Graceful fallback to password
+        });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [isOpen]);
+
+    // Escape key dismiss
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                haptics.selection();
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
 
     // Enroll fingerprint right from the modal if supported
     const handleEnrollBiometrics = async () => {

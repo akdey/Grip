@@ -8,9 +8,7 @@ import { useCategories } from '../features/transactions/categoryHooks';
 import { SpendTrendChart } from '../components/analytics/SpendTrendChart';
 import { MonthlyExpenseCalendar } from '../components/analytics/MonthlyExpenseCalendar';
 import { Card } from '../components/ui/Card';
-
-const PasswordVerifyModal = React.lazy(() => import('../components/ui/PasswordVerifyModal').then(module => ({ default: module.PasswordVerifyModal })));
-
+import { PasswordVerifyModal } from '../components/ui/PasswordVerifyModal';
 const DEFAULT_CHART_PALETTE = [
     '#B89D72', // Muted Sandstone Gold
     '#B37D4D', // Warm Muted Clay / Ochre
