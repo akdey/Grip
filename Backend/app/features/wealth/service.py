@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func, and_
 from fastapi import HTTPException, Depends
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.features.wealth.models import InvestmentHolding, InvestmentSnapshot, InvestmentMappingRule, AssetType, InvestmentTransactionMapping
 from app.features.wealth import schemas
@@ -468,6 +469,7 @@ class WealthService:
                 existing.price_per_unit = 1.0
             else:
                 snap = InvestmentSnapshot(
+                    id=uuid.uuid4(),
                     holding_id=holding_id,
                     user_id=transaction.user_id,
                     captured_at=txn_date,
@@ -491,7 +493,10 @@ class WealthService:
             
         units = 0.0
         if price > 0:
-            units = invested_delta / price
+            duty_rate = getattr(settings, "MF_STAMP_DUTY_RATE", 0.00005) if txn_date >= date(2020, 7, 1) else 0.0
+            stamp_duty = round(invested_delta * duty_rate, 2)
+            net_invested = invested_delta - stamp_duty
+            units = net_invested / price
             
         stmt = select(InvestmentSnapshot).where(
             and_(
@@ -506,6 +511,8 @@ class WealthService:
             existing.amount_invested_delta += invested_delta
             existing.price_per_unit = price
             existing.total_value = existing.units_held * price
+            existing.is_sip = True
+            existing.sip_amount = invested_delta
         else:
             prev_stmt = (
                 select(InvestmentSnapshot)
@@ -521,13 +528,16 @@ class WealthService:
             
             new_units = prev_units + units
             snap = InvestmentSnapshot(
+                id=uuid.uuid4(),
                 holding_id=holding_id,
                 user_id=transaction.user_id,
                 captured_at=txn_date,
                 units_held=new_units,
                 price_per_unit=price,
                 total_value=new_units * price,
-                amount_invested_delta=invested_delta
+                amount_invested_delta=invested_delta,
+                is_sip=True,
+                sip_amount=invested_delta
             )
             self.db.add(snap)
             
@@ -1222,8 +1232,9 @@ class WealthService:
     async def sync_all_holdings_prices(self):
         """
         Fetches latest price for all holdings and updates snapshots for today.
+        Also automatically executes scheduled monthly SIP installments when due.
         """
-        # Fetch all active holdings
+        settings = get_settings()
         stmt = select(InvestmentHolding)
         result = await self.db.execute(stmt)
         holdings = result.scalars().all()
@@ -1236,7 +1247,8 @@ class WealthService:
                 
             try:
                 price = await self.get_asset_price(holding, today)
-                if price <= 0: continue
+                if price <= 0:
+                    continue
                 
                 # Check for existing snapshot today to update
                 snap_stmt = select(InvestmentSnapshot).where(
@@ -1247,41 +1259,98 @@ class WealthService:
                 )
                 existing = (await self.db.execute(snap_stmt)).scalar_one_or_none()
                 
-                if existing:
-                    existing.price_per_unit = price
-                    existing.total_value = existing.units_held * price
-                else:
-                    # Create new snapshot based on previous day's units
-                    prev_stmt = (
+                # Fetch latest historical snapshot prior to today
+                prev_stmt = (
+                    select(InvestmentSnapshot)
+                    .where(
+                        InvestmentSnapshot.holding_id == holding.id,
+                        InvestmentSnapshot.captured_at < today
+                    )
+                    .order_by(desc(InvestmentSnapshot.captured_at))
+                    .limit(1)
+                )
+                prev = (await self.db.execute(prev_stmt)).scalar_one_or_none()
+                base_units = prev.units_held if prev else 0.0
+                is_sip_fund = (prev.is_sip if prev else False) or (existing.is_sip if existing else False)
+                sip_amount = (prev.sip_amount if prev and prev.sip_amount else None) or (existing.sip_amount if existing and existing.sip_amount else None)
+                
+                # Check if this holding is an active SIP fund and if an installment is due this month
+                sip_delta = 0.0
+                allotted_units = 0.0
+                
+                if is_sip_fund and sip_amount and sip_amount > 0 and holding.asset_type == AssetType.MUTUAL_FUND:
+                    # Find scheduled SIP day of month from the latest historical SIP snapshot
+                    sip_day_stmt = (
                         select(InvestmentSnapshot)
                         .where(
                             InvestmentSnapshot.holding_id == holding.id,
-                            InvestmentSnapshot.captured_at < today
+                            InvestmentSnapshot.is_sip == True,
+                            InvestmentSnapshot.amount_invested_delta > 0
                         )
                         .order_by(desc(InvestmentSnapshot.captured_at))
                         .limit(1)
                     )
-                    prev = (await self.db.execute(prev_stmt)).scalar_one_or_none()
-                    units = prev.units_held if prev else 0.0
+                    last_sip_snap = (await self.db.execute(sip_day_stmt)).scalar_one_or_none()
+                    scheduled_day = last_sip_snap.captured_at.day if last_sip_snap else 1
                     
-                    if units > 0:
+                    # Check if an installment has already been recorded in current calendar month
+                    month_snap_stmt = (
+                        select(InvestmentSnapshot)
+                        .where(
+                            InvestmentSnapshot.holding_id == holding.id,
+                            func.extract('year', InvestmentSnapshot.captured_at) == today.year,
+                            func.extract('month', InvestmentSnapshot.captured_at) == today.month,
+                            InvestmentSnapshot.amount_invested_delta > 0
+                        )
+                    )
+                    month_sip_done = (await self.db.execute(month_snap_stmt)).scalars().first()
+                    
+                    # If not yet executed this month and today is on or past the scheduled day:
+                    if not month_sip_done and today.day >= scheduled_day:
+                        duty_rate = getattr(settings, "MF_STAMP_DUTY_RATE", 0.00005) if today >= date(2020, 7, 1) else 0.0
+                        stamp_duty = round(sip_amount * duty_rate, 2)
+                        net_invested = sip_amount - stamp_duty
+                        allotted_units = net_invested / price
+                        sip_delta = sip_amount
+                        holding.total_invested = (holding.total_invested or 0.0) + sip_amount
+                        logger.info(f"Auto-executed SIP for {holding.name}: Rs {sip_amount} -> {allotted_units:.4f} units at NAV {price}")
+
+                final_units = base_units + allotted_units
+
+                if existing:
+                    existing.price_per_unit = price
+                    if allotted_units > 0 and existing.amount_invested_delta == 0.0:
+                        existing.units_held = final_units
+                        existing.amount_invested_delta = sip_delta
+                    existing.total_value = existing.units_held * price
+                    if is_sip_fund:
+                        existing.is_sip = True
+                        existing.sip_amount = sip_amount
+                else:
+                    if final_units > 0:
                         new_snap = InvestmentSnapshot(
+                            id=uuid.uuid4(),
                             holding_id=holding.id,
                             user_id=holding.user_id,
                             captured_at=today,
-                            units_held=units,
+                            units_held=final_units,
                             price_per_unit=price,
-                            total_value=units * price,
-                            amount_invested_delta=0.0
+                            total_value=final_units * price,
+                            amount_invested_delta=sip_delta,
+                            is_sip=is_sip_fund,
+                            sip_amount=sip_amount
                         )
                         self.db.add(new_snap)
-                        
+
                 # Update holding master
-                holding.current_value = (existing.units_held * price) if existing else (units * price)
+                current_units = existing.units_held if existing else final_units
+                holding.current_value = current_units * price
+                if holding.total_invested and holding.total_invested > 0:
+                    holding.xirr = ((holding.current_value - holding.total_invested) / holding.total_invested) * 100.0
                 holding.last_updated_at = datetime.now()
                 
             except Exception as e:
-                logger.error(f"Failed to sync price for {holding.name}: {e}")
+                logger.error(f"Failed to sync price/SIP for {holding.name}: {e}")
                 
         await self.db.commit()
 

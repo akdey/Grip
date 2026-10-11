@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "GRIP"
     APP_TAGLINE: str = "Autonomous Financial Intelligence"
     
+    # Statutory / Regulatory Rates
+    MF_STAMP_DUTY_RATE: float = 0.00005  # 0.005% per Indian Stamp Act amendment (effective July 1, 2020)
+    
     @property
     def ASYNC_DATABASE_URL(self) -> str:
         url = self.DATABASE_URL
