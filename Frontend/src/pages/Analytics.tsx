@@ -504,7 +504,7 @@ const Analytics: React.FC = () => {
             {/* Mode 1: Lifestyle Expenses Mode */}
             {mode === 'expenses' && (
                 <div className="space-y-6 animate-in fade-in duration-300">
-                    {/* Donut Chart & Breakdown / MoM Growth */}
+                    {/* Donut Chart & Category Breakdown */}
                     <div className="p-5 sm:p-6 rounded-[2rem] bg-surface-subtle border border-border-subtle space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -594,7 +594,7 @@ const Analytics: React.FC = () => {
                                                             {cat.name}
                                                         </p>
                                                         <p className="text-[10px] text-text-muted font-medium mt-0.5">
-                                                            {sharePct}% of burn • Growth: {cat.variance_percentage > 0 ? '+' : ''}{cat.variance_percentage.toFixed(0)}%
+                                                            {sharePct}% of burn
                                                         </p>
                                                     </div>
                                                 </div>

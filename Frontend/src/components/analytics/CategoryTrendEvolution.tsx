@@ -58,11 +58,9 @@ export const CategoryTrendEvolution: React.FC<CategoryTrendEvolutionProps> = ({
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
-    // Map color per category
+    // Map color per category directly from Database
     const categoryColorMap = useMemo(() => {
-        const map: Record<string, string> = {
-            investment: '#38bdf8', // Distinct Arctic Ice Blue for investment
-        };
+        const map: Record<string, string> = {};
         allCategoriesMeta?.forEach(c => {
             if (c.name && c.color) {
                 map[c.name.trim().toLowerCase()] = c.color;
@@ -73,8 +71,16 @@ export const CategoryTrendEvolution: React.FC<CategoryTrendEvolutionProps> = ({
 
     const getCatColor = (catName: string, index: number) => {
         const normalized = catName.trim().toLowerCase();
-        if (normalized === 'investment') return '#38bdf8';
-        return categoryColorMap[normalized] || PALETTE[(index + 1) % PALETTE.length];
+        // Priority 1: Exact color stored in DB for this category
+        if (categoryColorMap[normalized]) {
+            return categoryColorMap[normalized];
+        }
+        // Priority 2: Fallback for investment if not explicitly assigned in DB
+        if (normalized === 'investment') {
+            return '#38bdf8';
+        }
+        // Priority 3: Fallback palette
+        return PALETTE[(index + 1) % PALETTE.length];
     };
 
     // Flatten data for recharts
