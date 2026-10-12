@@ -25,6 +25,7 @@ const NAV_ITEMS: NavItem[] = [
     { path: '/more', label: 'Explorer', icon: LayoutGrid },
 ];
 
+
 export const Navbar: React.FC = () => {
     return (
         <div className="fixed bottom-3 sm:bottom-4 inset-x-0 z-50 md:hidden flex justify-center pointer-events-none px-4 pb-[env(safe-area-inset-bottom,0px)]">
@@ -85,9 +86,8 @@ export const Navbar: React.FC = () => {
                                             className={`transition-colors ${isActive ? 'text-accent-text drop-shadow-[0_0_8px_var(--color-accent-subtle)]' : ''}`}
                                         />
                                     </motion.div>
-                                    <span className={`text-[9px] tracking-tight mt-0.5 leading-none transition-all ${
-                                        isActive ? 'font-black text-accent-text' : 'font-semibold text-text-muted'
-                                    }`}>
+                                    <span className={`text-[9px] tracking-tight mt-0.5 leading-none transition-all ${isActive ? 'font-black text-accent-text' : 'font-semibold text-text-muted'
+                                        }`}>
                                         {item.label}
                                     </span>
                                     {/* macOS Dock Micro-Dot Running Indicator */}
