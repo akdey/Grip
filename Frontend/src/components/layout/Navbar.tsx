@@ -10,33 +10,44 @@ import {
 import { motion } from 'framer-motion';
 import { haptics } from '../../lib/haptics';
 
-const NAV_ITEMS = [
+interface NavItem {
+    path: string;
+    label: string;
+    icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+    isAction?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
     { path: '/dashboard', label: 'Matrix', icon: Home },
     { path: '/analytics', label: 'Flow', icon: BarChart3 },
-    { path: '/add', label: '', icon: Plus, isAction: true },
+    { path: '/add', label: 'Add', icon: Plus, isAction: true },
     { path: '/wealth', label: 'Wealth', icon: Briefcase },
     { path: '/more', label: 'Explorer', icon: LayoutGrid },
 ];
 
 export const Navbar: React.FC = () => {
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-page/80 backdrop-blur-2xl saturate-[190%] border-t border-border-default pb-safe pt-2 px-6 shadow-[0_-10px_40px_rgba(0,0,0,0.6)]">
-            <div className="flex items-center justify-between h-14 relative">
+        <div className="fixed bottom-3 sm:bottom-4 inset-x-0 z-50 md:hidden flex justify-center pointer-events-none px-4 pb-[env(safe-area-inset-bottom,0px)]">
+            <nav
+                aria-label="Mobile Navigation Dock"
+                className="pointer-events-auto relative flex items-center justify-between gap-1 p-1.5 w-full max-w-[364px] rounded-full bg-surface/85 backdrop-blur-2xl saturate-[190%] border border-border-subtle/80 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_1px_1px_rgba(255,255,255,0.08)_inset] transition-all"
+            >
                 {NAV_ITEMS.map((item) => {
                     if (item.isAction) {
                         return (
-                            <div key={item.path} className="relative -top-6 flex justify-center w-1/5">
+                            <div key={item.path} className="flex items-center justify-center px-1">
                                 <NavLink
                                     to={item.path}
-                                    onPointerDown={() => haptics.impact('light')}
-                                    className="block active:scale-90 transition-transform duration-100 ease-out touch-manipulation"
+                                    onPointerDown={() => haptics.impact('medium')}
+                                    className="block touch-manipulation focus:outline-none"
                                     aria-label="Add new entry"
                                 >
                                     <motion.div
-                                        layoutId="fab-action"
-                                        className="w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-[0_15px_40px_rgba(255,255,255,0.25)] border-4 border-page"
+                                        whileTap={{ scale: 0.88 }}
+                                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                                        className="w-11 h-11 rounded-full bg-accent text-accent-contrast flex items-center justify-center shadow-[0_4px_18px_rgba(56,189,248,0.35)] border-2 border-surface active:brightness-95 transition-all"
                                     >
-                                        <Plus size={28} strokeWidth={3} />
+                                        <Plus size={22} strokeWidth={2.75} />
                                     </motion.div>
                                 </NavLink>
                             </div>
@@ -49,29 +60,50 @@ export const Navbar: React.FC = () => {
                             to={item.path}
                             onPointerDown={() => haptics.selection()}
                             className={({ isActive }) => `
-                                flex flex-col items-center justify-center w-1/5 space-y-1.5 transition-all duration-150 touch-manipulation select-none active:scale-95
-                                ${isActive ? 'text-accent-text' : 'text-text-muted hover:text-text-secondary'}
+                                relative flex-1 flex flex-col items-center justify-center py-1.5 px-2 rounded-full transition-all duration-150 touch-manipulation select-none
+                                ${isActive ? 'text-accent-text font-bold' : 'text-text-muted hover:text-text-primary'}
                             `}
                         >
                             {({ isActive }) => (
                                 <>
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="dockActiveCapsule"
+                                            className="absolute inset-0 bg-accent-subtle/60 dark:bg-accent/15 rounded-full border border-accent/25 -z-10 shadow-[0_2px_10px_rgba(56,189,248,0.12)]"
+                                            transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                                        />
+                                    )}
                                     <motion.div
+                                        whileTap={{ scale: 0.86 }}
                                         animate={{ scale: isActive ? 1.08 : 1 }}
-                                        transition={{ type: 'spring', damping: 20, stiffness: 350 }}
+                                        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                                        className="flex items-center justify-center"
                                     >
                                         <item.icon
-                                            size={20}
+                                            size={19}
                                             strokeWidth={isActive ? 2.5 : 2}
-                                            className={isActive ? 'text-accent-text drop-shadow-[0_0_10px_var(--color-accent-subtle)]' : ''}
+                                            className={`transition-colors ${isActive ? 'text-accent-text drop-shadow-[0_0_8px_var(--color-accent-subtle)]' : ''}`}
                                         />
                                     </motion.div>
-                                    <span className={`text-[8px] font-black uppercase tracking-[1.2px] ${isActive ? 'text-accent-text font-black' : ''}`}>{item.label}</span>
+                                    <span className={`text-[9px] tracking-tight mt-0.5 leading-none transition-all ${
+                                        isActive ? 'font-black text-accent-text' : 'font-semibold text-text-muted'
+                                    }`}>
+                                        {item.label}
+                                    </span>
+                                    {/* macOS Dock Micro-Dot Running Indicator */}
+                                    {isActive && (
+                                        <motion.span
+                                            layoutId="dockActiveDot"
+                                            className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-accent shadow-[0_0_5px_var(--color-accent)]"
+                                            transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                                        />
+                                    )}
                                 </>
                             )}
                         </NavLink>
                     );
                 })}
-            </div>
-        </nav>
+            </nav>
+        </div>
     );
 };
