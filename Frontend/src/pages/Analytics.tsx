@@ -337,15 +337,9 @@ const Analytics: React.FC = () => {
                             ) : '••••••'}
                         </p>
                         <p className="text-[11px] text-text-muted font-medium mt-0.5">
-                            {showSensitive ? (
-                                <>
-                                    Inflow: <span className="font-bold text-text-primary">{formatCurrency(metrics.income)}</span>
-                                    {' • '}
-                                    Total Outflow: <span className="font-bold text-text-primary">{formatCurrency(metrics.rawOutflow)}</span>
-                                </>
-                            ) : (
-                                'Inflow: •••• • Total Outflow: ••••'
-                            )}
+                            {metrics.netCashSurplus >= 0
+                                ? 'Net liquidity surplus retained'
+                                : 'Net liquidity deficit for period'}
                         </p>
                     </div>
 
