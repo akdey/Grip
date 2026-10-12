@@ -71,7 +71,7 @@ const DockItem: React.FC<{
                     {isActive && (
                         <motion.div
                             layoutId="dockActiveCapsule"
-                            className="absolute inset-0 bg-accent-subtle/60 dark:bg-accent/15 rounded-full border border-accent/25 -z-10 shadow-[0_2px_10px_rgba(56,189,248,0.12)]"
+                            className="absolute inset-0 bg-accent-subtle/70 dark:bg-accent/20 backdrop-blur-md rounded-full border border-accent/30 -z-10 shadow-[0_2px_12px_rgba(56,189,248,0.2)]"
                             transition={{ type: 'spring', stiffness: 380, damping: 28 }}
                         />
                     )}
@@ -83,11 +83,11 @@ const DockItem: React.FC<{
                         <item.icon
                             size={19}
                             strokeWidth={isActive ? 2.5 : 2}
-                            className={`transition-colors ${isActive ? 'text-accent-text drop-shadow-[0_0_8px_var(--color-accent-subtle)]' : ''}`}
+                            className={`transition-colors drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] ${isActive ? 'text-accent-text drop-shadow-[0_0_8px_var(--color-accent-subtle)]' : ''}`}
                         />
                     </motion.div>
                     <span
-                        className={`text-[9px] tracking-tight mt-0.5 leading-none transition-all ${
+                        className={`text-[9px] tracking-tight mt-0.5 leading-none transition-all drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)] ${
                             isActive ? 'font-black text-accent-text' : 'font-semibold text-text-muted'
                         }`}
                     >
@@ -113,7 +113,7 @@ export const Navbar: React.FC = () => {
                 }}
                 onTouchEnd={() => mouseX.set(Infinity)}
                 onTouchCancel={() => mouseX.set(Infinity)}
-                className="pointer-events-auto relative flex items-center justify-between gap-1 p-1.5 w-full max-w-[364px] rounded-full bg-surface/85 backdrop-blur-2xl saturate-[190%] border border-border-subtle/80 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_1px_1px_rgba(255,255,255,0.08)_inset] transition-all"
+                className="pointer-events-auto relative flex items-center justify-between gap-1 p-1.5 w-full max-w-[364px] rounded-full bg-surface/50 dark:bg-surface/40 backdrop-blur-3xl saturate-[220%] border border-white/20 dark:border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5),inset_0_1px_1px_0_rgba(255,255,255,0.25),inset_0_-1px_1px_0_rgba(0,0,0,0.2)] transition-all"
             >
                 {NAV_ITEMS.map((item) => {
                     if (item.isAction) {
