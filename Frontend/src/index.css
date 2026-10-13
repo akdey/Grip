@@ -461,45 +461,77 @@ body::before {
 
   /* Liquid Glass Floating Dock - VisionOS / macOS Liquid Material */
   .dock-liquid-glass {
+    position: absolute;
+    inset: 0;
+    border-radius: 30px;
+    pointer-events: none;
+    overflow: hidden;
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    will-change: backdrop-filter;
+    isolation: isolate;
+    z-index: -10;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.65) 0%,
-      rgba(255, 255, 255, 0.38) 50%,
-      rgba(255, 255, 255, 0.52) 100%
+      rgba(255, 255, 255, 0.82) 0%,
+      rgba(255, 255, 255, 0.65) 50%,
+      rgba(255, 255, 255, 0.78) 100%
     );
-    backdrop-filter: blur(16px) saturate(135%);
-    -webkit-backdrop-filter: blur(16px) saturate(135%);
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.85);
     box-shadow: 
-      0 16px 36px -6px rgba(15, 23, 42, 0.12),
-      0 6px 16px -2px rgba(15, 23, 42, 0.06),
+      0 18px 42px -8px rgba(15, 23, 42, 0.16),
+      0 6px 16px -2px rgba(15, 23, 42, 0.08),
       inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.95),
       inset 0 -1px 2px 0 rgba(0, 0, 0, 0.04);
+  }
+
+  .dock-glass-gloss {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: 30px;
+    background: radial-gradient(
+      140% 90% at 50% 0%,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0.1) 40%,
+      transparent 70%
+    );
   }
 
   html[data-theme="dark"] .dock-liquid-glass {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.12) 0%,
-      rgba(255, 255, 255, 0.04) 50%,
-      rgba(255, 255, 255, 0.08) 100%
+      rgba(24, 27, 36, 0.82) 0%,
+      rgba(15, 17, 24, 0.74) 50%,
+      rgba(20, 23, 32, 0.80) 100%
     );
-    backdrop-filter: blur(20px) saturate(135%);
-    -webkit-backdrop-filter: blur(20px) saturate(135%);
+    backdrop-filter: blur(32px) saturate(180%);
+    -webkit-backdrop-filter: blur(32px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.14);
     box-shadow: 
       0 24px 60px -10px rgba(0, 0, 0, 0.7),
       0 8px 24px -4px rgba(0, 0, 0, 0.45),
-      inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.22),
-      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.3);
+      inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  html[data-theme="dark"] .dock-glass-gloss {
+    background: radial-gradient(
+      140% 90% at 50% 0%,
+      rgba(255, 255, 255, 0.15) 0%,
+      rgba(255, 255, 255, 0.02) 40%,
+      transparent 70%
+    );
   }
 
   /* Liquid Glass Active Lens Capsule */
   .dock-active-lens {
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.85) 0%,
-      rgba(255, 255, 255, 0.60) 100%
+      rgba(255, 255, 255, 0.92) 0%,
+      rgba(255, 255, 255, 0.70) 100%
     );
     border: 1px solid rgba(255, 255, 255, 0.95);
     box-shadow: 
@@ -510,13 +542,13 @@ body::before {
   html[data-theme="dark"] .dock-active-lens {
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.16) 0%,
-      rgba(255, 255, 255, 0.08) 100%
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.09) 100%
     );
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     box-shadow: 
       0 4px 16px rgba(0, 0, 0, 0.4),
-      inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.3);
   }
 
   /* Liquid Glass Card - Apple Style */

@@ -71,14 +71,14 @@ const DockItem: React.FC<{
                     {isActive && (
                         <motion.div
                             layoutId="dockActiveCapsule"
-                            className="absolute inset-y-1 inset-x-1 dock-active-lens rounded-[18px] -z-10"
+                            className="absolute inset-y-1 inset-x-1 dock-active-lens rounded-[18px] z-0"
                             transition={{ type: 'spring', stiffness: 380, damping: 28 }}
                         />
                     )}
                     <motion.div
                         style={{ scale, y }}
                         whileTap={{ scale: 0.88 }}
-                        className="flex items-center justify-center py-0.5"
+                        className="relative z-10 flex items-center justify-center py-0.5"
                     >
                         <item.icon
                             size={20}
@@ -87,7 +87,7 @@ const DockItem: React.FC<{
                         />
                     </motion.div>
                     <span
-                        className={`text-[10px] tracking-tight mt-0.5 leading-none transition-all ${
+                        className={`relative z-10 text-[10px] tracking-tight mt-0.5 leading-none transition-all antialiased ${
                             isActive ? 'font-bold text-text-primary' : 'font-medium text-text-muted'
                         }`}
                     >
@@ -113,8 +113,12 @@ export const Navbar: React.FC = () => {
                 }}
                 onTouchEnd={() => mouseX.set(Infinity)}
                 onTouchCancel={() => mouseX.set(Infinity)}
-                className="pointer-events-auto relative flex items-center justify-between gap-1 p-1.5 w-full max-w-[364px] rounded-[30px] dock-liquid-glass transition-all"
+                className="pointer-events-auto relative flex items-center justify-between gap-1 p-1.5 w-full max-w-[364px] rounded-[30px] isolate"
             >
+                {/* Physical Liquid Glass Layer - Isolated backdrop-filter and specular reflection */}
+                <div className="dock-liquid-glass" aria-hidden="true">
+                    <div className="dock-glass-gloss" />
+                </div>
                 {NAV_ITEMS.map((item) => {
                     if (item.isAction) {
                         return (
