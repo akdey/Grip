@@ -71,7 +71,7 @@ const DockItem: React.FC<{
                     {isActive && (
                         <motion.div
                             layoutId="dockActiveCapsule"
-                            className="absolute inset-y-1 inset-x-1 bg-black/[0.05] dark:bg-white/[0.12] rounded-[18px] border border-black/[0.04] dark:border-white/[0.08] -z-10 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
+                            className="absolute inset-y-1 inset-x-1 dock-active-lens rounded-[18px] -z-10"
                             transition={{ type: 'spring', stiffness: 380, damping: 28 }}
                         />
                     )}
