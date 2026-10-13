@@ -63,7 +63,7 @@ const DockItem: React.FC<{
             onPointerDown={() => haptics.selection()}
             className={({ isActive }) => `
                 relative flex-1 flex flex-col items-center justify-center py-2 px-2.5 min-h-[54px] rounded-[22px] transition-colors duration-150 touch-manipulation select-none
-                ${isActive ? 'text-accent-text font-bold' : 'text-text-muted hover:text-text-primary'}
+                ${isActive ? 'text-text-primary font-bold' : 'text-text-muted hover:text-text-primary'}
             `}
         >
             {({ isActive }) => (
@@ -71,7 +71,7 @@ const DockItem: React.FC<{
                     {isActive && (
                         <motion.div
                             layoutId="dockActiveCapsule"
-                            className="absolute inset-y-1 inset-x-1 bg-accent-subtle/80 dark:bg-accent/15 rounded-[18px] border border-accent/20 dark:border-accent/30 -z-10 shadow-[0_1px_4px_rgba(0,0,0,0.04)]"
+                            className="absolute inset-y-1 inset-x-1 bg-black/[0.05] dark:bg-white/[0.12] rounded-[18px] border border-black/[0.04] dark:border-white/[0.08] -z-10 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
                             transition={{ type: 'spring', stiffness: 380, damping: 28 }}
                         />
                     )}
@@ -83,12 +83,12 @@ const DockItem: React.FC<{
                         <item.icon
                             size={20}
                             strokeWidth={isActive ? 2.5 : 2}
-                            className={`transition-colors ${isActive ? 'text-accent-text' : 'text-text-muted'}`}
+                            className={`transition-colors ${isActive ? 'text-text-primary' : 'text-text-muted'}`}
                         />
                     </motion.div>
                     <span
                         className={`text-[10px] tracking-tight mt-0.5 leading-none transition-all ${
-                            isActive ? 'font-bold text-accent-text' : 'font-medium text-text-muted'
+                            isActive ? 'font-bold text-text-primary' : 'font-medium text-text-muted'
                         }`}
                     >
                         {item.label}
