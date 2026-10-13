@@ -23,6 +23,16 @@ class TransactionService:
     def __init__(self, db: AsyncSession = Depends(get_db)):
         self.db = db
 
+    def _invalidate_safe_spend_cache(self, user_id: Optional[UUID]):
+        """Proactively bust the Safe-to-Spend hot cache when transaction data changes."""
+        if not user_id:
+            return
+        try:
+            from app.features.analytics.service import AnalyticsService
+            AnalyticsService.invalidate_safe_spend_cache(user_id)
+        except Exception as e:
+            logger.warning(f"Failed to invalidate safe spend cache for user {user_id}: {e}")
+
     async def _resolve_surety(self, sub_category_name: str, user_id: UUID = None) -> bool:
         """Resolve is_surety flag from the categories cache."""
         if not sub_category_name:
@@ -222,6 +232,7 @@ class TransactionService:
         else:
             await self._sync_double_entry_credit_card_payment(txn)
 
+        self._invalidate_safe_spend_cache(user_id)
         return txn
 
     async def get_merchant_mapping(self, raw_merchant: str) -> Optional[MerchantMapping]:
@@ -244,6 +255,7 @@ class TransactionService:
         txn = Transaction(**txn_data)
         self.db.add(txn)
         await self.db.commit()
+        self._invalidate_safe_spend_cache(txn.user_id)
         return txn
 
     async def create_manual_transaction(self, user_id: UUID, data: schemas.ManualTransactionCreate) -> Transaction:
@@ -286,6 +298,7 @@ class TransactionService:
             except Exception as e:
                 logger.warning(f"Wealth auto-linking skipped for manual txn {txn.id}: {e}")
 
+        self._invalidate_safe_spend_cache(user_id)
         return txn
 
     async def get_transaction(self, transaction_id: UUID, user_id: UUID) -> Transaction:
@@ -327,6 +340,7 @@ class TransactionService:
             
         await self.db.commit()
         await self._sync_double_entry_credit_card_payment(txn)
+        self._invalidate_safe_spend_cache(user_id)
         txns = await self._attach_icons([txn])
         return txns[0]
 
@@ -385,11 +399,7 @@ class TransactionService:
         txn.is_settled = not txn.is_settled
         await self.db.commit()
         
-        try:
-            from app.features.analytics.service import AnalyticsService
-            AnalyticsService._safe_spend_cache.pop(user_id, None)
-        except Exception:
-            pass
+        self._invalidate_safe_spend_cache(user_id)
             
         txns = await self._attach_icons([txn])
         return txns[0]
@@ -414,6 +424,7 @@ class TransactionService:
             
         await self.db.delete(txn)
         await self.db.commit()
+        self._invalidate_safe_spend_cache(user_id)
 
     async def _sync_double_entry_credit_card_payment(self, txn: Transaction):
         """

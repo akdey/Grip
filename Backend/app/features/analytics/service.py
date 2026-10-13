@@ -225,17 +225,36 @@ class AnalyticsService:
             )
     
     # Global memory cache for Safe-to-Spend results
-    _safe_spend_cache = {} # user_id -> (result, timestamp)
-    SAFE_SPEND_TTL = 60 # 60 seconds
+    _safe_spend_cache: Dict[UUID, tuple] = {} # user_id -> (result, timestamp, cached_date)
+    SAFE_SPEND_TTL = 1800 # 30 minutes (invalidated proactively on transaction/obligation changes and date rollover)
+
+    @classmethod
+    def invalidate_safe_spend_cache(cls, user_id: Optional[UUID] = None):
+        """Invalidate Safe-to-Spend cache for a specific user or all users."""
+        try:
+            if user_id:
+                cls._safe_spend_cache.pop(user_id, None)
+            else:
+                cls._safe_spend_cache.clear()
+        except Exception as e:
+            logger.warning(f"Error invalidating safe spend cache: {e}")
 
     async def calculate_safe_to_spend_amount(self, db: AsyncSession, user_id: UUID, days_till_salary: Optional[int] = None) -> SafeToSpendResponse:
         """Calculate the amount the user can safely spend until next salary."""
         # 0. Check Hot Cache
         now = time.time()
+        today = self._get_today()
         if user_id in self._safe_spend_cache:
-            res_obj, timestamp = self._safe_spend_cache[user_id]
-            if now - timestamp < self.SAFE_SPEND_TTL:
-                return res_obj
+            entry = self._safe_spend_cache[user_id]
+            if len(entry) == 3:
+                res_obj, timestamp, cached_date = entry
+                # Invalidate if calendar date changed (midnight rollover) or TTL expired
+                if cached_date == today and (now - timestamp < self.SAFE_SPEND_TTL):
+                    return res_obj
+            elif len(entry) == 2:
+                res_obj, timestamp = entry
+                if now - timestamp < self.SAFE_SPEND_TTL:
+                    return res_obj
 
         try:
             # Calculate days till salary (1st of next month)
@@ -399,8 +418,8 @@ class AnalyticsService:
                 status=status
             )
             
-            # Update Hot Cache
-            self._safe_spend_cache[user_id] = (response, time.time())
+            # Update Hot Cache (includes calculation date to auto-invalidate on midnight rollover)
+            self._safe_spend_cache[user_id] = (response, time.time(), today)
             return response
         except Exception as e:
             logger.error(f"Error calculating safe to spend: {e}")

@@ -91,6 +91,7 @@ class GoalService:
         db.add(goal)
         await db.commit()
         await db.refresh(goal)
+        AnalyticsService.invalidate_safe_spend_cache(user_id)
         return goal
 
     async def get_active_goals(self, db: AsyncSession, user_id: UUID) -> List[Goal]:
@@ -116,3 +117,4 @@ class GoalService:
         if goal:
             await db.delete(goal)
             await db.commit()
+            AnalyticsService.invalidate_safe_spend_cache(user_id)

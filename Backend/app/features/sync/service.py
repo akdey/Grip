@@ -775,6 +775,13 @@ class SyncService:
 
                     processed_count += 1
                 
+                if processed_count > 0:
+                    try:
+                        from app.features.analytics.service import AnalyticsService
+                        AnalyticsService.invalidate_safe_spend_cache(user_id)
+                    except Exception as ex:
+                        logger.warning(f"[Sync:{user_id}] Safe spend cache invalidation failed: {ex}")
+
                 logger.info(
                     f"[Sync:{user_id}] Sync complete. "
                     f"fetched={len(messages)}, dedup_skipped={dedup_skipped}, "

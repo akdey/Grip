@@ -22,6 +22,15 @@ class BillService:
     def __init__(self):
         self._tz = zoneinfo.ZoneInfo(settings.APP_TIMEZONE)
 
+    def _invalidate_safe_spend_cache(self, user_id: Optional[UUID]):
+        if not user_id:
+            return
+        try:
+            from app.features.analytics.service import AnalyticsService
+            AnalyticsService.invalidate_safe_spend_cache(user_id)
+        except Exception as e:
+            logger.warning(f"Failed to invalidate safe spend cache for user {user_id}: {e}")
+
     def _get_today(self) -> date:
         """Get current date in the configured timezone."""
         return datetime.now(self._tz).date()
@@ -45,6 +54,7 @@ class BillService:
         db.add(bill)
         await db.commit()
         await db.refresh(bill)
+        self._invalidate_safe_spend_cache(user_id)
         logger.info(f"Created bill '{bill.title}' for user {user_id}")
         return bill
     
@@ -103,6 +113,7 @@ class BillService:
         
         await db.commit()
         await db.refresh(bill)
+        self._invalidate_safe_spend_cache(user_id)
         logger.info(f"Updated bill {bill_id}")
         return bill
     
@@ -140,6 +151,7 @@ class BillService:
             
         await db.commit()
         await db.refresh(bill)
+        self._invalidate_safe_spend_cache(user_id)
         logger.info(f"Marked bill {bill_id} status updated (paid={paid})")
         return bill
     
