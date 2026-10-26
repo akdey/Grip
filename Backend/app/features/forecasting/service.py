@@ -4,6 +4,7 @@ import calendar
 from decimal import Decimal
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Dict, Any, Tuple
+from uuid import UUID
 import pandas as pd
 import numpy as np
 
