@@ -428,9 +428,19 @@ class BillService:
                             partner_found = True
                             break
             
+            # Calculate next month recurrence date for upcoming month projection
+            if today.month == 12:
+                next_m_year = today.year + 1
+                next_m_month = 1
+            else:
+                next_m_year = today.year
+                next_m_month = today.month + 1
+            max_day_next = monthrange(next_m_year, next_m_month)[1]
+            next_p_date = date(next_m_year, next_m_month, min(due_day, max_day_next))
+
             if partner_found:
                 if include_hidden:
-                     ledger_items.append(IdentifiedObligation(
+                    ledger_items.append(IdentifiedObligation(
                         id=f"auto-{p_txn.id}",
                         title=f"{p_txn.merchant_name or p_txn.sub_category} (Auto-detected)",
                         amount=abs(p_txn.amount),
@@ -440,14 +450,23 @@ class BillService:
                         sub_category=p_txn.sub_category,
                         source_id=str(p_txn.id)
                     ))
-                continue # Already paid this month, no obligation
-
+                # Project for upcoming month if requested
+                if days_ahead > 30 and today <= next_p_date <= threshold_date and exclusion_reason != "TERMINATED":
+                    ledger_items.append(IdentifiedObligation(
+                        id=f"auto-{p_txn.id}-next",
+                        title=f"{p_txn.merchant_name or p_txn.sub_category} (Auto-detected)",
+                        amount=abs(p_txn.amount),
+                        due_date=next_p_date,
+                        type="SURETY_TXN",
+                        status="PROJECTED",
+                        sub_category=p_txn.sub_category,
+                        source_id=str(p_txn.id)
+                    ))
+                continue # Already paid this month
 
             # Does it pass filter?
             if is_excluded and not include_hidden:
                 continue
-                
-
             
             date_status = "PROJECTED"
             if p_date < today:
@@ -457,12 +476,8 @@ class BillService:
             if is_excluded:
                 final_status = exclusion_reason
             
-            # Date filter only applies if active (PROJECTED/OVERDUE)
-            # If excluded, we include it regardless of date if include_hidden is True?
-            # Or still respect threshold? Let's respect threshold for "Upcoming" logic, but maybe relax for "Management"?
-            # Let's keep threshold strict for now.
             if today <= p_date <= threshold_date or final_status in ["OVERDUE", "SKIPPED", "TERMINATED", "COVERED", "PAID"]:
-                 if include_hidden or not is_excluded:
+                if include_hidden or not is_excluded:
                     ledger_items.append(IdentifiedObligation(
                         id=f"auto-{p_txn.id}",
                         title=f"{p_txn.merchant_name or p_txn.sub_category} (Auto-detected)",
@@ -477,6 +492,19 @@ class BillService:
                         projected_total += abs(p_txn.amount)
                     elif final_status == "OVERDUE":
                         unpaid_total += abs(p_txn.amount)
+
+            # Also project for upcoming month if days_ahead > 30
+            if days_ahead > 30 and today <= next_p_date <= threshold_date and exclusion_reason != "TERMINATED":
+                ledger_items.append(IdentifiedObligation(
+                    id=f"auto-{p_txn.id}-next",
+                    title=f"{p_txn.merchant_name or p_txn.sub_category} (Auto-detected)",
+                    amount=abs(p_txn.amount),
+                    due_date=next_p_date,
+                    type="SURETY_TXN",
+                    status="PROJECTED",
+                    sub_category=p_txn.sub_category,
+                    source_id=str(p_txn.id)
+                ))
         
         return {
             "unpaid_total": unpaid_total,

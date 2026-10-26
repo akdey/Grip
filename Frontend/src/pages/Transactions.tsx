@@ -158,6 +158,9 @@ const Transactions: React.FC = () => {
             if (sub) filters.sub_category = sub;
         }
 
+        const search = searchParams.get('search');
+        if (search) filters.search = search;
+
         return filters;
     }, [view, currentMonth, searchParams, limit]);
 
@@ -171,7 +174,8 @@ const Transactions: React.FC = () => {
         searchParams.get('category') ||
         searchParams.get('sub_category') ||
         searchParams.get('start_date') ||
-        searchParams.get('end_date')
+        searchParams.get('end_date') ||
+        searchParams.get('search')
     );
 
     const verifiedCount = useMemo(() => {
@@ -411,6 +415,7 @@ const Transactions: React.FC = () => {
                              view === 'month' ? `Month: ${format(currentMonth, 'MMMM yyyy')}` :
                              view === 'year' ? `Year: ${format(currentMonth, 'yyyy')}` :
                              view === 'pending' ? 'Action Center' :
+                             searchParams.get('search') ? `Search: "${searchParams.get('search')}"` :
                              searchParams.get('category') ? (
                                  searchParams.get('category')!.includes(',')
                                      ? `${searchParams.get('category')!.split(',').length} Categories`
@@ -1066,24 +1071,24 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
     return (
         <div
             onClick={() => navigate(`/transactions/${txn.id}`)}
-            className="flex items-center justify-between p-3.5 bg-surface-subtle hover:bg-surface-hover transition-all border border-border-subtle group active:scale-[0.98] rounded-2xl cursor-pointer"
+            className="flex items-center justify-between p-3.5 bg-surface-subtle hover:bg-surface-hover transition-all border border-border-subtle group active:scale-[0.98] rounded-2xl cursor-pointer gap-3"
         >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3.5 flex-1 min-w-0">
                 <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border border-border-subtle"
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-inner border border-border-subtle shrink-0"
                     style={{
                         backgroundColor: (txn.sub_category_color || txn.category_color) ? `${txn.sub_category_color || txn.category_color}18` : 'var(--color-bg-surface-pill)',
                         color: txn.sub_category_color || txn.category_color || 'var(--color-text-primary)'
                     }}
                 >
-                    <CategoryIcon name={txn.sub_category_icon || txn.category_icon} size={22} />
+                    <CategoryIcon name={txn.sub_category_icon || txn.category_icon} size={20} />
                 </div>
-                <div className="flex flex-col min-w-0">
-                    <p className="font-semibold text-primary truncate max-w-[150px] text-sm leading-tight">
+                <div className="flex flex-col min-w-0 flex-1">
+                    <p className="font-semibold text-primary truncate text-sm leading-tight" title={txn.merchant_name || txn.category}>
                         {txn.merchant_name || txn.category}
                     </p>
                     <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[9px] text-text-muted font-black uppercase tracking-widest truncate max-w-[80px]">
+                        <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest truncate max-w-[100px]">
                             {txn.sub_category}
                         </span>
                         <span className="text-[8px] text-text-muted/60">•</span>
@@ -1094,7 +1099,7 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
                     {txn.tags && txn.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
                             {txn.tags.map((tag: string) => (
-                                <span key={tag} className="text-[7px] px-1.5 py-0.5 rounded-md bg-surface-pill border border-border-subtle text-text-muted font-black uppercase tracking-tighter">
+                                <span key={tag} className="text-[8px] px-1.5 py-0.5 rounded-md bg-surface-pill border border-border-subtle text-text-muted font-medium tracking-tight">
                                     #{tag}
                                 </span>
                             ))}
@@ -1103,58 +1108,55 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
                 </div>
             </div>
 
-            <div className="text-right shrink-0">
+            <div className="text-right shrink-0 flex flex-col items-end justify-center">
                 <p className="font-black text-primary text-base leading-none tracking-tighter">
                     {showSensitive ? formatCurrency(txn.amount) : '••••'}
                 </p>
-                <div className="flex items-center justify-end gap-1 mt-1.5">
+                <div className="flex items-center justify-end gap-1.5 mt-1.5">
                     {txn.status === 'PENDING' ? (
-                        <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-amber-500/40 text-amber-500 bg-amber-500/10 uppercase tracking-tighter">
-                            Review
-                        </span>
-                    ) : (
-                        <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter ${txn.is_manual ? 'border-amber-500/30 text-amber-500 bg-amber-500/10' : 'border-border-subtle text-text-muted bg-surface-pill'
-                            }`}>
-                            {txn.is_manual ? 'Manual' : 'Sync'}
-                        </span>
-                    )}
-                    {txn.sub_category === 'Credit Card Payment' && (
-                        <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-border-subtle text-text-muted bg-surface-pill uppercase tracking-tighter">
-                            Offset
-                        </span>
-                    )}
-                    {(txn.category || '').toLowerCase() === 'investment' && (
-                        <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-border-subtle text-text-muted bg-surface-pill uppercase tracking-tighter">
-                            Wealth
-                        </span>
-                    )}
-                    {txn.status === 'PENDING' && (
-                        <div className="flex items-center gap-1.5 ml-2">
+                        <div className="flex items-center gap-1.5">
                             <button
                                 onClick={handleDelete}
                                 disabled={deleteMutation.isPending || verifyMutation.isPending}
-                                className="w-7 h-7 rounded-full bg-status-danger-bg border border-status-danger-border flex items-center justify-center text-status-danger-text hover:opacity-80 transition-all active:scale-90 disabled:opacity-50"
+                                className="w-7 h-7 rounded-full bg-status-danger-bg border border-status-danger-border flex items-center justify-center text-status-danger-text hover:opacity-80 transition-all active:scale-90 disabled:opacity-50 shrink-0"
                                 title="Discard"
                             >
                                 {deleteMutation.isPending ? (
-                                    <Loader2 size={14} className="animate-spin text-status-danger-text" />
+                                    <Loader2 size={13} className="animate-spin text-status-danger-text" />
                                 ) : (
-                                    <Trash2 size={14} />
+                                    <Trash2 size={13} />
                                 )}
                             </button>
                             <button
                                 onClick={handleApprove}
                                 disabled={verifyMutation.isPending || deleteMutation.isPending}
-                                className="w-7 h-7 rounded-full bg-status-success-bg border border-status-success-border flex items-center justify-center text-status-success-text hover:opacity-80 transition-all active:scale-90 disabled:opacity-50"
+                                className="w-7 h-7 rounded-full bg-status-success-bg border border-status-success-border flex items-center justify-center text-status-success-text hover:opacity-80 transition-all active:scale-90 disabled:opacity-50 shrink-0"
                                 title="Approve"
                             >
                                 {verifyMutation.isPending ? (
-                                    <Loader2 size={14} className="animate-spin text-status-success-text" />
+                                    <Loader2 size={13} className="animate-spin text-status-success-text" />
                                 ) : (
-                                    <Check size={14} />
+                                    <Check size={13} />
                                 )}
                             </button>
                         </div>
+                    ) : (
+                        <>
+                            <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter ${txn.is_manual ? 'border-amber-500/30 text-amber-500 bg-amber-500/10' : 'border-border-subtle text-text-muted bg-surface-pill'
+                                }`}>
+                                {txn.is_manual ? 'Manual' : 'Sync'}
+                            </span>
+                            {txn.sub_category === 'Credit Card Payment' && (
+                                <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-border-subtle text-text-muted bg-surface-pill uppercase tracking-tighter">
+                                    Offset
+                                </span>
+                            )}
+                            {(txn.category || '').toLowerCase() === 'investment' && (
+                                <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-border-subtle text-text-muted bg-surface-pill uppercase tracking-tighter">
+                                    Wealth
+                                </span>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

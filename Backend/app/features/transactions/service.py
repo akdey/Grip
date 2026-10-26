@@ -148,7 +148,8 @@ class TransactionService:
                         Transaction.merchant_name.ilike(search_term),
                         Transaction.remarks.ilike(search_term),
                         Transaction.category.ilike(search_term),
-                        Transaction.sub_category.ilike(search_term)
+                        Transaction.sub_category.ilike(search_term),
+                        func.array_to_string(Transaction.tags, ',').ilike(search_term)
                     )
                 )
 

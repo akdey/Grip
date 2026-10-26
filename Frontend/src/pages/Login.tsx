@@ -6,8 +6,10 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { api } from '../lib/api';
 import { Logo } from '../components/ui/Logo';
-import { Fingerprint } from 'lucide-react';
+import { Fingerprint, Sun, Moon } from 'lucide-react';
 import { checkBiometricsSupport, loginWithBiometrics, getDeviceBiometricName } from '../lib/webauthn';
+import { useTheme } from '../lib/theme';
+import { haptics } from '../lib/haptics';
 
 // Declare google for typescript
 declare global {
@@ -19,6 +21,7 @@ declare global {
 const Login: React.FC = () => {
     const navigate = useNavigate();
     const login = useAuthStore((state) => state.login);
+    const { isDark, toggleTheme } = useTheme();
     const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'OTP'>('LOGIN');
 
     const [email, setEmail] = useState(() => {
@@ -83,14 +86,14 @@ const Login: React.FC = () => {
             if (btn) {
                 btn.onclick = () => client.requestCode();
                 btn.innerHTML = `
-                    <button type="button" class="w-full flex items-center justify-center gap-3 bg-white text-black h-12 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-gray-100 transition-all">
+                    <button type="button" class="w-full flex items-center justify-center gap-3 bg-surface hover:bg-surface-hover text-primary border border-border-subtle h-12 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all cursor-pointer shadow-xs">
                         <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" class="w-5 h-5" alt="G" />
                         Continue with Google
                     </button>
                 `;
             }
         }
-    }, [mode]);
+    }, [mode, isDark]);
 
     const handleOneTapSync = async (code: string) => {
         setIsLoading(true);
@@ -149,7 +152,7 @@ const Login: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }
+    };
 
     const handleVerifyOtp = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -167,70 +170,111 @@ const Login: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }
+    };
 
     return (
-        <div className="h-screen w-full flex flex-col items-center justify-center p-4 text-white overflow-hidden">
-            <div className="w-full max-w-md space-y-8 animate-enter flex flex-col items-stretch">
-                <div className="text-center space-y-4">
+        <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-page text-primary relative overflow-y-auto">
+            {/* Theme Toggle Button */}
+            <div className="absolute top-4 right-4 z-20">
+                <button
+                    onClick={() => {
+                        haptics.selection();
+                        toggleTheme();
+                    }}
+                    className="p-2.5 rounded-full bg-surface-subtle border border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover transition-all active:scale-95 cursor-pointer"
+                    title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+                >
+                    {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
+            </div>
+
+            <div className="w-full max-w-md space-y-6 animate-enter flex flex-col items-stretch my-auto py-8">
+                {/* Brand / Logo */}
+                <div className="text-center space-y-3">
                     <div className="flex justify-center">
-                        <Logo size={64} />
+                        <Logo size={60} />
                     </div>
                     <div className="flex flex-col gap-1">
-                        <h1 className="text-4xl font-black tracking-tighter text-white heading-apple">
+                        <h1 className="text-3xl sm:text-4xl font-black tracking-tighter text-primary heading-apple">
                             {import.meta.env.VITE_APP_NAME || 'Grip'}
                         </h1>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[2px]">{import.meta.env.VITE_APP_TAGLINE}</p>
+                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-[2px]">
+                            {import.meta.env.VITE_APP_TAGLINE}
+                        </p>
                     </div>
                 </div>
 
-                <Card className="bg-white/[0.03] border-white/10 rounded-[2rem] p-8 shadow-2xl">
-                    <div className="flex justify-center border-b border-white/5 pb-4 mb-6">
+                {/* Card Container */}
+                <Card className="bg-surface border border-border-subtle rounded-[2rem] p-6 sm:p-8 shadow-xl">
+                    {/* Header Tabs */}
+                    <div className="flex justify-center border-b border-border-subtle pb-4 mb-6">
                         {mode !== 'OTP' && (
                             <div className="flex space-x-8 text-[9px] font-black uppercase tracking-widest">
                                 <button
-                                    onClick={() => { setMode('LOGIN'); setError(''); }}
-                                    className={`pb-1 transition-all ${mode === 'LOGIN' ? 'text-white border-b-2 border-white' : 'text-gray-600 hover:text-gray-400'}`}
+                                    onClick={() => {
+                                        haptics.selection();
+                                        setMode('LOGIN');
+                                        setError('');
+                                    }}
+                                    className={`pb-1 transition-all cursor-pointer ${
+                                        mode === 'LOGIN'
+                                            ? 'text-primary border-b-2 border-primary'
+                                            : 'text-text-muted hover:text-primary'
+                                    }`}
                                 >
                                     Login
                                 </button>
                                 <button
-                                    onClick={() => { setMode('REGISTER'); setError(''); }}
-                                    className={`pb-1 transition-all ${mode === 'REGISTER' ? 'text-white border-b-2 border-white' : 'text-gray-600 hover:text-gray-400'}`}
+                                    onClick={() => {
+                                        haptics.selection();
+                                        setMode('REGISTER');
+                                        setError('');
+                                    }}
+                                    className={`pb-1 transition-all cursor-pointer ${
+                                        mode === 'REGISTER'
+                                            ? 'text-primary border-b-2 border-primary'
+                                            : 'text-text-muted hover:text-primary'
+                                    }`}
                                 >
                                     Enlist
                                 </button>
                             </div>
                         )}
                         {mode === 'OTP' && (
-                            <span className="text-white font-black text-[9px] uppercase tracking-widest">Command Verification</span>
+                            <span className="text-primary font-black text-[9px] uppercase tracking-widest">
+                                Command Verification
+                            </span>
                         )}
                     </div>
 
-                    <form onSubmit={mode === 'LOGIN' ? handleLogin : mode === 'REGISTER' ? handleRegister : handleVerifyOtp} className="space-y-6">
-
+                    <form
+                        onSubmit={mode === 'LOGIN' ? handleLogin : mode === 'REGISTER' ? handleRegister : handleVerifyOtp}
+                        className="space-y-5"
+                    >
+                        {/* Enrolled Fast Biometric Card */}
                         {mode === 'LOGIN' && hasBiometricSupport && localStorage.getItem('grip_biometrics_enrolled') === 'true' && (
-                            <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-between gap-3 animate-fadeIn">
+                            <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between gap-3 animate-fadeIn">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
+                                    <div className="w-10 h-10 rounded-xl bg-surface-pill border border-border-subtle flex items-center justify-center text-primary shrink-0">
                                         <Fingerprint size={22} />
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-xs font-bold text-white truncate">Fast Sign-In</p>
-                                        <p className="text-[10px] text-gray-400 truncate">Use {getDeviceBiometricName()}</p>
+                                        <p className="text-xs font-bold text-primary truncate">Fast Sign-In</p>
+                                        <p className="text-[10px] text-text-muted truncate">Use {getDeviceBiometricName()}</p>
                                     </div>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={handleBiometricLogin}
                                     disabled={isLoading}
-                                    className="px-3.5 py-2 rounded-xl bg-white text-black font-black text-[10px] uppercase tracking-wider hover:bg-neutral-200 active:scale-95 transition-all shrink-0 cursor-pointer"
+                                    className="px-3.5 py-2 rounded-xl bg-primary text-text-inverse font-black text-[10px] uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all shrink-0 cursor-pointer shadow-xs"
                                 >
                                     Unlock
                                 </button>
                             </div>
                         )}
 
+                        {/* Standard Credential Inputs */}
                         {mode !== 'OTP' && (
                             <div className="space-y-4">
                                 <Input
@@ -240,7 +284,7 @@ const Login: React.FC = () => {
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="operator@grip.hub"
                                     required
-                                    className="bg-white/[0.02] border-white/5 h-12"
+                                    className="bg-surface-subtle border-border-subtle h-12 text-primary"
                                 />
                                 <Input
                                     label="Security Cipher"
@@ -249,14 +293,16 @@ const Login: React.FC = () => {
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
                                     required
-                                    className="bg-white/[0.02] border-white/5 h-12"
+                                    className="bg-surface-subtle border-border-subtle h-12 text-primary"
                                 />
                             </div>
                         )}
 
                         {mode === 'OTP' && (
-                            <div className='space-y-4'>
-                                <p className='text-[9px] font-bold text-gray-400 text-center uppercase tracking-widest'>{message}</p>
+                            <div className="space-y-4">
+                                <p className="text-[9px] font-bold text-text-muted text-center uppercase tracking-widest">
+                                    {message}
+                                </p>
                                 <Input
                                     label="Verification Code"
                                     type="text"
@@ -264,47 +310,61 @@ const Login: React.FC = () => {
                                     onChange={(e) => setOtp(e.target.value)}
                                     placeholder="123456"
                                     required
-                                    className="bg-white/[0.02] border-white/5 h-12"
+                                    className="bg-surface-subtle border-border-subtle h-12 text-primary"
                                 />
                             </div>
                         )}
 
+                        {/* Error Alert */}
                         {error && (
-                            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[9px] font-bold uppercase tracking-widest text-center">
+                            <div className="p-3 rounded-xl bg-status-danger-bg border border-status-danger-border text-status-danger-text text-[9px] font-bold uppercase tracking-widest text-center">
                                 {error}
                             </div>
                         )}
 
-                        <Button type="submit" className="w-full h-12 rounded-xl bg-white text-black font-black uppercase tracking-[2px] text-[10px] hover:bg-gray-200" isLoading={isLoading}>
+                        {/* Primary Submit Button */}
+                        <Button
+                            type="submit"
+                            className="w-full h-12 rounded-xl bg-primary text-text-inverse font-black uppercase tracking-[2px] text-[10px] hover:opacity-90 transition-opacity shadow-sm"
+                            isLoading={isLoading}
+                        >
                             {mode === 'LOGIN' ? 'Authorize' : mode === 'REGISTER' ? 'Register Unit' : 'Override & Sync'}
                         </Button>
 
+                        {/* Biometric Button fallback */}
                         {mode === 'LOGIN' && hasBiometricSupport && (
                             <button
                                 type="button"
                                 onClick={handleBiometricLogin}
                                 disabled={isLoading}
-                                className="w-full h-12 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/30 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-sm touch-manipulation cursor-pointer"
+                                className="w-full h-12 rounded-xl bg-surface-subtle hover:bg-surface-hover border border-border-subtle text-primary font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-xs touch-manipulation cursor-pointer"
                             >
-                                <Fingerprint size={18} className="text-white" />
+                                <Fingerprint size={18} className="text-primary" />
                                 <span>Sign in with {getDeviceBiometricName()}</span>
                             </button>
                         )}
 
+                        {/* OAuth / Google Sync */}
                         {mode !== 'OTP' && (
                             <div className="space-y-4">
                                 <div className="relative flex items-center justify-center">
-                                    <div className="border-t border-white/5 w-full"></div>
-                                    <span className="bg-transparent backdrop-blur-md px-4 text-[7px] font-black uppercase tracking-[3px] text-gray-700 absolute">OR</span>
+                                    <div className="border-t border-border-subtle w-full"></div>
+                                    <span className="bg-surface px-4 text-[7px] font-black uppercase tracking-[3px] text-text-muted absolute">
+                                        OR
+                                    </span>
                                 </div>
 
-                                <div id="googleSyncBtn" className="w-full flex justify-center !rounded-xl overflow-hidden opacity-80 hover:opacity-100 transition-opacity"></div>
+                                <div id="googleSyncBtn" className="w-full flex justify-center !rounded-xl overflow-hidden opacity-90 hover:opacity-100 transition-opacity"></div>
                             </div>
                         )}
 
                         {mode === 'OTP' && (
                             <div className="text-center">
-                                <button type="button" onClick={() => setMode('REGISTER')} className="text-[9px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors">
+                                <button
+                                    type="button"
+                                    onClick={() => setMode('REGISTER')}
+                                    className="text-[9px] font-black uppercase tracking-widest text-text-muted hover:text-primary transition-colors cursor-pointer"
+                                >
                                     Return to Registration
                                 </button>
                             </div>
@@ -312,29 +372,32 @@ const Login: React.FC = () => {
                     </form>
                 </Card>
 
-                <div className="flex flex-col items-center gap-6">
+                {/* Footer Links & Credit */}
+                <div className="flex flex-col items-center gap-5 pt-2">
                     <div className="flex gap-8">
                         <button
                             onClick={() => navigate('/privacy')}
-                            className="text-[8px] font-black uppercase tracking-[3px] text-gray-600 hover:text-white transition-colors"
+                            className="text-[8px] font-black uppercase tracking-[3px] text-text-muted hover:text-primary transition-colors cursor-pointer"
                         >
                             Privacy
                         </button>
                         <button
                             onClick={() => navigate('/terms')}
-                            className="text-[8px] font-black uppercase tracking-[3px] text-gray-600 hover:text-white transition-colors"
+                            className="text-[8px] font-black uppercase tracking-[3px] text-text-muted hover:text-primary transition-colors cursor-pointer"
                         >
                             Terms
                         </button>
                     </div>
 
-                    <div className="flex flex-col items-center gap-1 opacity-60">
-                        <span className="text-[6px] text-gray-700 font-bold uppercase tracking-[3px]">Engineered by</span>
+                    <div className="flex flex-col items-center gap-1 opacity-70">
+                        <span className="text-[6px] text-text-muted font-bold uppercase tracking-[3px]">
+                            Engineered by
+                        </span>
                         <a
                             href="https://portfolio.akdey.vercel.app"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[8px] font-black text-white hover:text-white/80 transition-all uppercase tracking-widest"
+                            className="text-[8px] font-black text-primary hover:opacity-80 transition-all uppercase tracking-widest"
                         >
                             AMIT KUMAR DEY
                         </a>
