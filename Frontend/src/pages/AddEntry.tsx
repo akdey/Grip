@@ -419,8 +419,10 @@ const AddEntry: React.FC = () => {
                                     />
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={() => setCalculatorOpen(true)}
-                                    className="w-10 h-10 bg-surface-subtle border border-border-subtle rounded-lg flex items-center justify-center transition-all active:scale-90 text-text-muted hover:text-primary hover:bg-surface-hover"
+                                    className="w-10 h-10 bg-surface-subtle border border-border-subtle rounded-xl flex items-center justify-center transition-all active:scale-90 text-text-muted hover:text-primary hover:bg-surface-hover cursor-pointer shrink-0"
+                                    title="Open Calculator"
                                 >
                                     <Calculator size={18} />
                                 </button>
