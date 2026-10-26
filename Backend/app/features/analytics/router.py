@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Literal
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
@@ -24,7 +24,7 @@ async def get_monthly_summary(
     service: Annotated[AnalyticsService, Depends()],
     month: Optional[int] = Query(None, ge=1, le=12),
     year: Optional[int] = Query(None, ge=2000, le=2100),
-    scope: str = Query("month", enum=["day", "month", "year", "all"])
+    scope: Literal["day", "month", "year", "all"] = Query("month")
 ):
     """
     Get financial summary (Income vs Expense) for a specific scope.

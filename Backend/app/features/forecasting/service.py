@@ -12,7 +12,7 @@ try:
     import sklearn
     from lightgbm import LGBMRegressor
     LIGHTGBM_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError, Exception):
     LIGHTGBM_AVAILABLE = False
     LGBMRegressor = None
 
