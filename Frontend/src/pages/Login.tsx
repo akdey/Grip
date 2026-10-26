@@ -251,12 +251,12 @@ const Login: React.FC = () => {
                         onSubmit={mode === 'LOGIN' ? handleLogin : mode === 'REGISTER' ? handleRegister : handleVerifyOtp}
                         className="space-y-5"
                     >
-                        {/* Enrolled Fast Biometric Card */}
-                        {mode === 'LOGIN' && hasBiometricSupport && localStorage.getItem('grip_biometrics_enrolled') === 'true' && (
-                            <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between gap-3 animate-fadeIn">
+                        {/* Biometric Fast Sign-In Card */}
+                        {mode === 'LOGIN' && hasBiometricSupport && (
+                            <div className="p-3.5 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between gap-3 animate-fadeIn">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-10 h-10 rounded-xl bg-surface-pill border border-border-subtle flex items-center justify-center text-primary shrink-0">
-                                        <Fingerprint size={22} />
+                                        <Fingerprint size={20} />
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-xs font-bold text-primary truncate">Fast Sign-In</p>
@@ -267,9 +267,9 @@ const Login: React.FC = () => {
                                     type="button"
                                     onClick={handleBiometricLogin}
                                     disabled={isLoading}
-                                    className="px-3.5 py-2 rounded-xl bg-primary text-text-inverse font-black text-[10px] uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all shrink-0 cursor-pointer shadow-xs"
+                                    className="px-4 py-2 rounded-xl bg-primary text-text-inverse font-black text-[10px] uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all shrink-0 cursor-pointer shadow-xs"
                                 >
-                                    Unlock
+                                    {isLoading ? 'Checking...' : 'Unlock'}
                                 </button>
                             </div>
                         )}
@@ -330,19 +330,6 @@ const Login: React.FC = () => {
                         >
                             {mode === 'LOGIN' ? 'Authorize' : mode === 'REGISTER' ? 'Register Unit' : 'Override & Sync'}
                         </Button>
-
-                        {/* Biometric Button fallback */}
-                        {mode === 'LOGIN' && hasBiometricSupport && (
-                            <button
-                                type="button"
-                                onClick={handleBiometricLogin}
-                                disabled={isLoading}
-                                className="w-full h-12 rounded-xl bg-surface-subtle hover:bg-surface-hover border border-border-subtle text-primary font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-xs touch-manipulation cursor-pointer"
-                            >
-                                <Fingerprint size={18} className="text-primary" />
-                                <span>Sign in with {getDeviceBiometricName()}</span>
-                            </button>
-                        )}
 
                         {/* OAuth / Google Sync */}
                         {mode !== 'OTP' && (

@@ -30,7 +30,9 @@ import {
     Check,
     AlertCircle,
     Clock,
-    Lock
+    Lock,
+    Fingerprint,
+    Loader2
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
@@ -43,6 +45,8 @@ import { Drawer } from '../components/ui/Drawer';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { useTheme } from '../lib/theme';
+import { getBiometricsStatus, registerBiometricCredential, getDeviceBiometricName } from '../lib/webauthn';
+import { haptics } from '../lib/haptics';
 
 const FEATURE_CARDS = [
     { id: 'sync', label: 'Gmail Sync', icon: Mail, path: '/sync', color: 'text-primary', bgColor: 'bg-surface-subtle' },
@@ -176,6 +180,54 @@ const More: React.FC = () => {
             setSaveError(err?.response?.data?.detail || 'Failed to save emergency contact');
         } finally {
             setIsSavingContact(false);
+        }
+    };
+
+    // Biometric & Hardware Passkey Status
+    const [biometricsStatus, setBiometricsStatus] = useState<{
+        supported: boolean;
+        platformAvailable: boolean;
+        hasBiometrics: boolean;
+        deviceType: string;
+    } | null>(null);
+    const [isEnrollingBiometrics, setIsEnrollingBiometrics] = useState(false);
+    const [biometricsMsg, setBiometricsMsg] = useState('');
+    const [biometricsErr, setBiometricsErr] = useState('');
+
+    const refreshBiometrics = async () => {
+        try {
+            const status = await getBiometricsStatus();
+            setBiometricsStatus(status);
+        } catch (e) {
+            console.warn('Failed to fetch biometric status', e);
+        }
+    };
+
+    useEffect(() => {
+        if (isProfileOpen) {
+            refreshBiometrics();
+        }
+    }, [isProfileOpen]);
+
+    const handleEnrollBiometrics = async () => {
+        setIsEnrollingBiometrics(true);
+        setBiometricsMsg('');
+        setBiometricsErr('');
+        try {
+            haptics.selection();
+            const res = await registerBiometricCredential();
+            haptics.notification('success');
+            setBiometricsMsg(res.message || 'Biometric passkey enrolled!');
+            await refreshBiometrics();
+            setTimeout(() => setBiometricsMsg(''), 4000);
+        } catch (err: any) {
+            haptics.notification('error');
+            if (!err?.message?.includes('cancel') && !err?.message?.includes('abort')) {
+                setBiometricsErr(err?.message || 'Biometric enrollment failed');
+                setTimeout(() => setBiometricsErr(''), 4000);
+            }
+        } finally {
+            setIsEnrollingBiometrics(false);
         }
     };
 
@@ -535,6 +587,80 @@ const More: React.FC = () => {
                                 Switch →
                             </span>
                         </button>
+                    </div>
+
+                    {/* Security & Biometrics */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-[2px] text-text-muted px-1">
+                            Security & Biometrics
+                        </label>
+                        <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-surface-pill text-primary border border-border-subtle flex items-center justify-center shrink-0">
+                                        <Fingerprint size={16} className="text-primary" />
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold text-primary block">
+                                            {getDeviceBiometricName()} Passkey
+                                        </span>
+                                        <span className="text-[11px] text-text-muted block mt-0.5 leading-relaxed">
+                                            Fast 1-second sign-in for daily activity and instant authorization for Wealth Vault.
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2 border-t border-border-subtle">
+                                <div className="flex items-center gap-1.5">
+                                    {biometricsStatus?.hasBiometrics ? (
+                                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1">
+                                            <Check size={11} />
+                                            <span>Active</span>
+                                        </span>
+                                    ) : (
+                                        <span className="text-[10px] font-bold text-text-muted bg-surface-pill px-2 py-0.5 rounded-md border border-border-subtle">
+                                            Not Enrolled
+                                        </span>
+                                    )}
+                                </div>
+
+                                {biometricsStatus?.platformAvailable ? (
+                                    <Button
+                                        type="button"
+                                        onClick={handleEnrollBiometrics}
+                                        disabled={isEnrollingBiometrics}
+                                        className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider h-auto shrink-0"
+                                    >
+                                        {isEnrollingBiometrics ? (
+                                            <Loader2 size={12} className="animate-spin" />
+                                        ) : biometricsStatus?.hasBiometrics ? (
+                                            'Re-register'
+                                        ) : (
+                                            `Enroll ${getDeviceBiometricName()}`
+                                        )}
+                                    </Button>
+                                ) : (
+                                    <span className="text-[10px] text-text-muted italic">
+                                        Unsupported on this device
+                                    </span>
+                                )}
+                            </div>
+
+                            {biometricsMsg && (
+                                <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-semibold px-1">
+                                    <Check size={13} />
+                                    <span>{biometricsMsg}</span>
+                                </div>
+                            )}
+
+                            {biometricsErr && (
+                                <div className="flex items-center gap-1.5 text-rose-400 text-[11px] font-semibold px-1">
+                                    <AlertCircle size={13} />
+                                    <span>{biometricsErr}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Nominee & Inactivity Contingency */}

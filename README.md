@@ -381,20 +381,25 @@ Predictable, recurring expenses that you *know* are coming:
 
 **How It Works:**
 ```
-① Mark bill as "Surety" (predictable recurring)
-② Grip automatically projects next occurrence
-③ Amount included in Safe-to-Spend calculation
-④ Even if not yet billed, it's accounted for
+① Mark bill as "Surety" (predictable recurring commitment)
+② Grip automatically projects current month & upcoming month occurrences
+③ Current obligations reduce Safe-to-Spend in real time
+④ Upcoming month obligations provide forward-looking cashflow visibility
 ```
+
+**Dual-Horizon Surety Obligations Ledger:**
+- **Current Month Ledger**: Identifies active, due, and paid sureties for the ongoing calendar cycle, freezing commitments from the live Safe-to-Spend balance.
+- **Upcoming Month Projections**: In-depth horizon scan (`days_ahead > 30`) automatically calculates exact next-month recurrence dates (`auto-{id}-next`), giving a clear forecast of the upcoming month's financial burden before the month even begins.
+- **Segmented UI View**: Toggle seamlessly between **This Month** and **Upcoming Month** in the Sureties console with dedicated metrics for active commitments vs. projected burden.
 
 **Example:**
 ```
 Rent: ₹15,000 (Surety, due 1st of every month)
-Today: Jan 20
-Next Due: Feb 1 (12 days away)
+Today: Oct 26
+Current Month: Settled
+Upcoming Month: Nov 1 (6 days away) • Projected Burden: ₹15,000
 
-Safe-to-Spend: Already reduced by ₹15,000
-Result: Prevents overspending before rent is due ✅
+Result: Prevents surprise salary drains by previewing next month's recurring commitments ✅
 ```
 
 **Frozen Funds Breakdown:**
@@ -526,35 +531,45 @@ Masked:   "UPI: ****@paytm paid ****@phonepe"
 - ✅ Aadhaar numbers (🆔 8-digit masking, last 4 visible)
 - ✅ UPI IDs (👤 <email> or <username> prefix masked)
 - ✅ Phone numbers (📱 middle 6 digits masked)
-**Security Architecture:**
-- **Biometric Device Fingerprint (WebAuthn / Passkeys)**: Native integration for Touch ID, Face ID, or Windows Hello. No passwords required after initial device enrollment. Hardware-backed security preventing phishing.
-- JWT authentication with bcrypt password hashing
-- Email verification with OTP (SMTP)
-- Read-only Gmail OAuth (can't send/modify emails)
-- Encrypted OAuth tokens in database (PostgreSQL JSONB encrypted)
-- No third-party analytics or tracking
-- Self-hostable (you control the data)
+**Security & Biometric Architecture:**
+- **Dual-Tier Biometric Security (WebAuthn / Passkeys / Fingerprint)**:
+  - **Tier 1 (Outer Gate / Fast App Sign-In)**: 1-second biometric authentication for day-to-day operations (logging expenses, approving synced transactions, reviewing budgets). Reduces friction so users don't type credentials multiple times a day.
+  - **Tier 2 (Inner Gate / Wealth Vault Gate)**: High-security barrier isolating total net worth, mutual funds, EPF/PPF, and asset statements behind a secondary biometric re-prompt or master password challenge (`WealthVaultGate`). Prevents casual onlookers from seeing sensitive portfolio balances.
+  - **Hardware-Backed Device Passkeys**: Works natively with Apple Touch ID, Face ID, Android Biometrics, and Windows Hello. Phishing-resistant FIDO2 specification with discoverable and non-discoverable passkeys.
+  - **Device Key Management**: Direct enrollment and status monitoring inside **Profile Settings** (`More` → `Security & Biometrics`).
+- **Cryptographic Security**:
+  - JWT authentication with bcrypt password hashing
+  - Read-only Gmail OAuth (minimal scopes: `gmail.readonly`, cannot send or delete emails)
+  - Encrypted OAuth tokens in database (PostgreSQL JSONB encrypted)
+  - Zero third-party telemetry, trackers, or ad-network SDKs
+  - Fully self-hostable with complete data ownership
 
-### 🏷️ Advanced Organization
+### 🏷️ Advanced Organization & Metadata
 
-**Tags System**
-- Create custom tags (#vacation, #business, #medical, #family)
-- Tag individual transactions
-- Filter and analyze by tags
-- Multi-tag support (one transaction, multiple tags)
+**Case-Sensitive Tags System**
+- **Exact Casing Preservation**: Custom tags retain their exact user-typed capitalization (e.g. `#Groceries`, `#UberTrip`, `#AppleStore`, `#Goa2026`) across the database, APIs, and UI without forced lowercase/uppercase distortion.
+- **Dedicated Tags Hub**: Redesigned console featuring real-time metadata aggregations:
+  - **Total Active Tags** and **Cumulative Tagged Spend** across all logged transactions.
+  - **Real-Time Search & Sort Toolbar**: Instant tag filtering with sorting by **Most Used** (frequency), **Highest Spend** (volume), and **Alphabetical (A-Z)**.
+  - **Click-Through Navigation**: Tapping any tag provides tactile haptic feedback and navigates directly to `/transactions?search=...`, displaying all associated expenses.
 
 **Categories & Subcategories**
-- 20+ predefined categories
-- Hierarchical structure (Category > Subcategory)
-- Fully customizable (add/edit/delete)
-- Visual spending distribution
+- 20+ predefined categories with intelligent subcategory mappings
+- Dynamic icon assignments and brand color accents
+- Real-time visual spending distribution and category budgets
 
-**Search & Filters**
-- Search by merchant, amount, category, tag
-- Date range filters
-- Account type filters (Credit Card, Savings, Cash, UPI)
-- Status filters (Pending, Verified)
-- Export filtered results
+**Search, Filter & Layout Shielding**
+- Search across merchant names, remarks, categories, subcategories, and tags simultaneously
+- Mobile-first flexbox layout shielding preventing button displacement and text overflow on long merchant titles in the **Pending Review Action Center**
+- Date range, account type (Credit Card, Bank, Cash, UPI), and status filters (Pending vs. Verified)
+- One-click CSV and Excel statement exports
+
+### 🎨 Design & Theme Parity
+
+**True Light & Dark Theme Parity**
+- **Dual Theme Support**: Architectural design system maintaining exact contrast, readability, and elevation across Dark (`#050505`) and Light (`#F2F4F8`) themes.
+- **Pre-Login Theme Switcher**: Dedicated theme toggle switch on the Login page allowing users to set their preferred visual environment before authenticating.
+- **Apple-Inspired Spatial Aesthetics**: Tactile haptic feedback on iOS/Android Web Vibration API, glassmorphic surfaces, and responsive micro-animations.
 
 ---
 
