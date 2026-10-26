@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Hash, Loader2, ChevronRight, Search, X, Sparkles, TrendingUp, Layers } from 'lucide-react';
-import { format } from 'date-fns';
+import { ArrowLeft, Hash, Loader2, ChevronRight, Search, X } from 'lucide-react';
 import { useTagsSummary, type TagSummary } from '../features/transactions/hooks';
 import { haptics } from '../lib/haptics';
 
@@ -20,15 +19,6 @@ const Tags: React.FC = () => {
     const { data: tags, isLoading } = useTagsSummary();
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('count');
-
-    // Aggregate statistics
-    const stats = useMemo(() => {
-        if (!tags || tags.length === 0) return { totalTags: 0, totalSpend: 0, topTag: null as TagSummary | null };
-        const totalTags = tags.length;
-        const totalSpend = tags.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-        const topTag = [...tags].sort((a, b) => b.count - a.count)[0] || null;
-        return { totalTags, totalSpend, topTag };
-    }, [tags]);
 
     // Filter and sort tags
     const filteredTags = useMemo(() => {
@@ -78,7 +68,7 @@ const Tags: React.FC = () => {
                 )}
             </header>
 
-            <div className="p-4 space-y-5 max-w-2xl mx-auto animate-enter">
+            <div className="p-4 space-y-4 max-w-2xl mx-auto animate-enter">
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center p-16 space-y-3">
                         <Loader2 className="w-8 h-8 text-accent-text animate-spin" />
@@ -98,35 +88,6 @@ const Tags: React.FC = () => {
                     </div>
                 ) : (
                     <>
-                        {/* Summary Metrics Card */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-1">
-                                <div className="flex items-center gap-1.5 text-text-muted">
-                                    <Layers size={13} />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">Total Tags</span>
-                                </div>
-                                <p className="text-2xl font-black text-primary tracking-tight">
-                                    {stats.totalTags}
-                                </p>
-                                <p className="text-[10px] text-text-muted font-medium truncate">
-                                    Across all logged activity
-                                </p>
-                            </div>
-
-                            <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-1">
-                                <div className="flex items-center gap-1.5 text-text-muted">
-                                    <TrendingUp size={13} />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">Tagged Spend</span>
-                                </div>
-                                <p className="text-2xl font-black text-primary tracking-tight truncate">
-                                    {formatCurrency(stats.totalSpend)}
-                                </p>
-                                <p className="text-[10px] text-text-muted font-medium truncate">
-                                    {stats.topTag ? `Top: #${stats.topTag.tag}` : 'Total volume'}
-                                </p>
-                            </div>
-                        </div>
-
                         {/* Search and Sort Toolbar */}
                         <div className="space-y-3">
                             <div className="relative flex items-center">
@@ -210,65 +171,47 @@ const Tags: React.FC = () => {
                             </div>
                         ) : (
                             <div className="space-y-2.5">
-                                {filteredTags.map((tag: TagSummary) => {
-                                    const lastUsedFormatted = tag.last_used
-                                        ? (() => {
-                                              try {
-                                                  return format(new Date(tag.last_used), 'dd MMM yyyy');
-                                              } catch {
-                                                  return null;
-                                              }
-                                          })()
-                                        : null;
-
-                                    return (
-                                        <div
-                                            key={tag.tag}
-                                            onClick={() => handleTagClick(tag.tag)}
-                                            className="group bg-surface-subtle hover:bg-surface-hover border border-border-subtle rounded-2xl p-3.5 flex items-center justify-between transition-all active:scale-[0.99] cursor-pointer gap-3 shadow-xs"
-                                        >
-                                            <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                                <div className="w-10 h-10 rounded-2xl bg-surface-pill border border-border-subtle text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                                    <Hash size={18} />
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    {/* Case-sensitive font rendering without lowercase/uppercase CSS */}
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-semibold text-primary text-sm tracking-tight truncate font-sans">
-                                                            #{tag.tag}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-text-muted font-medium">
-                                                        <span>
-                                                            {tag.count} transaction{tag.count !== 1 ? 's' : ''}
-                                                        </span>
-                                                        {lastUsedFormatted && (
-                                                            <>
-                                                                <span className="opacity-40">•</span>
-                                                                <span className="truncate">Last: {lastUsedFormatted}</span>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
+                                {filteredTags.map((tag: TagSummary) => (
+                                    <div
+                                        key={tag.tag}
+                                        onClick={() => handleTagClick(tag.tag)}
+                                        className="group bg-surface-subtle hover:bg-surface-hover border border-border-subtle rounded-2xl p-3.5 flex items-center justify-between transition-all active:scale-[0.99] cursor-pointer gap-3 shadow-xs"
+                                    >
+                                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                            <div className="w-10 h-10 rounded-2xl bg-surface-pill border border-border-subtle text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                                <Hash size={18} />
                                             </div>
-
-                                            <div className="flex items-center gap-2.5 shrink-0 text-right">
-                                                <div>
-                                                    <p className="font-black text-primary text-sm tracking-tight leading-none">
-                                                        {formatCurrency(Number(tag.amount))}
-                                                    </p>
-                                                    <p className="text-[9px] text-text-muted uppercase tracking-wider font-bold mt-1">
-                                                        Total
-                                                    </p>
+                                            <div className="min-w-0 flex-1">
+                                                {/* Case-sensitive font rendering without lowercase/uppercase CSS */}
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold text-primary text-sm tracking-tight truncate font-sans">
+                                                        #{tag.tag}
+                                                    </span>
                                                 </div>
-                                                <ChevronRight
-                                                    size={16}
-                                                    className="text-text-muted/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all"
-                                                />
+                                                <div className="mt-0.5 text-[11px] text-text-muted font-medium">
+                                                    <span>
+                                                        {tag.count} transaction{tag.count !== 1 ? 's' : ''}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
-                                    );
-                                })}
+
+                                        <div className="flex items-center gap-2.5 shrink-0 text-right">
+                                            <div>
+                                                <p className="font-black text-primary text-sm tracking-tight leading-none">
+                                                    {formatCurrency(Number(tag.amount))}
+                                                </p>
+                                                <p className="text-[9px] text-text-muted uppercase tracking-wider font-bold mt-1">
+                                                    Total
+                                                </p>
+                                            </div>
+                                            <ChevronRight
+                                                size={16}
+                                                className="text-text-muted/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </>
