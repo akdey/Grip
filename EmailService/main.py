@@ -3,19 +3,28 @@ from pydantic import BaseModel, EmailStr
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+import base64
 import os
-from typing import Optional
+from typing import Optional, List
 
 app = FastAPI(title="Grip Email Relay")
 
 # This secret should be shared between your main backend and this microservice
 EMAIL_RELAY_SECRET = os.getenv("EMAIL_RELAY_SECRET", "change-me-in-production")
 
+class EmailAttachment(BaseModel):
+    filename: str
+    content: str  # Base64-encoded string
+    type: Optional[str] = "application/octet-stream"
+
 class EmailRequest(BaseModel):
     to_email: EmailStr
     subject: str
     html_content: str
     from_name: Optional[str] = "Grip"
+    attachments: Optional[List[EmailAttachment]] = None
 
 @app.get("/")
 def read_root():
@@ -40,11 +49,43 @@ async def send_email(
         raise HTTPException(status_code=500, detail="Relay SMTP credentials missing")
 
     try:
-        message = MIMEMultipart("alternative")
-        message["Subject"] = request.subject
-        message["From"] = f"{request.from_name} <{from_email}>"
-        message["To"] = request.to_email
-        message.attach(MIMEText(request.html_content, "html"))
+        if request.attachments:
+            # When attachments are present, use 'mixed' multipart
+            message = MIMEMultipart("mixed")
+            message["Subject"] = request.subject
+            message["From"] = f"{request.from_name} <{from_email}>"
+            message["To"] = request.to_email
+
+            # Attach HTML Body
+            body_part = MIMEText(request.html_content, "html")
+            message.attach(body_part)
+
+            # Process and attach each file
+            for att in request.attachments:
+                try:
+                    file_bytes = base64.b64decode(att.content)
+                    mime_type = att.type or "application/octet-stream"
+                    if "/" in mime_type:
+                        maintype, subtype = mime_type.split("/", 1)
+                    else:
+                        maintype, subtype = "application", "octet-stream"
+                    
+                    part = MIMEBase(maintype, subtype)
+                    part.set_payload(file_bytes)
+                    encoders.encode_base64(part)
+                    part.add_header(
+                        "Content-Disposition",
+                        f'attachment; filename="{att.filename}"'
+                    )
+                    message.attach(part)
+                except Exception as att_err:
+                    print(f"Error attaching {att.filename}: {att_err}")
+        else:
+            message = MIMEMultipart("alternative")
+            message["Subject"] = request.subject
+            message["From"] = f"{request.from_name} <{from_email}>"
+            message["To"] = request.to_email
+            message.attach(MIMEText(request.html_content, "html"))
 
         # Since Vercel is often liberal with ports, we try standard 587
         # or 465 based on what you configure in environment.
@@ -61,3 +102,4 @@ async def send_email(
         return {"status": "sent"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
