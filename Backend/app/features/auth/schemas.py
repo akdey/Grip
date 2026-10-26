@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr
 import uuid
 
@@ -30,9 +30,10 @@ class VerifyOTP(BaseModel):
     otp: str
 
 class EmergencyContactUpdate(BaseModel):
-    emergency_contact_email: Optional[EmailStr] = None
+    emergency_contact_email: Optional[str] = None
 
 class EmergencyContactResponse(BaseModel):
     emergency_contact_email: Optional[str] = None
     last_active_at: Optional[str] = None
+    emails: List[str] = []
 

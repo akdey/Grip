@@ -453,10 +453,11 @@ Result: Prevents surprise salary drains by previewing next month's recurring com
 - **CSV Data Backup**: One-click export of your entire raw transaction ledger to CSV for independent processing.
 
 **🛡️ Automated Contingency Asset Dispatch (7-Day Inactivity Switch)**
-- **Automated Emergency Dispatch**: If you do not access Grip for 7 days, an automated batch generates your latest comprehensive portfolio statement spreadsheet (`.xlsx`) and delivers it securely via email to your designated emergency contact or nominee.
+- **Multi-Nominee Emergency Dispatch**: If you do not access Grip for 7 days, an automated batch generates your latest comprehensive portfolio statement spreadsheet (`.xlsx`) and delivers it securely via email to **multiple designated emergency contacts or nominees** (e.g. spouse, siblings, executor).
+- **One-Click Live Test Dispatch**: Send a real-time test contingency statement directly from the UI or API (`POST /auth/emergency-contact/test`) to verify deliverability and preview what your nominees will receive.
 - **ZERO-Bloat Activity Tracking**: Maintains zero database bloat by recording activity on a single user profile timestamp with in-memory throttling (updated at most once every 2 hours). No explosive log tables or disk clutter.
 - **Scheduled Batch Execution**: Runs on a daily schedule via GitHub Actions (`.github/workflows/inactivity-contingency.yml`) and internal APScheduler. Supports one-click manual triggers from GitHub Actions UI.
-- **Self-Service Configuration**: Configure, update, or disable your designated emergency contact anytime directly from **More > Asset Dispatch** or the Settings popover in the UI.
+- **Self-Service Configuration**: Manage multiple nominee emails as chips/tags, update, or disable your contingency preferences anytime directly from **More > Profile Settings** in the UI.
 
 ### 📊 Advanced Analytics
 
@@ -533,8 +534,9 @@ Masked:   "UPI: ****@paytm paid ****@phonepe"
 - ✅ Phone numbers (📱 middle 6 digits masked)
 **Security & Biometric Architecture:**
 - **Dual-Tier Biometric Security (WebAuthn / Passkeys / Fingerprint)**:
-  - **Tier 1 (Outer Gate / Fast App Sign-In)**: 1-second biometric authentication for day-to-day operations (logging expenses, approving synced transactions, reviewing budgets). Reduces friction so users don't type credentials multiple times a day.
+  - **Tier 1 (Outer Gate / App-Launch & Fast Sign-In)**: Automatically prompts the native device biometric sensor (Touch ID / Face ID / Fingerprint / Windows Hello) upon opening the app or logging in, unlocking all figures immediately across transactions, analytics, and budgets.
   - **Tier 2 (Inner Gate / Wealth Vault Gate)**: High-security barrier isolating total net worth, mutual funds, EPF/PPF, and asset statements behind a secondary biometric re-prompt or master password challenge (`WealthVaultGate`). Prevents casual onlookers from seeing sensitive portfolio balances.
+  - **Universal In-Page Privacy Eye**: Direct Eye toggle accessible right from the header on Transactions, Dashboard, and Wealth to reveal or mask figures on demand without navigating away.
   - **Hardware-Backed Device Passkeys**: Works natively with Apple Touch ID, Face ID, Android Biometrics, and Windows Hello. Phishing-resistant FIDO2 specification with discoverable and non-discoverable passkeys.
   - **Device Key Management**: Direct enrollment and status monitoring inside **Profile Settings** (`More` → `Security & Biometrics`).
 - **Cryptographic Security**:
@@ -548,10 +550,9 @@ Masked:   "UPI: ****@paytm paid ****@phonepe"
 
 **Case-Sensitive Tags System**
 - **Exact Casing Preservation**: Custom tags retain their exact user-typed capitalization (e.g. `#Groceries`, `#UberTrip`, `#AppleStore`, `#Goa2026`) across the database, APIs, and UI without forced lowercase/uppercase distortion.
-- **Dedicated Tags Hub**: Redesigned console featuring real-time metadata aggregations:
-  - **Total Active Tags** and **Cumulative Tagged Spend** across all logged transactions.
-  - **Real-Time Search & Sort Toolbar**: Instant tag filtering with sorting by **Most Used** (frequency), **Highest Spend** (volume), and **Alphabetical (A-Z)**.
-  - **Click-Through Navigation**: Tapping any tag provides tactile haptic feedback and navigates directly to `/transactions?search=...`, displaying all associated expenses.
+- **Dedicated Tags Hub**: Clean, streamlined console displaying transaction frequency counts for each tag.
+- **Real-Time Search & Sort Toolbar**: Instant tag filtering with sorting by **Most Used** (frequency), **Highest Spend** (volume), and **Alphabetical (A-Z)**.
+- **Click-Through Navigation**: Tapping any tag provides tactile haptic feedback and navigates directly to `/transactions?search=...`, displaying all associated expenses.
 
 **Categories & Subcategories**
 - 20+ predefined categories with intelligent subcategory mappings

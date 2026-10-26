@@ -381,13 +381,41 @@ async def verify_biometrics_login(
     )
 
 
+def parse_and_validate_emails(raw_val: Optional[str]) -> tuple[Optional[str], list[str]]:
+    import re
+    from email_validator import validate_email, EmailNotValidError
+    if not raw_val or not raw_val.strip():
+        return None, []
+    # Split by comma, semicolon, newline, or whitespace
+    tokens = [e.strip() for e in re.split(r'[,;\n\r]+', raw_val) if e.strip()]
+    cleaned = []
+    seen = set()
+    for token in tokens:
+        try:
+            valid = validate_email(token, check_deliverability=False)
+            normalized = valid.normalized.lower()
+        except EmailNotValidError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid email address: '{token}'"
+            )
+        if normalized not in seen:
+            seen.add(normalized)
+            cleaned.append(normalized)
+    if not cleaned:
+        return None, []
+    return ", ".join(cleaned), cleaned
+
+
 @router.get("/emergency-contact", response_model=schemas.EmergencyContactResponse)
 async def get_emergency_contact(
     current_user: Annotated[User, Depends(get_current_user)]
 ):
+    _, emails = parse_and_validate_emails(current_user.emergency_contact_email)
     return {
         "emergency_contact_email": current_user.emergency_contact_email,
         "last_active_at": current_user.last_active_at.isoformat() if current_user.last_active_at else None,
+        "emails": emails,
     }
 
 
@@ -398,7 +426,7 @@ async def update_emergency_contact(
     db: Annotated[AsyncSession, Depends(get_db)]
 ):
     from sqlalchemy import update
-    email_val = str(data.emergency_contact_email).strip().lower() if data.emergency_contact_email else None
+    email_val, emails = parse_and_validate_emails(data.emergency_contact_email)
     await db.execute(
         update(User)
         .where(User.id == current_user.id)
@@ -409,5 +437,126 @@ async def update_emergency_contact(
     return {
         "emergency_contact_email": current_user.emergency_contact_email,
         "last_active_at": current_user.last_active_at.isoformat() if current_user.last_active_at else None,
+        "emails": emails,
     }
+
+
+@router.post("/emergency-contact/test")
+async def test_emergency_contact(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    """
+    Sends a test portfolio statement email to all registered contingency contacts.
+    """
+    import asyncio
+    import zoneinfo
+    from app.core.config import get_settings
+    from app.core.email import send_email
+    from app.features.export.service import generate_portfolio_statement_excel
+
+    raw = current_user.emergency_contact_email or ""
+    _, emails = parse_and_validate_emails(raw)
+    if not emails:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No emergency contact emails configured. Please add and save at least one email first."
+        )
+
+    settings = get_settings()
+    tz = zoneinfo.ZoneInfo(settings.APP_TIMEZONE)
+    user_name = current_user.full_name or current_user.email.split('@')[0].replace('.', ' ').title()
+    today_str = datetime.now(tz).strftime("%Y-%m-%d")
+    clean_email_prefix = current_user.email.split('@')[0]
+    filename = f"Grip_Asset_Schedule_{clean_email_prefix}_{today_str}.xlsx"
+
+    # Generate the actual portfolio statement Excel file
+    try:
+        excel_stream = await generate_portfolio_statement_excel(db, current_user)
+        excel_bytes = excel_stream.getvalue()
+    except Exception as e:
+        logger.error(f"Error generating portfolio excel for test: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate asset spreadsheet: {str(e)}"
+        )
+
+    subject = f"[TEST] Confidential Asset Portfolio Statement for {user_name} [Grip Contingency]"
+    html_body = f"""
+    <html>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.6; margin: 0; padding: 24px; background-color: #f8fafc;">
+            <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 24px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+                <div style="background: #090a0f; padding: 32px; color: #ffffff;">
+                    <span style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em; color: #ffffff;">GRIP</span>
+                    <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; margin-left: 12px;">Test Dispatch</span>
+                    <h2 style="color: #ffffff; margin: 20px 0 0 0; font-size: 20px; font-weight: 800;">7-Day Inactivity Contingency Test</h2>
+                </div>
+                <div style="padding: 32px;">
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 14px 18px; border-radius: 14px; margin-bottom: 24px; font-size: 13px; font-weight: 600;">
+                        ✅ Contingency Test Dispatch: This is a manual test email triggered by {user_name} ({current_user.email}) to verify delivery of their confidential portfolio schedule.
+                    </div>
+                    <p style="font-size: 14px; color: #475569;">
+                        Hello,
+                    </p>
+                    <p style="font-size: 14px; color: #475569;">
+                        You are registered as a designated emergency / contingency contact for <strong>{user_name}</strong> on <strong>Grip</strong>.
+                    </p>
+                    <div style="background: #f1f5f9; padding: 20px; border-radius: 14px; margin: 24px 0; border: 1px solid #e2e8f0;">
+                        <p style="margin: 0; font-size: 13px; color: #334155; font-weight: 600;">
+                            How this works in production:
+                        </p>
+                        <p style="margin: 6px 0 0 0; font-size: 13px; color: #64748b;">
+                            If {user_name} is inactive on Grip for {settings.INACTIVITY_THRESHOLD_DAYS} consecutive days, Grip Automated Systems will automatically generate an updated version of the attached schedule and email it to you.
+                        </p>
+                    </div>
+                    <p style="font-size: 13px; color: #475569;">
+                        The attached sample Excel file (<strong>{filename}</strong>) contains the current financial asset schedule as recorded in Grip.
+                    </p>
+                    <p style="font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; margin-top: 30px;">
+                        Sent securely from Grip Asset Contingency System.
+                    </p>
+                </div>
+            </div>
+        </body>
+    </html>
+    """
+
+    sent_to = []
+    failed_to = []
+    for dest in emails:
+        try:
+            success = await asyncio.to_thread(
+                send_email,
+                to_email=dest,
+                subject=subject,
+                html_content=html_body,
+                attachment_bytes=excel_bytes,
+                attachment_filename=filename,
+                attachment_mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            if success:
+                sent_to.append(dest)
+            else:
+                failed_to.append(dest)
+        except Exception as send_err:
+            logger.error(f"Error sending test email to {dest}: {send_err}")
+            failed_to.append(dest)
+
+    if not sent_to and failed_to:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to deliver test email to {', '.join(failed_to)}. Please check your SMTP or email relay configuration."
+        )
+
+    msg = f"Test statement successfully dispatched to {len(sent_to)} contact(s): {', '.join(sent_to)}"
+    if failed_to:
+        msg += f" (Failed for: {', '.join(failed_to)})"
+
+    return {
+        "status": "success",
+        "message": msg,
+        "sent_to": sent_to,
+        "failed_to": failed_to
+    }
+
 

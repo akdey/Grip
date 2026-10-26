@@ -1,12 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { Smartphone, X } from 'lucide-react';
+import { useAuthStore, usePrivacyStore } from '../../lib/store';
+import { getBiometricsStatus, unlockWithBiometrics } from '../../lib/webauthn';
+import { haptics } from '../../lib/haptics';
 
 export const Layout: React.FC = () => {
     const location = useLocation();
     const [showDesktopWarning, setShowDesktopWarning] = useState(true);
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const { showSensitive, setShowSensitive } = usePrivacyStore();
+
+    // App Open Biometric Unlock
+    // When the user opens the app, prompt biometric verification once per session
+    // to reveal amounts across all pages without having to go back to Home/Dashboard.
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        const sessionKey = 'grip_app_open_auth_attempted';
+        if (sessionStorage.getItem(sessionKey)) return;
+        sessionStorage.setItem(sessionKey, 'true');
+
+        if (!showSensitive) {
+            getBiometricsStatus().then((status) => {
+                if (status.hasBiometrics && status.platformAvailable) {
+                    unlockWithBiometrics().then((success) => {
+                        if (success) {
+                            setShowSensitive(true);
+                            haptics.notification('success');
+                        }
+                    }).catch((err) => {
+                        console.log('App launch biometric verification cancelled/skipped:', err);
+                    });
+                }
+            }).catch(() => {});
+        }
+    }, [isAuthenticated, showSensitive, setShowSensitive]);
+
     const isEntryPage = location.pathname === '/add' ||
         location.pathname.startsWith('/transactions/') ||
         location.pathname === '/settings/categories' ||

@@ -32,7 +32,9 @@ import {
     Clock,
     Lock,
     Fingerprint,
-    Loader2
+    Loader2,
+    Send,
+    X
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
@@ -148,6 +150,8 @@ const More: React.FC = () => {
     const [isSavingContact, setIsSavingContact] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [saveError, setSaveError] = useState('');
+    const [isSendingTest, setIsSendingTest] = useState(false);
+    const [testStatus, setTestStatus] = useState<{ success: boolean; message: string } | null>(null);
 
     const fetchEmergencyContact = async () => {
         try {
@@ -163,6 +167,16 @@ const More: React.FC = () => {
     useEffect(() => {
         fetchEmergencyContact();
     }, []);
+
+    const emailsList = emergencyEmail
+        .split(/[,;\n\r]+/)
+        .map(e => e.trim())
+        .filter(e => e.length > 0);
+
+    const handleRemoveEmail = (target: string) => {
+        const remaining = emailsList.filter(e => e.toLowerCase() !== target.toLowerCase());
+        setEmergencyEmail(remaining.join(', '));
+    };
 
     const handleSaveEmergencyContact = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -182,6 +196,32 @@ const More: React.FC = () => {
             setIsSavingContact(false);
         }
     };
+
+    const handleTestEmergencyContact = async () => {
+        setIsSendingTest(true);
+        setTestStatus(null);
+        setSaveError('');
+        try {
+            haptics.selection();
+            const res = await api.post('/auth/emergency-contact/test');
+            haptics.notification('success');
+            setTestStatus({
+                success: true,
+                message: res.data?.message || 'Test contingency email dispatched successfully!'
+            });
+            setTimeout(() => setTestStatus(null), 8000);
+        } catch (err: any) {
+            haptics.notification('error');
+            setTestStatus({
+                success: false,
+                message: err?.response?.data?.detail || err?.message || 'Failed to dispatch test email.'
+            });
+            setTimeout(() => setTestStatus(null), 8000);
+        } finally {
+            setIsSendingTest(false);
+        }
+    };
+
 
     // Biometric & Hardware Passkey Status
     const [biometricsStatus, setBiometricsStatus] = useState<{
@@ -665,9 +705,16 @@ const More: React.FC = () => {
 
                     {/* Nominee & Inactivity Contingency */}
                     <div className="space-y-2.5">
-                        <label className="text-[10px] font-bold uppercase tracking-[2px] text-text-muted px-1">
-                            Emergency Nominee
-                        </label>
+                        <div className="flex items-center justify-between px-1">
+                            <label className="text-[10px] font-bold uppercase tracking-[2px] text-text-muted">
+                                Emergency Nominees
+                            </label>
+                            {emailsList.length > 0 && (
+                                <span className="text-[9px] font-bold text-accent-text bg-accent-subtle px-2 py-0.5 rounded-full border border-accent-border">
+                                    {emailsList.length} {emailsList.length === 1 ? 'Contact' : 'Contacts'}
+                                </span>
+                            )}
+                        </div>
 
                         <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3">
                             <div className="flex items-start gap-3">
@@ -679,17 +726,40 @@ const More: React.FC = () => {
                                         7-Day Inactivity Contingency
                                     </h5>
                                     <p className="text-[11px] text-text-muted mt-1 leading-relaxed">
-                                        If you don't access Grip for 7 days, your portfolio statement (<span className="font-mono text-[10px] text-primary">.xlsx</span>) will be automatically emailed to this nominee.
+                                        If you don't access Grip for 7 days, your confidential portfolio statement (<span className="font-mono text-[10px] text-primary">.xlsx</span>) will be automatically emailed to all listed nominees.
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Nominee Chips List */}
+                            {emailsList.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                    {emailsList.map((em, idx) => (
+                                        <span
+                                            key={idx}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-surface-card border border-border-subtle text-[11px] font-mono text-primary shadow-xs"
+                                        >
+                                            <Mail size={11} className="text-text-muted" />
+                                            <span>{em}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveEmail(em)}
+                                                className="text-text-muted hover:text-rose-400 p-0.5 rounded-full transition-colors"
+                                                title={`Remove ${em}`}
+                                            >
+                                                <X size={11} />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
 
                             {/* Email Input & Action */}
                             <form onSubmit={handleSaveEmergencyContact} className="space-y-2.5 pt-1">
                                 <div className="flex gap-2">
                                     <Input
-                                        type="email"
-                                        placeholder="nominee@example.com"
+                                        type="text"
+                                        placeholder="Add emails, separated by commas..."
                                         value={emergencyEmail}
                                         onChange={(e) => setEmergencyEmail(e.target.value)}
                                         className="flex-1 text-xs"
@@ -706,7 +776,7 @@ const More: React.FC = () => {
                                 {saveSuccess && (
                                     <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-semibold px-1">
                                         <Check size={13} />
-                                        <span>Nominee email updated successfully</span>
+                                        <span>Nominee contact(s) updated successfully</span>
                                     </div>
                                 )}
 
@@ -717,19 +787,47 @@ const More: React.FC = () => {
                                     </div>
                                 )}
 
-                                <div className="flex items-center justify-between pt-1 border-t border-border-subtle">
-                                    <span className="text-[10px] text-text-muted">
+                                {testStatus && (
+                                    <div className={`flex items-start gap-1.5 text-[11px] font-semibold px-1 py-1 rounded-lg ${testStatus.success ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-rose-400 bg-rose-500/10 border border-rose-500/20'}`}>
+                                        {testStatus.success ? <Check size={13} className="shrink-0 mt-0.5" /> : <AlertCircle size={13} className="shrink-0 mt-0.5" />}
+                                        <span className="leading-tight">{testStatus.message}</span>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center justify-between pt-2 border-t border-border-subtle gap-2">
+                                    <span className="text-[10px] text-text-muted shrink-0">
                                         Leave empty to disable.
                                     </span>
-                                    <button
-                                        type="button"
-                                        onClick={handleExportStatement}
-                                        disabled={isExportingStatement}
-                                        className="text-[11px] font-semibold text-accent-text hover:underline flex items-center gap-1"
-                                    >
-                                        <FileSpreadsheet size={12} />
-                                        <span>{isExportingStatement ? 'Downloading...' : 'Preview .xlsx'}</span>
-                                    </button>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={handleTestEmergencyContact}
+                                            disabled={isSendingTest || emailsList.length === 0}
+                                            className="text-[11px] font-semibold text-accent-text hover:underline flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                            title={emailsList.length === 0 ? "Save at least one email first" : "Send a sample contingency portfolio email to test delivery"}
+                                        >
+                                            {isSendingTest ? (
+                                                <>
+                                                    <Loader2 size={12} className="animate-spin text-accent-text" />
+                                                    <span>Testing...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send size={12} />
+                                                    <span>Test Email</span>
+                                                </>
+                                            )}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleExportStatement}
+                                            disabled={isExportingStatement}
+                                            className="text-[11px] font-semibold text-text-muted hover:text-primary flex items-center gap-1 transition-colors"
+                                        >
+                                            <FileSpreadsheet size={12} />
+                                            <span>{isExportingStatement ? 'Downloading...' : 'Preview .xlsx'}</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </form>
                         </div>

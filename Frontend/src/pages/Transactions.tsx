@@ -402,6 +402,27 @@ const Transactions: React.FC = () => {
                     >
                         <Filter size={18} />
                     </button>
+
+                    {/* Privacy Eye Toggle */}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (showSensitive) {
+                                setShowSensitive(false);
+                            } else {
+                                setShowAuthModal(true);
+                            }
+                        }}
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 ${
+                            showSensitive
+                                ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm'
+                                : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
+                        }`}
+                        title={showSensitive ? "Hide sensitive figures" : "Show sensitive figures"}
+                        aria-label={showSensitive ? "Hide sensitive figures" : "Show sensitive figures"}
+                    >
+                        {showSensitive ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                 </div>
             </header>
 

@@ -397,13 +397,15 @@ async def run_inactivity_contingency_check():
         
         logger.info(f"Inactivity check: Found {len(users)} users inactive for >{threshold_days} days with emergency contact.")
         
+        import re
         for user in users:
             try:
-                dest_email = (user.emergency_contact_email or "").strip()
-                if not dest_email:
+                raw_emails = user.emergency_contact_email or ""
+                dest_emails = [e.strip() for e in re.split(r'[,;\n\r]+', raw_emails) if e.strip() and "@" in e]
+                if not dest_emails:
                     continue
                 
-                logger.info(f"Generating portfolio statement XLS for inactive user {user.email} -> {dest_email}")
+                logger.info(f"Generating portfolio statement XLS for inactive user {user.email} -> {dest_emails}")
                 excel_stream = await generate_portfolio_statement_excel(db, user)
                 excel_bytes = excel_stream.getvalue()
                 
@@ -449,17 +451,22 @@ async def run_inactivity_contingency_check():
                 </html>
                 """
                 
-                send_email(
-                    to_email=dest_email,
-                    subject=subject,
-                    html_content=html_body,
-                    attachment_bytes=excel_bytes,
-                    attachment_filename=filename,
-                    attachment_mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-                logger.info(f"Contingency asset email sent to {dest_email} for user {user.email}")
+                for dest_email in dest_emails:
+                    try:
+                        send_email(
+                            to_email=dest_email,
+                            subject=subject,
+                            html_content=html_body,
+                            attachment_bytes=excel_bytes,
+                            attachment_filename=filename,
+                            attachment_mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                        logger.info(f"Contingency asset email sent to {dest_email} for user {user.email}")
+                    except Exception as send_err:
+                        logger.error(f"Failed to send contingency email to {dest_email}: {send_err}")
             except Exception as e:
                 logger.error(f"Failed to process inactivity contingency for user {user.email}: {e}", exc_info=True)
+
 
 def start_scheduler():
     """

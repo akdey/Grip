@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../lib/store';
+import { useAuthStore, usePrivacyStore } from '../lib/store';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -42,6 +42,13 @@ const Login: React.FC = () => {
         }).catch(() => {});
     }, []);
 
+    const completeLogin = (user: { id: string; email: string; is_active: boolean }, token: string) => {
+        login(user, token);
+        usePrivacyStore.getState().setShowSensitive(true);
+        sessionStorage.setItem('grip_app_open_auth_attempted', 'true');
+        navigate('/dashboard');
+    };
+
     const handleBiometricLogin = async () => {
         setIsLoading(true);
         setError('');
@@ -50,8 +57,7 @@ const Login: React.FC = () => {
             if (res.email) {
                 localStorage.setItem('grip_last_email', res.email);
             }
-            login({ id: 'temp-id', email: res.email, is_active: true }, res.access_token);
-            navigate('/dashboard');
+            completeLogin({ id: 'temp-id', email: res.email, is_active: true }, res.access_token);
         } catch (err: any) {
             console.warn('Biometric login err:', err);
             if (!err?.message?.includes('cancel') && !err?.message?.includes('abort')) {
@@ -104,8 +110,7 @@ const Login: React.FC = () => {
                 redirect_uri: 'postmessage'
             });
             const { access_token } = response.data;
-            login({ id: 'temp-id', email: 'verified@google', is_active: true }, access_token);
-            navigate('/dashboard');
+            completeLogin({ id: 'temp-id', email: 'verified@google', is_active: true }, access_token);
         } catch (err: any) {
             setError(err.response?.data?.detail || 'One-Tap Sync failed. Please try standard login.');
         } finally {
@@ -129,8 +134,7 @@ const Login: React.FC = () => {
 
             const { access_token } = response.data;
             if (email) localStorage.setItem('grip_last_email', email.trim());
-            login({ id: 'temp-id', email, is_active: true }, access_token);
-            navigate('/dashboard');
+            completeLogin({ id: 'temp-id', email, is_active: true }, access_token);
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Login failed. Please check your credentials.');
         } finally {
@@ -163,14 +167,14 @@ const Login: React.FC = () => {
             const response = await api.post('/auth/verify-otp', { email, otp });
             const { access_token } = response.data;
             if (email) localStorage.setItem('grip_last_email', email.trim());
-            login({ id: 'temp-id', email, is_active: true }, access_token);
-            navigate('/dashboard');
+            completeLogin({ id: 'temp-id', email, is_active: true }, access_token);
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Verification failed.');
         } finally {
             setIsLoading(false);
         }
     };
+
 
     return (
         <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-page text-primary relative overflow-y-auto">
