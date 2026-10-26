@@ -110,16 +110,30 @@ async def get_financial_forecast(
     db: Annotated[AsyncSession, Depends(get_db)],
     service: Annotated[ForecastingService, Depends()]
 ):
+    import time
+    from datetime import date
+    today = date.today()
+    month_key = f"{today.year}-{today.month}"
+    now = time.time()
+
+    if current_user.id in ForecastingService._forecast_cache:
+        cached_result, timestamp, cached_month = ForecastingService._forecast_cache[current_user.id]
+        if cached_month == month_key and (now - timestamp < ForecastingService.FORECAST_CACHE_TTL):
+            return cached_result
+
     raw_transactions = await get_raw_transactions_for_forecasting(db, current_user.id, days=1095)
     monthly_breakdown = await get_monthly_category_breakdown(db, current_user.id, months=4)
     
     forecast = await service.calculate_safe_to_spend(raw_transactions, monthly_breakdown)
     
-    return {
+    result = {
         "predicted_burden_30d": forecast.amount,
         "confidence": forecast.confidence,
         "description": forecast.reason,
         "time_frame": forecast.time_frame,
         "breakdown": forecast.breakdown
     }
+
+    ForecastingService._forecast_cache[current_user.id] = (result, now, month_key)
+    return result
 

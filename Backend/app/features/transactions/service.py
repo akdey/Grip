@@ -24,7 +24,7 @@ class TransactionService:
         self.db = db
 
     def _invalidate_safe_spend_cache(self, user_id: Optional[UUID]):
-        """Proactively bust the Safe-to-Spend hot cache when transaction data changes."""
+        """Proactively bust the Safe-to-Spend and Forecast hot caches when transaction data changes."""
         if not user_id:
             return
         try:
@@ -32,6 +32,11 @@ class TransactionService:
             AnalyticsService.invalidate_safe_spend_cache(user_id)
         except Exception as e:
             logger.warning(f"Failed to invalidate safe spend cache for user {user_id}: {e}")
+        try:
+            from app.features.forecasting.service import ForecastingService
+            ForecastingService.invalidate_cache(user_id)
+        except Exception:
+            pass
 
     async def _resolve_surety(self, sub_category_name: str, user_id: UUID = None) -> bool:
         """Resolve is_surety flag from the categories cache."""

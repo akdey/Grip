@@ -11,32 +11,34 @@ from app.core.database import get_db
 import time
 
 class CategoryService:
-    _cache = None
-    _cache_time = 0
+    _user_cache: dict = {}  # user_id_str -> (categories, timestamp)
     CACHE_TTL = 3600  # 1 hour
 
     def __init__(self, db: AsyncSession = Depends(get_db)):
         self.db = db
 
-    async def get_cached_categories(self, user_id: UUID) -> List[Category]:
-        """Get categories with a simple memory cache to save DB round-trips."""
+    async def get_cached_categories(self, user_id: Optional[UUID] = None) -> List[Category]:
+        """Get categories with a per-user memory cache to save DB round-trips and isolate tenants."""
         now = time.time()
-        # Note: In a multi-user environment, we'd need a per-user cache key
-        # but since system categories are shared, we cache those globally.
-        if CategoryService._cache is None or (now - CategoryService._cache_time) > self.CACHE_TTL:
-            CategoryService._cache = await self.get_categories(user_id)
-            CategoryService._cache_time = now
-        return CategoryService._cache
+        cache_key = str(user_id) if user_id else "global"
+        if cache_key in CategoryService._user_cache:
+            cached_data, cache_time = CategoryService._user_cache[cache_key]
+            if now - cache_time < self.CACHE_TTL:
+                return cached_data
 
-    async def get_categories(self, user_id: UUID) -> List[Category]:
+        categories = await self.get_categories(user_id)
+        CategoryService._user_cache[cache_key] = (categories, now)
+        return categories
+
+    async def get_categories(self, user_id: Optional[UUID] = None) -> List[Category]:
         # Fetch both system categories (user_id=None) and user-specific categories
         # Use contains_eager with explicit join to fetch everything in a SINGLE round-trip
         from sqlalchemy.orm import contains_eager
         stmt = (
             select(Category)
             .outerjoin(Category.sub_categories)
-            .where((Category.user_id == None) | (Category.user_id == user_id))
-            .where((SubCategory.user_id == None) | (SubCategory.user_id == user_id))
+            .where((Category.user_id == None) | (Category.user_id == user_id) if user_id else (Category.user_id == None))
+            .where((SubCategory.user_id == None) | (SubCategory.user_id == user_id) if user_id else (SubCategory.user_id == None))
             .options(contains_eager(Category.sub_categories))
         )
         result = await self.db.execute(stmt)
@@ -44,10 +46,13 @@ class CategoryService:
         return result.unique().scalars().all()
 
     @classmethod
-    def invalidate_cache(cls):
-        """Force the cache to refresh on the next request."""
-        cls._cache = None
-        cls._cache_time = 0
+    def invalidate_cache(cls, user_id: Optional[UUID] = None):
+        """Force the cache to refresh for a specific user or all users."""
+        if user_id:
+            cls._user_cache.pop(str(user_id), None)
+            cls._user_cache.pop("global", None)
+        else:
+            cls._user_cache.clear()
 
     async def create_category(self, user_id: UUID, data: schemas.CategoryCreate) -> Category:
         category = Category(
@@ -61,7 +66,7 @@ class CategoryService:
         self.db.add(category)
         await self.db.commit()
         await self.db.refresh(category, ["sub_categories"])
-        self.invalidate_cache()
+        self.invalidate_cache(user_id)
         return category
 
     async def create_sub_category(self, user_id: UUID, data: schemas.SubCategoryCreate) -> SubCategory:
@@ -82,7 +87,7 @@ class CategoryService:
         )
         self.db.add(sub_category)
         await self.db.commit()
-        self.invalidate_cache()
+        self.invalidate_cache(user_id)
         return sub_category
 
     async def delete_category(self, user_id: UUID, category_id: UUID):
@@ -93,7 +98,7 @@ class CategoryService:
             raise HTTPException(status_code=404, detail="Category not found or you don't have permission")
         await self.db.delete(category)
         await self.db.commit()
-        self.invalidate_cache()
+        self.invalidate_cache(user_id)
 
     async def delete_sub_category(self, user_id: UUID, sub_category_id: UUID):
         stmt = select(SubCategory).where(SubCategory.id == sub_category_id, SubCategory.user_id == user_id)
@@ -103,7 +108,7 @@ class CategoryService:
             raise HTTPException(status_code=404, detail="SubCategory not found or you don't have permission")
         await self.db.delete(sub_category)
         await self.db.commit()
-        self.invalidate_cache()
+        self.invalidate_cache(user_id)
 
     async def update_category(self, user_id: UUID, category_id: UUID, data: schemas.CategoryUpdate) -> Category:
         stmt = (
@@ -127,7 +132,7 @@ class CategoryService:
             
         await self.db.commit()
         await self.db.refresh(category, ["sub_categories"])
-        self.invalidate_cache()
+        self.invalidate_cache(user_id)
         return category
 
     async def update_sub_category(self, user_id: UUID, sub_category_id: UUID, data: schemas.SubCategoryUpdate) -> SubCategory:
@@ -143,6 +148,6 @@ class CategoryService:
             
         await self.db.commit()
         await self.db.refresh(sub_category)
-        self.invalidate_cache()
+        self.invalidate_cache(user_id)
         return sub_category
 

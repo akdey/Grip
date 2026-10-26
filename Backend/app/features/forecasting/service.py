@@ -451,6 +451,20 @@ class LightGBMForecaster:
 
 
 class ForecastingService:
+    _forecast_cache: dict = {}  # user_id -> (result_dict, timestamp, month_key)
+    FORECAST_CACHE_TTL = 3600  # 1 hour
+
+    @classmethod
+    def invalidate_cache(cls, user_id: Optional[UUID] = None):
+        """Invalidate forecast cache for a specific user or all users."""
+        try:
+            if user_id:
+                cls._forecast_cache.pop(user_id, None)
+            else:
+                cls._forecast_cache.clear()
+        except Exception:
+            pass
+
     def __init__(self, llm: LLMService = Depends(get_llm_service)):
         from app.core.llm import LLMService as ActualLLMService
         if isinstance(llm, ActualLLMService):
