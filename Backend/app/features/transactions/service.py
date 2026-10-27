@@ -227,7 +227,7 @@ class TransactionService:
 
         if verification.approved:
             await self._sync_double_entry_credit_card_payment(txn)
-            await self._maybe_shadow_to_ledger(txn)
+            await self._sync_settle_up_entry(txn)
             if (txn.category or "").lower() == "investment":
                 try:
                     from app.features.wealth.service import WealthService
@@ -237,6 +237,7 @@ class TransactionService:
                     logger.warning(f"Wealth auto-linking skipped for txn {txn.id}: {e}")
         else:
             await self._sync_double_entry_credit_card_payment(txn)
+            await self._sync_settle_up_entry(txn)
 
         self._invalidate_safe_spend_cache(user_id)
         return txn
@@ -294,7 +295,7 @@ class TransactionService:
         await self._sync_double_entry_credit_card_payment(txn)
 
         # Shadow to Settle Up ledger if this is a loan-related category
-        await self._maybe_shadow_to_ledger(txn)
+        await self._sync_settle_up_entry(txn)
 
         if (txn.category or "").lower() == "investment":
             try:
@@ -346,6 +347,7 @@ class TransactionService:
             
         await self.db.commit()
         await self._sync_double_entry_credit_card_payment(txn)
+        await self._sync_settle_up_entry(txn)
         self._invalidate_safe_spend_cache(user_id)
         txns = await self._attach_icons([txn])
         return txns[0]
@@ -427,6 +429,13 @@ class TransactionService:
         offset_txn = offset_res.scalar_one_or_none()
         if offset_txn:
             await self.db.delete(offset_txn)
+
+        # Delete corresponding settle up entry if one exists
+        settle_stmt = select(SettleUpEntry).where(SettleUpEntry.transaction_id == transaction_id)
+        settle_res = await self.db.execute(settle_stmt)
+        settle_entry = settle_res.scalar_one_or_none()
+        if settle_entry:
+            await self.db.delete(settle_entry)
             
         await self.db.delete(txn)
         await self.db.commit()
@@ -510,27 +519,56 @@ class TransactionService:
                 await self.db.commit()
                 logger.info(f"[DoubleEntry] Removed CC credit offset {existing_offset.id} as txn {txn.id} is no longer a CC payment debit")
 
-    async def _maybe_shadow_to_ledger(self, txn: Transaction):
-        """If the transaction sub_category matches a Settle Up keyword, shadow it to the Peer Ledger."""
+    async def _sync_settle_up_entry(self, txn: Transaction):
+        """
+        Synchronizes transaction state with the Peer Ledger (settle_up_entries).
+        - 'p2p loan out': Money lent to peer (bank debit). In Settle Up: +abs(amount) (They owe you).
+        - 'p2p receive': Money received / loan repaid (bank credit). In Settle Up: -abs(amount) (Debt settled / You owe them).
+        - If transaction is rejected or sub_category changed away from P2P, deletes the linked entry.
+        """
         sub_cat_lower = (txn.sub_category or "").lower().strip()
-        if sub_cat_lower not in SETTLE_UP_SUBCATEGORIES:
-            return
+        is_p2p = (
+            txn.status == TransactionStatus.VERIFIED
+            and sub_cat_lower in SETTLE_UP_SUBCATEGORIES
+        )
 
-        # Check if a ledger entry already exists for this transaction
         existing = await self.db.execute(
             select(SettleUpEntry).where(SettleUpEntry.transaction_id == txn.id)
         )
-        if existing.scalar_one_or_none():
-            return
+        entry = existing.scalar_one_or_none()
 
-        entry = SettleUpEntry(
-            user_id=txn.user_id,
-            peer_name=txn.merchant_name or "Unknown",
-            amount=txn.amount,
-            transaction_id=txn.id,
-            remarks=txn.remarks,
-            date=txn.transaction_date or txn.created_at.date() if txn.created_at else None
-        )
-        self.db.add(entry)
-        await self.db.commit()
-        logger.info(f"[SettleUp] Shadowed txn {txn.id} -> Peer: {entry.peer_name}, Amount: {entry.amount}")
+        if is_p2p:
+            if sub_cat_lower == "p2p loan out":
+                settle_amount = abs(txn.amount)
+            else:  # "p2p receive"
+                settle_amount = -abs(txn.amount)
+
+            peer_name = (txn.merchant_name or "Unknown").strip()
+            tx_date = txn.transaction_date or (txn.created_at.date() if txn.created_at else None)
+
+            if entry:
+                entry.peer_name = peer_name
+                entry.amount = settle_amount
+                entry.remarks = txn.remarks
+                entry.date = tx_date
+                logger.info(f"[SettleUp] Updated entry {entry.id} for txn {txn.id} -> Peer: {peer_name}, Amount: {settle_amount}")
+            else:
+                entry = SettleUpEntry(
+                    user_id=txn.user_id,
+                    peer_name=peer_name,
+                    amount=settle_amount,
+                    transaction_id=txn.id,
+                    remarks=txn.remarks,
+                    date=tx_date
+                )
+                self.db.add(entry)
+                logger.info(f"[SettleUp] Created entry for txn {txn.id} -> Peer: {peer_name}, Amount: {settle_amount}")
+            await self.db.commit()
+        else:
+            if entry:
+                await self.db.delete(entry)
+                await self.db.commit()
+                logger.info(f"[SettleUp] Removed entry for txn {txn.id} as it is no longer verified P2P")
+
+    # Alias for backwards-compatibility
+    _maybe_shadow_to_ledger = _sync_settle_up_entry
