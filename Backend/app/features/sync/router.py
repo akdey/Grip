@@ -1,7 +1,7 @@
 from typing import Annotated
 import logging
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Header, status
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from google_auth_oauthlib.flow import Flow
 from app.core.database import get_db
@@ -12,6 +12,7 @@ from app.features.sync.service import SyncService
 import base64
 import json
 from app.features.sync.models import SyncLog
+from app.features.transactions.models import Transaction
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -227,15 +228,13 @@ async def get_sync_status(
     result = await db.execute(stmt)
     last_sync = result.scalar_one_or_none()
     
-    # Get total synced count
+    # Get total synced count directly from automated transactions
     count_stmt = (
-        select(SyncLog)
-        .where(SyncLog.user_id == current_user.id)
-        .where(SyncLog.status == "SUCCESS")
+        select(func.count(Transaction.id))
+        .where(Transaction.user_id == current_user.id)
+        .where(Transaction.is_manual == False)
     )
-    count_result = await db.execute(count_stmt)
-    all_syncs = count_result.scalars().all()
-    total_synced = sum(log.records_processed for log in all_syncs)
+    total_synced = (await db.execute(count_stmt)).scalar() or 0
     
     return {
         "connected": True,

@@ -468,6 +468,23 @@ async def run_inactivity_contingency_check():
                 logger.error(f"Failed to process inactivity contingency for user {user.email}: {e}", exc_info=True)
 
 
+async def run_db_maintenance():
+    """
+    Automated database hygiene task to prevent storage bloat on Supabase Free Tier:
+    - Purges sync logs older than 30 days.
+    - Purges 0-record hourly sync logs older than 3 days.
+    Runs daily.
+    """
+    logger.info("Starting Daily Database Maintenance...")
+    async with AsyncSessionLocal() as db:
+        try:
+            sync_service = SyncService(db)
+            pruned_count = await sync_service.prune_sync_logs(keep_days=30, keep_empty_days=3)
+            logger.info(f"Daily Database Maintenance completed. Pruned {pruned_count} old sync log(s).")
+        except Exception as e:
+            logger.error(f"Daily Database Maintenance failed: {e}", exc_info=True)
+
+
 def start_scheduler():
     """
     Start the scheduler if ENABLE_SCHEDULER is True.
@@ -497,6 +514,10 @@ def start_scheduler():
     # Run Inactivity Contingency Check daily at 8:00 AM IST (2:30 AM UTC)
     inactivity_trigger = CronTrigger(hour=2, minute=30)
     scheduler.add_job(run_inactivity_contingency_check, inactivity_trigger)
+
+    # Run Database Maintenance daily at 4:00 AM IST (10:30 PM UTC previous day)
+    db_maint_trigger = CronTrigger(hour=22, minute=30)
+    scheduler.add_job(run_db_maintenance, db_maint_trigger)
     
     scheduler.start()
     logger.info("Scheduler started. Jobs scheduled.")

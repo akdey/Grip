@@ -7,7 +7,7 @@ import json
 import base64
 from datetime import datetime, timedelta
 from typing import Optional, List
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, delete, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 import time
@@ -86,10 +86,35 @@ class SyncService:
         log.end_time = datetime.now()
         log.status = status
         log.records_processed = count
-        log.error_message = error
-        if summary:
-            log.summary = json.dumps(summary)
+        log.error_message = error[:500] if error else None
+        
+        # Avoid storing giant raw JSON summary payloads to prevent DB bloat.
+        # Store at most a compact summary dict only when records were actually processed.
+        if summary and count > 0:
+            compact_merchants = list({s.get("merchant", "") for s in summary if s.get("merchant")})[:5]
+            log.summary = json.dumps({"count": count, "sample_merchants": compact_merchants})
+        else:
+            log.summary = None
         await self.db.commit()
+
+    async def prune_sync_logs(self, keep_days: int = 30, keep_empty_days: int = 3) -> int:
+        """
+        Purges old sync logs to keep the database footprint minimal.
+        - Logs with 0 records processed are purged after `keep_empty_days` (default 3 days).
+        - All other logs older than `keep_days` (default 30 days) are purged.
+        """
+        cutoff_all = datetime.now() - timedelta(days=keep_days)
+        cutoff_empty = datetime.now() - timedelta(days=keep_empty_days)
+
+        stmt = delete(SyncLog).where(
+            or_(
+                SyncLog.start_time < cutoff_all,
+                and_(SyncLog.records_processed == 0, SyncLog.start_time < cutoff_empty)
+            )
+        )
+        result = await self.db.execute(stmt)
+        await self.db.commit()
+        return result.rowcount
 
     def _compress_email_body(self, text: str) -> str:
         """

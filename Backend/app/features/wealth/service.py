@@ -1358,7 +1358,15 @@ class WealthService:
                         existing.is_sip = True
                         existing.sip_amount = sip_amount
                 else:
-                    if final_units > 0:
+                    # Skip duplicate snapshots on weekends (Sat=5, Sun=6) if NAV & units haven't changed and no SIP occurred
+                    is_weekend = today.weekday() >= 5
+                    price_unchanged = prev and abs(prev.price_per_unit - price) < 1e-6
+                    units_unchanged = prev and abs(prev.units_held - final_units) < 1e-6
+
+                    if is_weekend and price_unchanged and units_unchanged and sip_delta == 0:
+                        # Market closed; no new activity to record. Avoid duplicate weekend snapshot.
+                        pass
+                    elif final_units > 0:
                         new_snap = InvestmentSnapshot(
                             id=uuid.uuid4(),
                             holding_id=holding.id,
