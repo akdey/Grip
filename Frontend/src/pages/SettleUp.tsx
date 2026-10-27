@@ -21,7 +21,8 @@ import {
     ChevronRight,
     ChevronLeft,
     FileText,
-    Link2
+    Link2,
+    ExternalLink
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -695,6 +696,7 @@ const PeerHistoryDrawer: React.FC<PeerHistoryDrawerProps> = ({
     onDelete,
     onQuickSettle
 }) => {
+    const navigate = useNavigate();
     const { data: history, isLoading } = usePeerHistory(peerName || '');
     const [selectedEntry, setSelectedEntry] = useState<LedgerEntry | null>(null);
 
@@ -818,7 +820,7 @@ const PeerHistoryDrawer: React.FC<PeerHistoryDrawerProps> = ({
                                 </div>
                             </div>
 
-                            {/* Bank Sync Status */}
+                            {/* Bank Sync Status & Direct Navigation */}
                             <div className="p-3.5 rounded-2xl bg-surface-subtle border border-border-subtle flex items-start gap-3">
                                 <div className="w-8 h-8 rounded-xl bg-surface border border-border-subtle flex items-center justify-center text-text-muted shrink-0 mt-0.5">
                                     <Link2 size={15} />
@@ -828,13 +830,29 @@ const PeerHistoryDrawer: React.FC<PeerHistoryDrawerProps> = ({
                                         Source & Bank Link
                                     </span>
                                     {selectedEntry.transaction_id ? (
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-xs font-bold text-accent-text">
-                                                Linked to Bank Transaction
-                                            </span>
-                                            <span className="text-[8px] px-1.5 py-0.5 rounded bg-accent-subtle border border-accent-border text-accent-text font-black uppercase">
-                                                Synced
-                                            </span>
+                                        <div className="mt-1 space-y-2.5">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-accent-text">
+                                                    Linked to Bank Transaction
+                                                </span>
+                                                <span className="text-[8px] px-1.5 py-0.5 rounded bg-accent-subtle border border-accent-border text-accent-text font-black uppercase">
+                                                    Synced
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    haptics.impact('medium');
+                                                    navigate(`/transactions/${selectedEntry.transaction_id}`);
+                                                }}
+                                                className="w-full py-2.5 px-3 rounded-xl bg-primary text-text-inverse hover:opacity-95 font-bold text-xs flex items-center justify-between active:scale-[0.98] transition-all shadow-sm group"
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    <ExternalLink size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                                                    <span>Open Bank Transaction</span>
+                                                </span>
+                                                <ChevronRight size={14} className="opacity-70" />
+                                            </button>
                                         </div>
                                     ) : (
                                         <p className="text-xs font-medium text-text-muted mt-0.5">
@@ -956,9 +974,19 @@ const PeerHistoryDrawer: React.FC<PeerHistoryDrawerProps> = ({
                                                             {isLent ? 'Lent / Paid' : 'Received / Borrowed'}
                                                         </p>
                                                         {entry.transaction_id && (
-                                                            <span className="text-[7.5px] px-1 py-0.2 rounded bg-accent-subtle border border-accent-border text-accent-text font-black uppercase tracking-tighter shrink-0">
-                                                                Synced
-                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    haptics.impact('light');
+                                                                    navigate(`/transactions/${entry.transaction_id}`);
+                                                                }}
+                                                                className="inline-flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded bg-accent-subtle hover:bg-accent-subtle/80 border border-accent-border text-accent-text font-black uppercase tracking-tighter shrink-0 active:scale-95 transition-all cursor-pointer"
+                                                                title="Open Bank Transaction"
+                                                            >
+                                                                <span>Synced</span>
+                                                                <ExternalLink size={9} />
+                                                            </button>
                                                         )}
                                                     </div>
                                                     <p className="text-[10px] font-semibold text-text-muted mt-0.5 truncate">
