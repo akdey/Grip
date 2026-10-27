@@ -2,7 +2,7 @@ import uuid
 from decimal import Decimal
 from datetime import date
 from typing import Optional
-from sqlalchemy import String, ForeignKey, Numeric, Text, DateTime, Date
+from sqlalchemy import String, ForeignKey, Numeric, Text, DateTime, Date, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -11,6 +11,9 @@ from app.features.transactions.models import Transaction
 
 class SettleUpEntry(Base):
     __tablename__ = "settle_up_entries"
+    __table_args__ = (
+        Index("ix_settle_up_user_peer", "user_id", "peer_name"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)

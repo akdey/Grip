@@ -36,7 +36,14 @@ jobs:
               console.log(process.env.DATABASE_URL);
             }
           ")
-          /usr/lib/postgresql/17/bin/pg_dump "$CLEAN_URL" > dump.sql
+          /usr/lib/postgresql/17/bin/pg_dump "$CLEAN_URL" \
+            --schema=public \
+            --no-owner \
+            --no-privileges \
+            --clean \
+            --if-exists \
+            --exclude-table-data=public.sync_logs \
+            > dump.sql
           gzip dump.sql
 
       - name: Push to Backup Repository
