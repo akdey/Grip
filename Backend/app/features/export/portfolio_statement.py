@@ -17,6 +17,7 @@ from app.features.wealth.models import InvestmentHolding, AssetType
 from app.features.credit_cards.models import CreditCard
 from app.features.bills.models import Bill
 from app.features.auth.models import User
+from app.features.settle_up.models import SettleUpEntry
 
 
 # Professional Typography & Colors
@@ -107,7 +108,8 @@ def generate_portfolio_statement_workbook(
     user: User,
     holdings: List[InvestmentHolding],
     credit_cards: List[CreditCard],
-    bills: List[Bill]
+    bills: List[Bill],
+    settle_up_entries: Optional[List[SettleUpEntry]] = None
 ) -> io.BytesIO:
     """
     Builds the executive multi-sheet personal financial statement & asset schedule.
@@ -119,6 +121,53 @@ def generate_portfolio_statement_workbook(
     deposits = [h for h in holdings if get_type_str(h.asset_type) in ["FD", "RD"]]
     market_assets = [h for h in holdings if get_type_str(h.asset_type) in ["MUTUAL_FUND", "STOCK", "SIP", "GOLD"]]
     govt_assets = [h for h in holdings if get_type_str(h.asset_type) in ["PF", "APY", "PLI", "GRATUITY", "OTHER", "REAL_ESTATE"]]
+
+    # Process Settle Up Peer Ledgers (Debts & Receivables)
+    from collections import defaultdict
+    peer_groups = defaultdict(list)
+    for e in (settle_up_entries or []):
+        if e.peer_name:
+            peer_groups[e.peer_name.strip().lower()].append(e)
+
+    peer_receivables = []
+    peer_payables = []
+    peer_settled = []
+
+    for _, group in peer_groups.items():
+        display_name = max(group, key=lambda x: len(x.peer_name)).peer_name.strip()
+        net = sum(e.amount for e in group)
+        latest = group[0]  # sorted desc by date
+        remarks = next((e.remarks for e in group if e.remarks and e.remarks.strip()), "")
+
+        if net > 0:
+            peer_receivables.append({
+                "name": display_name,
+                "amount": float(net),
+                "last_date": latest.date,
+                "count": len(group),
+                "remarks": remarks
+            })
+        elif net < 0:
+            peer_payables.append({
+                "name": display_name,
+                "amount": float(abs(net)),
+                "last_date": latest.date,
+                "count": len(group),
+                "remarks": remarks
+            })
+        else:
+            peer_settled.append({
+                "name": display_name,
+                "last_date": latest.date,
+                "count": len(group)
+            })
+
+    peer_receivables.sort(key=lambda x: x["amount"], reverse=True)
+    peer_payables.sort(key=lambda x: x["amount"], reverse=True)
+    peer_settled.sort(key=lambda x: str(x["last_date"] or ""), reverse=True)
+
+    total_receivables = sum(r["amount"] for r in peer_receivables)
+    total_payables = sum(p["amount"] for p in peer_payables)
 
     user_display = getattr(user, "full_name", None) or user.email
     today_str = date.today().strftime("%d-%b-%Y")
@@ -136,10 +185,19 @@ def generate_portfolio_statement_workbook(
     ws1.cell(row=4, column=1, value="STATEMENT PROFILE & DETAILS").font = FONT_SECTION
     ws1.merge_cells("A4:H4")
 
+    liability_text = f"{len(credit_cards)} active credit accounts"
+    if peer_payables:
+        liability_text += f", {len(peer_payables)} peer payables"
+
     profile_items = [
         ("Account Holder", user_display, "Report Type", "Consolidated Net Worth Schedule"),
         ("Reporting Currency", "Indian Rupee (INR / ₹)", "Valuation Date", today_str),
-        ("Total Assets Tracked", f"{len(holdings)} holdings across {len(deposits)} deposits, {len(market_assets)} market funds, {len(govt_assets)} schemes", "Liabilities Tracked", f"{len(credit_cards)} active credit accounts"),
+        (
+            "Total Assets Tracked",
+            f"{len(holdings)} holdings ({len(deposits)} deposits, {len(market_assets)} funds, {len(govt_assets)} schemes) + {len(peer_receivables)} peer receivables",
+            "Liabilities Tracked",
+            liability_text
+        ),
     ]
 
     curr_row = 5
@@ -193,8 +251,11 @@ def generate_portfolio_statement_workbook(
         ("Bank Deposits (FD & RD)", len(deposits), sum(h.total_invested or 0 for h in deposits), sum(h.current_value or 0 for h in deposits), "See '🏦 Bank Deposits (FD & RD)'"),
         ("Mutual Funds & Equities", len(market_assets), sum(h.total_invested or 0 for h in market_assets), sum(h.current_value or 0 for h in market_assets), "See '📈 Mutual Funds & Stocks'"),
         ("Retirement & Govt Schemes", len(govt_assets), sum(h.total_invested or 0 for h in govt_assets), sum(h.current_value or 0 for h in govt_assets), "See '🛡️ Govt & Retirement'"),
+        ("Peer Receivables (Settle Up)", len(peer_receivables), total_receivables, total_receivables, "See '🤝 Peer Ledgers (Settle Up)'"),
         ("Credit Facilities & Cards", len(credit_cards), 0.0, 0.0, "See '💳 Credit Cards'"),
     ]
+    if total_payables > 0:
+        summary_data.append(("Peer Payables / Debts", len(peer_payables), -total_payables, -total_payables, "See '🤝 Peer Ledgers (Settle Up)'"))
 
     start_sum_row = curr_row
     for label, count, inv, val, tab_ref in summary_data:
@@ -210,22 +271,22 @@ def generate_portfolio_statement_workbook(
         c2.alignment = ALIGN_CENTER
         c2.border = BORDER_CELL
 
-        c3 = ws1.cell(row=curr_row, column=3, value=inv if inv > 0 else "-")
+        c3 = ws1.cell(row=curr_row, column=3, value=inv if inv != 0 else "-")
         c3.font = FONT_DATA
         c3.alignment = ALIGN_RIGHT
-        c3.number_format = FORMAT_CURRENCY if inv > 0 else "@"
+        c3.number_format = FORMAT_CURRENCY if inv != 0 else "@"
         c3.border = BORDER_CELL
 
-        c4 = ws1.cell(row=curr_row, column=4, value=val if val > 0 else "-")
+        c4 = ws1.cell(row=curr_row, column=4, value=val if val != 0 else "-")
         c4.font = FONT_DATA_BOLD
         c4.alignment = ALIGN_RIGHT
-        c4.number_format = FORMAT_CURRENCY if val > 0 else "@"
+        c4.number_format = FORMAT_CURRENCY if val != 0 else "@"
         c4.border = BORDER_CELL
 
-        c5 = ws1.cell(row=curr_row, column=5, value=gain if inv > 0 else "-")
+        c5 = ws1.cell(row=curr_row, column=5, value=gain if (inv > 0 and gain != 0) else "-")
         c5.font = FONT_GAIN if gain >= 0 else FONT_LOSS
         c5.alignment = ALIGN_RIGHT
-        c5.number_format = FORMAT_CURRENCY if inv > 0 else "@"
+        c5.number_format = FORMAT_CURRENCY if (inv > 0 and gain != 0) else "@"
         c5.border = BORDER_CELL
 
         c6 = ws1.cell(row=curr_row, column=6, value=pct if inv > 0 else "-")
@@ -248,7 +309,7 @@ def generate_portfolio_statement_workbook(
     c_tot1.fill = FILL_TOTAL
     c_tot1.border = BORDER_TOTAL
 
-    c_tot2 = ws1.cell(row=curr_row, column=2, value=len(holdings))
+    c_tot2 = ws1.cell(row=curr_row, column=2, value=len(holdings) + len(peer_receivables) + len(peer_payables))
     c_tot2.font = FONT_DATA_BOLD
     c_tot2.fill = FILL_TOTAL
     c_tot2.alignment = ALIGN_CENTER
@@ -298,7 +359,8 @@ def generate_portfolio_statement_workbook(
         ("Institutional Coverage", "This statement compiles asset balances across scheduled commercial banks, registered asset management companies (AMCs), and sovereign social security agencies."),
         ("Valuation Methodology", "Fixed and recurring deposits reflect compounding interest accrual up to the report date. Market assets reflect closing Net Asset Values (NAV) published via AMFI."),
         ("Account Identification", "Folio numbers, deposit advice references, PRAN/UAN identifiers, and registered nominee allocations are documented in their respective schedule tabs."),
-        ("Data Integrity & Confidentiality", "All asset valuations, deposit tenures, and institutional references are compiled directly from your Grip portfolio and active AMFI NAV market feeds.")
+        ("Data Integrity & Confidentiality", "All asset valuations, deposit tenures, and institutional references are compiled directly from your Grip portfolio and active AMFI NAV market feeds."),
+        ("Peer Debts & Receivables (Settle Up)", "Personal loans and peer ledger balances reflect outstanding amounts owed to you (assets to recover) or informal borrowings (liabilities to settle), compiled from Grip Settle Up.")
     ]
 
     for title, desc in general_notes:
@@ -714,6 +776,232 @@ def generate_portfolio_statement_workbook(
         ws5.row_dimensions[curr_row].height = 22
 
     auto_fit_columns(ws5, min_width=12, max_width=55)
+
+
+    # --- SHEET 6: 🤝 Peer Ledgers (Settle Up) ---
+    ws6 = wb.create_sheet(title="🤝 Peer Ledgers (Settle Up)")
+    build_banner(
+        ws6,
+        title="SCHEDULE OF PEER DEBTS & RECEIVABLES (SETTLE UP)",
+        subtitle="Consolidated record of personal loans given (receivables to recover), borrowings (payables to settle), and settlement history.",
+        max_col=7
+    )
+
+    # Executive Overview Block
+    ws6.cell(row=4, column=1, value="PEER LEDGER EXECUTIVE STANDING").font = FONT_SECTION
+    ws6.merge_cells("A4:G4")
+
+    kpis = [
+        ("Total Money to Collect (Receivables)", total_receivables, "Money lent to friends, relatives & contacts to be recovered"),
+        ("Total Money to Pay (Payables)", total_payables, "Informal debts / borrowings to be settled"),
+        ("Net Peer Position", total_receivables - total_payables, "Net balance receivable" if (total_receivables - total_payables) >= 0 else "Net balance payable")
+    ]
+    curr_row = 5
+    for title, val, note in kpis:
+        c_t = ws6.cell(row=curr_row, column=1, value=title)
+        c_t.font = FONT_DATA_BOLD
+        c_t.fill = FILL_CARD_BG
+        c_t.border = BORDER_CELL
+        ws6.merge_cells(start_row=curr_row, start_column=1, end_row=curr_row, end_column=2)
+        for col in range(1, 3):
+            ws6.cell(row=curr_row, column=col).border = BORDER_CELL
+
+        c_v = ws6.cell(row=curr_row, column=3, value=val)
+        c_v.font = FONT_GAIN if val > 0 else (FONT_LOSS if val < 0 else FONT_DATA_BOLD)
+        c_v.alignment = ALIGN_RIGHT
+        c_v.number_format = FORMAT_CURRENCY
+        c_v.fill = FILL_CARD_BG
+        c_v.border = BORDER_CELL
+
+        c_n = ws6.cell(row=curr_row, column=4, value=note)
+        c_n.font = FONT_MUTED
+        c_n.fill = FILL_CARD_BG
+        c_n.border = BORDER_CELL
+        ws6.merge_cells(start_row=curr_row, start_column=4, end_row=curr_row, end_column=7)
+        for col in range(4, 8):
+            ws6.cell(row=curr_row, column=col).border = BORDER_CELL
+        ws6.row_dimensions[curr_row].height = 20
+        curr_row += 1
+
+    curr_row += 1
+
+    # TABLE 1: Active Receivables
+    ws6.cell(row=curr_row, column=1, value="🟢 ACTIVE RECEIVABLES (MONEY OWED TO YOU — ASSETS TO RECOVER)").font = FONT_SECTION
+    ws6.merge_cells(f"A{curr_row}:G{curr_row}")
+    curr_row += 1
+
+    rec_headers = [
+        "Sl.", "Contact / Merchant Name", "Outstanding Amount (₹)", "Last Activity Date",
+        "Total Entries", "Notes & Transaction Purpose", "Contingency Action / Guidance"
+    ]
+    for idx, h in enumerate(rec_headers, start=1):
+        cell = ws6.cell(row=curr_row, column=idx, value=h)
+        cell.font = FONT_HEADER
+        cell.fill = FILL_HEADER
+        cell.alignment = ALIGN_HEADER
+        cell.border = BORDER_CELL
+    ws6.row_dimensions[curr_row].height = 24
+    curr_row += 1
+
+    start_rec_row = curr_row
+    if not peer_receivables:
+        c_empty = ws6.cell(row=curr_row, column=1, value="No active receivables recorded.")
+        c_empty.font = FONT_MUTED
+        ws6.merge_cells(f"A{curr_row}:G{curr_row}")
+        curr_row += 1
+    else:
+        for idx, r in enumerate(peer_receivables, start=1):
+            fill = FILL_ZEBRA if idx % 2 == 0 else PatternFill(fill_type=None)
+            guidance = "Contact person to recover outstanding balance."
+            if "washing machine" in r["name"].lower():
+                guidance = "Washing machine loan/EMI adjustment with Aminur."
+            elif "loan" in (r["remarks"] or "").lower():
+                guidance = "Personal short-term loan receivable."
+
+            row_data = [
+                (idx, FONT_DATA, ALIGN_CENTER, None),
+                (r["name"], FONT_DATA_BOLD, ALIGN_LEFT, None),
+                (r["amount"], FONT_DATA_BOLD, ALIGN_RIGHT, FORMAT_CURRENCY),
+                (str(r["last_date"] or "N/A"), FONT_DATA, ALIGN_CENTER, None),
+                (r["count"], FONT_DATA, ALIGN_CENTER, None),
+                (r["remarks"] or "No notes entered", FONT_DATA, ALIGN_LEFT, None),
+                (guidance, FONT_MUTED, ALIGN_LEFT, None)
+            ]
+            for col_idx, (val_data, font, align, num_fmt) in enumerate(row_data, start=1):
+                cell_item = ws6.cell(row=curr_row, column=col_idx, value=val_data)
+                cell_item.font = font
+                cell_item.alignment = align
+                cell_item.border = BORDER_CELL
+                if fill.fill_type:
+                    cell_item.fill = fill
+                if num_fmt:
+                    cell_item.number_format = num_fmt
+            ws6.row_dimensions[curr_row].height = 20
+            curr_row += 1
+
+        # Total Receivables Row
+        ws6.cell(row=curr_row, column=1, value="").fill = FILL_TOTAL
+        ws6.cell(row=curr_row, column=1).border = BORDER_TOTAL
+        c_rtot = ws6.cell(row=curr_row, column=2, value="TOTAL ACTIVE RECEIVABLES")
+        c_rtot.font = FONT_DATA_BOLD
+        c_rtot.fill = FILL_TOTAL
+        c_rtot.border = BORDER_TOTAL
+
+        c_ramt = ws6.cell(row=curr_row, column=3, value=f"=SUM(C{start_rec_row}:C{curr_row-1})")
+        c_ramt.font = FONT_GAIN
+        c_ramt.alignment = ALIGN_RIGHT
+        c_ramt.number_format = FORMAT_CURRENCY
+        c_ramt.fill = FILL_TOTAL
+        c_ramt.border = BORDER_TOTAL
+
+        for c in range(4, 8):
+            ws6.cell(row=curr_row, column=c, value="").fill = FILL_TOTAL
+            ws6.cell(row=curr_row, column=c).border = BORDER_TOTAL
+        ws6.row_dimensions[curr_row].height = 22
+        curr_row += 1
+
+    curr_row += 1
+
+    # TABLE 2: Active Payables (if any)
+    if peer_payables:
+        ws6.cell(row=curr_row, column=1, value="🔴 ACTIVE PAYABLES (MONEY YOU OWE — LIABILITIES TO SETTLE)").font = FONT_SECTION
+        ws6.merge_cells(f"A{curr_row}:G{curr_row}")
+        curr_row += 1
+
+        for idx, h in enumerate(rec_headers, start=1):
+            cell = ws6.cell(row=curr_row, column=idx, value=h)
+            cell.font = FONT_HEADER
+            cell.fill = FILL_HEADER
+            cell.alignment = ALIGN_HEADER
+            cell.border = BORDER_CELL
+        ws6.row_dimensions[curr_row].height = 24
+        curr_row += 1
+
+        start_pay_row = curr_row
+        for idx, p in enumerate(peer_payables, start=1):
+            fill = FILL_ZEBRA if idx % 2 == 0 else PatternFill(fill_type=None)
+            row_data = [
+                (idx, FONT_DATA, ALIGN_CENTER, None),
+                (p["name"], FONT_DATA_BOLD, ALIGN_LEFT, None),
+                (p["amount"], FONT_DATA_BOLD, ALIGN_RIGHT, FORMAT_CURRENCY),
+                (str(p["last_date"] or "N/A"), FONT_DATA, ALIGN_CENTER, None),
+                (p["count"], FONT_DATA, ALIGN_CENTER, None),
+                (p["remarks"] or "No notes entered", FONT_DATA, ALIGN_LEFT, None),
+                ("Verify and settle liability with contact.", FONT_MUTED, ALIGN_LEFT, None)
+            ]
+            for col_idx, (val_data, font, align, num_fmt) in enumerate(row_data, start=1):
+                cell_item = ws6.cell(row=curr_row, column=col_idx, value=val_data)
+                cell_item.font = font
+                cell_item.alignment = align
+                cell_item.border = BORDER_CELL
+                if fill.fill_type:
+                    cell_item.fill = fill
+                if num_fmt:
+                    cell_item.number_format = num_fmt
+            ws6.row_dimensions[curr_row].height = 20
+            curr_row += 1
+
+        # Total Payables Row
+        ws6.cell(row=curr_row, column=1, value="").fill = FILL_TOTAL
+        ws6.cell(row=curr_row, column=1).border = BORDER_TOTAL
+        c_ptot = ws6.cell(row=curr_row, column=2, value="TOTAL ACTIVE PAYABLES")
+        c_ptot.font = FONT_DATA_BOLD
+        c_ptot.fill = FILL_TOTAL
+        c_ptot.border = BORDER_TOTAL
+
+        c_pamt = ws6.cell(row=curr_row, column=3, value=f"=SUM(C{start_pay_row}:C{curr_row-1})")
+        c_pamt.font = FONT_LOSS
+        c_pamt.alignment = ALIGN_RIGHT
+        c_pamt.number_format = FORMAT_CURRENCY
+        c_pamt.fill = FILL_TOTAL
+        c_pamt.border = BORDER_TOTAL
+
+        for c in range(4, 8):
+            ws6.cell(row=curr_row, column=c, value="").fill = FILL_TOTAL
+            ws6.cell(row=curr_row, column=c).border = BORDER_TOTAL
+        ws6.row_dimensions[curr_row].height = 22
+        curr_row += 2
+
+    # TABLE 3: Settled Accounts (Historical Audit Trail)
+    if peer_settled:
+        ws6.cell(row=curr_row, column=1, value="⚪ FULLY SETTLED ACCOUNTS (HISTORICAL AUDIT REFERENCE)").font = FONT_SECTION
+        ws6.merge_cells(f"A{curr_row}:G{curr_row}")
+        curr_row += 1
+
+        set_headers = ["Sl.", "Contact / Merchant Name", "Outstanding Balance", "Last Settled Date", "Past Entries", "Status", "Audit Note"]
+        for idx, h in enumerate(set_headers, start=1):
+            cell = ws6.cell(row=curr_row, column=idx, value=h)
+            cell.font = FONT_HEADER
+            cell.fill = FILL_HEADER
+            cell.alignment = ALIGN_HEADER
+            cell.border = BORDER_CELL
+        ws6.row_dimensions[curr_row].height = 24
+        curr_row += 1
+
+        for idx, s in enumerate(peer_settled, start=1):
+            fill = FILL_ZEBRA if idx % 2 == 0 else PatternFill(fill_type=None)
+            row_data = [
+                (idx, FONT_DATA, ALIGN_CENTER, None),
+                (s["name"], FONT_DATA, ALIGN_LEFT, None),
+                ("₹0.00", FONT_DATA, ALIGN_RIGHT, None),
+                (str(s["last_date"] or "N/A"), FONT_DATA, ALIGN_CENTER, None),
+                (s["count"], FONT_DATA, ALIGN_CENTER, None),
+                ("Fully Settled & Balanced", FONT_DATA_BOLD, ALIGN_CENTER, None),
+                ("All past dues and payments balanced to zero. No action required.", FONT_MUTED, ALIGN_LEFT, None)
+            ]
+            for col_idx, (val_data, font, align, num_fmt) in enumerate(row_data, start=1):
+                cell_item = ws6.cell(row=curr_row, column=col_idx, value=val_data)
+                cell_item.font = font
+                cell_item.alignment = align
+                cell_item.border = BORDER_CELL
+                if fill.fill_type:
+                    cell_item.fill = fill
+                if num_fmt:
+                    cell_item.number_format = num_fmt
+            ws6.row_dimensions[curr_row].height = 20
+            curr_row += 1
+
+    auto_fit_columns(ws6, min_width=12, max_width=55)
 
 
     output = io.BytesIO()

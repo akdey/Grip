@@ -82,10 +82,21 @@ async def generate_portfolio_statement_excel(db: AsyncSession, user) -> io.Bytes
     bills_res = await db.execute(bills_stmt)
     bills = bills_res.scalars().all()
 
+    # 4. Fetch Settle Up / Peer Ledgers
+    from app.features.settle_up.models import SettleUpEntry
+    settle_up_stmt = (
+        select(SettleUpEntry)
+        .where(SettleUpEntry.user_id == user.id)
+        .order_by(SettleUpEntry.date.desc())
+    )
+    settle_up_res = await db.execute(settle_up_stmt)
+    settle_up_entries = settle_up_res.scalars().all()
+
     return generate_portfolio_statement_workbook(
         user=user,
         holdings=holdings,
         credit_cards=credit_cards,
-        bills=bills
+        bills=bills,
+        settle_up_entries=settle_up_entries
     )
 
