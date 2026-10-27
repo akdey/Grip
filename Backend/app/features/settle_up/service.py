@@ -12,10 +12,11 @@ class SettleUpService:
     def __init__(self, db: AsyncSession = Depends(get_db)):
         self.db = db
 
-    async def get_peer_balances(self, user_id: UUID) -> List[schemas.PeerBalance]:
+    async def get_peer_balances(self, user_id: UUID, include_settled: bool = True) -> List[schemas.PeerBalance]:
         """
         Gets a summary of all peers and the net balance owed.
         Positive: They owe you. Negative: You owe them.
+        If include_settled is False, filters out peers whose net balance is 0.
         """
         stmt = (
             select(
@@ -25,9 +26,11 @@ class SettleUpService:
             )
             .where(SettleUpEntry.user_id == user_id)
             .group_by(func.lower(SettleUpEntry.peer_name))
-            .having(func.sum(SettleUpEntry.amount) != 0) # Optionally filter out settled (0) balances, or keep them for history
-            .order_by(desc("last_activity_date"))
         )
+        if not include_settled:
+            stmt = stmt.having(func.sum(SettleUpEntry.amount) != 0)
+
+        stmt = stmt.order_by(desc("last_activity_date"))
         result = await self.db.execute(stmt)
         
         balances = []
@@ -35,7 +38,7 @@ class SettleUpService:
             balances.append(
                 schemas.PeerBalance(
                     peer_name=row.peer_name,
-                    net_balance=row.net_balance,
+                    net_balance=row.net_balance or 0,
                     last_activity_date=row.last_activity_date,
                 )
             )

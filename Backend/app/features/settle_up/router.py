@@ -11,9 +11,10 @@ router = APIRouter()
 @router.get("/balances", response_model=List[schemas.PeerBalance])
 async def get_peer_balances(
     current_user: Annotated[User, Depends(get_current_user)],
-    service: Annotated[SettleUpService, Depends()]
+    service: Annotated[SettleUpService, Depends()],
+    include_settled: bool = True
 ):
-    return await service.get_peer_balances(user_id=current_user.id)
+    return await service.get_peer_balances(user_id=current_user.id, include_settled=include_settled)
 
 @router.get("/{peer_name}/history", response_model=List[schemas.SettleUpEntryResponse])
 async def get_peer_history(

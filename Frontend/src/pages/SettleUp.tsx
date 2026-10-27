@@ -61,7 +61,7 @@ const SettleUp: React.FC = () => {
 
     // Filter & Search State
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterMode, setFilterMode] = useState<'all' | 'collect' | 'pay'>('all');
+    const [filterMode, setFilterMode] = useState<'active' | 'all' | 'collect' | 'pay' | 'settled'>('active');
 
     // Add/Edit Entry State
     const [editingEntry, setEditingEntry] = useState<LedgerEntry | null>(null);
@@ -83,31 +83,54 @@ const SettleUp: React.FC = () => {
         }).format(Math.abs(amount));
 
     // Calculate High-level KPIs
-    const { totalToCollect, totalToPay, netPosition } = useMemo(() => {
+    const { totalToCollect, totalToPay, collectCount, payCount, settledCount, activeCount } = useMemo(() => {
         let collect = 0;
         let pay = 0;
+        let cCount = 0;
+        let pCount = 0;
+        let sCount = 0;
         balances?.forEach(p => {
             const val = Number(p.net_balance);
-            if (val > 0) collect += val;
-            else if (val < 0) pay += Math.abs(val);
+            if (val > 0) {
+                collect += val;
+                cCount++;
+            } else if (val < 0) {
+                pay += Math.abs(val);
+                pCount++;
+            } else {
+                sCount++;
+            }
         });
         return {
             totalToCollect: collect,
             totalToPay: pay,
-            netPosition: collect - pay
+            collectCount: cCount,
+            payCount: pCount,
+            settledCount: sCount,
+            activeCount: cCount + pCount
         };
     }, [balances]);
 
     // Filtered Balances List
     const filteredBalances = useMemo(() => {
         if (!balances) return [];
-        return balances.filter(p => {
-            const matchesSearch = p.peer_name.toLowerCase().includes(searchTerm.toLowerCase());
-            if (!matchesSearch) return false;
-            if (filterMode === 'collect') return p.net_balance > 0;
-            if (filterMode === 'pay') return p.net_balance < 0;
-            return true;
-        });
+        return balances
+            .filter(p => {
+                const matchesSearch = p.peer_name.toLowerCase().includes(searchTerm.toLowerCase());
+                if (!matchesSearch) return false;
+                if (filterMode === 'active') return Number(p.net_balance) !== 0;
+                if (filterMode === 'collect') return Number(p.net_balance) > 0;
+                if (filterMode === 'pay') return Number(p.net_balance) < 0;
+                if (filterMode === 'settled') return Number(p.net_balance) === 0;
+                return true; // 'all'
+            })
+            .sort((a, b) => {
+                // In 'all' view, keep active non-zero balances at top
+                const aActive = Math.abs(Number(a.net_balance)) > 0 ? 1 : 0;
+                const bActive = Math.abs(Number(b.net_balance)) > 0 ? 1 : 0;
+                if (aActive !== bActive) return bActive - aActive;
+                return new Date(b.last_activity_date || 0).getTime() - new Date(a.last_activity_date || 0).getTime();
+            });
     }, [balances, searchTerm, filterMode]);
 
     const handleSaveEntry = () => {
@@ -216,7 +239,7 @@ const SettleUp: React.FC = () => {
                             Settle Up
                         </h1>
                         <p className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">
-                            {balances?.length || 0} active contacts
+                            {activeCount} active • {settledCount} settled
                         </p>
                     </div>
                 </div>
@@ -234,43 +257,43 @@ const SettleUp: React.FC = () => {
             </header>
 
             <div className="max-w-4xl mx-auto px-4 py-5 space-y-6">
-                {/* KPI Overview Strip */}
-                <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-3.5 sm:p-4 text-center">
-                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-text-muted block">
-                            Net Balance
-                        </span>
-                        <p className={`text-base sm:text-lg font-black tracking-tight mt-1 truncate ${
-                            netPosition > 0 ? 'text-emerald-500' : netPosition < 0 ? 'text-rose-500' : 'text-primary'
-                        }`}>
-                            {netPosition > 0 ? `+${formatCurrency(netPosition)}` : netPosition < 0 ? `-${formatCurrency(netPosition)}` : '₹0'}
-                        </p>
-                        <span className="text-[7.5px] font-bold text-text-muted/70 uppercase tracking-tighter mt-0.5 block truncate">
-                            {netPosition > 0 ? 'Net Receivable' : netPosition < 0 ? 'Net Payable' : 'Balanced'}
-                        </span>
-                    </div>
-
-                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-3.5 sm:p-4 text-center">
-                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-emerald-500 block">
-                            To Collect
-                        </span>
-                        <p className="text-base sm:text-lg font-black text-emerald-500 tracking-tight mt-1 truncate">
+                {/* Redesigned 2-Card KPI Strip: Full readability without truncation */}
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    {/* To Collect Card */}
+                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-500 flex items-center gap-1.5">
+                                <ArrowUpRight size={15} className="shrink-0 stroke-[2.5]" />
+                                <span>To Collect</span>
+                            </span>
+                            <span className="text-[8.5px] sm:text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 shrink-0">
+                                {collectCount} {collectCount === 1 ? 'contact' : 'contacts'}
+                            </span>
+                        </div>
+                        <p className="text-xl sm:text-2xl md:text-3xl font-black text-emerald-500 tracking-tight mt-2.5 break-words">
                             {formatCurrency(totalToCollect)}
                         </p>
-                        <span className="text-[7.5px] font-bold text-emerald-500/70 uppercase tracking-tighter mt-0.5 block truncate">
-                            They Owe You
+                        <span className="text-[10px] font-semibold text-text-muted mt-1 block">
+                            They owe you
                         </span>
                     </div>
 
-                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-3.5 sm:p-4 text-center">
-                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-rose-500 block">
-                            To Pay
-                        </span>
-                        <p className="text-base sm:text-lg font-black text-rose-500 tracking-tight mt-1 truncate">
+                    {/* To Pay Card */}
+                    <div className="bg-surface-subtle border border-border-subtle rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-rose-500/30 transition-all">
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-rose-500 flex items-center gap-1.5">
+                                <ArrowDownLeft size={15} className="shrink-0 stroke-[2.5]" />
+                                <span>To Pay</span>
+                            </span>
+                            <span className="text-[8.5px] sm:text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500 shrink-0">
+                                {payCount} {payCount === 1 ? 'contact' : 'contacts'}
+                            </span>
+                        </div>
+                        <p className="text-xl sm:text-2xl md:text-3xl font-black text-rose-500 tracking-tight mt-2.5 break-words">
                             {formatCurrency(totalToPay)}
                         </p>
-                        <span className="text-[7.5px] font-bold text-rose-500/70 uppercase tracking-tighter mt-0.5 block truncate">
-                            You Owe Them
+                        <span className="text-[10px] font-semibold text-text-muted mt-1 block">
+                            You owe them
                         </span>
                     </div>
                 </div>
@@ -296,17 +319,17 @@ const SettleUp: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Filter Pills */}
+                    {/* Filter Pills with Settled & All options */}
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
                         <button
-                            onClick={() => { haptics.selection(); setFilterMode('all'); }}
+                            onClick={() => { haptics.selection(); setFilterMode('active'); }}
                             className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
-                                filterMode === 'all'
+                                filterMode === 'active'
                                     ? 'bg-primary text-text-inverse border-primary shadow-sm'
                                     : 'bg-surface-subtle text-text-muted border-border-subtle hover:text-primary hover:bg-surface-hover'
                             }`}
                         >
-                            All ({balances?.length || 0})
+                            Active ({activeCount})
                         </button>
                         <button
                             onClick={() => { haptics.selection(); setFilterMode('collect'); }}
@@ -316,7 +339,7 @@ const SettleUp: React.FC = () => {
                                     : 'bg-surface-subtle text-emerald-500/80 border-border-subtle hover:text-emerald-500 hover:bg-surface-hover'
                             }`}
                         >
-                            To Collect ({balances?.filter(b => b.net_balance > 0).length || 0})
+                            To Collect ({collectCount})
                         </button>
                         <button
                             onClick={() => { haptics.selection(); setFilterMode('pay'); }}
@@ -326,7 +349,27 @@ const SettleUp: React.FC = () => {
                                     : 'bg-surface-subtle text-rose-500/80 border-border-subtle hover:text-rose-500 hover:bg-surface-hover'
                             }`}
                         >
-                            To Pay ({balances?.filter(b => b.net_balance < 0).length || 0})
+                            To Pay ({payCount})
+                        </button>
+                        <button
+                            onClick={() => { haptics.selection(); setFilterMode('settled'); }}
+                            className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                                filterMode === 'settled'
+                                    ? 'bg-slate-700 text-white border-slate-600 shadow-sm'
+                                    : 'bg-surface-subtle text-text-muted border-border-subtle hover:text-primary hover:bg-surface-hover'
+                            }`}
+                        >
+                            Settled ({settledCount})
+                        </button>
+                        <button
+                            onClick={() => { haptics.selection(); setFilterMode('all'); }}
+                            className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                                filterMode === 'all'
+                                    ? 'bg-surface border-border-default text-primary shadow-sm'
+                                    : 'bg-surface-subtle text-text-muted border-border-subtle hover:text-primary hover:bg-surface-hover'
+                            }`}
+                        >
+                            All ({balances?.length || 0})
                         </button>
                     </div>
                 </div>
@@ -340,11 +383,13 @@ const SettleUp: React.FC = () => {
                             </div>
                             <div>
                                 <p className="font-black uppercase tracking-[3px] text-xs text-primary">
-                                    {searchTerm ? 'No Matching Contacts' : 'All Settled Up'}
+                                    {searchTerm ? 'No Matching Contacts' : filterMode === 'settled' ? 'No Settled Contacts' : 'All Settled Up'}
                                 </p>
                                 <p className="text-[11px] text-text-muted mt-1 max-w-xs">
                                     {searchTerm
                                         ? `No records found matching "${searchTerm}". Try another name.`
+                                        : filterMode === 'settled'
+                                        ? 'No settled contact ledgers found in this view.'
                                         : 'You have no outstanding debts or receivables with friends or merchants.'}
                                 </p>
                             </div>
@@ -362,7 +407,10 @@ const SettleUp: React.FC = () => {
                         </div>
                     ) : (
                         filteredBalances.map((peer) => {
-                            const isOwed = peer.net_balance > 0; // Positive = they owe you
+                            const net = Number(peer.net_balance);
+                            const isOwed = net > 0;
+                            const isDebt = net < 0;
+                            const isSettled = net === 0;
                             const initial = peer.peer_name ? peer.peer_name.trim().charAt(0).toUpperCase() : '?';
 
                             return (
@@ -380,28 +428,48 @@ const SettleUp: React.FC = () => {
                                             <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border shadow-inner ${
                                                 isOwed
                                                     ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500'
-                                                    : 'bg-rose-500/15 border-rose-500/30 text-rose-500'
+                                                    : isDebt
+                                                    ? 'bg-rose-500/15 border-rose-500/30 text-rose-500'
+                                                    : 'bg-surface border-border-subtle text-text-muted'
                                             }`}>
                                                 {initial}
                                             </div>
 
-                                            <p className="font-bold text-primary text-sm sm:text-base truncate group-hover:text-accent-text transition-colors">
-                                                {peer.peer_name}
-                                            </p>
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-primary text-sm sm:text-base truncate group-hover:text-accent-text transition-colors">
+                                                    {peer.peer_name}
+                                                </p>
+                                                {peer.last_activity_date && (
+                                                    <p className="text-[10px] text-text-muted font-medium mt-0.5">
+                                                        Active {formatDateSafe(peer.last_activity_date).short}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
 
                                         <div className="text-right shrink-0">
                                             <p className={`font-black text-base tracking-tight ${
-                                                isOwed ? 'text-emerald-500' : 'text-rose-500'
+                                                isOwed
+                                                    ? 'text-emerald-500'
+                                                    : isDebt
+                                                    ? 'text-rose-500'
+                                                    : 'text-text-muted font-bold'
                                             }`}>
-                                                {isOwed ? `+${formatCurrency(peer.net_balance)}` : `-${formatCurrency(peer.net_balance)}`}
+                                                {isOwed
+                                                    ? `+${formatCurrency(net)}`
+                                                    : isDebt
+                                                    ? `-${formatCurrency(net)}`
+                                                    : '₹0'}
                                             </p>
-                                            <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mt-0.5 border ${
+                                            <span className={`inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mt-0.5 border ${
                                                 isOwed
                                                     ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
-                                                    : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+                                                    : isDebt
+                                                    ? 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+                                                    : 'bg-surface border-border-subtle text-text-muted/80'
                                             }`}>
-                                                {isOwed ? 'They owe you' : 'You owe them'}
+                                                {isSettled && <CheckCircle2 size={10} />}
+                                                {isOwed ? 'They owe you' : isDebt ? 'You owe them' : 'Settled'}
                                             </span>
                                         </div>
                                     </div>
@@ -436,46 +504,73 @@ const SettleUp: React.FC = () => {
                     <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-accent-subtle/50 border border-accent-border/60">
                         <Info size={16} className="text-accent-text mt-0.5 shrink-0" />
                         <p className="text-[11px] text-text-muted leading-relaxed">
-                            Peer debt ledger entries adjust obligations between you and merchants/friends without affecting your bank statement ledger.
+                            Peer debt ledger entries track obligations between you and contacts/merchants.
                         </p>
                     </div>
 
-                    {/* Direction Toggle */}
-                    <div className="space-y-1.5">
+                    {/* Direction Toggle with Clear Labels and Visual Indicators */}
+                    <div className="space-y-2">
                         <label className="text-[9px] text-text-muted font-bold uppercase tracking-[2px] ml-1">
                             Transaction Direction
                         </label>
-                        <div className="grid grid-cols-2 gap-2 p-1 bg-surface-subtle border border-border-subtle rounded-2xl">
+                        <div className="grid grid-cols-2 gap-2 p-1.5 bg-surface-subtle border border-border-subtle rounded-2xl">
                             <button
                                 type="button"
                                 onClick={() => { haptics.selection(); setNewType('lent'); }}
-                                className={`py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                                className={`py-3 px-2 rounded-xl text-xs font-bold uppercase tracking-wider flex flex-col items-center justify-center gap-1 transition-all ${
                                     newType === 'lent'
                                         ? 'bg-emerald-500 text-white shadow-sm'
                                         : 'text-text-muted hover:text-primary hover:bg-surface-hover'
                                 }`}
                             >
-                                <ArrowUpRight size={15} />
-                                <span>I Lent / Paid</span>
+                                <span className="flex items-center gap-1.5">
+                                    <ArrowUpRight size={15} />
+                                    <span>I Lent / Paid</span>
+                                </span>
+                                <span className={`text-[8.5px] font-semibold lowercase tracking-normal ${
+                                    newType === 'lent' ? 'text-white/90' : 'text-text-muted/70'
+                                }`}>
+                                    they owe me (+)
+                                </span>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => { haptics.selection(); setNewType('received'); }}
-                                className={`py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                                className={`py-3 px-2 rounded-xl text-xs font-bold uppercase tracking-wider flex flex-col items-center justify-center gap-1 transition-all ${
                                     newType === 'received'
                                         ? 'bg-rose-500 text-white shadow-sm'
                                         : 'text-text-muted hover:text-primary hover:bg-surface-hover'
                                 }`}
                             >
-                                <ArrowDownLeft size={15} />
-                                <span>I Borrowed</span>
+                                <span className="flex items-center gap-1.5">
+                                    <ArrowDownLeft size={15} />
+                                    <span>Received / Borrowed</span>
+                                </span>
+                                <span className={`text-[8.5px] font-semibold lowercase tracking-normal ${
+                                    newType === 'received' ? 'text-white/90' : 'text-text-muted/70'
+                                }`}>
+                                    repayment / I owe (-)
+                                </span>
                             </button>
                         </div>
-                        <p className="text-[10px] text-text-muted/80 ml-1 italic font-medium">
-                            {newType === 'lent'
-                                ? '✓ Increases what they owe you (+ balance)'
-                                : '✓ Decreases what they owe you or increases debt (- balance)'}
-                        </p>
+
+                        {/* Live Sign Preview Box */}
+                        <div className={`p-2.5 rounded-xl border text-[11px] font-medium flex items-center justify-between ${
+                            newType === 'lent'
+                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
+                                : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+                        }`}>
+                            <span>
+                                {newType === 'lent'
+                                    ? '✓ Increases what they owe you (+ balance)'
+                                    : '✓ Decreases what they owe you or increases your debt (- balance)'}
+                            </span>
+                            {newAmount && !isNaN(parseFloat(newAmount)) && (
+                                <span className="font-black text-xs shrink-0 ml-2">
+                                    {newType === 'lent' ? `+₹${newAmount}` : `-₹${newAmount}`}
+                                </span>
+                            )}
+                        </div>
                     </div>
 
                     {/* Person / Merchant Name */}
