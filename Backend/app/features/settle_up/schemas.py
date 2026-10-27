@@ -1,14 +1,14 @@
 from pydantic import BaseModel, Field
 from uuid import UUID
 from typing import Optional
-from datetime import date, datetime
+from datetime import date as date_type, datetime
 from decimal import Decimal
 
 class SettleUpEntryBase(BaseModel):
     peer_name: str
     amount: Decimal
     remarks: Optional[str] = None
-    date: Optional[date] = None
+    date: Optional[date_type] = None
 
     class Config:
         str_strip_whitespace = True
@@ -20,7 +20,7 @@ class SettleUpEntryUpdate(BaseModel):
     peer_name: Optional[str] = None
     amount: Optional[Decimal] = None
     remarks: Optional[str] = None
-    date: Optional[date] = None
+    date: Optional[date_type] = None
 
     class Config:
         str_strip_whitespace = True
@@ -28,7 +28,7 @@ class SettleUpEntryUpdate(BaseModel):
 class SettleUpEntryResponse(SettleUpEntryBase):
     id: UUID
     user_id: UUID
-    date: date  # Override Optional from base — DB always has a date
+    date: date_type  # Override Optional from base — DB always has a date
     transaction_id: Optional[UUID] = None
     created_at: datetime
     
@@ -38,7 +38,8 @@ class SettleUpEntryResponse(SettleUpEntryBase):
 class PeerBalance(BaseModel):
     peer_name: str
     net_balance: Decimal
-    last_activity_date: date
+    last_activity_date: date_type
 
     class Config:
         str_strip_whitespace = True
+
