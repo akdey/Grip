@@ -22,7 +22,11 @@ export const useAuthStore = create<AuthState>()(
             token: null,
             isAuthenticated: false,
             login: (user, token) => set({ user, token, isAuthenticated: true }),
-            logout: () => set({ user: null, token: null, isAuthenticated: false }),
+            logout: () => {
+                usePrivacyStore.getState().setShowSensitive(false);
+                useWealthVaultStore.getState().lockVault();
+                set({ user: null, token: null, isAuthenticated: false });
+            },
         }),
         {
             name: 'pfie-auth-storage',

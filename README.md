@@ -533,11 +533,12 @@ Masked:   "UPI: ****@paytm paid ****@phonepe"
 - ✅ UPI IDs (👤 <email> or <username> prefix masked)
 - ✅ Phone numbers (📱 middle 6 digits masked)
 **Security & Biometric Architecture:**
-- **Dual-Tier Biometric Security (WebAuthn / Passkeys / Fingerprint)**:
-  - **Tier 1 (Outer Gate / App-Launch & Fast Sign-In)**: Automatically prompts the native device biometric sensor (Touch ID / Face ID / Fingerprint / Windows Hello) upon opening the app or logging in, unlocking all figures immediately across transactions, analytics, and budgets.
-  - **Tier 2 (Inner Gate / Wealth Vault Gate)**: High-security barrier isolating total net worth, mutual funds, EPF/PPF, and asset statements behind a secondary biometric re-prompt or master password challenge (`WealthVaultGate`). Prevents casual onlookers from seeing sensitive portfolio balances.
-  - **Universal In-Page Privacy Eye**: Direct Eye toggle accessible right from the header on Transactions, Dashboard, and Wealth to reveal or mask figures on demand without navigating away.
-  - **Hardware-Backed Device Passkeys**: Works natively with Apple Touch ID, Face ID, Android Biometrics, and Windows Hello. Phishing-resistant FIDO2 specification with discoverable and non-discoverable passkeys.
+- **On-Demand Biometric Verification (WebAuthn / Passkeys / Fingerprint)**:
+  - **Zero-Exposure Privacy by Default**: All sensitive financial figures, net worth balances, and transactions remain safely masked (`***` / `••••`) upon app launch and login until explicitly requested.
+  - **On-Demand Biometric Unlock**: Tapping the privacy Eye toggle or accessing the Wealth Vault triggers native hardware biometrics (Touch ID, Face ID, Android Fingerprint, or Windows Hello) to reveal figures securely.
+  - **Wealth Vault Gate**: Isolates total net worth, mutual funds, EPF/PPF, and asset schedules behind biometric verification or a master challenge (`WealthVaultGate`).
+  - **Universal In-Page Privacy Eye**: Direct Eye toggle accessible from headers on Dashboard, Transactions, Analytics, and Wealth to reveal or re-mask figures anytime with a single tap.
+  - **Hardware-Backed Device Passkeys**: Works natively with FIDO2 WebAuthn specifications for phishing-resistant local authentication.
   - **Device Key Management**: Direct enrollment and status monitoring inside **Profile Settings** (`More` → `Security & Biometrics`).
 - **Cryptographic Security**:
   - JWT authentication with bcrypt password hashing

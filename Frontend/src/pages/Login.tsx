@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore, usePrivacyStore } from '../lib/store';
+import { useAuthStore } from '../lib/store';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { api } from '../lib/api';
 import { Logo } from '../components/ui/Logo';
-import { Fingerprint, Sun, Moon } from 'lucide-react';
-import { checkBiometricsSupport, loginWithBiometrics, getDeviceBiometricName } from '../lib/webauthn';
+import { Sun, Moon } from 'lucide-react';
 import { useTheme } from '../lib/theme';
 import { haptics } from '../lib/haptics';
 
@@ -33,44 +32,10 @@ const Login: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
-    const [hasBiometricSupport, setHasBiometricSupport] = useState(false);
-
-    // Check device biometrics on mount
-    useEffect(() => {
-        checkBiometricsSupport().then((res) => {
-            setHasBiometricSupport(res.platformAvailable);
-        }).catch(() => {});
-    }, []);
 
     const completeLogin = (user: { id: string; email: string; is_active: boolean }, token: string) => {
         login(user, token);
-        usePrivacyStore.getState().setShowSensitive(true);
-        sessionStorage.setItem('grip_app_open_auth_attempted', 'true');
         navigate('/dashboard');
-    };
-
-    const handleBiometricLogin = async () => {
-        setIsLoading(true);
-        setError('');
-        try {
-            const res = await loginWithBiometrics(email.trim() || undefined);
-            if (res.email) {
-                localStorage.setItem('grip_last_email', res.email);
-            }
-            completeLogin({ id: 'temp-id', email: res.email, is_active: true }, res.access_token);
-        } catch (err: any) {
-            console.warn('Biometric login err:', err);
-            if (!err?.message?.includes('cancel') && !err?.message?.includes('abort')) {
-                const msg = err?.message || '';
-                if (!email.trim() && (msg.toLowerCase().includes('passkey') || msg.toLowerCase().includes('credential') || msg.toLowerCase().includes('not recognized'))) {
-                    setError('No passkey found on this device. Please enter your email above to sign in with your fingerprint, or use your credentials.');
-                } else {
-                    setError(msg || 'Biometric authentication failed. Please use your credentials.');
-                }
-            }
-        } finally {
-            setIsLoading(false);
-        }
     };
 
     // Initialize Google Login + Sync Fast Track
@@ -255,29 +220,6 @@ const Login: React.FC = () => {
                         onSubmit={mode === 'LOGIN' ? handleLogin : mode === 'REGISTER' ? handleRegister : handleVerifyOtp}
                         className="space-y-5"
                     >
-                        {/* Biometric Fast Sign-In Card */}
-                        {mode === 'LOGIN' && hasBiometricSupport && (
-                            <div className="p-3.5 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between gap-3 animate-fadeIn">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-10 rounded-xl bg-surface-pill border border-border-subtle flex items-center justify-center text-primary shrink-0">
-                                        <Fingerprint size={20} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-xs font-bold text-primary truncate">Fast Sign-In</p>
-                                        <p className="text-[10px] text-text-muted truncate">Use {getDeviceBiometricName()}</p>
-                                    </div>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={handleBiometricLogin}
-                                    disabled={isLoading}
-                                    className="px-4 py-2 rounded-xl bg-primary text-text-inverse font-black text-[10px] uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all shrink-0 cursor-pointer shadow-xs"
-                                >
-                                    {isLoading ? 'Checking...' : 'Unlock'}
-                                </button>
-                            </div>
-                        )}
-
                         {/* Standard Credential Inputs */}
                         {mode !== 'OTP' && (
                             <div className="space-y-4">
