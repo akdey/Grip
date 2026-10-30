@@ -20,6 +20,7 @@ from app.features.wealth import schemas
 from app.features.transactions.models import Transaction
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 # Try importing Prophet, handle if missing (though it should be there)
 try:
