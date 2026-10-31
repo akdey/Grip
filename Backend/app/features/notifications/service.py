@@ -140,61 +140,166 @@ class NotificationService:
         send_email(email, subject, html)
 
     async def send_surety_reminder(self, user_id: uuid.UUID, full_name: str, bill_title: str, amount: float, due_date: datetime):
-        """Send a reminder before a fixed obligation (surety) is due."""
+        """Legacy wrapper: forwards single item to send_consolidated_surety_reminder."""
+        await self.send_consolidated_surety_reminder(
+            user_id=user_id,
+            full_name=full_name,
+            items=[{
+                "title": bill_title,
+                "amount": amount,
+                "due_date": due_date.date() if isinstance(due_date, datetime) else due_date,
+                "type": "BILL"
+            }],
+            slot="MORNING"
+        )
+
+    async def send_consolidated_surety_reminder(
+        self,
+        user_id: uuid.UUID,
+        full_name: str,
+        items: List[dict],
+        slot: str = "MORNING"
+    ):
+        """
+        Send a single consolidated payment reminder email for all upcoming surety payments
+        due tomorrow, preventing email spam while providing a complete financial briefing.
+        """
         result = await self.db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
-        if not user or not user.email: return
+        if not user or not user.email:
+            return
+
+        if not items:
+            return
 
         import zoneinfo
         tz = zoneinfo.ZoneInfo(settings.APP_TIMEZONE)
         today = datetime.now(tz).date()
-        days_left = (due_date.date() - today).days
-        
-        due_str = f"in {days_left} days" if days_left > 1 else "tomorrow"
-        if days_left <= 0:
-            due_str = "today"
+        tomorrow = today + timedelta(days=1)
+        tomorrow_str = tomorrow.strftime('%d %B, %Y')
 
         name = self._derive_name(user.email, full_name)
-        
-        # Premium dynamic subject lines
-        if days_left == 1:
-            subject = f"Final Reminder: Payment Due Tomorrow for {bill_title}"
-        elif days_left == 2:
-            subject = f"Reminder: Payment Due in 2 Days for {bill_title}"
+        total_amount = sum(abs(float(item.get("amount", 0.0))) for item in items)
+        count = len(items)
+        is_evening = (slot.upper() == "EVENING")
+
+        # Distinct dynamic subject line
+        if is_evening:
+            prefix = "Final Evening Check"
+            if count == 1:
+                subject = f"{prefix}: ₹{total_amount:,.2f} due tomorrow for {items[0]['title']}"
+            else:
+                subject = f"{prefix}: {count} payments due tomorrow (Total ₹{total_amount:,.2f})"
         else:
-            subject = f"Reminder: Payment Due for {bill_title}"
-            
-        reminder_message = f"Your recurring payment for {bill_title} is due {due_str}."
-        
+            prefix = "Morning Briefing"
+            if count == 1:
+                subject = f"{prefix}: ₹{total_amount:,.2f} due tomorrow for {items[0]['title']}"
+            else:
+                subject = f"{prefix}: {count} payments due tomorrow (Total ₹{total_amount:,.2f})"
+
+        # Generate contextual AI note
+        titles_summary = ", ".join([item["title"] for item in items[:4]])
+        if count > 4:
+            titles_summary += f", and {count - 4} others"
+
+        if is_evening:
+            reminder_message = f"Grip evening check, {name}: you have {count} commitment{'s' if count > 1 else ''} totaling ₹{total_amount:,.2f} executing tomorrow ({titles_summary}). Ensure your accounts are funded before midnight debits."
+        else:
+            reminder_message = f"Good morning, {name}. Here is your financial heads-up: {count} recurring payment{'s' if count > 1 else ''} totaling ₹{total_amount:,.2f} are scheduled for tomorrow ({titles_summary}). Plan your liquidity today."
+
         if self.llm.is_enabled:
+            time_context = "evening before midnight debits" if is_evening else "morning planning for tomorrow's scheduled debits"
             prompt = f"""
             Persona: Sassy, witty, premium personal CFO.
-            Task: Write a reminder message for {name} regarding their upcoming payment.
-            Context: The payment for '{bill_title}' of amount ₹{abs(amount):,.2f} is due {due_str} (on {due_date.strftime('%d %B, %Y')}).
-            - Max 30 words. No quotes, no markdown.
-            - Be cheeky or witty. Example: 'Grip protocol check, {name}: your rent is due soon. Make sure your account is fueled so you keep a roof over your head.'
+            Task: Write a concise reminder message for {name} regarding {count} upcoming recurring payment(s) due tomorrow ({tomorrow_str}).
+            Context: Total amount is ₹{total_amount:,.2f}. Items include: {titles_summary}. Timing: {time_context}.
+            - Max 35 words. No quotes, no markdown.
+            - Keep it witty, polished, and action-oriented.
             """
-            resp = await self.llm.generate_response(prompt, temperature=0.8, timeout=30.0)
-            if resp:
-                reminder_message = resp.strip().replace('"', '')
+            try:
+                resp = await self.llm.generate_response(prompt, temperature=0.7, timeout=25.0)
+                if resp:
+                    reminder_message = resp.strip().replace('"', '')
+            except Exception as e:
+                logger.warning(f"Failed to generate LLM message for consolidated reminder: {e}")
+
+        # Build items table/list HTML
+        items_rows = []
+        for idx, item in enumerate(items, 1):
+            amount_val = abs(float(item.get("amount", 0.0)))
+            title = item.get("title", "Obligation")
+            item_type = item.get("type", "BILL")
+            
+            badge_color = "#4f46e5" if item_type == "CREDIT_CARD" else "#0891b2" if item_type == "SURETY_TXN" else "#10b981"
+            badge_text = "Credit Card" if item_type == "CREDIT_CARD" else "Recurring Surety" if item_type == "SURETY_TXN" else "Bill"
+            
+            row_bg = "#ffffff" if idx % 2 == 1 else "#f8fafc"
+            items_rows.append(f"""
+            <tr style="background-color: {row_bg}; border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 14px 16px; text-align: left; vertical-align: middle;">
+                    <span style="font-weight: 700; color: #1e293b; font-size: 15px; display: block;">{title}</span>
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: {badge_color}; letter-spacing: 0.05em;">{badge_text}</span>
+                </td>
+                <td style="padding: 14px 16px; text-align: right; vertical-align: middle;">
+                    <span style="font-size: 16px; font-weight: 800; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, monospace;">₹{amount_val:,.2f}</span>
+                </td>
+            </tr>
+            """)
+
+        items_table_html = "".join(items_rows)
+
+        slot_label = "EVENING RECAP • FINAL CHECK" if is_evening else "MORNING BRIEFING • DUE TOMORROW"
+        slot_badge_color = "#e11d48" if is_evening else "#4f46e5"
 
         content = f"""
-        <p>Hello {name},</p>
-        <div style="background: #fff; border: 1px solid #e2e8f0; padding: 25px; border-radius: 16px; margin: 25px 0;">
-            <p style="margin: 0; font-size: 18px; color: #111; font-style: italic; line-height: 1.6;">"{reminder_message}"</p>
+        <div style="display: inline-block; padding: 4px 12px; border-radius: 9999px; background: {slot_badge_color}15; color: {slot_badge_color}; font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px;">
+            {slot_label}
         </div>
-        <div style="background: #f8fafc; padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #f1f5f9; text-align: center;">
-            <p style="margin: 0; font-size: 14px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em;">Amount Due</p>
-            <p style="margin: 5px 0; font-size: 32px; font-weight: 800; color: #1e293b;">₹{abs(amount):,.2f}</p>
-            <p style="margin: 10px 0 0 0; font-size: 16px; color: #475569;">Due on <strong>{due_date.strftime('%d %B, %Y')}</strong></p>
+        <p style="font-size: 16px; margin: 0 0 16px 0; color: #334155;">Hello {name},</p>
+        
+        <div style="background: #f8fafc; border-left: 4px solid {slot_badge_color}; padding: 18px 20px; border-radius: 0 16px 16px 0; margin-bottom: 25px;">
+            <p style="margin: 0; font-size: 15px; color: #1e293b; font-style: italic; line-height: 1.6;">"{reminder_message}"</p>
         </div>
-        <p>Ensure you have sufficient funds to avoid any late fees.</p>
+
+        <!-- KPI Hero Summary -->
+        <div style="background: linear-gradient(135deg, #090a0f 0%, #1e1e2d 100%); color: #ffffff; padding: 24px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 14px; margin-bottom: 14px;">
+                <div>
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #94a3b8;">Total Commitments</span>
+                    <h3 style="margin: 4px 0 0 0; font-size: 32px; font-weight: 900; color: #ffffff; letter-spacing: -0.02em;">₹{total_amount:,.2f}</h3>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #38bdf8;">Due Tomorrow</span>
+                    <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #e2e8f0;">{tomorrow_str}</p>
+                </div>
+            </div>
+            <p style="margin: 0; font-size: 12px; color: #cbd5e1;">
+                Consolidated overview of <strong>{count} payment{'s' if count > 1 else ''}</strong> scheduled for tomorrow.
+            </p>
+        </div>
+
+        <!-- Breakdown Table -->
+        <div style="border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; margin-bottom: 24px;">
+            <div style="background: #f1f5f9; padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">
+                <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #475569;">Itemized Payment Schedule ({count})</span>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tbody>
+                    {items_table_html}
+                </tbody>
+            </table>
+        </div>
+
+        <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin: 0;">
+            Please ensure the required funds are available in your respective bank accounts or credit cards to avoid failed mandates or penalty charges.
+        </p>
         """
         html = self._get_html_wrapper(
-            title="Payment Reminder",
+            title="Consolidated Payment Briefing",
             content=content,
-            cta_text="View Obligations",
-            cta_url=f"{settings.FRONTEND_ORIGIN}/transactions?view=custom&category=Bills"
+            cta_text="Review Obligations in Grip",
+            cta_url=f"{settings.FRONTEND_ORIGIN}/transactions?view=custom&category=Bills",
+            footer_note="Grip Autonomous Scheduler delivers this briefing twice on the day prior to scheduled payment dates."
         )
         send_email(user.email, subject, html)
 

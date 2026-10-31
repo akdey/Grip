@@ -60,7 +60,7 @@ While others make you wait for "syncs" or manual entries, Grip is built to get y
 - **Rule Engine (Secondary)**: A deterministic, zero-latency pattern-matching engine handles common Indian bank email formats.
 - **Automatic Transaction Extraction**: Connect Gmail once; transactions are extracted from bank alerts automatically.
 - **Webhook Sync Optimization**: Intelligent 5-second debouncing and concurrency guards prevent redundant syncs from batch emails.
-- **Autonomous Notification Engine**: Scheduled email alerts for Gmail disconnection, surety bill reminders, and spending insights.
+- **Autonomous Notification Engine**: Scheduled email alerts for Gmail disconnection, consolidated surety bill briefings (twice-daily digest a day before payment), and spending insights.
 - **Tabular ML Forecasting**: LightGBM Tabular Machine Learning (category/subcategory features + 1-month and 12-month lag memory) to predict month-end expenses.
 - **Smart Learning**: Remembers your merchant preferences, auto-categorizes future transactions.
 - **Multi-Layer Spam Filter**: Sender whitelist + subject gates + body signals distinguish real transactions from marketing emails.
@@ -137,7 +137,7 @@ Grip processes your financial data through a sophisticated, privacy-preserving p
                          ↓
 │ 8. AUTONOMOUS NOTIFICATIONS                                     │
 │    • Gmail Connection Alerts: Instant email if OAuth expires       │
-│    • Surety Reminders: Morning-of alerts for big recurring bills  │
+│    • Consolidated Surety Briefings: Twice-daily digest a day before bills are due (Morning & Evening) │
 │    • Weekly Insights: Smart alerts for Category spending spikes   │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓

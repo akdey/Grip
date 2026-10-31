@@ -42,10 +42,11 @@ async def run_daily_price_sync():
 
 async def run_surety_reminders():
     """
-    Check for payments due exactly 1 or 2 days from today and send notifications.
-    Includes explicit Bills, Credit Cards, and Auto-detected Sureties.
+    Check for payments due tomorrow (1 day before surety payment date).
+    Consolidates all obligations (Credit Cards, Bills, Sureties) for each user into
+    a SINGLE email and is scheduled to run twice daily (Morning 8:00 AM & Evening 8:00 PM IST).
     """
-    logger.info("Starting Surety Reminders Scan (1 & 2 days prior)...")
+    logger.info("Starting Consolidated Surety Reminders Scan...")
     import zoneinfo
     from app.features.auth.models import User
     from app.features.bills.service import BillService
@@ -53,28 +54,33 @@ async def run_surety_reminders():
     from app.features.notifications.service import NotificationService
     
     tz = zoneinfo.ZoneInfo(settings.APP_TIMEZONE)
-    today = datetime.now(tz).date()
-    target_dates = [today + timedelta(days=1), today + timedelta(days=2)]
+    now_tz = datetime.now(tz)
+    today = now_tz.date()
+    tomorrow = today + timedelta(days=1)
     
+    # Morning slot (before 2 PM IST) vs Evening slot (after 2 PM IST)
+    slot = "EVENING" if now_tz.hour >= 14 else "MORNING"
+    logger.info(f"Surety reminders run: Date={today}, Target Tomorrow={tomorrow}, Slot={slot}")
+
     async with AsyncSessionLocal() as db:
         llm_service = get_llm_service()
         notification_service = NotificationService(db, llm_service)
         bill_service = BillService()
         cc_service = CreditCardService()
         
-        # 1. Fetch all users
-        stmt_users = select(User)
+        # 1. Fetch all active users
+        stmt_users = select(User).where(User.is_active == True)
         res_users = await db.execute(stmt_users)
         users = res_users.scalars().all()
         
         for user in users:
             full_name = user.full_name or user.email.split('@')[0]
+            user_due_items = []
             
             # --- PART A: Credit Cards ---
             try:
                 cards = await cc_service.get_user_cards(db, user.id, active_only=True)
                 for card in cards:
-                    # Calculate next payment due date in Asia/Kolkata
                     due_day = card.payment_due_date
                     try:
                         due_date = today.replace(day=due_day)
@@ -84,7 +90,6 @@ async def run_surety_reminders():
                         due_date = today.replace(day=last_day)
                         
                     if due_date < today:
-                        # Move to next month
                         if today.month == 12:
                             next_month = date(today.year + 1, 1, 1)
                         else:
@@ -96,8 +101,7 @@ async def run_surety_reminders():
                             last_day = monthrange(next_month.year, next_month.month)[1]
                             due_date = next_month.replace(day=last_day)
                             
-                    if due_date in target_dates:
-                        # Calculate unbilled amount
+                    if due_date == tomorrow:
                         from app.utils.finance_utils import get_billing_cycle_dates
                         cycle_dates = get_billing_cycle_dates(card.statement_date)
                         unbilled = await cc_service.get_unbilled_amount(
@@ -107,37 +111,60 @@ async def run_surety_reminders():
                             cycle_dates["cycle_end"]
                         )
                         if unbilled > 0:
-                            await notification_service.send_surety_reminder(
-                                user.id,
-                                full_name,
-                                f"{card.card_name} Payment",
-                                float(unbilled),
-                                datetime.combine(due_date, datetime.min.time())
-                            )
-                            logger.info(f"Sent credit card reminder for card: {card.card_name} to user {user.id}")
+                            user_due_items.append({
+                                "title": f"{card.card_name} Payment",
+                                "amount": float(unbilled),
+                                "due_date": due_date,
+                                "type": "CREDIT_CARD",
+                                "subtitle": "Credit Card Statement"
+                            })
             except Exception as e:
                 logger.error(f"Failed to check credit card reminders for user {user.id}: {e}")
 
             # --- PART B: Bills & Auto-detected Sureties ---
             try:
-                ledger = await bill_service.get_obligations_ledger(db, user.id, days_ahead=60, include_hidden=False)
-                for item in ledger["items"]:
+                ledger = await bill_service.get_obligations_ledger(db, user.id, days_ahead=30, include_hidden=False)
+                for item in ledger.get("items", []):
                     if item.type in ["BILL", "SURETY_TXN"]:
                         if item.status in ["PROJECTED", "PENDING", "OVERDUE"]:
-                            # We check if due date matches one of our target dates
-                            if item.due_date in target_dates:
-                                await notification_service.send_surety_reminder(
-                                    user.id,
-                                    full_name,
-                                    item.title,
-                                    float(item.amount),
-                                    datetime.combine(item.due_date, datetime.min.time())
-                                )
-                                logger.info(f"Sent reminder for {item.type}: {item.title} to user {user.id}")
+                            if item.due_date == tomorrow:
+                                user_due_items.append({
+                                    "title": item.title,
+                                    "amount": float(item.amount),
+                                    "due_date": item.due_date,
+                                    "type": item.type,
+                                    "subtitle": "Fixed Recurring Surety" if item.type == "SURETY_TXN" else "Bill Obligation"
+                                })
             except Exception as e:
                 logger.error(f"Failed to check ledger reminders for user {user.id}: {e}")
-                
-    logger.info("Surety Reminders Completed.")
+
+            # --- Deduplicate & Consolidate Send ---
+            if user_due_items:
+                seen_keys = set()
+                deduped_items = []
+                for itm in user_due_items:
+                    k = (itm["title"].strip().lower(), round(abs(itm["amount"]), 2))
+                    if k not in seen_keys:
+                        seen_keys.add(k)
+                        deduped_items.append(itm)
+
+                # Sort by amount descending (highest commitment first)
+                deduped_items.sort(key=lambda x: abs(x["amount"]), reverse=True)
+
+                try:
+                    await notification_service.send_consolidated_surety_reminder(
+                        user_id=user.id,
+                        full_name=full_name,
+                        items=deduped_items,
+                        slot=slot
+                    )
+                    logger.info(f"Dispatched consolidated surety reminder to {user.email}: {len(deduped_items)} items, slot={slot}")
+                except Exception as send_err:
+                    logger.error(f"Failed to send consolidated reminder to user {user.id}: {send_err}", exc_info=True)
+            else:
+                logger.debug(f"No payments due tomorrow for user {user.id}")
+
+    logger.info("Consolidated Surety Reminders Completed.")
 
 async def run_weekly_insights():
     """
@@ -503,8 +530,8 @@ def start_scheduler():
     # Run Gmail sync every hour
     scheduler.add_job(run_gmail_sync, 'interval', hours=1)
     
-    # Run Surety reminders daily at 7:00 AM IST (1:30 AM UTC)
-    reminder_trigger = CronTrigger(hour=1, minute=30)
+    # Run Surety reminders twice daily: 8:00 AM IST (2:30 AM UTC) and 8:00 PM IST (14:30 UTC)
+    reminder_trigger = CronTrigger(hour='2,14', minute=30)
     scheduler.add_job(run_surety_reminders, reminder_trigger)
     
     # Run Weekly Insights on Sunday at 10:00 AM IST (4:30 AM UTC)
