@@ -60,7 +60,7 @@ While others make you wait for "syncs" or manual entries, Grip is built to get y
 - **Rule Engine (Secondary)**: A deterministic, zero-latency pattern-matching engine handles common Indian bank email formats.
 - **Automatic Transaction Extraction**: Connect Gmail once; transactions are extracted from bank alerts automatically.
 - **Webhook Sync Optimization**: Intelligent 5-second debouncing and concurrency guards prevent redundant syncs from batch emails.
-- **Autonomous Notification Engine**: Scheduled email alerts for Gmail disconnection, consolidated surety bill briefings (twice-daily digest a day before payment), and spending insights.
+- **Autonomous Notification Engine**: Scheduled email alerts for Gmail disconnection, consolidated surety bill briefings (twice-daily digest a day before payment), spending insights, and automated weekly borrower reminders for outstanding loans.
 - **Tabular ML Forecasting**: LightGBM Tabular Machine Learning (category/subcategory features + 1-month and 12-month lag memory) to predict month-end expenses.
 - **Smart Learning**: Remembers your merchant preferences, auto-categorizes future transactions.
 - **Multi-Layer Spam Filter**: Sender whitelist + subject gates + body signals distinguish real transactions from marketing emails.
@@ -436,12 +436,21 @@ Result: Prevents surprise salary drains by previewing next month's recurring com
 
 ### 🤝 Settle Up (Peer-to-Peer Balances)
 
-**Track Shared Expenses & Borrowing**
-- Maintain running tabs with friends, roommates, and family
-- Record money lent (they owe you) and money borrowed (you owe them)
-- View consolidated net balances per person at a glance
-- Link specific P2P settlements to actual bank transactions for complete auditability
-- Add optional notes and timestamps for every exchange
+**Track Shared Expenses, Loans & Automated Reminders**
+- **Running Ledger Tabs**: Maintain running tabs with friends, roommates, and colleagues with transparent running balances.
+- **Bi-directional Tracking**: Record money lent (they owe you / positive balance) and money borrowed (you owe them / negative balance).
+- **Consolidated Net Balances**: Instant visibility into who owes you what, with 1-click Quick Settle.
+- **Bank Transaction Linking**: Link peer settlements to actual bank transactions for end-to-end auditability.
+- **Direct Loan Card WhatsApp Reminders**: Tap the green **Remind** action on any "To Collect" card to ping borrowers immediately via `https://wa.me/...`.
+- **4 Literary & Friendly Message Tones**:
+  - *Literary & Witty (Shakespeare)*: `"Neither a borrower nor a lender be, as the Bard penned — but between friends, fond memories (and ₹2,500) linger sweetly! ☕ Let's square up whenever you have a moment."`
+  - *Charming & Warm*: Polite, pressure-free nudge.
+  - *Casual & Breezy*: Quick check-in between close friends.
+  - *Direct & Crisp*: Professional UPI/GPay settlement reminder.
+- **Automated Email Follow-up Engine**:
+  - Send branded literary reminder emails with one click.
+  - **Weekly Automation Switch**: Toggle `Automate Weekly Email Reminders` on any contact; Grip's background scheduler automatically dispatches a gentle follow-up every Monday until settled, throttled to avoid spamming.
+- **Borrower Contact Management**: Save WhatsApp numbers and email addresses permanently per peer during entry creation or directly from the ledger.
 
 ### 📑 Professional Export & Reporting
 
@@ -828,9 +837,11 @@ POST /api/v1/transactions/{id}/verify       # Verify
 ```bash
 GET  /api/v1/wealth/holdings                     # List portfolio
 GET  /api/v1/wealth/holdings/{id}                # Holding details with snapshots
+GET  /api/v1/wealth/holdings/{id}/history        # Itemized investment history ledger (NEW!)
 POST /api/v1/wealth/holdings                     # Add new asset
 POST /api/v1/wealth/forecast                     # AI forecast (Prophet)
 POST /api/v1/wealth/map-transaction              # Link transaction to holding
+POST /api/v1/wealth/batch-map-recurring          # Batch-map recurring monthly SIPs
 GET  /api/v1/wealth/sync-prices                  # Trigger manual price sync
 POST /api/v1/wealth/import-cams                  # Import CAMS statement (NEW!)
 GET  /api/v1/wealth/holdings/{id}/sip-analysis   # SIP date performance analysis (NEW!)
@@ -843,13 +854,17 @@ GET /api/v1/analytics/variance       # Month-over-month
 GET /api/v1/analytics/monthly-summary # Monthly stats
 ```
 
-#### Settle Up (Peer-to-Peer)
+#### Settle Up (Peer-to-Peer & Follow-ups)
 ```bash
-GET    /api/v1/settle-up/balances            # List all peer balances
-GET    /api/v1/settle-up/{peer_name}/history # Specific peer ledger
-POST   /api/v1/settle-up/                    # Add new P2P entry
-PUT    /api/v1/settle-up/{entry_id}          # Update entry
-DELETE /api/v1/settle-up/{entry_id}          # Delete entry
+GET    /api/v1/settle-up/balances                 # List all peer balances & contact reminder settings
+GET    /api/v1/settle-up/contacts                 # List all borrower contacts
+GET    /api/v1/settle-up/{peer_name}/contact      # Get specific borrower contact details
+PUT    /api/v1/settle-up/{peer_name}/contact      # Upsert WhatsApp phone, email, & auto-remind settings
+POST   /api/v1/settle-up/{peer_name}/send-reminder # Dispatch friendly literary reminder email
+GET    /api/v1/settle-up/{peer_name}/history      # Specific peer transaction ledger
+POST   /api/v1/settle-up/                         # Add new P2P entry (with optional phone/email)
+PUT    /api/v1/settle-up/{entry_id}               # Update entry
+DELETE /api/v1/settle-up/{entry_id}               # Delete entry
 ```
 
 #### Export
