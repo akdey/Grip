@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Search, Link as LinkIcon, Check, Layers, ListFilter } from 'lucide-react';
+import { ChevronDown, Search, Link as LinkIcon, Check, Layers, ListFilter, Plus } from 'lucide-react';
 import { api } from '../../lib/api';
+import { AddHoldingModal } from './AddHoldingModal';
 
 function getOrdinalSuffix(day: number): string {
     if (day > 3 && day < 21) return 'th';
@@ -47,6 +48,27 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
     const [autoDetecting, setAutoDetecting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [batchHoldingSelections, setBatchHoldingSelections] = useState<{ [groupKey: string]: string }>({});
+    const [holdingsList, setHoldingsList] = useState<Holding[]>(holdings);
+    const [isAddHoldingOpen, setIsAddHoldingOpen] = useState(false);
+    const [targetGroupForNewHolding, setTargetGroupForNewHolding] = useState<string | null>(null);
+
+    React.useEffect(() => {
+        setHoldingsList(holdings);
+    }, [holdings]);
+
+    const handleNewHoldingCreated = async (newHolding?: any) => {
+        setIsAddHoldingOpen(false);
+        onLinkSuccess();
+        if (newHolding) {
+            setHoldingsList(prev => [newHolding, ...prev.filter(h => h.id !== newHolding.id)]);
+            if (targetGroupForNewHolding) {
+                setBatchHoldingSelections(prev => ({ ...prev, [targetGroupForNewHolding]: newHolding.id }));
+                setTargetGroupForNewHolding(null);
+            } else if (step === 'SELECT_HOLDING' && selectedTxn) {
+                await handleLink(newHolding.id, selectedTxn.id);
+            }
+        }
+    };
 
     const fetchTransactions = async () => {
         setLoading(true);
@@ -276,11 +298,19 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                                         <div className="relative flex-1 sm:w-56 min-w-0">
                                                             <select
                                                                 value={selectedId}
-                                                                onChange={(e) => setBatchHoldingSelections(prev => ({ ...prev, [group.key]: e.target.value }))}
+                                                                onChange={(e) => {
+                                                                    if (e.target.value === '__ADD_NEW__') {
+                                                                        setTargetGroupForNewHolding(group.key);
+                                                                        setIsAddHoldingOpen(true);
+                                                                    } else {
+                                                                        setBatchHoldingSelections(prev => ({ ...prev, [group.key]: e.target.value }));
+                                                                    }
+                                                                }}
                                                                 className="w-full bg-surface border border-border-subtle text-xs text-primary rounded-xl px-2.5 py-2 pr-7 focus:outline-none focus:border-border-default truncate appearance-none cursor-pointer"
                                                             >
                                                                 <option value="">Select Asset...</option>
-                                                                {holdings.map(h => (
+                                                                <option value="__ADD_NEW__" className="bg-surface text-accent font-bold">✨ + Add New Asset...</option>
+                                                                {holdingsList.map(h => (
                                                                     <option key={h.id} value={h.id} className="bg-surface text-primary">
                                                                         {h.name} ({h.asset_type})
                                                                     </option>
@@ -288,6 +318,18 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                                             </select>
                                                             <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                                                         </div>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setTargetGroupForNewHolding(group.key);
+                                                                setIsAddHoldingOpen(true);
+                                                            }}
+                                                            title="Add new asset to portfolio"
+                                                            className="px-2.5 py-2 rounded-xl border border-border-subtle bg-surface hover:bg-surface-hover text-text-muted hover:text-primary transition-all active:scale-95 shrink-0 flex items-center justify-center shadow-sm"
+                                                        >
+                                                            <Plus size={14} />
+                                                        </button>
 
                                                         <button
                                                             onClick={() => handleBatchLink(group, selectedId)}
@@ -378,21 +420,32 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                     </div>
                                 </div>
 
-                                <div className="relative mb-4">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-                                    <input
-                                        type="text"
-                                        placeholder="Search holdings..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full bg-surface-subtle border border-border-subtle text-primary rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-border-default placeholder:text-text-muted"
-                                    />
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                                        <input
+                                            type="text"
+                                            placeholder="Search holdings..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full bg-surface-subtle border border-border-subtle text-primary rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-border-default placeholder:text-text-muted"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setTargetGroupForNewHolding(null);
+                                            setIsAddHoldingOpen(true);
+                                        }}
+                                        className="px-3.5 py-2 rounded-xl bg-accent text-black font-bold text-xs hover:bg-accent-hover transition-all flex items-center gap-1.5 active:scale-95 shadow-sm shrink-0 whitespace-nowrap"
+                                    >
+                                        <Plus size={14} /> Add New Asset
+                                    </button>
                                 </div>
 
                                 <p className="text-text-muted text-xs mb-2">Select the Asset to link to:</p>
 
                                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
-                                    {holdings
+                                    {holdingsList
                                         .filter(h => h.name.toLowerCase().includes(searchTerm.toLowerCase()))
                                         .map(h => (
                                             <div
@@ -411,6 +464,22 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                                 )}
                                             </div>
                                         ))}
+
+                                    {holdingsList.filter(h => h.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+                                        <div className="text-center py-8 bg-surface-subtle rounded-2xl border border-dashed border-border-subtle">
+                                            <p className="text-sm font-semibold text-primary">No matching assets found</p>
+                                            <p className="text-xs text-text-muted mt-1 mb-3">Did you invest in a new mutual fund or asset today?</p>
+                                            <button
+                                                onClick={() => {
+                                                    setTargetGroupForNewHolding(null);
+                                                    setIsAddHoldingOpen(true);
+                                                }}
+                                                className="px-4 py-2 rounded-xl bg-accent text-black font-bold text-xs hover:bg-accent-hover transition-all inline-flex items-center gap-1.5 active:scale-95 shadow-sm"
+                                            >
+                                                <Plus size={14} /> Add New Asset & Link
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </>
                         )}
@@ -418,6 +487,15 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                     </div>
                 </motion.div>
             </div>
+
+            <AddHoldingModal
+                isOpen={isAddHoldingOpen}
+                onClose={() => {
+                    setIsAddHoldingOpen(false);
+                    setTargetGroupForNewHolding(null);
+                }}
+                onSuccess={handleNewHoldingCreated}
+            />
         </AnimatePresence>
     );
 };

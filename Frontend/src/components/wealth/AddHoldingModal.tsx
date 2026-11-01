@@ -7,7 +7,7 @@ import { haptics } from '../../lib/haptics';
 interface AddHoldingModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSuccess: () => void;
+    onSuccess: (newHolding?: any) => void;
 }
 
 export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClose, onSuccess }) => {
@@ -79,8 +79,8 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                 remarks: formData.remarks.trim() || null,
             };
 
-            await api.post('/wealth/holdings', submitData);
-            onSuccess();
+            const res = await api.post('/wealth/holdings', submitData);
+            onSuccess(res.data);
             onClose();
             setFormData({
                 name: '',

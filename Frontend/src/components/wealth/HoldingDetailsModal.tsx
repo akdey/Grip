@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, TrendingUp, Pencil, Save, X, Check, Percent, Calendar, Lock, ShieldCheck, Landmark, FileText, UserCheck, MapPin, Loader2 } from 'lucide-react';
+import { ChevronDown, TrendingUp, Pencil, Save, X, Check, Percent, Calendar, Lock, ShieldCheck, Landmark, FileText, UserCheck, MapPin, Loader2, History, ArrowUpRight, ArrowDownRight, CheckCircle2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { SIPDateAnalysis } from './SIPDateAnalysis';
 import { haptics } from '../../lib/haptics';
@@ -15,8 +15,10 @@ interface HoldingDetailsModalProps {
 }
 
 export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen, onClose, holding, onUpdated }) => {
-    const [activeTab, setActiveTab] = useState<'performance' | 'sip-analysis'>('performance');
+    const [activeTab, setActiveTab] = useState<'performance' | 'history' | 'sip-analysis'>('performance');
     const [currentHolding, setCurrentHolding] = useState<any>(holding);
+    const [history, setHistory] = useState<any[]>([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [savedSuccess, setSavedSuccess] = useState(false);
@@ -35,6 +37,20 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
     const [savingRecords, setSavingRecords] = useState(false);
     const [recordsSavedSuccess, setRecordsSavedSuccess] = useState(false);
 
+    const fetchHistory = async (holdingId?: string) => {
+        const id = holdingId || currentHolding?.id || holding?.id;
+        if (!id) return;
+        setLoadingHistory(true);
+        try {
+            const res = await api.get(`/wealth/holdings/${id}/history`);
+            setHistory(res.data || []);
+        } catch (e) {
+            console.error("Failed to fetch holding history", e);
+        } finally {
+            setLoadingHistory(false);
+        }
+    };
+
     useEffect(() => {
         if (holding) {
             setCurrentHolding(holding);
@@ -49,6 +65,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
             setEditRemarks(holding.remarks || '');
             setIsEditing(false);
             setIsEditingRecords(false);
+            fetchHistory(holding.id);
         }
     }, [holding]);
 
@@ -360,28 +377,53 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
 
                         {/* Tabs & Content Container */}
                         <div className="flex-1 overflow-hidden flex flex-col">
-                            {hasSIPData && (
-                                <div className="flex gap-2 px-6 sm:px-10 border-b border-border-subtle bg-surface-subtle/50">
+                            <div className="flex gap-1 sm:gap-2 px-6 sm:px-10 border-b border-border-subtle bg-surface-subtle/50 overflow-x-auto no-scrollbar">
+                                <button
+                                    onClick={() => {
+                                        haptics.selection();
+                                        setActiveTab('performance');
+                                    }}
+                                    className={`px-4 sm:px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative shrink-0 ${activeTab === 'performance' ? 'text-emerald-500' : 'text-text-muted hover:text-primary'}`}
+                                >
+                                    Performance
+                                    {activeTab === 'performance' && (
+                                        <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        haptics.selection();
+                                        setActiveTab('history');
+                                    }}
+                                    className={`px-4 sm:px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative shrink-0 flex items-center gap-2 ${activeTab === 'history' ? 'text-emerald-500' : 'text-text-muted hover:text-primary'}`}
+                                >
+                                    <span>Investment History</span>
+                                    {history.length > 0 && (
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold tracking-normal ${
+                                            activeTab === 'history' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-surface text-text-muted border border-border-subtle'
+                                        }`}>
+                                            {history.length}
+                                        </span>
+                                    )}
+                                    {activeTab === 'history' && (
+                                        <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
+                                    )}
+                                </button>
+                                {hasSIPData && (
                                     <button
-                                        onClick={() => setActiveTab('performance')}
-                                        className={`px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative ${activeTab === 'performance' ? 'text-emerald-500' : 'text-text-muted hover:text-primary'}`}
-                                    >
-                                        Performance
-                                        {activeTab === 'performance' && (
-                                            <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
-                                        )}
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab('sip-analysis')}
-                                        className={`px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative ${activeTab === 'sip-analysis' ? 'text-emerald-500' : 'text-text-muted hover:text-primary'}`}
+                                        onClick={() => {
+                                            haptics.selection();
+                                            setActiveTab('sip-analysis');
+                                        }}
+                                        className={`px-4 sm:px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative shrink-0 ${activeTab === 'sip-analysis' ? 'text-emerald-500' : 'text-text-muted hover:text-primary'}`}
                                     >
                                         SIP Intelligence
                                         {activeTab === 'sip-analysis' && (
                                             <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
                                         )}
                                     </button>
-                                </div>
-                            )}
+                                )}
+                            </div>
 
                             <div className="flex-1 overflow-y-auto p-6 pb-28 sm:p-10 sm:pb-24 custom-scrollbar">
                                 {activeTab === 'performance' ? (
@@ -654,6 +696,159 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                             )}
                                         </div>
                                     </>
+                                ) : activeTab === 'history' ? (
+                                    <div className="space-y-6">
+                                        {/* Investment Summary Cards */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                            <div className="bg-surface-subtle rounded-2xl p-4 border border-border-subtle">
+                                                <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted">Total Contributions</p>
+                                                <p className="text-xl sm:text-2xl font-black mt-1 text-primary">{history.length} <span className="text-xs font-normal text-text-muted">records</span></p>
+                                            </div>
+                                            <div className="bg-surface-subtle rounded-2xl p-4 border border-border-subtle">
+                                                <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted">Recorded Inflows</p>
+                                                <p className="text-xl sm:text-2xl font-black mt-1 text-primary font-mono">
+                                                    {formatCurrency(history.reduce((acc, it) => acc + (it.amount || 0), 0))}
+                                                </p>
+                                            </div>
+                                            <div className="bg-surface-subtle rounded-2xl p-4 border border-border-subtle">
+                                                <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted">Units Accumulated</p>
+                                                <p className="text-xl sm:text-2xl font-black mt-1 text-primary font-mono">
+                                                    {history[0]?.cumulative_units != null 
+                                                        ? Number(history[0].cumulative_units).toFixed(3)
+                                                        : (currentHolding.current_units ? Number(currentHolding.current_units).toFixed(3) : 'N/A')}
+                                                </p>
+                                            </div>
+                                            <div className="bg-surface-subtle rounded-2xl p-4 border border-border-subtle">
+                                                <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted">Current Valuation</p>
+                                                <p className="text-xl sm:text-2xl font-black mt-1 text-emerald-400 font-mono">
+                                                    {formatCurrency(currentHolding.current_value || 0)}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* History Itemized List */}
+                                        <div className="bg-surface-subtle rounded-2xl border border-border-subtle p-4 sm:p-6">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div>
+                                                    <h3 className="text-sm font-black uppercase tracking-wider text-primary flex items-center gap-2">
+                                                        <History size={16} className="text-emerald-400" />
+                                                        Investment Ledger & Inflows
+                                                    </h3>
+                                                    <p className="text-[11px] text-text-muted mt-0.5">Chronological record of SIP debits, NAV allotments, and capital contributions</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => fetchHistory(currentHolding?.id)}
+                                                    disabled={loadingHistory}
+                                                    className="text-xs text-text-muted hover:text-primary transition-colors flex items-center gap-1 active:scale-95"
+                                                >
+                                                    <Loader2 size={13} className={loadingHistory ? "animate-spin" : ""} />
+                                                    <span>Refresh</span>
+                                                </button>
+                                            </div>
+
+                                            {loadingHistory && history.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center py-16 text-text-muted">
+                                                    <Loader2 className="animate-spin w-8 h-8 text-primary/40 mb-3" />
+                                                    <p className="text-xs">Loading investment records...</p>
+                                                </div>
+                                            ) : history.length === 0 ? (
+                                                <div className="text-center py-16 bg-surface/50 rounded-xl border border-dashed border-border-subtle px-4">
+                                                    <History size={32} className="mx-auto text-text-muted/40 mb-3" />
+                                                    <p className="text-sm font-bold text-primary">No Investment Records Found</p>
+                                                    <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
+                                                        Map bank debit transactions to this holding using the Asset Linker to automatically track date, units, purchase NAV, and returns.
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {history.map((item, idx) => {
+                                                        const dateFormatted = new Date(item.date).toLocaleDateString([], {
+                                                            day: 'numeric',
+                                                            month: 'short',
+                                                            year: 'numeric'
+                                                        });
+                                                        const isGain = (item.gain_loss || 0) >= 0;
+
+                                                        return (
+                                                            <div
+                                                                key={item.id || idx}
+                                                                className="p-3.5 sm:p-4 rounded-xl border border-border-subtle bg-surface hover:bg-surface-hover transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
+                                                            >
+                                                                <div className="flex items-start gap-3 min-w-0 flex-1">
+                                                                    <div className="w-9 h-9 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center shrink-0 mt-0.5">
+                                                                        <Calendar size={16} className="text-primary" />
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <div className="flex flex-wrap items-center gap-2">
+                                                                            <span className="text-sm font-bold text-primary">{dateFormatted}</span>
+                                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                                                                item.investment_type === 'SIP' 
+                                                                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                                                                    : item.investment_type === 'DEPOSIT'
+                                                                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                                                                    : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                                                            }`}>
+                                                                                {item.investment_type}
+                                                                            </span>
+                                                                            {item.transaction_id && (
+                                                                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 font-semibold">
+                                                                                    <CheckCircle2 size={10} /> Bank Debit
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+
+                                                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-text-muted">
+                                                                            {item.merchant_name && (
+                                                                                <span className="font-medium text-text-secondary truncate max-w-[220px]">
+                                                                                    {item.merchant_name}
+                                                                                </span>
+                                                                            )}
+                                                                            {item.units != null && (
+                                                                                <span className="text-primary font-mono">
+                                                                                    +{Number(item.units).toFixed(3)} units
+                                                                                </span>
+                                                                            )}
+                                                                            {item.nav != null && (
+                                                                                <span className="font-mono">
+                                                                                    @ NAV ₹{Number(item.nav).toFixed(2)}
+                                                                                </span>
+                                                                            )}
+                                                                            {item.cumulative_units != null && (
+                                                                                <span className="text-[11px] text-text-muted opacity-80 font-mono">
+                                                                                    (Total: {Number(item.cumulative_units).toFixed(3)} units)
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {item.remarks && (
+                                                                            <p className="text-xs text-text-muted/80 italic mt-1 truncate max-w-md">
+                                                                                "{item.remarks}"
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t border-border-subtle/50 sm:border-t-0">
+                                                                    <span className="font-bold font-mono text-base text-primary">
+                                                                        ₹{Number(item.amount || 0).toLocaleString('en-IN')}
+                                                                    </span>
+                                                                    {item.gain_loss != null && (
+                                                                        <div className="flex items-center gap-1 text-[11px] font-mono mt-0.5">
+                                                                            <span className="text-text-muted">Now: ₹{Number(item.current_value_now).toLocaleString('en-IN')}</span>
+                                                                            <span className={`font-bold flex items-center ${isGain ? 'text-status-success' : 'text-status-danger'}`}>
+                                                                                {isGain ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                                                                                {isGain ? '+' : ''}{Number(item.gain_loss_percent).toFixed(1)}%
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 ) : (
                                     <SIPDateAnalysis holdingId={holding.id} />
                                 )}

@@ -121,6 +121,146 @@ class WealthService:
             
         return holding
 
+    async def get_holding_investment_history(self, holding_id: uuid.UUID, user_id: uuid.UUID) -> List[schemas.HoldingHistoryItem]:
+        holding = await self.db.get(InvestmentHolding, holding_id)
+        if not holding or holding.user_id != user_id:
+            raise ValueError("Holding not found")
+
+        # 1. Fetch mapped transactions
+        txns_stmt = (
+            select(Transaction)
+            .join(InvestmentTransactionMapping, InvestmentTransactionMapping.transaction_id == Transaction.id)
+            .where(InvestmentTransactionMapping.holding_id == holding_id)
+            .order_by(Transaction.transaction_date.desc(), Transaction.created_at.desc())
+        )
+        mapped_txns = (await self.db.execute(txns_stmt)).scalars().all()
+        txns_by_date = {}
+        for t in mapped_txns:
+            if t.transaction_date:
+                txns_by_date.setdefault(t.transaction_date, []).append(t)
+
+        # 2. Fetch snapshots
+        snapshots_stmt = (
+            select(InvestmentSnapshot)
+            .where(InvestmentSnapshot.holding_id == holding_id)
+            .order_by(InvestmentSnapshot.captured_at.asc())
+        )
+        snapshots = (await self.db.execute(snapshots_stmt)).scalars().all()
+
+        # Determine latest price/NAV for holding to calculate current valuation & returns
+        latest_nav = None
+        if snapshots and snapshots[-1].price_per_unit > 0:
+            latest_nav = snapshots[-1].price_per_unit
+        elif holding.asset_type in [AssetType.MUTUAL_FUND, AssetType.STOCK, AssetType.SIP]:
+            try:
+                latest_nav = await self.get_asset_price(holding, date.today())
+            except Exception:
+                if snapshots and snapshots[-1].units_held > 0 and holding.current_value > 0:
+                    latest_nav = holding.current_value / snapshots[-1].units_held
+        if not latest_nav and snapshots and snapshots[-1].units_held > 0 and holding.current_value > 0:
+            latest_nav = holding.current_value / snapshots[-1].units_held
+
+        items = []
+        prev_units = 0.0
+
+        used_txn_ids = set()
+        for snap in snapshots:
+            delta_amount = float(snap.amount_invested_delta or 0.0)
+            units_delta = max(0.0, float(snap.units_held - prev_units)) if prev_units > 0 else float(snap.units_held)
+            prev_units = float(snap.units_held)
+
+            if delta_amount <= 0.0 and units_delta <= 0.0:
+                continue
+
+            # Look for matching mapped transaction on snap.captured_at
+            matched_txn = None
+            if snap.captured_at in txns_by_date:
+                for cand in txns_by_date[snap.captured_at]:
+                    if cand.id not in used_txn_ids:
+                        if abs(float(abs(cand.amount)) - delta_amount) < 1.0 or matched_txn is None:
+                            matched_txn = cand
+                            if abs(float(abs(cand.amount)) - delta_amount) < 1.0:
+                                break
+                if matched_txn:
+                    used_txn_ids.add(matched_txn.id)
+
+            cur_val_now = None
+            gain_loss = None
+            gain_loss_pct = None
+            if latest_nav and units_delta > 0:
+                cur_val_now = round(units_delta * latest_nav, 2)
+                if delta_amount > 0:
+                    gain_loss = round(cur_val_now - delta_amount, 2)
+                    gain_loss_pct = round((gain_loss / delta_amount) * 100.0, 2)
+
+            inv_type = "SIP" if snap.is_sip else "LUMPSUM"
+            if holding.asset_type in [AssetType.FD, AssetType.RD]:
+                inv_type = "DEPOSIT"
+
+            items.append(schemas.HoldingHistoryItem(
+                id=str(snap.id),
+                date=snap.captured_at,
+                amount=round(delta_amount, 2),
+                units=round(units_delta, 4) if units_delta > 0 else None,
+                nav=round(float(snap.price_per_unit), 4) if snap.price_per_unit else None,
+                cumulative_units=round(float(snap.units_held), 4) if snap.units_held else None,
+                total_value_then=round(float(snap.total_value), 2) if snap.total_value else None,
+                current_value_now=cur_val_now,
+                gain_loss=gain_loss,
+                gain_loss_percent=gain_loss_pct,
+                investment_type=inv_type,
+                merchant_name=matched_txn.merchant_name if matched_txn else None,
+                remarks=matched_txn.remarks if matched_txn else None,
+                transaction_id=matched_txn.id if matched_txn else None,
+                source="TRANSACTION" if matched_txn else ("SIP" if snap.is_sip else "SNAPSHOT")
+            ))
+
+        # Any remaining mapped transactions that didn't match a snapshot (fallback)
+        for t in mapped_txns:
+            if t.id not in used_txn_ids:
+                amt = float(abs(t.amount))
+                items.append(schemas.HoldingHistoryItem(
+                    id=str(t.id),
+                    date=t.transaction_date or t.created_at.date(),
+                    amount=amt,
+                    units=None,
+                    nav=None,
+                    cumulative_units=None,
+                    total_value_then=None,
+                    current_value_now=None,
+                    gain_loss=None,
+                    gain_loss_percent=None,
+                    investment_type="BANK_DEBIT",
+                    merchant_name=t.merchant_name,
+                    remarks=t.remarks,
+                    transaction_id=t.id,
+                    source="TRANSACTION"
+                ))
+
+        # If no snapshots and no transactions, but holding has total_invested
+        if not items and holding.total_invested > 0:
+            c_date = holding.created_at.date() if isinstance(holding.created_at, datetime) else date.today()
+            items.append(schemas.HoldingHistoryItem(
+                id=f"initial_{holding.id}",
+                date=c_date,
+                amount=holding.total_invested,
+                units=None,
+                nav=None,
+                cumulative_units=None,
+                total_value_then=holding.current_value,
+                current_value_now=holding.current_value,
+                gain_loss=round(holding.current_value - holding.total_invested, 2) if holding.current_value else 0.0,
+                gain_loss_percent=round(((holding.current_value - holding.total_invested) / holding.total_invested * 100.0), 2) if holding.total_invested > 0 else 0.0,
+                investment_type="INITIAL",
+                merchant_name=holding.institution_name,
+                remarks=holding.remarks or "Initial Portfolio Entry",
+                transaction_id=None,
+                source="INITIAL"
+            ))
+
+        items.sort(key=lambda x: x.date, reverse=True)
+        return items
+
     async def create_holding(self, user_id: uuid.UUID, data: schemas.InvestmentHoldingCreate) -> InvestmentHolding:
         """Create a new holding. If existing holdings data provided, create synthetic snapshots."""
         from dateutil.relativedelta import relativedelta

@@ -86,6 +86,28 @@ class InvestmentSnapshotOut(InvestmentSnapshotBase):
     id: UUID
     holding_id: UUID
     is_projected: bool = False
+    is_sip: bool = False
+    sip_amount: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+class HoldingHistoryItem(BaseModel):
+    id: str
+    date: date
+    amount: float
+    units: Optional[float] = None
+    nav: Optional[float] = None
+    cumulative_units: Optional[float] = None
+    total_value_then: Optional[float] = None
+    current_value_now: Optional[float] = None
+    gain_loss: Optional[float] = None
+    gain_loss_percent: Optional[float] = None
+    investment_type: str = "SIP"
+    merchant_name: Optional[str] = None
+    remarks: Optional[str] = None
+    transaction_id: Optional[UUID] = None
+    source: str = "TRANSACTION"
 
     class Config:
         from_attributes = True

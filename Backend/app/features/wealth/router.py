@@ -31,6 +31,17 @@ async def get_holding_details(
     except ValueError:
         raise HTTPException(status_code=404, detail="Holding not found")
 
+@router.get("/holdings/{holding_id}/history", response_model=List[schemas.HoldingHistoryItem])
+async def get_holding_investment_history(
+    holding_id: UUID,
+    current_user: User = Depends(get_current_user),
+    service: WealthService = Depends()
+):
+    try:
+        return await service.get_holding_investment_history(holding_id, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
 @router.post("/holdings", response_model=schemas.InvestmentHoldingOut)
 async def create_holding(
     holding: schemas.InvestmentHoldingCreate,
