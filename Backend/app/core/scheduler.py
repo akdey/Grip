@@ -512,6 +512,47 @@ async def run_db_maintenance():
             logger.error(f"Daily Database Maintenance failed: {e}", exc_info=True)
 
 
+async def run_settle_up_email_reminders():
+    """
+    Checks for outstanding positive balances where borrower has auto_remind_email=True
+    and hasn't been reminded in the last 7 days.
+    Sends friendly, automated literary reminder emails.
+    """
+    logger.info("Starting Automated Settle Up Email Reminders...")
+    from app.features.settle_up.models import SettleUpPeerContact, SettleUpEntry
+    from app.features.settle_up.service import SettleUpService
+    
+    async with AsyncSessionLocal() as db:
+        service = SettleUpService(db)
+        seven_days_ago = datetime.now() - timedelta(days=7)
+
+        stmt = select(SettleUpPeerContact).where(
+            SettleUpPeerContact.auto_remind_email == True,
+            SettleUpPeerContact.email.isnot(None),
+            (SettleUpPeerContact.last_reminded_at.is_(None) | (SettleUpPeerContact.last_reminded_at <= seven_days_ago))
+        )
+        candidates = (await db.execute(stmt)).scalars().all()
+
+        reminded_count = 0
+        for contact in candidates:
+            try:
+                bal_stmt = select(func.sum(SettleUpEntry.amount)).where(
+                    SettleUpEntry.user_id == contact.user_id,
+                    SettleUpEntry.peer_name.ilike(contact.peer_name.strip())
+                )
+                net = (await db.execute(bal_stmt)).scalar_one_or_none() or 0
+                if net > 0:
+                    await service.send_email_reminder(
+                        user_id=contact.user_id,
+                        peer_name=contact.peer_name
+                    )
+                    reminded_count += 1
+            except Exception as e:
+                logger.error(f"Failed automated reminder for {contact.peer_name}: {e}")
+
+        logger.info(f"Automated Settle Up Reminders finished. Sent {reminded_count} emails.")
+
+
 def start_scheduler():
     """
     Start the scheduler if ENABLE_SCHEDULER is True.
@@ -545,6 +586,10 @@ def start_scheduler():
     # Run Database Maintenance daily at 4:00 AM IST (10:30 PM UTC previous day)
     db_maint_trigger = CronTrigger(hour=22, minute=30)
     scheduler.add_job(run_db_maintenance, db_maint_trigger)
+
+    # Run Automated Settle Up Reminders weekly on Monday at 11:00 AM IST (5:30 AM UTC)
+    settle_up_trigger = CronTrigger(day_of_week='mon', hour=5, minute=30)
+    scheduler.add_job(run_settle_up_email_reminders, settle_up_trigger)
     
     scheduler.start()
     logger.info("Scheduler started. Jobs scheduled.")

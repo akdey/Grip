@@ -6,6 +6,10 @@ export interface PeerBalance {
     peer_name: string;
     net_balance: number;
     last_activity_date: string;
+    phone?: string | null;
+    email?: string | null;
+    auto_remind_email?: boolean;
+    last_reminded_at?: string | null;
 }
 
 export interface LedgerEntry {
@@ -24,6 +28,14 @@ export interface LedgerEntryCreate {
     amount: number;
     remarks?: string;
     date?: string;
+    phone?: string;
+    email?: string;
+}
+
+export interface PeerContactUpdate {
+    phone?: string | null;
+    email?: string | null;
+    auto_remind_email?: boolean;
 }
 
 export const usePeerBalances = () => {
@@ -88,6 +100,34 @@ export const useDeleteSettleUpEntry = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['settle-up-balances'] });
             queryClient.invalidateQueries({ queryKey: ['settle-up-history'] });
+        },
+    });
+};
+
+export const useUpdatePeerContact = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ peerName, ...contact }: PeerContactUpdate & { peerName: string }) => {
+            const { data } = await api.put(`/settle-up/${encodeURIComponent(peerName)}/contact`, contact);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['settle-up-balances'] });
+        },
+    });
+};
+
+export const useSendEmailReminder = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ peerName, custom_note, subject }: { peerName: string; custom_note?: string; subject?: string }) => {
+            const { data } = await api.post(`/settle-up/${encodeURIComponent(peerName)}/send-reminder`, { custom_note, subject });
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['settle-up-balances'] });
         },
     });
 };

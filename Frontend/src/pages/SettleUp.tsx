@@ -22,7 +22,13 @@ import {
     ChevronLeft,
     FileText,
     Link2,
-    ExternalLink
+    ExternalLink,
+    MessageCircle,
+    Mail,
+    Send,
+    Copy,
+    Phone,
+    BellRing
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -31,6 +37,8 @@ import {
     useAddLedgerEntry,
     useUpdateSettleUpEntry,
     useDeleteSettleUpEntry,
+    useUpdatePeerContact,
+    useSendEmailReminder,
     type PeerBalance,
     type LedgerEntry
 } from '../features/settle-up/hooks';
@@ -54,6 +62,53 @@ const formatDateSafe = (dateStr?: string | null) => {
     }
 };
 
+export const formatWhatsAppLink = (phone: string, text: string) => {
+    let clean = phone.replace(/[^0-9]/g, '');
+    if (clean.length === 10) {
+        clean = '91' + clean;
+    }
+    return `https://wa.me/${clean}?text=${encodeURIComponent(text)}`;
+};
+
+export const REMINDER_TEMPLATES = [
+    {
+        id: 'literary',
+        label: 'Literary & Witty',
+        tag: 'Shakespeare / Classic',
+        getText: (name: string, amt: string, note?: string) => {
+            const base = `Hey ${name}! "Neither a borrower nor a lender be", as the Bard penned — but between friends, fond memories (and ₹${amt}) linger sweetly! ☕ Let's square up on Grip whenever you have a quiet moment. Cheers!`;
+            return note ? `${base}\n\n(Note: ${note})` : base;
+        }
+    },
+    {
+        id: 'charming',
+        label: 'Charming & Warm',
+        tag: 'Gentle & Polite',
+        getText: (name: string, amt: string, note?: string) => {
+            const base = `Hey ${name}! Hope you're having a wonderful week. Just a gentle, friendly reminder regarding the ₹${amt} from our recent outing whenever you get a chance to settle up. No rush at all! ✨`;
+            return note ? `${base}\n\n(Note: ${note})` : base;
+        }
+    },
+    {
+        id: 'casual',
+        label: 'Casual & Breezy',
+        tag: 'Split & Chill',
+        getText: (name: string, amt: string, note?: string) => {
+            const base = `Hey ${name}! Just checking in on the ₹${amt} balance on Grip when you get a chance. Hope all's well! 🤝`;
+            return note ? `${base}\n\n(Note: ${note})` : base;
+        }
+    },
+    {
+        id: 'direct',
+        label: 'Direct & Crisp',
+        tag: 'UPI Ready',
+        getText: (name: string, amt: string, note?: string) => {
+            const base = `Hi ${name}, sharing a quick reminder for the pending balance of ₹${amt} on Grip. You can GPay/UPI me whenever convenient. Thanks!`;
+            return note ? `${base}\n\n(Note: ${note})` : base;
+        }
+    }
+];
+
 const SettleUp: React.FC = () => {
     const navigate = useNavigate();
     const { data: balances, isLoading } = usePeerBalances();
@@ -71,6 +126,11 @@ const SettleUp: React.FC = () => {
     const [newDate, setNewDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
     const [newRemarks, setNewRemarks] = useState('');
     const [newType, setNewType] = useState<'lent' | 'received'>('lent');
+    const [newPhone, setNewPhone] = useState('');
+    const [newEmail, setNewEmail] = useState('');
+
+    // Reminder State
+    const [reminderPeer, setReminderPeer] = useState<PeerBalance | null>(null);
 
     const addMutation = useAddLedgerEntry();
     const updateMutation = useUpdateSettleUpEntry();
@@ -164,6 +224,8 @@ const SettleUp: React.FC = () => {
                 amount: finalAmount,
                 date: newDate || format(new Date(), 'yyyy-MM-dd'),
                 remarks: newRemarks.trim() || undefined,
+                phone: newPhone.trim() || undefined,
+                email: newEmail.trim() || undefined,
             }, {
                 onSuccess: () => {
                     haptics.notification('success');
@@ -179,6 +241,8 @@ const SettleUp: React.FC = () => {
         setNewAmount('');
         setNewDate(format(new Date(), 'yyyy-MM-dd'));
         setNewRemarks('');
+        setNewPhone('');
+        setNewEmail('');
         setNewType('lent');
         setEditingEntry(null);
         setShowAddForm(false);
@@ -474,6 +538,45 @@ const SettleUp: React.FC = () => {
                                             </span>
                                         </div>
                                     </div>
+
+                                    {/* Borrower Follow-up Quick Bar on Card */}
+                                    {isOwed && (
+                                        <div className="mt-3 pt-2.5 border-t border-border-subtle/50 flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-1.5 text-[10.5px] text-text-muted min-w-0">
+                                                {peer.phone ? (
+                                                    <span className="font-mono text-emerald-400 font-semibold flex items-center gap-1 truncate">
+                                                        <Phone size={10} /> {peer.phone}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-text-muted/60 italic text-[10px]">No phone saved</span>
+                                                )}
+                                                {peer.email && (
+                                                    <span className="text-text-muted/70 truncate text-[10px]">
+                                                        • {peer.email}
+                                                    </span>
+                                                )}
+                                                {peer.auto_remind_email && (
+                                                    <span className="text-[8.5px] px-1.5 py-0.5 rounded-full bg-accent/15 border border-accent/25 text-accent font-bold tracking-tight uppercase shrink-0">
+                                                        Auto-Email
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    haptics.impact('light');
+                                                    setReminderPeer(peer);
+                                                }}
+                                                className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 font-bold text-[11px] flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0"
+                                                title="Send WhatsApp or Email reminder"
+                                            >
+                                                <MessageCircle size={13} className="text-emerald-400" />
+                                                <span>Remind</span>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })
@@ -485,12 +588,22 @@ const SettleUp: React.FC = () => {
             <PeerHistoryDrawer
                 peerName={selectedPeer}
                 peerBalance={balances?.find(b => b.peer_name === selectedPeer)?.net_balance || 0}
+                peerContact={balances?.find(b => b.peer_name === selectedPeer)}
                 isOpen={!!selectedPeer}
                 onClose={() => setSelectedPeer(null)}
                 formatCurrency={formatCurrency}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onQuickSettle={handleQuickSettle}
+                onOpenReminder={(p) => setReminderPeer(p)}
+            />
+
+            {/* Borrower Reminder Drawer */}
+            <BorrowerReminderDrawer
+                isOpen={!!reminderPeer}
+                onClose={() => setReminderPeer(null)}
+                peer={reminderPeer}
+                formatCurrency={formatCurrency}
             />
 
             {/* Add / Edit Entry Drawer */}
@@ -650,6 +763,45 @@ const SettleUp: React.FC = () => {
                         />
                     </div>
 
+                    {/* Optional Borrower Contact Info (When Lending) */}
+                    {newType === 'lent' && !editingEntry && (
+                        <div className="p-3.5 rounded-2xl bg-surface border border-border-subtle space-y-3">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+                                <Sparkles size={12} className="text-emerald-400" />
+                                <span>Borrower Follow-up Contacts (Optional)</span>
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider ml-1 flex items-center gap-1">
+                                        <Phone size={10} className="text-emerald-400" /> WhatsApp Number
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={newPhone}
+                                        onChange={(e) => setNewPhone(e.target.value)}
+                                        placeholder="e.g. 9876543210"
+                                        className="w-full bg-surface-subtle border border-border-subtle rounded-xl px-3 py-2 text-xs font-semibold text-primary focus:outline-none focus:border-border-default placeholder:text-text-muted/50"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider ml-1 flex items-center gap-1">
+                                        <Mail size={10} className="text-emerald-400" /> Email Address
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={newEmail}
+                                        onChange={(e) => setNewEmail(e.target.value)}
+                                        placeholder="e.g. borrower@gmail.com"
+                                        className="w-full bg-surface-subtle border border-border-subtle rounded-xl px-3 py-2 text-xs font-semibold text-primary focus:outline-none focus:border-border-default placeholder:text-text-muted/50"
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-[10px] text-text-muted/70 leading-relaxed">
+                                Used for 1-click literary WhatsApp pings and automated email follow-ups.
+                            </p>
+                        </div>
+                    )}
+
                     {/* Submit Button */}
                     <button
                         onClick={handleSaveEntry}
@@ -678,23 +830,27 @@ const SettleUp: React.FC = () => {
 interface PeerHistoryDrawerProps {
     peerName: string | null;
     peerBalance: number;
+    peerContact?: PeerBalance | null;
     isOpen: boolean;
     onClose: () => void;
     formatCurrency: (n: number) => string;
     onEdit: (entry: LedgerEntry) => void;
     onDelete: (id: string) => void;
     onQuickSettle: (peerName: string, balance: number) => void;
+    onOpenReminder?: (peer: PeerBalance) => void;
 }
 
 const PeerHistoryDrawer: React.FC<PeerHistoryDrawerProps> = ({
     peerName,
     peerBalance,
+    peerContact,
     isOpen,
     onClose,
     formatCurrency,
     onEdit,
     onDelete,
-    onQuickSettle
+    onQuickSettle,
+    onOpenReminder
 }) => {
     const navigate = useNavigate();
     const { data: history, isLoading } = usePeerHistory(peerName || '');
@@ -921,6 +1077,41 @@ const PeerHistoryDrawer: React.FC<PeerHistoryDrawerProps> = ({
                             </div>
                         )}
 
+                        {/* Borrower Follow-up Banner */}
+                        {peerBalance > 0 && peerContact && (
+                            <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                    <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                                        <Sparkles size={11} /> Borrower Reminders & Follow-up
+                                    </span>
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-text-muted">
+                                        <span className="font-mono text-primary font-semibold flex items-center gap-1">
+                                            <Phone size={11} className="text-emerald-400" />
+                                            {peerContact.phone || <span className="text-text-muted/60 font-normal italic">No WhatsApp number</span>}
+                                        </span>
+                                        <span className="text-primary truncate flex items-center gap-1">
+                                            <Mail size={11} className="text-emerald-400" />
+                                            {peerContact.email || <span className="text-text-muted/60 font-normal italic">No email</span>}
+                                        </span>
+                                        {peerContact.auto_remind_email && (
+                                            <span className="text-[8.5px] px-1.5 py-0.5 rounded-full bg-accent/20 text-accent font-bold uppercase">
+                                                Auto-Email ON
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => onOpenReminder?.(peerContact)}
+                                    className="px-3.5 py-2 rounded-xl bg-emerald-500 text-black hover:bg-emerald-400 font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 whitespace-nowrap"
+                                >
+                                    <MessageCircle size={14} />
+                                    <span>Remind on WhatsApp / Email</span>
+                                </button>
+                            </div>
+                        )}
+
                         {/* Transaction History Heading */}
                         <div className="flex items-center justify-between px-1 pt-1">
                             <p className="text-[10px] font-black uppercase tracking-[2px] text-text-muted flex items-center gap-1.5">
@@ -1011,6 +1202,361 @@ const PeerHistoryDrawer: React.FC<PeerHistoryDrawerProps> = ({
                         )}
                     </>
                 )}
+            </div>
+        </Drawer>
+    );
+};
+
+// Sub-component: Borrower Reminder Drawer
+interface BorrowerReminderDrawerProps {
+    isOpen: boolean;
+    onClose: () => void;
+    peer: PeerBalance | null;
+    formatCurrency: (n: number) => string;
+}
+
+const BorrowerReminderDrawer: React.FC<BorrowerReminderDrawerProps> = ({
+    isOpen,
+    onClose,
+    peer,
+    formatCurrency
+}) => {
+    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
+    const [autoRemind, setAutoRemind] = useState(false);
+    const [selectedTemplateId, setSelectedTemplateId] = useState('literary');
+    const [customNote, setCustomNote] = useState('');
+    const [copied, setCopied] = useState(false);
+    const [emailSuccessMsg, setEmailSuccessMsg] = useState<string | null>(null);
+
+    const updateContactMutation = useUpdatePeerContact();
+    const sendEmailMutation = useSendEmailReminder();
+
+    useEffect(() => {
+        if (peer) {
+            setPhone(peer.phone || '');
+            setEmail(peer.email || '');
+            setAutoRemind(peer.auto_remind_email || false);
+            setCustomNote('');
+            setCopied(false);
+            setEmailSuccessMsg(null);
+        }
+    }, [peer, isOpen]);
+
+    if (!peer) return null;
+
+    const netAmount = Math.abs(Number(peer.net_balance));
+    const formattedAmt = netAmount.toLocaleString('en-IN');
+    const activeTemplate = REMINDER_TEMPLATES.find(t => t.id === selectedTemplateId) || REMINDER_TEMPLATES[0];
+    const reminderText = activeTemplate.getText(peer.peer_name, formattedAmt, customNote.trim() || undefined);
+
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const waLink = cleanPhone ? formatWhatsAppLink(cleanPhone, reminderText) : null;
+
+    const handleSaveContact = () => {
+        haptics.selection();
+        updateContactMutation.mutate({
+            peerName: peer.peer_name,
+            phone: phone.trim() || null,
+            email: email.trim() || null,
+            auto_remind_email: autoRemind
+        }, {
+            onSuccess: () => {
+                haptics.notification('success');
+            },
+            onError: () => haptics.notification('error')
+        });
+    };
+
+    const handleOpenWhatsApp = () => {
+        if (!cleanPhone) {
+            haptics.notification('warning');
+            alert('Please enter a valid WhatsApp phone number for this borrower.');
+            return;
+        }
+        haptics.impact('medium');
+        // Auto-save contact if changed
+        if (phone.trim() !== (peer.phone || '') || email.trim() !== (peer.email || '')) {
+            handleSaveContact();
+        }
+        window.open(waLink!, '_blank');
+    };
+
+    const handleCopy = () => {
+        haptics.impact('light');
+        navigator.clipboard.writeText(reminderText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleSendEmail = () => {
+        if (!email.trim()) {
+            haptics.notification('warning');
+            alert('Please enter a valid email address for this borrower first.');
+            return;
+        }
+        haptics.impact('medium');
+        sendEmailMutation.mutate({
+            peerName: peer.peer_name,
+            custom_note: customNote.trim() || undefined
+        }, {
+            onSuccess: () => {
+                haptics.notification('success');
+                setEmailSuccessMsg(`Email successfully sent to ${email.trim()}!`);
+                setTimeout(() => setEmailSuccessMsg(null), 4000);
+            },
+            onError: (err: any) => {
+                haptics.notification('error');
+                const detail = err?.response?.data?.detail || 'Failed to send email';
+                alert(detail);
+            }
+        });
+    };
+
+    return (
+        <Drawer
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Borrower Reminders & Follow-up"
+            height="max-h-[90vh] h-auto"
+        >
+            <div className="w-full max-w-lg mx-auto space-y-4 pb-6 overflow-x-hidden">
+                {/* Hero Header */}
+                <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
+                            Borrower & Amount Due
+                        </span>
+                        <h3 className="text-base sm:text-lg font-black text-primary truncate">
+                            {peer.peer_name}
+                        </h3>
+                        <p className="text-xs text-emerald-400 font-semibold mt-0.5">
+                            Owes you ₹{formattedAmt}
+                        </p>
+                    </div>
+
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                        <MessageCircle size={24} />
+                    </div>
+                </div>
+
+                {/* Section 1: Contact Information */}
+                <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+                            <User size={13} /> Contact Details
+                        </span>
+                        <button
+                            type="button"
+                            onClick={handleSaveContact}
+                            disabled={updateContactMutation.isPending}
+                            className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-surface border border-border-subtle text-text-muted hover:text-primary active:scale-95 transition-all flex items-center gap-1"
+                        >
+                            {updateContactMutation.isPending ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
+                            <span>Save Contact</span>
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-bold uppercase tracking-wider text-text-muted flex items-center gap-1">
+                                <Phone size={10} className="text-emerald-400" /> WhatsApp Number
+                            </label>
+                            <input
+                                type="tel"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                placeholder="e.g. 9876543210"
+                                className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-semibold text-primary focus:outline-none focus:border-emerald-500 placeholder:text-text-muted/50"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-bold uppercase tracking-wider text-text-muted flex items-center gap-1">
+                                <Mail size={10} className="text-emerald-400" /> Email ID (for follow-up)
+                            </label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="e.g. rahul@gmail.com"
+                                className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-semibold text-primary focus:outline-none focus:border-emerald-500 placeholder:text-text-muted/50"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Section 2: Literary WhatsApp Reminder */}
+                <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3.5">
+                    <div>
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+                                <Sparkles size={13} className="text-emerald-400" />
+                                Literary WhatsApp Reminder
+                            </h4>
+                            <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                                https://wa.me
+                            </span>
+                        </div>
+                        <p className="text-[10px] text-text-muted mt-0.5">
+                            Prefills a polite, literary message so you can nudge without feeling awkward
+                        </p>
+                    </div>
+
+                    {/* Template Pills */}
+                    <div className="grid grid-cols-2 gap-2">
+                        {REMINDER_TEMPLATES.map((tmpl) => (
+                            <button
+                                key={tmpl.id}
+                                type="button"
+                                onClick={() => {
+                                    haptics.selection();
+                                    setSelectedTemplateId(tmpl.id);
+                                }}
+                                className={`p-2.5 rounded-xl border text-left transition-all active:scale-95 ${
+                                    selectedTemplateId === tmpl.id
+                                        ? 'bg-surface border-emerald-500/50 shadow-sm'
+                                        : 'bg-surface/50 border-border-subtle hover:bg-surface text-text-muted'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-bold text-primary block truncate">
+                                        {tmpl.label}
+                                    </span>
+                                    {selectedTemplateId === tmpl.id && (
+                                        <Check size={12} className="text-emerald-400 shrink-0 ml-1" />
+                                    )}
+                                </div>
+                                <span className="text-[9px] text-text-muted block mt-0.5 truncate">
+                                    {tmpl.tag}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Optional Note */}
+                    <div className="space-y-1">
+                        <label className="text-[9px] font-bold uppercase tracking-wider text-text-muted">
+                            Custom Note (Optional)
+                        </label>
+                        <input
+                            type="text"
+                            value={customNote}
+                            onChange={(e) => setCustomNote(e.target.value)}
+                            placeholder="e.g. Dinner on Friday, Bangalore trip cab"
+                            className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-semibold text-primary focus:outline-none focus:border-border-default placeholder:text-text-muted/50"
+                        />
+                    </div>
+
+                    {/* Message Preview Box */}
+                    <div className="p-3.5 rounded-xl bg-surface border border-border-subtle relative group">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-text-muted">
+                                Prefilled Message Preview
+                            </span>
+                            <button
+                                type="button"
+                                onClick={handleCopy}
+                                className="text-[10px] font-bold text-text-muted hover:text-primary flex items-center gap-1 active:scale-90 transition-all"
+                            >
+                                {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                                <span>{copied ? 'Copied!' : 'Copy'}</span>
+                            </button>
+                        </div>
+                        <p className="text-xs text-primary leading-relaxed font-sans whitespace-pre-wrap select-all">
+                            {reminderText}
+                        </p>
+                    </div>
+
+                    {/* WhatsApp Launch Button */}
+                    <button
+                        type="button"
+                        onClick={handleOpenWhatsApp}
+                        className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md shadow-emerald-500/10"
+                    >
+                        <MessageCircle size={16} />
+                        <span>Open WhatsApp Reminder</span>
+                    </button>
+                </div>
+
+                {/* Section 3: Email Follow-up & Automation */}
+                <div className="p-4 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3.5">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h4 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+                                <Mail size={13} className="text-emerald-400" />
+                                Email Follow-up & Automation
+                            </h4>
+                            <p className="text-[10px] text-text-muted mt-0.5">
+                                Send friendly reminders directly or automate weekly follow-ups
+                            </p>
+                        </div>
+                    </div>
+
+                    {emailSuccessMsg && (
+                        <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-2">
+                            <CheckCircle2 size={15} />
+                            <span>{emailSuccessMsg}</span>
+                        </div>
+                    )}
+
+                    {peer.last_reminded_at && (
+                        <p className="text-[10px] text-text-muted font-medium">
+                            Last email reminder sent: {new Date(peer.last_reminded_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                    )}
+
+                    {/* Automation Toggle */}
+                    <div className="p-3 rounded-xl bg-surface border border-border-subtle flex items-center justify-between gap-3">
+                        <div>
+                            <span className="text-xs font-bold text-primary block">
+                                Automate Weekly Email Reminders
+                            </span>
+                            <span className="text-[10px] text-text-muted block mt-0.5">
+                                Grip will automatically send a polite check-in every Monday until settled
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                haptics.selection();
+                                const nextVal = !autoRemind;
+                                setAutoRemind(nextVal);
+                                updateContactMutation.mutate({
+                                    peerName: peer.peer_name,
+                                    auto_remind_email: nextVal
+                                });
+                            }}
+                            className={`w-11 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                                autoRemind ? 'bg-emerald-500' : 'bg-surface-subtle border border-border-subtle'
+                            }`}
+                        >
+                            <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                                autoRemind ? 'translate-x-5' : 'translate-x-0'
+                            }`} />
+                        </button>
+                    </div>
+
+                    {/* Send Email Now Button */}
+                    <button
+                        type="button"
+                        onClick={handleSendEmail}
+                        disabled={sendEmailMutation.isPending || !email.trim()}
+                        className="w-full py-3 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-primary font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40"
+                    >
+                        {sendEmailMutation.isPending ? (
+                            <>
+                                <Loader2 size={14} className="animate-spin" />
+                                <span>Sending Email...</span>
+                            </>
+                        ) : (
+                            <>
+                                <Send size={14} />
+                                <span>Send Email Reminder Now</span>
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
         </Drawer>
     );

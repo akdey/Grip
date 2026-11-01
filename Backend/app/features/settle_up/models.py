@@ -1,8 +1,8 @@
 import uuid
 from decimal import Decimal
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
-from sqlalchemy import String, ForeignKey, Numeric, Text, DateTime, Date, Index
+from sqlalchemy import String, ForeignKey, Numeric, Text, DateTime, Date, Index, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -34,3 +34,21 @@ class SettleUpEntry(Base):
 
     user: Mapped["User"] = relationship("User")
     transaction: Mapped[Optional["Transaction"]] = relationship("Transaction")
+
+class SettleUpPeerContact(Base):
+    __tablename__ = "settle_up_peer_contacts"
+    __table_args__ = (
+        Index("ix_settle_up_peer_contacts_user_peer", "user_id", "peer_name", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    peer_name: Mapped[str] = mapped_column(String, index=True)
+    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # WhatsApp number
+    email: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Follow-up email
+    auto_remind_email: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_reminded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user: Mapped["User"] = relationship("User")

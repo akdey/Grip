@@ -1,5 +1,5 @@
 from uuid import UUID
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends
 from app.features.auth.deps import get_current_user
 from app.features.auth.models import User
@@ -15,6 +15,44 @@ async def get_peer_balances(
     include_settled: bool = True
 ):
     return await service.get_peer_balances(user_id=current_user.id, include_settled=include_settled)
+
+@router.get("/contacts", response_model=List[schemas.PeerContactOut])
+async def get_all_contacts(
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[SettleUpService, Depends()]
+):
+    return await service.get_all_contacts(user_id=current_user.id)
+
+@router.get("/{peer_name}/contact", response_model=Optional[schemas.PeerContactOut])
+async def get_peer_contact(
+    peer_name: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[SettleUpService, Depends()]
+):
+    return await service.get_peer_contact(user_id=current_user.id, peer_name=peer_name)
+
+@router.put("/{peer_name}/contact", response_model=schemas.PeerContactOut)
+async def upsert_peer_contact(
+    peer_name: str,
+    data: schemas.PeerContactUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[SettleUpService, Depends()]
+):
+    return await service.upsert_peer_contact(user_id=current_user.id, peer_name=peer_name, data=data)
+
+@router.post("/{peer_name}/send-reminder", response_model=schemas.SendEmailReminderResponse)
+async def send_email_reminder(
+    peer_name: str,
+    data: schemas.SendEmailReminderRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[SettleUpService, Depends()]
+):
+    return await service.send_email_reminder(
+        user_id=current_user.id,
+        peer_name=peer_name,
+        custom_note=data.custom_note,
+        subject=data.subject
+    )
 
 @router.get("/{peer_name}/history", response_model=List[schemas.SettleUpEntryResponse])
 async def get_peer_history(
