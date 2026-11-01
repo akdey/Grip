@@ -201,14 +201,17 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                         </div>
 
                         {/* Header */}
-                        <div className="p-6 sm:p-8 border-b border-border-subtle flex justify-between items-start bg-surface-subtle shrink-0">
-                            <div>
-                                <h2 className="text-2xl sm:text-3xl font-black text-primary line-clamp-1 tracking-tighter uppercase italic heading-apple">
-                                    {currentHolding.name}
-                                </h2>
-                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 text-xs text-text-muted font-bold uppercase tracking-widest">
-                                    <span className="bg-accent-subtle text-primary px-3 py-1 rounded-full border border-border-subtle">{currentHolding.asset_type}</span>
-                                    {currentHolding.ticker_symbol && <span>• {currentHolding.ticker_symbol}</span>}
+                        <div className="px-5 sm:px-8 py-4 sm:py-5 border-b border-border-subtle bg-surface-subtle shrink-0">
+                            <div className="flex items-center justify-between gap-3 mb-2">
+                                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-text-muted font-bold uppercase tracking-wider">
+                                    <span className="bg-surface-pill text-primary px-2.5 py-0.5 rounded-full border border-border-subtle font-semibold">
+                                        {currentHolding.asset_type?.replace(/_/g, ' ')}
+                                    </span>
+                                    {currentHolding.ticker_symbol && (
+                                        <span className="font-mono text-text-muted">
+                                            • {currentHolding.ticker_symbol}
+                                        </span>
+                                    )}
                                     {isFixedIncome && currentHolding.interest_rate && (
                                         <span className="text-emerald-400 font-semibold">• {currentHolding.interest_rate}% p.a.</span>
                                     )}
@@ -216,29 +219,33 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                         <span className="text-primary font-mono font-semibold">• Mat: {formatCurrency(currentHolding.maturity_amount)}</span>
                                     )}
                                 </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        onClick={() => {
+                                            haptics.selection();
+                                            setIsEditing(!isEditing);
+                                        }}
+                                        className={`px-3 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs active:scale-95 ${
+                                            isEditing 
+                                                ? 'badge-danger' 
+                                                : 'bg-surface border-border-subtle hover:bg-surface-hover text-primary'
+                                        }`}
+                                    >
+                                        {isEditing ? <X size={13} /> : <Pencil size={13} />}
+                                        <span>{isEditing ? 'Cancel' : 'Edit'}</span>
+                                    </button>
+                                    <button
+                                        onClick={onClose}
+                                        className="w-8 h-8 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-xs group"
+                                        aria-label="Close modal"
+                                    >
+                                        <X size={15} />
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => {
-                                        haptics.selection();
-                                        setIsEditing(!isEditing);
-                                    }}
-                                    className={`px-4 py-2.5 rounded-full border text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 ${
-                                        isEditing 
-                                            ? 'badge-danger' 
-                                            : 'bg-surface border-border-subtle hover:bg-surface-hover text-primary'
-                                    }`}
-                                >
-                                    {isEditing ? <X size={14} /> : <Pencil size={14} />}
-                                    <span>{isEditing ? 'Cancel' : 'Edit Holding'}</span>
-                                </button>
-                                <button
-                                    onClick={onClose}
-                                    className="w-11 h-11 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all shadow-xl group"
-                                >
-                                    <ChevronDown size={22} className="group-hover:translate-y-0.5 transition-transform" />
-                                </button>
-                            </div>
+                            <h2 className="text-base sm:text-xl font-bold text-primary tracking-tight leading-snug line-clamp-2">
+                                {currentHolding.name}
+                            </h2>
                         </div>
 
                         {/* Edit Form Drawer / Panel */}
@@ -377,52 +384,75 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
 
                         {/* Tabs & Content Container */}
                         <div className="flex-1 overflow-hidden flex flex-col">
-                            <div className="flex gap-1 sm:gap-2 px-6 sm:px-10 border-b border-border-subtle bg-surface-subtle/50 overflow-x-auto no-scrollbar">
-                                <button
-                                    onClick={() => {
-                                        haptics.selection();
-                                        setActiveTab('performance');
-                                    }}
-                                    className={`px-4 sm:px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative shrink-0 ${activeTab === 'performance' ? 'text-emerald-500' : 'text-text-muted hover:text-primary'}`}
-                                >
-                                    Performance
-                                    {activeTab === 'performance' && (
-                                        <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        haptics.selection();
-                                        setActiveTab('history');
-                                    }}
-                                    className={`px-4 sm:px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative shrink-0 flex items-center gap-2 ${activeTab === 'history' ? 'text-emerald-500' : 'text-text-muted hover:text-primary'}`}
-                                >
-                                    <span>Investment History</span>
-                                    {history.length > 0 && (
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold tracking-normal ${
-                                            activeTab === 'history' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-surface text-text-muted border border-border-subtle'
-                                        }`}>
-                                            {history.length}
-                                        </span>
-                                    )}
-                                    {activeTab === 'history' && (
-                                        <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
-                                    )}
-                                </button>
-                                {hasSIPData && (
+                            {/* Segmented Navigation Tabs — All options fully visible */}
+                            <div className="px-4 sm:px-8 py-2.5 border-b border-border-subtle bg-surface-subtle/50 shrink-0">
+                                <div className="flex p-1 bg-surface-pill rounded-2xl border border-border-subtle max-w-xl mx-auto gap-1">
                                     <button
                                         onClick={() => {
                                             haptics.selection();
-                                            setActiveTab('sip-analysis');
+                                            setActiveTab('performance');
                                         }}
-                                        className={`px-4 sm:px-6 py-4 text-xs font-black uppercase tracking-[3px] transition-all relative shrink-0 ${activeTab === 'sip-analysis' ? 'text-emerald-500' : 'text-text-muted hover:text-primary'}`}
+                                        className={`relative flex-1 py-2 px-1 sm:px-3 rounded-xl text-xs font-semibold transition-all text-center select-none ${
+                                            activeTab === 'performance' ? 'text-primary font-bold' : 'text-text-muted hover:text-primary'
+                                        }`}
                                     >
-                                        SIP Intelligence
-                                        {activeTab === 'sip-analysis' && (
-                                            <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
+                                        {activeTab === 'performance' && (
+                                            <motion.div
+                                                layoutId="holdingActiveTab"
+                                                className="absolute inset-0 bg-surface rounded-xl border border-border-subtle shadow-xs z-0"
+                                                transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                                            />
+                                        )}
+                                        <span className="relative z-10 truncate">Performance</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            haptics.selection();
+                                            setActiveTab('history');
+                                        }}
+                                        className={`relative flex-1 py-2 px-1 sm:px-3 rounded-xl text-xs font-semibold transition-all text-center flex items-center justify-center gap-1.5 select-none ${
+                                            activeTab === 'history' ? 'text-primary font-bold' : 'text-text-muted hover:text-primary'
+                                        }`}
+                                    >
+                                        {activeTab === 'history' && (
+                                            <motion.div
+                                                layoutId="holdingActiveTab"
+                                                className="absolute inset-0 bg-surface rounded-xl border border-border-subtle shadow-xs z-0"
+                                                transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                                            />
+                                        )}
+                                        <span className="relative z-10 truncate">History</span>
+                                        {history.length > 0 && (
+                                            <span className={`relative z-10 text-[10px] px-1.5 py-0.2 rounded-full font-bold tabular-nums ${
+                                                activeTab === 'history' ? 'bg-primary text-text-inverse' : 'bg-surface-subtle text-text-muted border border-border-subtle'
+                                            }`}>
+                                                {history.length}
+                                            </span>
                                         )}
                                     </button>
-                                )}
+
+                                    {hasSIPData && (
+                                        <button
+                                            onClick={() => {
+                                                haptics.selection();
+                                                setActiveTab('sip-analysis');
+                                            }}
+                                            className={`relative flex-1 py-2 px-1 sm:px-3 rounded-xl text-xs font-semibold transition-all text-center select-none ${
+                                                activeTab === 'sip-analysis' ? 'text-primary font-bold' : 'text-text-muted hover:text-primary'
+                                            }`}
+                                        >
+                                            {activeTab === 'sip-analysis' && (
+                                                <motion.div
+                                                    layoutId="holdingActiveTab"
+                                                    className="absolute inset-0 bg-surface rounded-xl border border-border-subtle shadow-xs z-0"
+                                                    transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                                                />
+                                            )}
+                                            <span className="relative z-10 truncate">SIP Intel</span>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-6 pb-28 sm:p-10 sm:pb-24 custom-scrollbar">
@@ -699,28 +729,30 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                 ) : activeTab === 'history' ? (
                                     <div className="space-y-6">
                                         {/* Investment Summary Cards */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                                            <div className="bg-surface-subtle rounded-2xl p-4 border border-border-subtle">
-                                                <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted">Total Contributions</p>
-                                                <p className="text-xl sm:text-2xl font-black mt-1 text-primary">{history.length} <span className="text-xs font-normal text-text-muted">records</span></p>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                            <div className="bg-surface-subtle rounded-2xl p-3.5 sm:p-4 border border-border-subtle">
+                                                <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Total Contributions</p>
+                                                <p className="text-base sm:text-xl font-bold mt-1 text-primary tabular-nums">
+                                                    {history.length} <span className="text-xs font-normal text-text-muted">records</span>
+                                                </p>
                                             </div>
-                                            <div className="bg-surface-subtle rounded-2xl p-4 border border-border-subtle">
-                                                <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted">Recorded Inflows</p>
-                                                <p className="text-xl sm:text-2xl font-black mt-1 text-primary font-mono">
+                                            <div className="bg-surface-subtle rounded-2xl p-3.5 sm:p-4 border border-border-subtle">
+                                                <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Recorded Inflows</p>
+                                                <p className="text-base sm:text-xl font-bold mt-1 text-primary font-mono tabular-nums">
                                                     {formatCurrency(history.reduce((acc, it) => acc + (it.amount || 0), 0))}
                                                 </p>
                                             </div>
-                                            <div className="bg-surface-subtle rounded-2xl p-4 border border-border-subtle">
-                                                <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted">Units Accumulated</p>
-                                                <p className="text-xl sm:text-2xl font-black mt-1 text-primary font-mono">
+                                            <div className="bg-surface-subtle rounded-2xl p-3.5 sm:p-4 border border-border-subtle">
+                                                <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Units Accumulated</p>
+                                                <p className="text-base sm:text-xl font-bold mt-1 text-primary font-mono tabular-nums">
                                                     {history[0]?.cumulative_units != null 
                                                         ? Number(history[0].cumulative_units).toFixed(3)
                                                         : (currentHolding.current_units ? Number(currentHolding.current_units).toFixed(3) : 'N/A')}
                                                 </p>
                                             </div>
-                                            <div className="bg-surface-subtle rounded-2xl p-4 border border-border-subtle">
-                                                <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted">Current Valuation</p>
-                                                <p className="text-xl sm:text-2xl font-black mt-1 text-emerald-400 font-mono">
+                                            <div className="bg-surface-subtle rounded-2xl p-3.5 sm:p-4 border border-border-subtle">
+                                                <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Current Valuation</p>
+                                                <p className="text-base sm:text-xl font-bold mt-1 text-primary font-mono tabular-nums">
                                                     {formatCurrency(currentHolding.current_value || 0)}
                                                 </p>
                                             </div>
@@ -730,7 +762,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                         <div className="bg-surface-subtle rounded-2xl border border-border-subtle p-4 sm:p-6">
                                             <div className="flex items-center justify-between mb-4">
                                                 <div>
-                                                    <h3 className="text-sm font-black uppercase tracking-wider text-primary flex items-center gap-2">
+                                                    <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-primary flex items-center gap-2">
                                                         <History size={16} className="text-emerald-400" />
                                                         Investment Ledger & Inflows
                                                     </h3>
