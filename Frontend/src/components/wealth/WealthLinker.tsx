@@ -238,7 +238,7 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                         <button
                                             onClick={handleAutoDetect}
                                             disabled={autoDetecting}
-                                            className="px-3.5 py-2 rounded-xl bg-accent text-black font-semibold text-xs hover:bg-accent-hover transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                                            className="px-3.5 py-2 rounded-xl bg-accent text-accent-contrast font-semibold text-xs hover:bg-accent-hover transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
                                         >
                                             {autoDetecting ? "Detecting..." : "⚡ Auto-Detect & Map All"}
                                         </button>
@@ -436,7 +436,7 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                             setTargetGroupForNewHolding(null);
                                             setIsAddHoldingOpen(true);
                                         }}
-                                        className="px-3.5 py-2 rounded-xl bg-accent text-black font-bold text-xs hover:bg-accent-hover transition-all flex items-center gap-1.5 active:scale-95 shadow-sm shrink-0 whitespace-nowrap"
+                                        className="px-3.5 py-2 rounded-xl bg-accent text-accent-contrast font-bold text-xs hover:bg-accent-hover transition-all flex items-center gap-1.5 active:scale-95 shadow-sm shrink-0 whitespace-nowrap"
                                     >
                                         <Plus size={14} /> Add New Asset
                                     </button>
@@ -474,7 +474,7 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                                                     setTargetGroupForNewHolding(null);
                                                     setIsAddHoldingOpen(true);
                                                 }}
-                                                className="px-4 py-2 rounded-xl bg-accent text-black font-bold text-xs hover:bg-accent-hover transition-all inline-flex items-center gap-1.5 active:scale-95 shadow-sm"
+                                                className="px-4 py-2 rounded-xl bg-accent text-accent-contrast font-bold text-xs hover:bg-accent-hover transition-all inline-flex items-center gap-1.5 active:scale-95 shadow-sm"
                                             >
                                                 <Plus size={14} /> Add New Asset & Link
                                             </button>

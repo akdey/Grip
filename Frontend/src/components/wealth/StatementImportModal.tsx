@@ -500,11 +500,11 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                                 <button
                                     onClick={handleImport}
                                     disabled={loading || transactions.length === 0}
-                                    className="flex-[2] py-5 rounded-2xl bg-white hover:bg-neutral-200 text-black font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-md disabled:opacity-50"
+                                    className="flex-[2] py-5 rounded-2xl bg-primary hover:opacity-90 text-text-inverse font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-md disabled:opacity-50"
                                 >
                                     {loading ? (
                                         <>
-                                            <div className="animate-spin w-5 h-5 border-2 border-black/30 border-t-black rounded-full"></div>
+                                            <div className="animate-spin w-5 h-5 border-2 border-current/30 border-t-current rounded-full"></div>
                                             Processing...
                                         </>
                                     ) : (
@@ -518,7 +518,7 @@ export const StatementImportModal: React.FC<StatementImportModalProps> = ({ isOp
                         ) : (
                             <button
                                 onClick={handleClose}
-                                className="w-full py-5 rounded-2xl bg-white hover:bg-neutral-200 text-black font-black uppercase tracking-widest text-xs transition-all active:scale-[0.98] shadow-sm"
+                                className="w-full py-5 rounded-2xl bg-primary hover:opacity-90 text-text-inverse font-black uppercase tracking-widest text-xs transition-all active:scale-[0.98] shadow-sm"
                             >
                                 Re-enter Portfolio
                             </button>

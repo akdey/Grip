@@ -413,9 +413,9 @@ const InvestmentSimulator: React.FC = () => {
             <button
                 onClick={handleSimulate}
                 disabled={loading}
-                className="w-full py-3 bg-accent hover:bg-accent-hover text-black rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+                className="w-full py-3 bg-accent hover:bg-accent-hover text-accent-contrast rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
             >
-                {loading ? <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : "Calculate Returns"}
+                {loading ? <div className="w-5 h-5 border-2 border-current/30 border-t-current rounded-full animate-spin" /> : "Calculate Returns"}
             </button>
 
             {error && <div className="p-3 badge-danger text-sm rounded-lg flex items-center gap-2"><AlertCircle size={16} /> {error}</div>}

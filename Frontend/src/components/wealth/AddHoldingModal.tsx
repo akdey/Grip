@@ -573,9 +573,9 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
                             type="submit"
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="w-full py-4 rounded-xl bg-accent hover:bg-accent-hover text-black font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm disabled:opacity-50"
+                            className="w-full py-4 rounded-xl bg-accent hover:bg-accent-hover text-accent-contrast font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm disabled:opacity-50"
                         >
-                            {loading ? <div className="animate-spin w-5 h-5 border-2 border-black/30 border-t-black rounded-full"></div> : <><Save size={18} /> Deploy Asset to Portfolio</>}
+                            {loading ? <div className="animate-spin w-5 h-5 border-2 border-current/30 border-t-current rounded-full"></div> : <><Save size={18} /> Deploy Asset to Portfolio</>}
                         </button>
                     </div>
                 </motion.div>

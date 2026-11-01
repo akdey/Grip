@@ -256,7 +256,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
                                 <button
                                     onClick={handleSimulate}
                                     disabled={!formData.schemeCode || !formData.date || !formData.amount}
-                                    className="w-full py-4 rounded-2xl bg-accent hover:bg-accent-hover text-black font-semibold tracking-wide shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
+                                    className="w-full py-4 rounded-2xl bg-accent hover:bg-accent-hover text-accent-contrast font-semibold tracking-wide shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
                                 >
                                     Activate Simulation
                                     <ArrowRight size={18} />

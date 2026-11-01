@@ -156,7 +156,7 @@ const WealthLab: React.FC = () => {
                     </button>
                     <button
                         onClick={() => setIsSimulatorOpen(true)}
-                        className="px-3.5 py-2 rounded-xl bg-accent text-black text-xs font-bold hover:bg-accent-hover transition-colors flex items-center gap-1.5 shadow-sm active:scale-95"
+                        className="px-3.5 py-2 rounded-xl bg-accent text-accent-contrast text-xs font-bold hover:bg-accent-hover transition-colors flex items-center gap-1.5 shadow-sm active:scale-95"
                     >
                         <Calculator size={14} /> Time Machine Simulator
                     </button>
@@ -262,7 +262,7 @@ const WealthLab: React.FC = () => {
                             <button
                                 onClick={runSimulation}
                                 disabled={simulating}
-                                className="w-full mt-6 py-2.5 bg-accent text-black rounded-xl text-xs font-bold hover:bg-accent-hover transition-colors shadow-sm disabled:opacity-50"
+                                className="w-full mt-6 py-2.5 bg-accent text-accent-contrast rounded-xl text-xs font-bold hover:bg-accent-hover transition-colors shadow-sm disabled:opacity-50"
                             >
                                 {simulating ? "Calculating Forecast..." : "Update Prediction"}
                             </button>

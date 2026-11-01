@@ -32,15 +32,15 @@ export const IconSelector: React.FC<IconSelectorProps> = ({ selectedIcon, onSele
                                         w-12 h-12 flex items-center justify-center rounded-2xl
                                         transition-all duration-150 border touch-manipulation
                                         ${isSelected
-                                            ? 'bg-white text-black border-white shadow-[0_8px_25px_rgba(255,255,255,0.25)] scale-105 z-10'
-                                            : 'bg-white/[0.04] border-white/[0.06] hover:bg-white/[0.08] text-white/90 hover:scale-102'}
+                                            ? 'bg-primary text-text-inverse border-primary shadow-[0_8px_25px_rgba(0,0,0,0.25)] scale-105 z-10'
+                                            : 'bg-surface-subtle border-border-subtle hover:bg-surface-hover text-text-primary hover:scale-102'}
                                     `}
                                     aria-label={`Select icon ${iconName}`}
                                 >
                                     <CategoryIcon
                                         name={iconName}
                                         size={22}
-                                        color={isSelected ? '#000' : (isSelected ? color : undefined)}
+                                        color={isSelected ? 'var(--color-text-inverse)' : undefined}
                                     />
                                 </motion.button>
                             );

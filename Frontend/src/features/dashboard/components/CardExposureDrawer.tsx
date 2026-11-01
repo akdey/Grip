@@ -134,7 +134,7 @@ export const CardExposureDrawer: React.FC<CardExposureDrawerProps> = memo(({
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-accent text-black font-bold' : 'bg-metric-exposure-bg text-metric-exposure-text border border-metric-exposure-border'}`}>
+                                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-accent text-accent-contrast font-bold' : 'bg-metric-exposure-bg text-metric-exposure-text border border-metric-exposure-border'}`}>
                                                             <CardIcon size={16} />
                                                         </div>
                                                         <div>

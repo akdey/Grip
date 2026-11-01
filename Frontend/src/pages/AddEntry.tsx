@@ -627,7 +627,7 @@ const AddEntry: React.FC = () => {
                                     </div>
                                     <button
                                         onClick={addTag}
-                                        className="w-10 h-10 rounded-xl bg-accent hover:bg-accent-hover text-black flex items-center justify-center active:scale-90 transition-all font-bold"
+                                        className="w-10 h-10 rounded-xl bg-accent hover:bg-accent-hover text-accent-contrast flex items-center justify-center active:scale-90 transition-all font-bold"
                                     >
                                         <Plus size={16} />
                                     </button>
@@ -716,7 +716,7 @@ const AddEntry: React.FC = () => {
                                 onClick={handleSave}
                                 disabled={mutation.isPending || !amount || !category}
                                 className={`
-                                    w-14 h-14 rounded-full bg-accent text-black flex items-center justify-center shadow-2xl shadow-accent/20 active:scale-95 transition-all
+                                    w-14 h-14 rounded-full bg-accent text-accent-contrast flex items-center justify-center shadow-2xl shadow-accent/30 active:scale-95 transition-all
                                     ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6 hover:bg-accent-hover'}
                                 `}
                             >

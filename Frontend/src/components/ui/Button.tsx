@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { haptics } from '../../lib/haptics';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-    variant?: 'primary' | 'secondary' | 'danger';
+    variant?: 'primary' | 'secondary' | 'accent' | 'danger';
     isLoading?: boolean;
     icon?: React.ReactNode;
 }
@@ -20,6 +20,7 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
     const baseClass = 'glass-button';
     const variantClass = variant === 'secondary' ? 'secondary' :
+        variant === 'accent' ? 'accent' :
         variant === 'danger' ? 'bg-status-danger-bg text-status-danger-text border border-status-danger-border hover:bg-status-danger-solid hover:text-white' : '';
 
     const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
