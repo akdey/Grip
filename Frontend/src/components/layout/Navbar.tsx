@@ -129,11 +129,11 @@ export const Navbar: React.FC = () => {
                                     className="block touch-manipulation focus:outline-none"
                                     aria-label="Add new entry"
                                 >
-                                    {/* Hybrid Android FAB + Apple Glass: Elevated, brand accent, stable size */}
+                                    {/* Hybrid Android FAB + Apple Glass: Elevated, monochrome, stable size */}
                                     <motion.div
                                         whileTap={{ scale: 0.92 }}
                                         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                                        className="w-12 h-12 rounded-full bg-accent text-accent-contrast flex items-center justify-center shadow-[0_8px_25px_rgba(37,99,235,0.35)] dark:shadow-[0_8px_25px_rgba(0,0,0,0.5)] border-[3.5px] border-surface active:brightness-95 transition-all"
+                                        className="w-12 h-12 rounded-full bg-text-primary text-text-inverse flex items-center justify-center shadow-[0_8px_25px_rgba(0,0,0,0.35)] border-[3.5px] border-surface active:brightness-95 transition-all"
                                     >
                                         <Plus size={24} strokeWidth={2.75} />
                                     </motion.div>

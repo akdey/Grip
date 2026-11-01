@@ -29,7 +29,7 @@ Color is reserved **strictly** for financial meaning. Zero neon accents or AI tr
 | **Losses / Negative** | Expenses, liabilities, debt, overdue bills, sync failure | `.badge-danger`, `.text-status-danger` |
 | **Pending / Warning** | Due soon, confirmation required, threshold warnings | `.badge-warning`, `.text-status-warning` |
 | **Structure / Neutral** | Surfaces, borders, category tags, filters, chips | `.badge-neutral`, `bg-surface-subtle`, `border-border-subtle` |
-| **Brand Accent** | Primary CTAs & hero capacity. Arctic Ice Steel (`#bfe5f7`) in dark; Institutional Cobalt (`#2563EB`) in light. Bridges B&W and cobalt without neon AI tropes. | `bg-accent-solid`, `text-text-on-accent`, `bg-accent` |
+| **Brand Accent** | Primary CTAs & hero capacity. Arctic Ice Steel (`#bfe5f7`) in dark; Nordic Marine Slate (`#0e4d66`) in light. Bridges B&W and cyan without neon AI tropes. | `bg-accent-solid`, `text-text-on-accent`, `bg-accent` |
 
 ---
 

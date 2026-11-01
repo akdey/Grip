@@ -312,12 +312,12 @@ html[data-theme="light"] {
   --color-status-info-solid-hover:    #2563EB;
   --color-status-info-text:           #1D4ED8;
 
-  /* Brand Accent Tokens for Light Theme — Institutional Cobalt (Apple iOS Blue / Stripe Royal Blue) */
-  --brand-accent:             #2563EB;
-  --brand-accent-hover:       #1D4ED8;
-  --brand-accent-subtle:      rgba(37, 99, 235, 0.08);
-  --brand-accent-border:      rgba(37, 99, 235, 0.22);
-  --brand-accent-text:        #1D4ED8;
+  /* Brand Accent Tokens for Light Theme — Nordic Petrol / Marine Slate */
+  --brand-accent:             #0e4d66;
+  --brand-accent-hover:       #083a4e;
+  --brand-accent-subtle:      rgba(14, 77, 102, 0.08);
+  --brand-accent-border:      rgba(14, 77, 102, 0.20);
+  --brand-accent-text:        #0e4d66;
   --color-accent:             var(--brand-accent);
   --color-accent-hover:       var(--brand-accent-hover);
   --color-accent-subtle:      var(--brand-accent-subtle);
@@ -325,9 +325,9 @@ html[data-theme="light"] {
   --color-accent-text:        var(--brand-accent-text);
   --color-text-on-accent:     #FFFFFF;
   --color-accent-contrast:    #FFFFFF;
-  --color-metric-frozen-bg:   rgba(37, 99, 235, 0.06);
-  --color-metric-frozen-border: rgba(37, 99, 235, 0.15);
-  --color-metric-frozen-text: #1D4ED8;
+  --color-metric-frozen-bg:   rgba(14, 77, 102, 0.06);
+  --color-metric-frozen-border: rgba(14, 77, 102, 0.15);
+  --color-metric-frozen-text: #0e4d66;
 
   /* Metric tokens */
   --color-metric-obligations-bg:     rgba(225, 29, 72, 0.08);
@@ -626,41 +626,6 @@ body::before {
 
   .glass-button.accent {
     @apply bg-accent text-accent-contrast border border-accent-border hover:bg-accent-hover;
-  }
-
-  /* Refined Light Theme Button Materials (Apple Pro / Linear standard) */
-  html[data-theme="light"] .glass-button {
-    background: linear-gradient(180deg, #1E232E 0%, #11141D 100%);
-    color: #FFFFFF;
-    border: 1px solid rgba(15, 23, 42, 0.2);
-    box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  }
-  html[data-theme="light"] .glass-button:hover {
-    background: linear-gradient(180deg, #282E3D 0%, #171B26 100%);
-    opacity: 1;
-  }
-
-  html[data-theme="light"] .glass-button.secondary {
-    background: #FFFFFF;
-    color: #1E232E;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  }
-  html[data-theme="light"] .glass-button.secondary:hover {
-    background: #F8F9FB;
-    color: #0F1014;
-    border-color: rgba(0, 0, 0, 0.2);
-  }
-
-  html[data-theme="light"] .glass-button.accent {
-    background: var(--brand-accent);
-    color: #FFFFFF;
-    border: 1px solid var(--brand-accent-hover);
-    box-shadow: 0 4px 14px -2px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-  html[data-theme="light"] .glass-button.accent:hover {
-    background: var(--brand-accent-hover);
-    opacity: 1;
   }
 
   /* Interactive tactile cell */

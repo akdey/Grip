@@ -277,7 +277,7 @@ const Wealth: React.FC = () => {
                             >
                                 <LinkIcon size={14} />
                                 <span>Link</span>
-                                <span className="w-4 h-4 rounded-full bg-primary text-text-inverse text-[9px] font-bold flex items-center justify-center">
+                                <span className="w-4 h-4 rounded-full bg-neutral-200 text-black text-[9px] font-bold flex items-center justify-center">
                                     {unassignedTxns.length}
                                 </span>
                             </button>
@@ -319,7 +319,7 @@ const Wealth: React.FC = () => {
                         {/* Add Asset (Primary CTA) */}
                         <button
                             onClick={() => setIsAddModalOpen(true)}
-                            className="px-4 py-2 rounded-xl bg-accent text-accent-contrast text-xs font-bold hover:bg-accent-hover transition-all flex items-center gap-1.5 shadow-sm active:scale-95 ml-auto sm:ml-0"
+                            className="px-4 py-2 rounded-xl bg-white text-black text-xs font-bold hover:bg-neutral-200 transition-all flex items-center gap-1.5 shadow-sm active:scale-95 ml-auto sm:ml-0"
                         >
                             <Plus size={14} strokeWidth={2.5} />
                             <span>Add Asset</span>
@@ -473,8 +473,8 @@ const Wealth: React.FC = () => {
                                     haptics.selection();
                                     setSelectedClassFilter(tab.key);
                                 }}
-                                className={`px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all cursor-pointer ${selectedClassFilter === tab.key
-                                        ? 'bg-primary text-text-inverse font-bold shadow-sm'
+                                className={`px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all cursor-pointer ${selectedClassFilter === tab.key
+                                        ? 'bg-white text-black font-bold shadow-sm'
                                         : 'bg-surface-pill hover:bg-surface-hover text-text-muted hover:text-primary border border-border-subtle'
                                     }`}
                             >
@@ -516,7 +516,7 @@ const Wealth: React.FC = () => {
                             <button
                                 onClick={handleAutoDetect}
                                 disabled={autoDetecting}
-                                className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl bg-accent text-accent-contrast font-bold text-xs hover:bg-accent-hover transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+                                className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
                             >
                                 {autoDetecting ? <RefreshCw size={13} className="animate-spin" /> : <Sparkles size={13} />}
                                 Auto-Organize
@@ -570,7 +570,7 @@ const Wealth: React.FC = () => {
                                 <button
                                     onClick={handleAutoDetect}
                                     disabled={autoDetecting}
-                                    className="w-full sm:w-auto px-5 py-2.5 bg-accent text-accent-contrast rounded-xl text-xs font-bold hover:bg-accent-hover transition-all flex items-center justify-center gap-1.5"
+                                    className="w-full sm:w-auto px-5 py-2.5 bg-white text-black rounded-xl text-xs font-bold hover:bg-neutral-200 transition-all flex items-center justify-center gap-1.5"
                                 >
                                     <Sparkles size={14} /> Auto-Detect From Bank History
                                 </button>

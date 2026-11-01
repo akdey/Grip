@@ -357,7 +357,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                             <button
                                                 onClick={handleSave}
                                                 disabled={saving}
-                                                className="px-6 py-2 rounded-xl bg-status-success-solid hover:opacity-90 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                                                className="px-6 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-50"
                                             >
                                                 {savedSuccess ? (
                                                     <>
@@ -589,7 +589,7 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                             className={`text-xs px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-sm ${
                                                                 recordsSavedSuccess
                                                                     ? 'bg-emerald-500 text-white'
-                                                                    : 'bg-status-success-solid hover:opacity-90 text-white'
+                                                                    : 'bg-emerald-500 hover:bg-emerald-400 text-black'
                                                             }`}
                                                         >
                                                             {savingRecords ? (
