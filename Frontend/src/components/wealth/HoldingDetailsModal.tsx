@@ -759,22 +759,33 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                         </div>
 
                                         {/* History Itemized List */}
-                                        <div className="bg-surface-subtle rounded-2xl border border-border-subtle p-4 sm:p-6">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div>
-                                                    <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-primary flex items-center gap-2">
-                                                        <History size={16} className="text-emerald-400" />
-                                                        Investment Ledger & Inflows
-                                                    </h3>
-                                                    <p className="text-[11px] text-text-muted mt-0.5">Chronological record of SIP debits, NAV allotments, and capital contributions</p>
+                                        <div className="bg-surface-subtle rounded-2xl border border-border-subtle overflow-hidden">
+                                            {/* Section Header */}
+                                            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border-subtle bg-surface/30">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-8 h-8 rounded-xl bg-surface flex items-center justify-center border border-border-subtle text-primary shadow-xs">
+                                                        <History size={16} />
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <h3 className="text-sm font-bold text-primary">
+                                                                Investment Ledger
+                                                            </h3>
+                                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full badge-neutral font-mono tabular-nums">
+                                                                {history.length} {history.length === 1 ? 'entry' : 'entries'}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[11px] text-text-muted mt-0.5">Chronological inflows, purchase NAV, and allotment valuation</p>
+                                                    </div>
                                                 </div>
                                                 <button
                                                     onClick={() => fetchHistory(currentHolding?.id)}
                                                     disabled={loadingHistory}
-                                                    className="text-xs text-text-muted hover:text-primary transition-colors flex items-center gap-1 active:scale-95"
+                                                    className="px-2.5 py-1.5 rounded-xl border border-border-subtle bg-surface hover:bg-surface-hover text-xs font-medium text-text-secondary hover:text-primary transition-all flex items-center gap-1.5 active:scale-95 shadow-xs"
+                                                    title="Refresh investment history"
                                                 >
-                                                    <Loader2 size={13} className={loadingHistory ? "animate-spin" : ""} />
-                                                    <span>Refresh</span>
+                                                    <Loader2 size={12} className={loadingHistory ? "animate-spin" : ""} />
+                                                    <span className="text-xs">Refresh</span>
                                                 </button>
                                             </div>
 
@@ -784,15 +795,17 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                     <p className="text-xs">Loading investment records...</p>
                                                 </div>
                                             ) : history.length === 0 ? (
-                                                <div className="text-center py-16 bg-surface/50 rounded-xl border border-dashed border-border-subtle px-4">
-                                                    <History size={32} className="mx-auto text-text-muted/40 mb-3" />
+                                                <div className="text-center py-14 px-4 bg-surface/20">
+                                                    <div className="w-10 h-10 rounded-2xl bg-surface flex items-center justify-center border border-border-subtle mx-auto text-text-muted mb-3">
+                                                        <History size={20} />
+                                                    </div>
                                                     <p className="text-sm font-bold text-primary">No Investment Records Found</p>
                                                     <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
                                                         Map bank debit transactions to this holding using the Asset Linker to automatically track date, units, purchase NAV, and returns.
                                                     </p>
                                                 </div>
                                             ) : (
-                                                <div className="space-y-3">
+                                                <div className="divide-y divide-border-subtle">
                                                     {history.map((item, idx) => {
                                                         const dateFormatted = new Date(item.date).toLocaleDateString([], {
                                                             day: 'numeric',
@@ -804,76 +817,91 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                         return (
                                                             <div
                                                                 key={item.id || idx}
-                                                                className="p-3.5 sm:p-4 rounded-xl border border-border-subtle bg-surface hover:bg-surface-hover transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
+                                                                className="p-3.5 sm:p-4 hover:bg-surface-hover/60 transition-colors flex flex-col gap-2.5"
                                                             >
-                                                                <div className="flex items-start gap-3 min-w-0 flex-1">
-                                                                    <div className="w-9 h-9 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center shrink-0 mt-0.5">
-                                                                        <Calendar size={16} className="text-primary" />
-                                                                    </div>
-                                                                    <div className="min-w-0">
-                                                                        <div className="flex flex-wrap items-center gap-2">
-                                                                            <span className="text-sm font-bold text-primary">{dateFormatted}</span>
-                                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                                                                item.investment_type === 'SIP' 
-                                                                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                                                                    : item.investment_type === 'DEPOSIT'
-                                                                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                                                                    : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                                                                            }`}>
-                                                                                {item.investment_type}
+                                                                {/* Row 1: Date & Type on Left, Inflow Amount on Right */}
+                                                                <div className="flex items-center justify-between gap-3">
+                                                                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                                                        <span className="text-sm font-semibold text-primary font-mono tabular-nums">
+                                                                            {dateFormatted}
+                                                                        </span>
+                                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider ${
+                                                                            item.investment_type === 'SIP' ? 'badge-success' : 'badge-neutral'
+                                                                        }`}>
+                                                                            {item.investment_type || 'Inflow'}
+                                                                        </span>
+                                                                        {item.transaction_id && (
+                                                                            <span className="text-[10px] px-2 py-0.5 rounded-full badge-neutral flex items-center gap-1 font-medium text-text-muted">
+                                                                                <CheckCircle2 size={12} className="text-status-success" />
+                                                                                <span>Bank Linked</span>
                                                                             </span>
-                                                                            {item.transaction_id && (
-                                                                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 font-semibold">
-                                                                                    <CheckCircle2 size={10} /> Bank Debit
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-
-                                                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-text-muted">
-                                                                            {item.merchant_name && (
-                                                                                <span className="font-medium text-text-secondary truncate max-w-[220px]">
-                                                                                    {item.merchant_name}
-                                                                                </span>
-                                                                            )}
-                                                                            {item.units != null && (
-                                                                                <span className="text-primary font-mono">
-                                                                                    +{Number(item.units).toFixed(3)} units
-                                                                                </span>
-                                                                            )}
-                                                                            {item.nav != null && (
-                                                                                <span className="font-mono">
-                                                                                    @ NAV ₹{Number(item.nav).toFixed(2)}
-                                                                                </span>
-                                                                            )}
-                                                                            {item.cumulative_units != null && (
-                                                                                <span className="text-[11px] text-text-muted opacity-80 font-mono">
-                                                                                    (Total: {Number(item.cumulative_units).toFixed(3)} units)
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-
-                                                                        {item.remarks && (
-                                                                            <p className="text-xs text-text-muted/80 italic mt-1 truncate max-w-md">
-                                                                                "{item.remarks}"
-                                                                            </p>
                                                                         )}
+                                                                    </div>
+
+                                                                    {/* Primary Inflow Amount */}
+                                                                    <div className="text-right shrink-0">
+                                                                        <span className="font-bold font-mono text-base text-primary tabular-nums">
+                                                                            ₹{Number(item.amount || 0).toLocaleString('en-IN')}
+                                                                        </span>
                                                                     </div>
                                                                 </div>
 
-                                                                <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t border-border-subtle/50 sm:border-t-0">
-                                                                    <span className="font-bold font-mono text-base text-primary">
-                                                                        ₹{Number(item.amount || 0).toLocaleString('en-IN')}
-                                                                    </span>
+                                                                {/* Row 2: Lot Units, NAV Price & Valuation Return */}
+                                                                <div className="flex items-center justify-between gap-3 text-xs">
+                                                                    {/* Units & NAV */}
+                                                                    <div className="flex items-center gap-1.5 flex-wrap font-mono text-text-secondary">
+                                                                        {item.units != null && (
+                                                                            <span className="font-medium text-primary">
+                                                                                +{Number(item.units).toFixed(3)} units
+                                                                            </span>
+                                                                        )}
+                                                                        {item.nav != null && (
+                                                                            <span className="text-text-muted text-[11px]">
+                                                                                @ NAV ₹{Number(item.nav).toFixed(2)}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Current Value & Lot Return */}
                                                                     {item.gain_loss != null && (
-                                                                        <div className="flex items-center gap-1 text-[11px] font-mono mt-0.5">
-                                                                            <span className="text-text-muted">Now: ₹{Number(item.current_value_now).toLocaleString('en-IN')}</span>
-                                                                            <span className={`font-bold flex items-center ${isGain ? 'text-status-success' : 'text-status-danger'}`}>
+                                                                        <div className="flex items-center gap-2 shrink-0">
+                                                                            {item.current_value_now != null && (
+                                                                                <span className="text-text-muted text-[11px] font-mono tabular-nums">
+                                                                                    Val: ₹{Number(item.current_value_now).toLocaleString('en-IN')}
+                                                                                </span>
+                                                                            )}
+                                                                            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold font-mono tabular-nums ${
+                                                                                isGain ? 'badge-success' : 'badge-danger'
+                                                                            }`}>
                                                                                 {isGain ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
                                                                                 {isGain ? '+' : ''}{Number(item.gain_loss_percent).toFixed(1)}%
                                                                             </span>
                                                                         </div>
                                                                     )}
                                                                 </div>
+
+                                                                {/* Row 3: Meta & Source Details */}
+                                                                {(item.merchant_name || item.cumulative_units != null || item.remarks) && (
+                                                                    <div className="flex items-center justify-between gap-3 pt-1 border-t border-border-subtle/40 text-[11px] text-text-muted">
+                                                                        <div className="flex items-center gap-2 min-w-0 truncate">
+                                                                            {item.merchant_name && (
+                                                                                <span className="truncate max-w-[220px] sm:max-w-md font-normal text-text-muted">
+                                                                                    {item.merchant_name}
+                                                                                </span>
+                                                                            )}
+                                                                            {item.remarks && item.remarks !== item.merchant_name && (
+                                                                                <span className="italic truncate max-w-[180px] opacity-70">
+                                                                                    • {item.remarks}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        {item.cumulative_units != null && (
+                                                                            <span className="font-mono text-[10px] text-text-muted/80 shrink-0 tabular-nums">
+                                                                                Total: {Number(item.cumulative_units).toFixed(3)} u
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         );
                                                     })}
