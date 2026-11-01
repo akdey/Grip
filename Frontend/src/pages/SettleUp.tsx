@@ -565,76 +565,64 @@ const SettleUp: React.FC = () => {
                                     {/* Borrower Follow-up Quick Bar on Card */}
                                     {isOwed && (
                                         <div className="mt-3 pt-2.5 border-t border-border-subtle/50 flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-1.5 text-[10.5px] text-text-muted min-w-0">
-                                                {peer.phone ? (
-                                                    <span className="font-mono text-emerald-400 font-semibold flex items-center gap-1 truncate">
-                                                        <Phone size={10} /> {peer.phone}
-                                                        <div className="flex items-center gap-1.5 text-[10.5px] text-text-muted min-w-0 flex-1">
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    haptics.selection();
-                                                                    setEditingContactPeer(peer);
-                                                                }}
-                                                                className="flex items-center gap-1.5 text-text-muted hover:text-primary transition-colors group/edit text-left truncate"
-                                                                title="Add or edit phone/email contact details"
-                                                            >
-                                                                {peer.phone ? (
-                                                                    <span className="font-mono text-emerald-400 font-semibold flex items-center gap-1 truncate">
-                                                                        <Phone size={10} /> {peer.phone}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-text-muted/70 italic text-[10px] flex items-center gap-1">
-                                                                        <Phone size={10} className="text-text-muted/40" /> Add phone
-                                                                    </span>
-                                                                )}
-                                                                {peer.email ? (
-                                                                    <span className="text-text-muted/70 truncate text-[10px]">
-                                                                        • {peer.email}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-text-muted/50 text-[10px] hidden sm:inline">
-                                                                        • Add email
-                                                                    </span>
-                                                                )}
-                                                                <span className="p-1 rounded-md bg-surface border border-border-subtle text-text-muted group-hover/edit:text-primary group-hover/edit:border-border-default transition-all shrink-0 ml-0.5">
-                                                                    <Pencil size={9} />
-                                                                </span>
-                                                                ) : (
-                                                                <span className="text-text-muted/60 italic text-[10px]">No phone saved</span>
-                                                )}
-                                                                {peer.email && (
-                                                                    <span className="text-text-muted/70 truncate text-[10px]">
-                                                                        • {peer.email}
-                                                                    </span>
-                                                                )}
-                                                            </button>
+                                            <div className="flex items-center gap-1.5 text-[10.5px] text-text-muted min-w-0 flex-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        haptics.selection();
+                                                        setEditingContactPeer(peer);
+                                                    }}
+                                                    className="flex items-center gap-1.5 text-text-muted hover:text-primary transition-colors group/edit text-left truncate"
+                                                    title="Add or edit phone/email contact details"
+                                                >
+                                                    {peer.phone ? (
+                                                        <span className="font-mono text-emerald-400 font-semibold flex items-center gap-1 truncate">
+                                                            <Phone size={10} /> {peer.phone}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-text-muted/70 italic text-[10px] flex items-center gap-1">
+                                                            <Phone size={10} className="text-text-muted/40" /> Add phone
+                                                        </span>
+                                                    )}
+                                                    {peer.email ? (
+                                                        <span className="text-text-muted/70 truncate text-[10px]">
+                                                            • {peer.email}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-text-muted/50 text-[10px] hidden sm:inline">
+                                                            • Add email
+                                                        </span>
+                                                    )}
+                                                    <span className="p-1 rounded-md bg-surface border border-border-subtle text-text-muted group-hover/edit:text-primary group-hover/edit:border-border-default transition-all shrink-0 ml-0.5">
+                                                        <Pencil size={9} />
+                                                    </span>
+                                                </button>
 
-                                                            {peer.auto_remind_email && (
-                                                                <span className="text-[8.5px] px-1.5 py-0.5 rounded-full bg-accent/15 border border-accent/25 text-accent font-bold tracking-tight uppercase shrink-0">
-                                                                    Auto-Email
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                haptics.impact('light');
-                                                                setReminderPeer(peer);
-                                                            }}
-                                                            className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 font-bold text-[11px] flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0"
-                                                            title="Send WhatsApp or Email reminder"
-                                                        >
-                                                            <MessageCircle size={13} className="text-emerald-400" />
-                                                            <span>Remind</span>
-                                                        </button>
-                                                    </div>
+                                                {peer.auto_remind_email && (
+                                                    <span className="text-[8.5px] px-1.5 py-0.5 rounded-full bg-accent/15 border border-accent/25 text-accent font-bold tracking-tight uppercase shrink-0">
+                                                        Auto-Email
+                                                    </span>
                                                 )}
                                             </div>
-                                            );
+
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    haptics.impact('light');
+                                                    setReminderPeer(peer);
+                                                }}
+                                                className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 font-bold text-[11px] flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0"
+                                                title="Send WhatsApp or Email reminder"
+                                            >
+                                                <MessageCircle size={13} className="text-emerald-400" />
+                                                <span>Remind</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
                         })
                     )}
                                         </div>
