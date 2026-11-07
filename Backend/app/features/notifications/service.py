@@ -383,6 +383,38 @@ class NotificationService:
             </div>
             """
 
+        # Generate Transactions Excel Workbook (Weekly + Complete History)
+        from app.features.transactions.models import Transaction
+        from app.features.export.service import generate_transactions_excel
+
+        txn_stmt = (
+            select(Transaction)
+            .where(Transaction.user_id == user_id)
+            .order_by(Transaction.transaction_date.desc(), Transaction.created_at.desc())
+        )
+        txns_res = await self.db.execute(txn_stmt)
+        all_user_txns = txns_res.scalars().all()
+
+        attachment_bytes = None
+        attachment_filename = None
+        if all_user_txns:
+            excel_io = generate_transactions_excel(all_user_txns, name)
+            attachment_bytes = excel_io.getvalue()
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            attachment_filename = f"Grip_Transactions_{today_str}.xlsx"
+
+        attachment_banner_html = f"""
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px 20px; margin: 24px 0;">
+            <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #475569; display: block;">Attached Spreadsheet (.xlsx)</span>
+            <p style="margin: 4px 0 0; font-size: 13.5px; font-weight: 700; color: #1e293b;">
+                Weekly Transactions &amp; Complete Historical Ledger
+            </p>
+            <p style="margin: 2px 0 0; font-size: 11px; color: #64748b;">
+                Includes Sheet 1 (Weekly Recap), Sheet 2 (Full {len(all_user_txns)} Transaction History), Sheet 3 (Category Breakdown).
+            </p>
+        </div>
+        """ if attachment_bytes else ""
+
         content = f"""
         <p>Hello {name},</p>
         <div style="background: #fff; border: 1px solid #fee2e2; padding: 25px; border-radius: 16px; margin: 25px 0;">
@@ -390,14 +422,22 @@ class NotificationService:
         </div>
         <h3 style="color: #1e293b; font-size: 16px; margin-bottom: 15px;">Weekly Spend Highlights</h3>
         {breakdown_html}
+        {attachment_banner_html}
         """
         html = self._get_html_wrapper(
             title="Weekly Spending Alert",
             content=content,
             cta_text="Review Dashboard",
-            cta_url=f"{settings.FRONTEND_ORIGIN}/dashboard"
+            cta_url=f"{settings.FRONTEND_ORIGIN}/dashboard",
+            footer_note=f"Automated weekly recap from Grip ({name}'s finance manager)."
         )
-        send_email(user.email, subject, html)
+        send_email(
+            user.email,
+            subject,
+            html,
+            attachment_bytes=attachment_bytes,
+            attachment_filename=attachment_filename
+        )
 
     async def send_buffer_alert(self, user_id: uuid.UUID, full_name: str, safe_to_spend: float):
         """Emergency alert when Safe-to-Spend drops into the danger zone."""

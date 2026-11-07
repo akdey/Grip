@@ -122,8 +122,8 @@ export const useSendEmailReminder = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ peerName, custom_note, subject }: { peerName: string; custom_note?: string; subject?: string }) => {
-            const { data } = await api.post(`/settle-up/${encodeURIComponent(peerName)}/send-reminder`, { custom_note, subject });
+        mutationFn: async ({ peerName, custom_note, subject, include_ledger }: { peerName: string; custom_note?: string; subject?: string; include_ledger?: boolean }) => {
+            const { data } = await api.post(`/settle-up/${encodeURIComponent(peerName)}/send-reminder`, { custom_note, subject, include_ledger });
             return data;
         },
         onSuccess: () => {

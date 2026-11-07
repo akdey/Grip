@@ -51,7 +51,8 @@ async def send_email_reminder(
         user_id=current_user.id,
         peer_name=peer_name,
         custom_note=data.custom_note,
-        subject=data.subject
+        subject=data.subject,
+        include_ledger=data.include_ledger
     )
 
 @router.get("/{peer_name}/history", response_model=List[schemas.SettleUpEntryResponse])

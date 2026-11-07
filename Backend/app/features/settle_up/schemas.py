@@ -74,6 +74,7 @@ class PeerBalance(BaseModel):
 class SendEmailReminderRequest(BaseModel):
     custom_note: Optional[str] = None
     subject: Optional[str] = None
+    include_ledger: bool = True
 
 class SendEmailReminderResponse(BaseModel):
     status: str

@@ -170,7 +170,8 @@ class SettleUpService:
         user_id: UUID,
         peer_name: str,
         custom_note: Optional[str] = None,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
+        include_ledger: bool = True
     ) -> schemas.SendEmailReminderResponse:
         """
         Sends a polite, friendly literary reminder email to the borrower regarding their pending balance.
@@ -195,6 +196,19 @@ class SettleUpService:
         if not contact or not contact.email:
             raise HTTPException(status_code=400, detail="No email address saved for this borrower. Please save their email first.")
 
+        # Query all ledger entries for this peer
+        entries = []
+        if include_ledger:
+            entries_stmt = (
+                select(SettleUpEntry)
+                .where(
+                    SettleUpEntry.user_id == user_id,
+                    SettleUpEntry.peer_name.ilike(peer_name.strip())
+                )
+                .order_by(SettleUpEntry.date.asc(), SettleUpEntry.created_at.asc())
+            )
+            entries = (await self.db.execute(entries_stmt)).scalars().all()
+
         user_display_name = user.full_name or user.email.split('@')[0]
         formatted_amount = f"₹{float(net_balance):,.2f}".rstrip('0').rstrip('.') if float(net_balance) % 1 == 0 else f"₹{float(net_balance):,.2f}"
 
@@ -207,6 +221,52 @@ class SettleUpService:
             </div>
         """ if custom_note else ""
 
+        # Ledger breakdown block
+        ledger_table_block = ""
+        if include_ledger and entries:
+            rows_html = ""
+            for e in entries:
+                is_lent = e.amount >= 0
+                direction_label = "Lent / Paid" if is_lent else "Repaid / Received"
+                amt_color = "#15803d" if is_lent else "#b91c1c"
+                amt_sign = "+" if is_lent else "-"
+                date_str = e.date.strftime("%d %b %Y") if e.date else "—"
+                note_str = e.remarks or "—"
+                rows_html += f"""
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 9px 12px; color: #64748b; font-size: 11px; white-space: nowrap;">{date_str}</td>
+                    <td style="padding: 9px 12px; color: #1e293b; font-size: 11px;">{note_str}</td>
+                    <td style="padding: 9px 12px; color: #64748b; font-size: 10px; text-transform: uppercase;">{direction_label}</td>
+                    <td style="padding: 9px 12px; text-align: right; font-weight: 700; color: {amt_color}; font-size: 11px; white-space: nowrap;">{amt_sign}₹{abs(float(e.amount)):,.2f}</td>
+                </tr>
+                """
+            ledger_table_block = f"""
+            <div style="margin: 24px 0; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #ffffff;">
+                <div style="background: #f8fafc; padding: 10px 14px; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #475569; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">
+                    Itemized Transaction Ledger ({len(entries)} items)
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                    <thead>
+                        <tr style="background: #f1f5f9; color: #64748b; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <th style="padding: 8px 12px; text-align: left;">Date</th>
+                            <th style="padding: 8px 12px; text-align: left;">Note / Purpose</th>
+                            <th style="padding: 8px 12px; text-align: left;">Type</th>
+                            <th style="padding: 8px 12px; text-align: right;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows_html}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #e2e8f0;">
+                            <td colspan="3" style="padding: 10px 12px; text-transform: uppercase; font-size: 10px; color: #1e293b;">Net Pending Balance</td>
+                            <td style="padding: 10px 12px; text-align: right; color: #15803d; font-size: 12px;">{formatted_amount}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            """
+
         html_body = f"""
         <!DOCTYPE html>
         <html>
@@ -214,7 +274,7 @@ class SettleUpService:
           <meta charset="utf-8">
           <style>
             body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; padding: 24px; }}
-            .card {{ background: #ffffff; max-width: 520px; margin: 0 auto; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0; }}
+            .card {{ background: #ffffff; max-width: 540px; margin: 0 auto; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0; }}
             .header {{ background: #0f172a; padding: 24px 32px; text-align: center; color: #ffffff; }}
             .header h1 {{ margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; text-transform: uppercase; font-style: italic; }}
             .header p {{ margin: 4px 0 0; font-size: 11px; opacity: 0.7; letter-spacing: 2px; text-transform: uppercase; font-weight: 600; }}
@@ -222,7 +282,7 @@ class SettleUpService:
             .amount-box {{ background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0; }}
             .amount {{ font-size: 32px; font-weight: 900; color: #16a34a; font-family: monospace; margin: 4px 0; }}
             .literary-quote {{ background: #fafafa; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px; font-size: 12px; color: #64748b; text-align: center; font-style: italic; margin: 20px 0; }}
-            .footer {{ text-align: center; padding: 20px 32px; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; background: #fafafa; }}
+            .footer {{ text-align: center; padding: 18px 24px; font-size: 11px; color: #475569; border-top: 1px solid #e2e8f0; background: #f8fafc; font-weight: 500; }}
           </style>
         </head>
         <body>
@@ -234,7 +294,7 @@ class SettleUpService:
             <div class="content">
               <p style="font-size: 15px; margin-top: 0;">Hi <strong>{peer_name}</strong>,</p>
               <p style="font-size: 13.5px; line-height: 1.6; color: #334155;">
-                Hope you're having a wonderful week! <strong>{user_display_name}</strong> wanted to share a gentle, friendly note regarding your pending shared balance on Grip.
+                Hope you're having a wonderful week! <strong>{user_display_name}</strong> wanted to share a gentle, friendly note regarding our pending shared expenses.
               </p>
 
               <div class="amount-box">
@@ -244,6 +304,7 @@ class SettleUpService:
               </div>
 
               {custom_note_block}
+              {ledger_table_block}
 
               <div class="literary-quote">
                 &ldquo;Neither a borrower nor a lender be, so goes the adage &mdash; but between good friends, memories (and tidy ledgers) make the sweetest company.&rdquo;
@@ -259,7 +320,7 @@ class SettleUpService:
               </p>
             </div>
             <div class="footer">
-              Sent via Grip Personal Finance &bull; Shared ledger tracking
+              Automated email from Grip ({user_display_name}'s finance manager) &bull; Shared expense tracking
             </div>
           </div>
         </body>

@@ -29,7 +29,9 @@ import {
     Copy,
     Phone,
     BellRing,
-    BookUser
+    BookUser,
+    Download,
+    FileSpreadsheet
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -106,7 +108,7 @@ export const REMINDER_TEMPLATES = [
         label: 'Literary & Witty',
         tag: 'Shakespeare / Classic',
         getText: (name: string, amt: string, note?: string) => {
-            const base = `Hey ${name}! "Neither a borrower nor a lender be", as the Bard penned — but between friends, fond memories (and ₹${amt}) linger sweetly! ☕ Let's square up on Grip whenever you have a quiet moment. Cheers!`;
+            const base = `Hey ${name}! "Neither a borrower nor a lender be", as the Bard penned — but between friends, fond memories (and ₹${amt}) linger sweetly! ☕ Let's square up whenever you have a quiet moment. Cheers!`;
             return note ? `${base}\n\n(Note: ${note})` : base;
         }
     },
@@ -124,7 +126,7 @@ export const REMINDER_TEMPLATES = [
         label: 'Casual & Breezy',
         tag: 'Split & Chill',
         getText: (name: string, amt: string, note?: string) => {
-            const base = `Hey ${name}! Just checking in on the ₹${amt} balance on Grip when you get a chance. Hope all's well! 🤝`;
+            const base = `Hey ${name}! Just checking in on the ₹${amt} pending balance when you get a chance. Hope all's well! 🤝`;
             return note ? `${base}\n\n(Note: ${note})` : base;
         }
     },
@@ -133,7 +135,7 @@ export const REMINDER_TEMPLATES = [
         label: 'Direct & Crisp',
         tag: 'UPI Ready',
         getText: (name: string, amt: string, note?: string) => {
-            const base = `Hi ${name}, sharing a quick reminder for the pending balance of ₹${amt} on Grip. You can GPay/UPI me whenever convenient. Thanks!`;
+            const base = `Hi ${name}, sharing a quick reminder for the pending balance of ₹${amt}. You can GPay/UPI me whenever convenient. Thanks!`;
             return note ? `${base}\n\n(Note: ${note})` : base;
         }
     }
@@ -561,66 +563,6 @@ const SettleUp: React.FC = () => {
                                             </span>
                                         </div>
                                     </div>
-
-                                    {/* Borrower Follow-up Quick Bar on Card */}
-                                    {isOwed && (
-                                        <div className="mt-3 pt-2.5 border-t border-border-subtle/50 flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-1.5 text-[10.5px] text-text-muted min-w-0 flex-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        haptics.selection();
-                                                        setEditingContactPeer(peer);
-                                                    }}
-                                                    className="flex items-center gap-1.5 text-text-muted hover:text-primary transition-colors group/edit text-left truncate"
-                                                    title="Add or edit phone/email contact details"
-                                                >
-                                                    {peer.phone ? (
-                                                        <span className="font-mono text-emerald-400 font-semibold flex items-center gap-1 truncate">
-                                                            <Phone size={10} /> {peer.phone}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-text-muted/70 italic text-[10px] flex items-center gap-1">
-                                                            <Phone size={10} className="text-text-muted/40" /> Add phone
-                                                        </span>
-                                                    )}
-                                                    {peer.email ? (
-                                                        <span className="text-text-muted/70 truncate text-[10px]">
-                                                            • {peer.email}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-text-muted/50 text-[10px] hidden sm:inline">
-                                                            • Add email
-                                                        </span>
-                                                    )}
-                                                    <span className="p-1 rounded-md bg-surface border border-border-subtle text-text-muted group-hover/edit:text-primary group-hover/edit:border-border-default transition-all shrink-0 ml-0.5">
-                                                        <Pencil size={9} />
-                                                    </span>
-                                                </button>
-
-                                                {peer.auto_remind_email && (
-                                                    <span className="text-[8.5px] px-1.5 py-0.5 rounded-full bg-accent/15 border border-accent/25 text-accent font-bold tracking-tight uppercase shrink-0">
-                                                        Auto-Email
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    haptics.impact('light');
-                                                    setReminderPeer(peer);
-                                                }}
-                                                className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 font-bold text-[11px] flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0"
-                                                title="Send WhatsApp or Email reminder"
-                                            >
-                                                <MessageCircle size={13} className="text-emerald-400" />
-                                                <span>Remind</span>
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
                             );
                         })
@@ -640,6 +582,7 @@ const SettleUp: React.FC = () => {
                                 onDelete={handleDelete}
                                 onQuickSettle={handleQuickSettle}
                                 onOpenReminder={(p) => setReminderPeer(p)}
+                                onEditContact={(p) => setEditingContactPeer(p)}
                             />
 
                             {/* Borrower Reminder Drawer */ }
@@ -933,6 +876,7 @@ const SettleUp: React.FC = () => {
     onDelete: (id: string) => void;
     onQuickSettle: (peerName: string, balance: number) => void;
     onOpenReminder?: (peer: PeerBalance) => void;
+    onEditContact?: (peer: PeerBalance) => void;
 }
 
                 const PeerHistoryDrawer: React.FC<PeerHistoryDrawerProps> = ({
@@ -945,7 +889,8 @@ const SettleUp: React.FC = () => {
                     onEdit,
                     onDelete,
                     onQuickSettle,
-                    onOpenReminder
+                    onOpenReminder,
+                    onEditContact
                 }) => {
     const navigate = useNavigate();
                     const {data: history, isLoading } = usePeerHistory(peerName || '');
@@ -1173,10 +1118,31 @@ const SettleUp: React.FC = () => {
                                     {peerBalance > 0 && peerContact && (
                                         <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                             <div className="min-w-0">
-                                                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                                                    <Sparkles size={11} /> Borrower Reminders & Follow-up
-                                                </span>
-                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-text-muted">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                                                        <Sparkles size={11} /> Borrower Reminders & Follow-up
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            haptics.selection();
+                                                            onEditContact?.(peerContact);
+                                                        }}
+                                                        className="p-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 hover:text-white border border-emerald-500/30 transition-all active:scale-90"
+                                                        title="Edit contact phone, email & auto-email settings"
+                                                    >
+                                                        <Pencil size={10} />
+                                                    </button>
+                                                </div>
+                                                <div
+                                                    onClick={() => {
+                                                        haptics.selection();
+                                                        onEditContact?.(peerContact);
+                                                    }}
+                                                    className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-text-muted cursor-pointer hover:opacity-85 transition-opacity"
+                                                    title="Click to edit contact details"
+                                                >
                                                     <span className="font-mono text-primary font-semibold flex items-center gap-1">
                                                         <Phone size={11} className="text-emerald-400" />
                                                         {peerContact.phone || <span className="text-text-muted/60 font-normal italic">No WhatsApp number</span>}
@@ -1317,10 +1283,13 @@ const SettleUp: React.FC = () => {
                         const [selectedTemplateId, setSelectedTemplateId] = useState('literary');
                         const [customNote, setCustomNote] = useState('');
                         const [copied, setCopied] = useState(false);
+                        const [includeLedger, setIncludeLedger] = useState(true);
+                        const [isExportingExcel, setIsExportingExcel] = useState(false);
                         const [emailSuccessMsg, setEmailSuccessMsg] = useState<string | null>(null);
 
                         const updateContactMutation = useUpdatePeerContact();
                         const sendEmailMutation = useSendEmailReminder();
+                        const { data: history } = usePeerHistory(peer?.peer_name || '');
 
     useEffect(() => {
         if (peer) {
@@ -1329,6 +1298,7 @@ const SettleUp: React.FC = () => {
                         setAutoRemind(peer.auto_remind_email || false);
                         setCustomNote('');
                         setCopied(false);
+                        setIncludeLedger(true);
                         setEmailSuccessMsg(null);
         }
     }, [peer, isOpen]);
@@ -1372,6 +1342,54 @@ const SettleUp: React.FC = () => {
                         window.open(waLink!, '_blank');
     };
 
+    const handleDownloadExcel = async () => {
+        if (!peer) return;
+        try {
+            setIsExportingExcel(true);
+            haptics.impact('medium');
+            const XLSX = await import('xlsx');
+
+            const rows = (history || []).map((entry, idx) => {
+                const isLent = entry.amount >= 0;
+                return {
+                    '#': idx + 1,
+                    'Date': entry.date || (entry.created_at ? entry.created_at.split('T')[0] : ''),
+                    'Merchant / Contact': entry.peer_name,
+                    'Type': isLent ? 'Lent / Paid' : 'Received / Repaid',
+                    'Amount (₹)': Math.abs(entry.amount),
+                    'Balance Impact': isLent ? `+₹${Math.abs(entry.amount)}` : `-₹${Math.abs(entry.amount)}`,
+                    'Remarks / Notes': entry.remarks || 'Direct Expense'
+                };
+            });
+
+            // Summary row
+            rows.push({
+                '#': '' as any,
+                'Date': '',
+                'Merchant / Contact': '',
+                'Type': 'NET OUTSTANDING BALANCE',
+                'Amount (₹)': Math.abs(peer.net_balance),
+                'Balance Impact': peer.net_balance > 0 ? `They owe ₹${Math.abs(peer.net_balance)}` : `You owe ₹${Math.abs(peer.net_balance)}`,
+                'Remarks / Notes': 'Calculated standing'
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(rows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Ledger Transactions');
+
+            const safePeerName = peer.peer_name.replace(/[^a-zA-Z0-9_-]/g, '_');
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(workbook, `Grip_Ledger_${safePeerName}_${dateStr}.xlsx`);
+            haptics.notification('success');
+        } catch (err) {
+            console.error('Failed to export Excel ledger:', err);
+            alert('Failed to generate Excel ledger file');
+            haptics.notification('error');
+        } finally {
+            setIsExportingExcel(false);
+        }
+    };
+
     const handleCopy = () => {
                             haptics.impact('light');
                         navigator.clipboard.writeText(reminderText);
@@ -1388,7 +1406,8 @@ const SettleUp: React.FC = () => {
                         haptics.impact('medium');
                         sendEmailMutation.mutate({
                             peerName: peer.peer_name,
-                        custom_note: customNote.trim() || undefined
+                            custom_note: customNote.trim() || undefined,
+                            include_ledger: includeLedger
         }, {
                             onSuccess: () => {
                             haptics.notification('success');
@@ -1436,15 +1455,6 @@ const SettleUp: React.FC = () => {
                                         <span className="text-[10px] font-black uppercase tracking-wider text-text-muted flex items-center gap-1.5">
                                             <User size={13} /> Contact Details
                                         </span>
-                                        <button
-                                            type="button"
-                                            onClick={handleSaveContact}
-                                            disabled={updateContactMutation.isPending}
-                                            className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-surface border border-border-subtle text-text-muted hover:text-primary active:scale-95 transition-all flex items-center gap-1"
-                                        >
-                                            {updateContactMutation.isPending ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
-                                            <span>Save Contact</span>
-                                        </button>
                                         <div className="flex items-center gap-1.5">
                                             <button
                                                 type="button"
@@ -1584,15 +1594,31 @@ const SettleUp: React.FC = () => {
                                         </p>
                                     </div>
 
-                                    {/* WhatsApp Launch Button */}
-                                    <button
-                                        type="button"
-                                        onClick={handleOpenWhatsApp}
-                                        className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md shadow-emerald-500/10"
-                                    >
-                                        <MessageCircle size={16} />
-                                        <span>Open WhatsApp Reminder</span>
-                                    </button>
+                                    {/* Action Buttons: WhatsApp & Download Ledger Excel */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={handleOpenWhatsApp}
+                                            className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md shadow-emerald-500/10"
+                                        >
+                                            <MessageCircle size={16} />
+                                            <span>Open WhatsApp</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleDownloadExcel}
+                                            disabled={isExportingExcel}
+                                            className="w-full py-3.5 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-primary font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm disabled:opacity-50"
+                                            title="Download spreadsheet to attach in WhatsApp"
+                                        >
+                                            {isExportingExcel ? (
+                                                <Loader2 size={15} className="animate-spin text-emerald-400" />
+                                            ) : (
+                                                <FileSpreadsheet size={15} className="text-emerald-400" />
+                                            )}
+                                            <span>{isExportingExcel ? 'Exporting...' : 'Download (.xlsx)'}</span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Section 3: Email Follow-up & Automation */}
@@ -1621,6 +1647,30 @@ const SettleUp: React.FC = () => {
                                             Last email reminder sent: {new Date(peer.last_reminded_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
                                         </p>
                                     )}
+
+                                    {/* Include Complete Ledger in Email Toggle */}
+                                    <div className="p-3 rounded-xl bg-surface border border-border-subtle flex items-center justify-between gap-3">
+                                        <div>
+                                            <span className="text-xs font-bold text-primary block">
+                                                Include Complete Ledger in Email
+                                            </span>
+                                            <span className="text-[10px] text-text-muted block mt-0.5">
+                                                Embeds itemized transaction breakdown and running balance in the email body
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                haptics.selection();
+                                                setIncludeLedger(!includeLedger);
+                                            }}
+                                            className={`w-11 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${includeLedger ? 'bg-emerald-500' : 'bg-surface-subtle border border-border-subtle'
+                                                }`}
+                                        >
+                                            <div className={`w-5 h-5 rounded-full bg-white transition-transform ${includeLedger ? 'translate-x-5' : 'translate-x-0'
+                                                }`} />
+                                        </button>
+                                    </div>
 
                                     {/* Automation Toggle */}
                                     <div className="p-3 rounded-xl bg-surface border border-border-subtle flex items-center justify-between gap-3">
