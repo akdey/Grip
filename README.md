@@ -135,16 +135,28 @@ Grip processes your financial data through a sophisticated, privacy-preserving p
 │    "Expected ₹12,500 in remaining expenses (18 days left)"     │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
-│ 8. AUTONOMOUS NOTIFICATIONS                                     │
-│    • Gmail Connection Alerts: Instant email if OAuth expires       │
-│    • Consolidated Surety Briefings: Twice-daily digest a day before bills are due (Morning & Evening) │
-│    • Weekly Insights: Smart alerts for Category spending spikes   │
+┌─────────────────────────────────────────────────────────────────┐
+│ 8. AUTONOMOUS ANOMALY DETECTION (Grip Radar)                    │
+│    • Merchant Amount Spikes (Z-Score ≥ 2.5)                     │
+│    • Duplicate Charges (Same merchant within 48h)               │
+│    • Category Weekly Burn Explosions (>2.2x rolling median)     │
+│    • Schema-Driven Surety & Bill Drift (SubCategory.is_surety)  │
+│    • First-time High Spend & Settle-Up Overdue Balances         │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ 9. ACTIONABLE INSIGHTS & DASHBOARD                              │
-│    • Safe-to-Spend = Balance - (Bills + CC + Buffer)           │
-│    • Wealth Trajectory: Historical + 10Y AI forecast           │
+│ 9. AUTONOMOUS NOTIFICATIONS & DIGESTS                           │
+│    • Gmail Connection Alerts: Instant email if OAuth expires    │
+│    • Consolidated Surety Briefings: Twice-daily digest          │
+│    • Weekly Recap Emails: Integrated Grip Radar flags &         │
+│      multi-sheet Excel transaction workbooks                    │
+└────────────────────────┬────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 10. ACTIONABLE INSIGHTS & DASHBOARD                             │
+│    • Safe-to-Spend = Balance - (Bills + CC + Buffer)            │
+│    • Grip Radar Dashboard: Real-time interactive alert triage   │
+│    • Wealth Trajectory: Historical + 10Y AI forecast            │
 │    • Investment XIRR: Annualized returns per asset              │
 │    Visual dashboard with spending trends and recommendations    │
 └─────────────────────────────────────────────────────────────────┘
@@ -191,6 +203,50 @@ Safe-to-Spend:             ₹17,370 ✅
 - **Reduces Anxiety**: One number tells you your true spending power
 - **Builds Buffer**: Automatic safety margin prevents living paycheck-to-paycheck
 - **Predictive**: Includes projected bills, not just current ones
+
+### ⚡ Grip Radar: Automated Anomaly Detection Engine (NEW!)
+
+**Autonomous Spending Risk Detection Without Black-Box Guesswork**
+
+Traditional banking fraud alerts focus on unauthorized card swipes, while personal budgeting tools leave you to spot billing errors and spending spikes on your own. Grip Radar introduces an automated, statistical intelligence engine that continuously monitors your transactions, committed sureties, and category burn rates.
+
+**The 6 Domain & Statistical Detectors:**
+
+1. **Merchant Amount Spikes ($Z\text{-Score} \ge 2.5$)**:
+   - Calculates the historical spending distribution per merchant ($\ge 3$ transactions).
+   - Flags sudden outlier charges that exceed $2\times$ your historical mean or $3\times$ your median with a minimum ₹400 divergence.
+   - *Example*: *"₹2,800 is 5.4× your typical ₹520 spent at Swiggy (18 past transactions)"*.
+
+2. **Near-Duplicate Charge Detection**:
+   - Analyzes non-rejected debit transactions within a sliding 48-hour window.
+   - Detects identical or near-identical amounts ($\pm ₹2$) at the same vendor before your bank statement arrives.
+   - *Example*: *"Two identical charges of ₹1,499 occurred at Netflix within 48 hours"*.
+
+3. **Category Weekly Burn Spikes ($> 2.2\times$ Rolling Median)**:
+   - Compares current 7-day category spend against the rolling 4-week weekly median.
+   - Triggers when weekly spend exceeds $2.2\times$ baseline with at least a ₹2,500 absolute divergence.
+   - *Example*: *"You've spent ₹8,900 on Dining in the past 7 days (typical weekly median: ₹3,100, 2.9× higher)"*.
+
+4. **Schema-Driven Surety & Bill Drift**:
+   - **Zero Hardcoded Keywords**: Operates directly on Grip's first-class domain schema (`SubCategory.is_surety`, `Transaction.is_surety`, and `Bill.is_recurring`).
+   - Identifies when committed utilities, EMIs, SIPs, or subscriptions jump by $\ge 12\%$ over previous baselines or exceed configured bill amounts by $\ge 10\%$.
+   - *Example*: *"Paid ₹6,800 vs configured bill budget of ₹5,500 (+24%) for ACT Broadband"*.
+
+5. **First-Time High-Spend Outliers**:
+   - Scans recent transactions for unfamiliar merchants never seen before in your entire transaction history.
+   - Flags first-time charges exceeding ₹5,000 for verification.
+   - *Example*: *"First recorded transaction with 'ACME Electronics' for ₹14,200"*.
+
+6. **Settle Up Debt Aging & Exposure Alerts**:
+   - Evaluates peer debt balances in real time.
+   - Alerts you when a peer balance exceeds ₹10,000 with no settlement activity or reminder sent in $> 30$ days.
+   - *Example*: *"Rahul owes you ₹15,000 with no settlement activity in over 30 days"*.
+
+**Interactive Triage & Multi-Channel Delivery:**
+- **Dashboard Radar Widget (`GripRadar`)**: High-contrast, glowing status pill displaying active flags with severity levels (🔴 High / 🟡 Medium), 1-click dismiss actions, "Dismiss All", and a manual "Scan Now" button with live animation.
+- **Inline Transaction Badges**: Transaction rows in the ledger automatically show `[⚡ Alert]` or `[⚡ High Alert]` pills with full contextual tooltips.
+- **Automated Morning Scan**: Runs autonomously every morning at 6:00 AM IST (00:30 UTC) across all active users.
+- **Weekly Email Digest**: Active anomalies are highlighted in the Sunday weekly recap email under **⚡ Grip Radar Flags**.
 
 ### 📈 Investment Intelligence Platform (NEW!)
 
@@ -450,12 +506,18 @@ Result: Prevents surprise salary drains by previewing next month's recurring com
 - **Automated Email Follow-up Engine**:
   - Send branded literary reminder emails with one click.
   - **Weekly Automation Switch**: Toggle `Automate Weekly Email Reminders` on any contact; Grip's background scheduler automatically dispatches a gentle follow-up every Monday until settled, throttled to avoid spamming.
-- **Borrower Contact Management**: Save WhatsApp numbers and email addresses permanently per peer during entry creation or directly from the ledger.
+  - **Itemized Email Ledgers**: Optional toggle to embed the borrower's full itemized transaction ledger and running balance table directly into reminder email bodies.
+- **1-Click WhatsApp Ledger Spreadsheets (`.xlsx`)**: Client-side instant spreadsheet generator in the reminder drawer to download the peer's entire transaction history and attach it directly to WhatsApp chats.
+- **Streamlined Contact Management**: Save WhatsApp numbers, emails, and reminder preferences directly within the borrower history drawer with dedicated quick-edit controls.
 
 ### 📑 Professional Export & Reporting
 
-**Consolidated Portfolio Statement**
-- **Executive-Ready Excel Export**: Generates a multi-tab, professionally styled workbook serving as a personal balance sheet and asset schedule.
+**Consolidated Portfolio Statement & Corporate Workbooks**
+- **3-Sheet Weekly Transaction Workbook**: Automatically generated via `openpyxl` and attached to weekly Sunday email recaps:
+  - *Sheet 1 (`📅 Weekly Transactions`)*: Filtered audit of the ongoing week's debits, credits, and net burn.
+  - *Sheet 2 (`📁 Complete History`)*: Full ledger of all user transactions with dates, categories, accounts, and amounts.
+  - *Sheet 3 (`📊 Category Breakdown`)*: Aggregated weekly spend distribution across all categories.
+- **Executive-Ready Portfolio Export**: Generates a multi-tab, professionally styled workbook serving as a personal balance sheet and asset schedule.
 - **Detailed Asset Schedules**: Separate tabs for Bank Deposits (FD/RD), Market Investments (MFs/Stocks), Government/Retirement Schemes (PF/PPF/NPS), and Credit Facilities.
 - **Institutional References**: Includes PRAN, UAN, Folio numbers, and nominee allocations for legacy planning.
 - **Clean Formatting**: Complete with typography, zebra striping, currency formatting, and auto-adjusted columns.
@@ -589,15 +651,16 @@ Masked:   "UPI: ****@paytm paid ****@phonepe"
 ### Backend
 - **Framework**: FastAPI (Python 3.12+) - High-performance async API
 - **Database**: PostgreSQL with SQLAlchemy (async) + asyncpg
-- **AI/ML**:
-  - **Groq** (Llama 3.3 70B) - Transaction extraction & forecasting
+- **AI/ML & Analytics**:
+  - **Groq** (Llama 3.3 70B) & **Local LLM** (SmolLM2-1.7B) - Transaction extraction & conversational briefings
   - **LightGBM** - Tabular gradient boosted machine learning for category & subcategory expense forecasting
-  - **scipy** - XIRR calculation (Newton-Raphson optimization)
+  - **scipy / numpy / pandas** - Anomaly detection ($Z$-score filters, rolling median divergence), XIRR calculation (Newton-Raphson)
+  - **openpyxl & xlsx** - Multi-sheet corporate transaction & contingency financial statement workbooks
 - **Data APIs**:
   - **mfapi.in** - Mutual fund NAV data (India)
   - **yfinance** - Stock prices (global)
-- **Scheduler**: APScheduler (async) - Daily price sync jobs
-- **Authentication**: JWT + bcrypt
+- **Scheduler**: APScheduler (async) - Daily price sync, morning anomaly scans (6 AM IST), surety briefings (8 AM / 8 PM IST), weekly digests
+- **Authentication**: JWT + bcrypt + FIDO2 WebAuthn (Passkeys / Biometrics)
 - **Email**: SMTP for OTP delivery
 - **OAuth**: Google OAuth 2.0 for Gmail
 - **Deployment**: Render/Vercel-ready
