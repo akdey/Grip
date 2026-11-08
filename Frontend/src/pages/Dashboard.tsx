@@ -60,6 +60,7 @@ import { OutflowLedger } from '../features/dashboard/components/OutflowLedger';
 import { SafeToSpendHero } from '../features/dashboard/components/SafeToSpendHero';
 import { FrozenAllocation } from '../features/dashboard/components/FrozenAllocation';
 import { AIForecast } from '../features/dashboard/components/AIForecast';
+import { GripRadar } from '../features/anomaly/components/GripRadar';
 import { CardExposureDrawer } from '../features/dashboard/components/CardExposureDrawer';
 import { ForecastIntelligenceDrawer } from '../features/dashboard/components/ForecastIntelligenceDrawer';
 
@@ -245,6 +246,8 @@ const Dashboard: React.FC = () => {
                     formatCurrency={formatCurrency}
                     onShowDetails={() => setShowForecastDetails(true)}
                 />
+
+                <GripRadar formatCurrency={formatCurrency} />
 
                 {/* Activity Feed */}
                 <RecentActivity transactions={transactions} formatCurrency={formatCurrency} isLoading={isTxnLoading} />

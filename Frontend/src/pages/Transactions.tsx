@@ -48,6 +48,7 @@ import {
 import { CategoryIcon } from '../components/ui/CategoryIcon';
 import { Drawer } from '../components/ui/Drawer';
 import { Loader } from '../components/ui/Loader';
+import { useAnomalyFlags } from '../features/anomaly/hooks';
 
 const Transactions: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -62,7 +63,7 @@ const Transactions: React.FC = () => {
     const [currentMonth, setCurrentMonth] = useState(() => {
         const d = searchParams.get('date');
         if (d) {
-            try { return parseISO(d); } catch (e) {}
+            try { return parseISO(d); } catch (e) { }
         }
         return new Date();
     });
@@ -74,7 +75,7 @@ const Transactions: React.FC = () => {
     useEffect(() => {
         const d = searchParams.get('date');
         if (d) {
-            try { setCurrentMonth(parseISO(d)); } catch (e) {}
+            try { setCurrentMonth(parseISO(d)); } catch (e) { }
         }
     }, [searchParams]);
 
@@ -371,11 +372,10 @@ const Transactions: React.FC = () => {
                             }
                             setSearchParams(newParams);
                         }}
-                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 ${
-                            view === 'month'
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 ${view === 'month'
                                 ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm'
                                 : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
-                        }`}
+                            }`}
                         title={view === 'month' ? "Switch to List View" : "Expense Calendar View"}
                     >
                         {view === 'month' ? <Receipt size={18} /> : <Calendar size={18} />}
@@ -384,11 +384,10 @@ const Transactions: React.FC = () => {
                     {/* Sort & Group Button */}
                     <button
                         onClick={() => setIsSortOpen(true)}
-                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 ${
-                            sortBy !== 'date_desc' || groupBy !== 'date'
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 ${sortBy !== 'date_desc' || groupBy !== 'date'
                                 ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm'
                                 : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
-                        }`}
+                            }`}
                         title="Sort & Group Ledger"
                     >
                         <ArrowUpDown size={18} />
@@ -413,11 +412,10 @@ const Transactions: React.FC = () => {
                                 setShowAuthModal(true);
                             }
                         }}
-                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 ${
-                            showSensitive
+                        className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 ${showSensitive
                                 ? 'bg-accent-subtle border-accent-border text-accent-text shadow-sm'
                                 : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
-                        }`}
+                            }`}
                         title={showSensitive ? "Hide sensitive figures" : "Show sensitive figures"}
                         aria-label={showSensitive ? "Hide sensitive figures" : "Show sensitive figures"}
                     >
@@ -433,16 +431,16 @@ const Transactions: React.FC = () => {
                         <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
                         <span className="text-[10px] font-bold text-accent-text uppercase tracking-wider truncate">
                             {view === 'day' ? `Day: ${format(currentMonth, 'dd MMM yyyy')}` :
-                             view === 'month' ? `Month: ${format(currentMonth, 'MMMM yyyy')}` :
-                             view === 'year' ? `Year: ${format(currentMonth, 'yyyy')}` :
-                             view === 'pending' ? 'Action Center' :
-                             searchParams.get('search') ? `Search: "${searchParams.get('search')}"` :
-                             searchParams.get('category') ? (
-                                 searchParams.get('category')!.includes(',')
-                                     ? `${searchParams.get('category')!.split(',').length} Categories`
-                                     : `Category: ${searchParams.get('category')}`
-                             ) :
-                             'Filtered Activity'}
+                                view === 'month' ? `Month: ${format(currentMonth, 'MMMM yyyy')}` :
+                                    view === 'year' ? `Year: ${format(currentMonth, 'yyyy')}` :
+                                        view === 'pending' ? 'Action Center' :
+                                            searchParams.get('search') ? `Search: "${searchParams.get('search')}"` :
+                                                searchParams.get('category') ? (
+                                                    searchParams.get('category')!.includes(',')
+                                                        ? `${searchParams.get('category')!.split(',').length} Categories`
+                                                        : `Category: ${searchParams.get('category')}`
+                                                ) :
+                                                    'Filtered Activity'}
                         </span>
                     </div>
                     <button
@@ -521,11 +519,10 @@ const Transactions: React.FC = () => {
                                             setShowAuthModal(true);
                                         }
                                     }}
-                                    className={`p-1.5 rounded-xl border flex items-center justify-center transition-all ${
-                                        showSensitive
+                                    className={`p-1.5 rounded-xl border flex items-center justify-center transition-all ${showSensitive
                                             ? 'bg-accent-subtle border-accent-border text-accent-text'
                                             : 'bg-surface-card border-border-subtle text-text-muted hover:text-primary'
-                                    }`}
+                                        }`}
                                     title={showSensitive ? "Hide sensitive data" : "Show sensitive data"}
                                 >
                                     {showSensitive ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -762,11 +759,10 @@ const Transactions: React.FC = () => {
                                         <div
                                             key={cat.id}
                                             onClick={() => toggleCategory(cat.name)}
-                                            className={`p-3 rounded-2xl border flex items-center justify-between transition-all cursor-pointer select-none active:scale-[0.99] ${
-                                                isSelected
+                                            className={`p-3 rounded-2xl border flex items-center justify-between transition-all cursor-pointer select-none active:scale-[0.99] ${isSelected
                                                     ? 'bg-accent-subtle border-accent-border'
                                                     : 'bg-surface-subtle border-border-subtle hover:bg-surface-hover text-text-muted hover:text-primary'
-                                            }`}
+                                                }`}
                                         >
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <div
@@ -785,11 +781,10 @@ const Transactions: React.FC = () => {
 
                                             {/* Checkbox */}
                                             <div
-                                                className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
-                                                    isSelected
+                                                className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${isSelected
                                                         ? 'bg-primary border-primary text-text-inverse shadow-sm'
                                                         : 'border-border-default bg-surface-subtle'
-                                                }`}
+                                                    }`}
                                             >
                                                 {isSelected && <Check size={13} strokeWidth={3} />}
                                             </div>
@@ -855,11 +850,10 @@ const Transactions: React.FC = () => {
                                     setSearchParams(newParams);
                                     setIsSortOpen(false);
                                 }}
-                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
-                                    view !== 'month'
+                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${view !== 'month'
                                         ? 'bg-accent-subtle border-accent-border text-primary'
                                         : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center justify-between w-full">
                                     <Receipt size={18} />
@@ -878,11 +872,10 @@ const Transactions: React.FC = () => {
                                     setSearchParams(newParams);
                                     setIsSortOpen(false);
                                 }}
-                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
-                                    view === 'month'
+                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${view === 'month'
                                         ? 'bg-accent-subtle border-accent-border text-primary'
                                         : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center justify-between w-full">
                                     <Calendar size={18} />
@@ -904,11 +897,10 @@ const Transactions: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2.5">
                             <button
                                 onClick={() => setGroupBy('date')}
-                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
-                                    groupBy === 'date'
+                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${groupBy === 'date'
                                         ? 'bg-accent-subtle border-accent-border text-primary'
                                         : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center justify-between w-full">
                                     <Calendar size={18} />
@@ -922,11 +914,10 @@ const Transactions: React.FC = () => {
 
                             <button
                                 onClick={() => setGroupBy('category')}
-                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${
-                                    groupBy === 'category'
+                                className={`p-4 rounded-3xl border flex flex-col items-start gap-2 transition-all ${groupBy === 'category'
                                         ? 'bg-accent-subtle border-accent-border text-primary'
                                         : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center justify-between w-full">
                                     <Layers size={18} />
@@ -957,11 +948,10 @@ const Transactions: React.FC = () => {
                                 <button
                                     key={option.id}
                                     onClick={() => setSortBy(option.id as any)}
-                                    className={`w-full p-3.5 rounded-2xl border flex items-center justify-between transition-all ${
-                                        sortBy === option.id
+                                    className={`w-full p-3.5 rounded-2xl border flex items-center justify-between transition-all ${sortBy === option.id
                                             ? 'bg-accent-subtle border-accent-border text-primary'
                                             : 'bg-surface-subtle border-border-subtle text-text-muted hover:text-primary hover:bg-surface-hover'
-                                    }`}
+                                        }`}
                                 >
                                     <div className="text-left">
                                         <p className="text-xs font-bold text-primary">{option.label}</p>
@@ -1012,6 +1002,10 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
     const navigate = useNavigate();
     const deleteMutation = useDeleteTransaction();
     const verifyMutation = useVerifyTransaction();
+    const { data: anomalyData } = useAnomalyFlags();
+    const anomaly = useMemo(() => {
+        return anomalyData?.flags?.find(f => f.transaction_id === txn.id);
+    }, [anomalyData, txn.id]);
     const dateObj = txn.transaction_date ? parseISO(txn.transaction_date) : new Date(txn.created_at);
 
     const today = startOfToday();
@@ -1105,9 +1099,22 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
                     <CategoryIcon name={txn.sub_category_icon || txn.category_icon} size={20} />
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
-                    <p className="font-semibold text-primary truncate text-sm leading-tight" title={txn.merchant_name || txn.category}>
-                        {txn.merchant_name || txn.category}
-                    </p>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="font-semibold text-primary truncate text-sm leading-tight" title={txn.merchant_name || txn.category}>
+                            {txn.merchant_name || txn.category}
+                        </p>
+                        {anomaly && (
+                            <span
+                                className={`inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-tight px-1.5 py-0.5 rounded border shrink-0 ${anomaly.severity === 'high'
+                                        ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                                    }`}
+                                title={anomaly.description}
+                            >
+                                ⚡ {anomaly.severity === 'high' ? 'High Alert' : 'Alert'}
+                            </span>
+                        )}
+                    </div>
                     <div className="flex items-center gap-1.5 mt-1">
                         <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest truncate max-w-[100px]">
                             {txn.sub_category}

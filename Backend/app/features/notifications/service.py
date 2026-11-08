@@ -415,6 +415,30 @@ class NotificationService:
         </div>
         """ if attachment_bytes else ""
 
+        # Check for active anomaly alerts
+        from app.features.anomaly.service import AnomalyService
+        anomaly_service = AnomalyService(self.db)
+        active_anomalies = await anomaly_service.get_active_flags(user_id, limit=4)
+
+        anomaly_section_html = ""
+        if active_anomalies:
+            anomaly_items_html = ""
+            for a in active_anomalies:
+                badge_color = "#ef4444" if a.severity == "high" else "#f59e0b"
+                anomaly_items_html += f"""
+                <li style="margin-bottom: 8px; font-size: 13px; color: #334155;">
+                    <strong style="color: {badge_color};">[{a.severity.upper()}]</strong> <strong>{a.title}:</strong> {a.description}
+                </li>
+                """
+            anomaly_section_html = f"""
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 14px; padding: 16px 20px; margin: 20px 0;">
+                <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #b45309; display: block;">⚡ Grip Radar Flags</span>
+                <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                    {anomaly_items_html}
+                </ul>
+            </div>
+            """
+
         content = f"""
         <p>Hello {name},</p>
         <div style="background: #fff; border: 1px solid #fee2e2; padding: 25px; border-radius: 16px; margin: 25px 0;">
@@ -422,6 +446,7 @@ class NotificationService:
         </div>
         <h3 style="color: #1e293b; font-size: 16px; margin-bottom: 15px;">Weekly Spend Highlights</h3>
         {breakdown_html}
+        {anomaly_section_html}
         {attachment_banner_html}
         """
         html = self._get_html_wrapper(

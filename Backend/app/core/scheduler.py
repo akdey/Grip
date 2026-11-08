@@ -553,6 +553,32 @@ async def run_settle_up_email_reminders():
         logger.info(f"Automated Settle Up Reminders finished. Sent {reminded_count} emails.")
 
 
+async def run_daily_anomaly_scan():
+    """
+    Automated daily scan to detect spending anomalies (amount spikes, category bursts,
+    duplicates, recurring drift, first-time large merchants, aging debt).
+    """
+    logger.info("Starting Daily Anomaly Detection Scan...")
+    from app.features.auth.models import User
+    from app.features.anomaly.service import AnomalyService
+
+    async with AsyncSessionLocal() as db:
+        try:
+            stmt = select(User).where(User.is_active == True)
+            users = (await db.execute(stmt)).scalars().all()
+            service = AnomalyService(db)
+            total_new = 0
+            for user in users:
+                try:
+                    new_count, _ = await service.scan_and_record_anomalies(user.id)
+                    total_new += new_count
+                except Exception as user_err:
+                    logger.error(f"Anomaly scan failed for user {user.email}: {user_err}")
+            logger.info(f"Daily Anomaly Scan Completed. Recorded {total_new} new anomaly flags across {len(users)} users.")
+        except Exception as e:
+            logger.error(f"Daily Anomaly Detection Scan failed: {e}", exc_info=True)
+
+
 def start_scheduler():
     """
     Start the scheduler if ENABLE_SCHEDULER is True.
@@ -590,6 +616,10 @@ def start_scheduler():
     # Run Automated Settle Up Reminders weekly on Monday at 11:00 AM IST (5:30 AM UTC)
     settle_up_trigger = CronTrigger(day_of_week='mon', hour=5, minute=30)
     scheduler.add_job(run_settle_up_email_reminders, settle_up_trigger)
+
+    # Run Daily Anomaly Detection Scan at 6:00 AM IST (00:30 UTC)
+    anomaly_trigger = CronTrigger(hour=0, minute=30)
+    scheduler.add_job(run_daily_anomaly_scan, anomaly_trigger)
     
     scheduler.start()
     logger.info("Scheduler started. Jobs scheduled.")
