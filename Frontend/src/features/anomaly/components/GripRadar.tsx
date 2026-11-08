@@ -9,14 +9,12 @@ import {
     RefreshCw,
     Store,
     Handshake,
-    X,
     ChevronDown,
     ArrowRight,
     ExternalLink,
     AlertTriangle,
     Check,
-    CheckCheck,
-    SlidersHorizontal
+    CheckCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -150,6 +148,9 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
         return flags.reduce((acc, f) => acc + (f.amount ? Math.abs(Number(f.amount)) : 0), 0);
     }, [flags]);
 
+    const topFlag = flags[0];
+    const topSignals = flags.slice(0, 2);
+
     // Filtered flags for the drawer
     const filteredFlags = useMemo(() => {
         if (selectedFilter === 'high') {
@@ -167,13 +168,14 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
     // 1. Loading Skeleton
     if (isLoading) {
         return (
-            <div className="bg-surface-subtle border border-border-subtle p-4 sm:p-5 rounded-[2.5rem] relative overflow-hidden animate-pulse h-[76px] flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-2xl bg-surface-pill" />
-                    <div className="space-y-1.5">
-                        <div className="h-3 w-28 bg-surface-pill rounded" />
-                        <div className="h-2.5 w-44 bg-surface-pill rounded" />
-                    </div>
+            <div className="bg-surface-subtle border border-border-subtle p-6 rounded-[2.5rem] relative overflow-hidden animate-pulse h-[160px]">
+                <div className="flex gap-4">
+                    <div className="w-6 h-6 rounded-full bg-surface-pill" />
+                    <div className="h-3 w-32 bg-surface-pill rounded" />
+                </div>
+                <div className="mt-4 space-y-3">
+                    <div className="h-8 w-40 bg-surface-pill rounded" />
+                    <div className="h-3 w-60 bg-surface-pill rounded" />
                 </div>
             </div>
         );
@@ -181,31 +183,31 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
 
     return (
         <>
-            {/* Dashboard Compact Card */}
+            {/* Dashboard Card */}
             {!hasFlags ? (
-                // ALL CLEAR STATE: Minimalist reassuring row
+                // ALL CLEAR STATE: Calm, minimal, reassuring row
                 <div
                     onClick={() => {
                         haptics.selection();
                         setIsDrawerOpen(true);
                     }}
-                    className="bg-surface-subtle border border-border-subtle hover:border-border-default/60 p-4 sm:p-5 rounded-[2.5rem] transition-all flex items-center justify-between gap-3 cursor-pointer active:scale-[0.99] group shadow-xs"
+                    className="bg-surface-subtle border border-border-subtle hover:border-border-default/60 p-5 rounded-[2.5rem] relative overflow-hidden group cursor-pointer active:scale-[0.99] transition-all shadow-none flex items-center justify-between gap-4"
                 >
-                    <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-2xl badge-success flex items-center justify-center shrink-0">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full badge-success flex items-center justify-center shrink-0 border shadow-inner">
                             <ShieldCheck size={16} />
                         </div>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                                <span className="text-[9px] font-black uppercase tracking-[3px] text-text-muted">
                                     Grip Radar
                                 </span>
-                                <span className="badge-success text-[10px] font-bold uppercase px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                                    <Check size={12} /> All Clear
+                                <span className="badge-success text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1 border">
+                                    <Check size={10} /> All Clear
                                 </span>
                             </div>
                             <p className="text-xs text-text-muted truncate mt-0.5">
-                                No spending spikes, duplicate charges, or surety drifts detected.
+                                Spending patterns, recurring bills, and peer settlements are within normal bounds.
                             </p>
                         </div>
                     </div>
@@ -224,71 +226,104 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                     </div>
                 </div>
             ) : (
-                // ANOMALIES PRESENT STATE: Minimalist, compact, non-intrusive alert pill
+                // ANOMALIES PRESENT STATE: Full-grade executive card matching AIForecast aesthetic
                 <div
                     onClick={() => {
                         haptics.selection();
                         setIsDrawerOpen(true);
                     }}
-                    className={`bg-surface-subtle border p-4 sm:p-5 rounded-[2.5rem] transition-all flex items-center justify-between gap-3 cursor-pointer active:scale-[0.99] group shadow-xs ${
+                    className={`bg-surface-subtle border p-6 rounded-[2.5rem] relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all shadow-none hover:shadow-md ${
                         hasHighSeverity
-                            ? 'border-status-danger-border/70 hover:border-status-danger-border'
-                            : 'border-status-warning-border/70 hover:border-status-warning-border'
+                            ? 'border-status-danger-border/40 hover:border-status-danger-border/70'
+                            : 'border-status-warning-border/40 hover:border-status-warning-border/70'
                     }`}
                 >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                        {/* Status Icon with subtle pulsing ring */}
-                        <div className="relative shrink-0">
-                            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${
+                    {/* Watermark Icon */}
+                    <div className={`absolute right-6 top-6 transition-colors pointer-events-none ${
+                        hasHighSeverity
+                            ? 'text-status-danger/10 group-hover:text-status-danger/20'
+                            : 'text-status-warning/10 group-hover:text-status-warning/20'
+                    }`}>
+                        <ShieldAlert size={52} />
+                    </div>
+
+                    <div className="relative z-10 flex flex-col gap-3.5">
+                        {/* Header Eyebrow & Status Badge */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center border shadow-inner ${
+                                    hasHighSeverity ? 'badge-danger' : 'badge-warning'
+                                }`}>
+                                    <ShieldAlert size={13} />
+                                </div>
+                                <h2 className="text-[9px] font-black uppercase tracking-[3px] text-text-muted">
+                                    Grip Radar
+                                </h2>
+                            </div>
+
+                            <span className={`text-[8.5px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 border ${
                                 hasHighSeverity ? 'badge-danger' : 'badge-warning'
                             }`}>
-                                <ShieldAlert size={16} />
-                            </div>
-                            <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                                    hasHighSeverity ? 'bg-status-danger' : 'bg-status-warning'
-                                }`} />
-                                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                                    hasHighSeverity ? 'bg-status-danger' : 'bg-status-warning'
-                                }`} />
+                                <span className={`w-1.5 h-1.5 rounded-full ${hasHighSeverity ? 'bg-status-danger animate-ping' : 'bg-status-warning'}`} />
+                                {flags.length} {flags.length === 1 ? 'Anomaly' : 'Anomalies'} Detected
                             </span>
                         </div>
 
-                        {/* Title & Preview info */}
-                        <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-                                    Grip Radar
-                                </span>
-                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
-                                    hasHighSeverity ? 'badge-danger' : 'badge-warning'
-                                }`}>
-                                    {flags.length} {flags.length === 1 ? 'Anomaly' : 'Anomalies'}
-                                </span>
-                            </div>
-
-                            <p className="text-xs font-semibold text-text-primary truncate mt-0.5 flex items-center gap-1.5">
-                                <span className="truncate">{flags[0]?.title}</span>
-                                {flags[0]?.amount != null && (
-                                    <span className="text-text-muted font-normal shrink-0 tabular-nums">
-                                        • {formatCurrency(Math.abs(Number(flags[0].amount)))}
-                                    </span>
-                                )}
-                                {flags.length > 1 && (
-                                    <span className="text-text-muted text-[10px] font-medium shrink-0">
-                                        +{flags.length - 1} more
-                                    </span>
-                                )}
+                        {/* Big Monetary Anchor & Subtitle */}
+                        <div>
+                            <p className="text-2xl sm:text-3xl font-black text-primary tracking-tight tabular-nums">
+                                {formatCurrency(totalFlaggedVolume)}
                             </p>
+                            <p className="text-[9px] text-text-muted font-bold uppercase tracking-widest mt-1">
+                                Flagged Outflow • Requires Review
+                            </p>
+                            {topFlag?.description && (
+                                <p className="text-[10.5px] font-medium leading-relaxed mt-2.5 max-w-[340px] text-text-secondary line-clamp-2">
+                                    "{topFlag.description}"
+                                </p>
+                            )}
                         </div>
-                    </div>
 
-                    {/* Action Button */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="px-3 py-1.5 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle group-hover:border-border-default text-xs font-semibold text-text-primary group-hover:text-accent-text flex items-center gap-1 transition-all">
-                            <span>Review</span>
-                            <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
-                        </span>
+                        {/* Signal Breakdown Chips */}
+                        {topSignals.length > 0 && (
+                            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                {topSignals.map((f) => {
+                                    const meta = getAnomalyMeta(f.anomaly_type);
+                                    return (
+                                        <span
+                                            key={f.id}
+                                            className="text-[9px] font-bold px-2.5 py-1 rounded-lg bg-surface border border-border-subtle text-text-muted flex items-center gap-1.5 uppercase tracking-wider"
+                                        >
+                                            <span className={`w-1.5 h-1.5 rounded-full ${f.severity === 'high' ? 'bg-status-danger' : 'bg-status-warning'}`} />
+                                            <span className="text-text-primary font-semibold truncate max-w-[120px]">
+                                                {f.merchant_name || meta.label}
+                                            </span>
+                                            {f.amount != null && (
+                                                <span className="tabular-nums font-bold text-text-primary">
+                                                    {formatCurrency(Math.abs(Number(f.amount)))}
+                                                </span>
+                                            )}
+                                        </span>
+                                    );
+                                })}
+                                {flags.length > 2 && (
+                                    <span className="text-[9px] font-bold px-2 py-1 rounded-lg bg-surface-pill border border-border-subtle text-text-muted">
+                                        +{flags.length - 2} more
+                                    </span>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Action Footer */}
+                        <div className="flex items-center justify-between pt-1 border-t border-border-subtle/50 text-text-muted group-hover:text-accent-text transition-colors">
+                            <span className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                Review & Triage Signals
+                            </span>
+                            <span className="text-[10px] font-bold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                                <span>Inspect All</span>
+                                <ArrowRight size={12} />
+                            </span>
+                        </div>
                     </div>
                 </div>
             )}
