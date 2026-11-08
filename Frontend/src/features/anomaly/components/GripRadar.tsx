@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect } from 'react';
+import React, { memo, useState, useEffect, useMemo } from 'react';
 import {
     ShieldAlert,
     ShieldCheck,
@@ -14,7 +14,9 @@ import {
     ArrowRight,
     ExternalLink,
     AlertTriangle,
-    Check
+    Check,
+    CheckCheck,
+    SlidersHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -31,43 +33,54 @@ interface GripRadarProps {
     formatCurrency: (amount: number) => string;
 }
 
-const getAnomalyIcon = (type: string) => {
+const getAnomalyMeta = (type: string) => {
     switch (type) {
         case 'amount_spike':
-            return TrendingUp;
+            return {
+                label: 'Spend Spike',
+                icon: TrendingUp,
+                colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+            };
         case 'near_duplicate':
-            return Copy;
+            return {
+                label: 'Duplicate Charge',
+                icon: Copy,
+                colorClass: 'text-rose-500 bg-rose-500/10 border-rose-500/20'
+            };
         case 'category_burn':
-            return Flame;
+            return {
+                label: 'Category Velocity',
+                icon: Flame,
+                colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+            };
         case 'recurring_drift':
-            return RefreshCw;
+            return {
+                label: 'Surety Drift',
+                icon: RefreshCw,
+                colorClass: 'text-blue-500 bg-blue-500/10 border-blue-500/20'
+            };
         case 'new_merchant_high':
-            return Store;
+            return {
+                label: 'First-time Merchant',
+                icon: Store,
+                colorClass: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20'
+            };
         case 'settle_up_aging':
-            return Handshake;
+            return {
+                label: 'Aging Debt',
+                icon: Handshake,
+                colorClass: 'text-rose-500 bg-rose-500/10 border-rose-500/20'
+            };
         default:
-            return AlertTriangle;
+            return {
+                label: 'Anomaly',
+                icon: AlertTriangle,
+                colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+            };
     }
 };
 
-const getAnomalyTypeLabel = (type: string) => {
-    switch (type) {
-        case 'amount_spike':
-            return 'Spend Spike';
-        case 'near_duplicate':
-            return 'Duplicate Charge';
-        case 'category_burn':
-            return 'Category Velocity';
-        case 'recurring_drift':
-            return 'Surety Drift';
-        case 'new_merchant_high':
-            return 'New Merchant';
-        case 'settle_up_aging':
-            return 'Aging Debt';
-        default:
-            return 'Anomaly';
-    }
-};
+type FilterCategory = 'all' | 'high' | 'spikes' | 'surety_settle';
 
 export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => {
     const navigate = useNavigate();
@@ -78,6 +91,7 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
+    const [selectedFilter, setSelectedFilter] = useState<FilterCategory>('all');
 
     // Body scroll lock when drawer is open
     useEffect(() => {
@@ -89,8 +103,8 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
         }
     }, [isDrawerOpen]);
 
-    const handleScan = async (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleScan = async (e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
         haptics.impact('medium');
         setIsScanning(true);
         try {
@@ -132,7 +146,23 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
     const flags = data?.flags || [];
     const hasFlags = flags.length > 0;
     const hasHighSeverity = (data?.high_severity_count || 0) > 0;
-    const totalFlaggedVolume = flags.reduce((acc, f) => acc + (f.amount ? Math.abs(Number(f.amount)) : 0), 0);
+    const totalFlaggedVolume = useMemo(() => {
+        return flags.reduce((acc, f) => acc + (f.amount ? Math.abs(Number(f.amount)) : 0), 0);
+    }, [flags]);
+
+    // Filtered flags for the drawer
+    const filteredFlags = useMemo(() => {
+        if (selectedFilter === 'high') {
+            return flags.filter(f => f.severity === 'high');
+        }
+        if (selectedFilter === 'spikes') {
+            return flags.filter(f => f.anomaly_type === 'amount_spike' || f.anomaly_type === 'category_burn');
+        }
+        if (selectedFilter === 'surety_settle') {
+            return flags.filter(f => f.anomaly_type === 'recurring_drift' || f.anomaly_type === 'settle_up_aging');
+        }
+        return flags;
+    }, [flags, selectedFilter]);
 
     // 1. Loading Skeleton
     if (isLoading) {
@@ -153,7 +183,7 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
         <>
             {/* Dashboard Compact Card */}
             {!hasFlags ? (
-                // ALL CLEAR STATE: Compact, calm, reassuring row
+                // ALL CLEAR STATE: Minimalist reassuring row
                 <div
                     onClick={() => {
                         haptics.selection();
@@ -267,7 +297,7 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
             <AnimatePresence>
                 {isDrawerOpen && (
                     <div className="fixed inset-0 z-[2000] flex justify-center pointer-events-none">
-                        {/* Backdrop */}
+                        {/* Backdrop with progressive blur & dimming */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -279,7 +309,7 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                             className="absolute inset-0 bg-overlay backdrop-blur-md pointer-events-auto"
                         />
 
-                        {/* Sheet */}
+                        {/* Bottom Sheet Surface */}
                         <motion.div
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
@@ -296,7 +326,7 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                                     haptics.selection();
                                 }
                             }}
-                            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl h-[88vh] max-h-[88vh] glass-drawer rounded-t-[2.5rem] flex flex-col shadow-2xl overflow-hidden pointer-events-auto z-[2000]"
+                            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl h-[90vh] max-h-[90vh] glass-drawer rounded-t-[2.5rem] flex flex-col shadow-2xl overflow-hidden pointer-events-auto z-[2000]"
                         >
                             {/* Grabber Handle */}
                             <div
@@ -309,193 +339,274 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                                 <div className="w-10 h-1.5 bg-border-strong rounded-full transition-colors active:scale-95" />
                             </div>
 
-                            {/* Drawer Header */}
-                            <div className="px-5 sm:px-6 py-3.5 border-b border-border-subtle flex items-center justify-between shrink-0 bg-surface/80 backdrop-blur-md">
+                            {/* Clean Header Bar */}
+                            <div className="px-5 sm:px-6 py-3 border-b border-border-subtle flex items-center justify-between shrink-0 bg-surface/80 backdrop-blur-md">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                                         hasFlags ? (hasHighSeverity ? 'badge-danger' : 'badge-warning') : 'badge-success'
                                     }`}>
-                                        {hasFlags ? <ShieldAlert size={16} /> : <ShieldCheck size={16} />}
+                                        {hasFlags ? <ShieldAlert size={18} /> : <ShieldCheck size={18} />}
                                     </div>
                                     <div className="min-w-0">
-                                        <h3 className="text-base font-semibold text-text-primary tracking-tight truncate heading-apple">
+                                        <h3 className="text-base sm:text-lg font-bold text-text-primary tracking-tight truncate heading-apple">
                                             Grip Radar
                                         </h3>
                                         <p className="text-xs text-text-muted truncate">
-                                            {hasFlags ? `${flags.length} active spending signals detected` : 'All transactions verified'}
+                                            Spending Watchdog & Anomaly Triage
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <button
-                                        type="button"
-                                        onClick={handleScan}
-                                        disabled={isScanning}
-                                        className="px-3 py-1.5 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-xs font-semibold text-text-muted hover:text-text-primary flex items-center gap-1.5 active:scale-95 transition-all"
-                                        title="Scan transactions now"
-                                    >
-                                        <RotateCw size={12} className={isScanning ? 'animate-spin text-accent-text' : ''} />
-                                        <span>{isScanning ? 'Scanning...' : 'Scan Now'}</span>
-                                    </button>
-
-                                    {flags.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={handleDismissAll}
-                                            disabled={dismissAllMutation.isPending}
-                                            className="px-3 py-1.5 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-xs font-semibold text-text-muted hover:text-text-primary active:scale-95 transition-all"
-                                        >
-                                            Dismiss All
-                                        </button>
-                                    )}
-
-                                    <button
-                                        onClick={() => {
-                                            haptics.selection();
-                                            setIsDrawerOpen(false);
-                                        }}
-                                        className="w-8 h-8 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary active:scale-90 transition-all shadow-xs"
-                                        aria-label="Close"
-                                    >
-                                        <ChevronDown size={16} />
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={() => {
+                                        haptics.selection();
+                                        setIsDrawerOpen(false);
+                                    }}
+                                    className="w-9 h-9 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary active:scale-90 transition-all shadow-xs"
+                                    aria-label="Close"
+                                >
+                                    <ChevronDown size={20} />
+                                </button>
                             </div>
 
-                            {/* Drawer Content */}
-                            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-3.5 custom-scrollbar touch-pan-y overscroll-contain">
+                            {/* Scrollable Content Body */}
+                            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 custom-scrollbar touch-pan-y overscroll-contain">
                                 {!hasFlags ? (
                                     // Empty state inside drawer
-                                    <div className="py-16 px-4 text-center space-y-3">
-                                        <div className="w-12 h-12 rounded-2xl badge-success flex items-center justify-center mx-auto">
-                                            <ShieldCheck size={24} />
+                                    <div className="py-20 px-4 text-center space-y-4">
+                                        <div className="w-14 h-14 rounded-3xl badge-success flex items-center justify-center mx-auto shadow-sm">
+                                            <ShieldCheck size={28} />
                                         </div>
-                                        <div>
-                                            <h4 className="text-base font-semibold text-text-primary">
-                                                All Clear
+                                        <div className="space-y-1">
+                                            <h4 className="text-base sm:text-lg font-bold text-text-primary">
+                                                All Clear • Zero Active Anomalies
                                             </h4>
-                                            <p className="text-xs text-text-muted max-w-sm mx-auto mt-1 leading-relaxed">
-                                                No unusual amount spikes, duplicate transactions, or surety budget drifts were detected.
+                                            <p className="text-xs text-text-muted max-w-sm mx-auto leading-relaxed">
+                                                All transactions and committed subscriptions are currently behaving within historical baselines.
                                             </p>
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={handleScan}
+                                            onClick={() => handleScan()}
                                             disabled={isScanning}
-                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-border-subtle hover:border-border-default text-xs font-semibold text-text-primary hover:text-accent-text transition-all active:scale-95 mt-2"
+                                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface border border-border-subtle hover:border-border-default text-xs font-semibold text-text-primary hover:text-accent-text transition-all active:scale-95 shadow-xs"
                                         >
                                             <RotateCw size={12} className={isScanning ? 'animate-spin' : ''} />
-                                            <span>Run Radar Scan</span>
+                                            <span>{isScanning ? 'Scanning...' : 'Run Radar Scan'}</span>
                                         </button>
                                     </div>
                                 ) : (
                                     <>
-                                        {/* Volume / Summary Header Strip */}
-                                        <div className="p-3.5 sm:p-4 rounded-2xl bg-surface-subtle border border-border-subtle flex items-center justify-between gap-3">
-                                            <div>
-                                                <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted block">
-                                                    Flagged Outflow Volume
-                                                </span>
-                                                <p className="text-lg font-bold text-text-primary tabular-nums mt-0.5">
-                                                    {formatCurrency(totalFlaggedVolume)}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                {(data?.high_severity_count || 0) > 0 && (
-                                                    <span className="badge-danger text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">
-                                                        {data?.high_severity_count} High Priority
+                                        {/* Financial Overview & Actions Hero Card */}
+                                        <div className="p-4 sm:p-5 rounded-2xl bg-surface-subtle border border-border-subtle space-y-3.5 shadow-sm">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
+                                                        Total Flagged Outflow
                                                     </span>
+                                                    <p className="text-2xl sm:text-3xl font-black text-text-primary tracking-tight tabular-nums mt-0.5">
+                                                        {formatCurrency(totalFlaggedVolume)}
+                                                    </p>
+                                                </div>
+
+                                                <div className="flex flex-col items-end gap-1.5">
+                                                    <div className="flex items-center gap-1.5">
+                                                        {(data?.high_severity_count || 0) > 0 && (
+                                                            <span className="badge-danger text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full">
+                                                                {data?.high_severity_count} High Priority
+                                                            </span>
+                                                        )}
+                                                        <span className="badge-neutral text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full">
+                                                            {flags.length} Total
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-[10px] text-text-muted">
+                                                        Scanned daily at 6:00 AM IST
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Toolbar Controls inside Hero */}
+                                            <div className="flex items-center justify-between pt-2 border-t border-border-subtle/60 gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleScan()}
+                                                    disabled={isScanning}
+                                                    className="px-3 py-1.5 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-xs font-semibold text-text-muted hover:text-text-primary flex items-center gap-1.5 active:scale-95 transition-all shadow-xs"
+                                                >
+                                                    <RotateCw size={12} className={isScanning ? 'animate-spin text-accent-text' : ''} />
+                                                    <span>{isScanning ? 'Scanning...' : 'Re-scan History'}</span>
+                                                </button>
+
+                                                {flags.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleDismissAll}
+                                                        disabled={dismissAllMutation.isPending}
+                                                        className="px-3 py-1.5 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-xs font-semibold text-text-muted hover:text-text-primary flex items-center gap-1.5 active:scale-95 transition-all shadow-xs"
+                                                    >
+                                                        <CheckCheck size={12} />
+                                                        <span>Dismiss All ({flags.length})</span>
+                                                    </button>
                                                 )}
-                                                <span className="badge-neutral text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">
-                                                    {flags.length} Total
-                                                </span>
                                             </div>
                                         </div>
 
-                                        {/* List of Anomaly Cards */}
-                                        <div className="space-y-2.5">
-                                            <AnimatePresence>
-                                                {flags.map((flag) => {
-                                                    const Icon = getAnomalyIcon(flag.anomaly_type);
+                                        {/* Filter Chips (if 3+ flags) */}
+                                        {flags.length >= 3 && (
+                                            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px] font-semibold">
+                                                <button
+                                                    onClick={() => setSelectedFilter('all')}
+                                                    className={`px-3 py-1 rounded-xl border transition-all active:scale-95 ${
+                                                        selectedFilter === 'all'
+                                                            ? 'bg-primary text-text-inverse border-transparent'
+                                                            : 'bg-surface border-border-subtle text-text-muted hover:text-text-primary'
+                                                    }`}
+                                                >
+                                                    All ({flags.length})
+                                                </button>
+
+                                                {(data?.high_severity_count || 0) > 0 && (
+                                                    <button
+                                                        onClick={() => setSelectedFilter('high')}
+                                                        className={`px-3 py-1 rounded-xl border transition-all active:scale-95 ${
+                                                            selectedFilter === 'high'
+                                                                ? 'bg-status-danger text-white border-transparent'
+                                                                : 'bg-surface border-border-subtle text-text-muted hover:text-status-danger'
+                                                        }`}
+                                                    >
+                                                        High Priority ({data?.high_severity_count})
+                                                    </button>
+                                                )}
+
+                                                <button
+                                                    onClick={() => setSelectedFilter('spikes')}
+                                                    className={`px-3 py-1 rounded-xl border transition-all active:scale-95 ${
+                                                        selectedFilter === 'spikes'
+                                                            ? 'bg-primary text-text-inverse border-transparent'
+                                                            : 'bg-surface border-border-subtle text-text-muted hover:text-text-primary'
+                                                    }`}
+                                                >
+                                                    Spikes & Velocity
+                                                </button>
+
+                                                <button
+                                                    onClick={() => setSelectedFilter('surety_settle')}
+                                                    className={`px-3 py-1 rounded-xl border transition-all active:scale-95 ${
+                                                        selectedFilter === 'surety_settle'
+                                                            ? 'bg-primary text-text-inverse border-transparent'
+                                                            : 'bg-surface border-border-subtle text-text-muted hover:text-text-primary'
+                                                    }`}
+                                                >
+                                                    Surety & Debt
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Anomaly Cards Section */}
+                                        <div className="space-y-3 pt-1">
+                                            <div className="flex items-center justify-between px-1">
+                                                <h4 className="text-[11px] font-bold uppercase tracking-wider text-text-muted">
+                                                    Flagged Events ({filteredFlags.length})
+                                                </h4>
+                                                <span className="text-[10px] text-text-muted">
+                                                    Tap to inspect details
+                                                </span>
+                                            </div>
+
+                                            <AnimatePresence mode="popLayout">
+                                                {filteredFlags.map((flag) => {
+                                                    const meta = getAnomalyMeta(flag.anomaly_type);
+                                                    const Icon = meta.icon;
                                                     const isHigh = flag.severity === 'high';
-                                                    const typeLabel = getAnomalyTypeLabel(flag.anomaly_type);
 
                                                     return (
                                                         <motion.div
                                                             key={flag.id}
                                                             layout
-                                                            initial={{ opacity: 0, y: 8 }}
+                                                            initial={{ opacity: 0, y: 10 }}
                                                             animate={{ opacity: 1, y: 0 }}
                                                             exit={{ opacity: 0, scale: 0.96 }}
                                                             transition={{ duration: 0.2 }}
-                                                            className="p-4 rounded-2xl bg-surface border border-border-subtle hover:border-border-default/60 transition-all space-y-3 shadow-xs"
+                                                            className={`p-4 sm:p-5 rounded-2xl bg-surface border transition-all space-y-3.5 shadow-xs ${
+                                                                isHigh
+                                                                    ? 'border-status-danger-border/40 hover:border-status-danger-border/70'
+                                                                    : 'border-border-subtle hover:border-border-default'
+                                                            }`}
                                                         >
-                                                            {/* Card Header */}
+                                                            {/* Card Header: Type, Title, and Amount */}
                                                             <div className="flex items-start justify-between gap-3">
                                                                 <div className="flex items-start gap-3 min-w-0 flex-1">
-                                                                    <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center mt-0.5 ${
-                                                                        isHigh ? 'badge-danger' : 'badge-warning'
-                                                                    }`}>
-                                                                        <Icon size={16} />
+                                                                    <div className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border mt-0.5 ${meta.colorClass}`}>
+                                                                        <Icon size={18} />
                                                                     </div>
 
-                                                                    <div className="min-w-0 space-y-0.5 flex-1">
-                                                                        <div className="flex flex-wrap items-center gap-1.5">
-                                                                            <span className="text-sm font-semibold text-text-primary">
-                                                                                {flag.title}
-                                                                            </span>
-                                                                            {flag.amount != null && (
-                                                                                <span className="text-sm font-semibold text-text-primary tabular-nums">
-                                                                                    • {formatCurrency(Math.abs(Number(flag.amount)))}
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
+                                                                    <div className="min-w-0 flex-1 space-y-1">
                                                                         <div className="flex items-center gap-1.5 flex-wrap">
                                                                             <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${
                                                                                 isHigh ? 'badge-danger' : 'badge-warning'
                                                                             }`}>
-                                                                                {isHigh ? 'High Severity' : 'Attention'}
+                                                                                {isHigh ? 'High Priority' : 'Attention'}
                                                                             </span>
                                                                             <span className="badge-neutral text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md">
-                                                                                {typeLabel}
+                                                                                {meta.label}
                                                                             </span>
                                                                         </div>
+
+                                                                        <h5 className="text-sm sm:text-base font-bold text-text-primary tracking-tight truncate">
+                                                                            {flag.title}
+                                                                        </h5>
                                                                     </div>
                                                                 </div>
 
-                                                                {/* Dismiss button */}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => handleDismiss(e, flag.id)}
-                                                                    className="p-1.5 rounded-lg bg-surface-subtle hover:bg-surface-pill text-text-muted hover:text-text-primary transition-colors shrink-0"
-                                                                    title="Dismiss alert"
-                                                                    aria-label="Dismiss alert"
-                                                                >
-                                                                    <X size={14} />
-                                                                </button>
+                                                                {/* Prominent Amount */}
+                                                                {flag.amount != null && (
+                                                                    <div className="text-right shrink-0">
+                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
+                                                                            Charge / Balance
+                                                                        </span>
+                                                                        <p className="text-base sm:text-lg font-black text-text-primary tabular-nums mt-0.5">
+                                                                            {formatCurrency(Math.abs(Number(flag.amount)))}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
                                                             </div>
 
-                                                            {/* Description */}
-                                                            <p className="text-xs text-text-secondary leading-relaxed pl-11">
-                                                                {flag.description}
-                                                            </p>
+                                                            {/* Diagnostic Inset Panel */}
+                                                            <div className="p-3.5 rounded-xl bg-surface-subtle border border-border-subtle/70 space-y-2">
+                                                                <p className="text-xs text-text-secondary leading-relaxed">
+                                                                    {flag.description}
+                                                                </p>
 
-                                                            {/* Bottom Bar: Baseline chip + Navigation action */}
-                                                            <div className="flex items-center justify-between gap-2 pt-1 pl-11 flex-wrap">
-                                                                {flag.expected_range ? (
-                                                                    <span className="text-[10px] font-mono text-text-muted bg-surface-pill px-2 py-0.5 rounded-md border border-border-subtle/50">
-                                                                        {flag.expected_range}
-                                                                    </span>
-                                                                ) : <div />}
+                                                                {flag.expected_range && (
+                                                                    <div className="flex items-center gap-2 pt-1 border-t border-border-subtle/50 text-[11px] flex-wrap">
+                                                                        <span className="text-text-muted font-medium">Expected Baseline:</span>
+                                                                        <span className="font-mono text-text-primary bg-surface-pill px-2 py-0.5 rounded border border-border-subtle/50 font-semibold">
+                                                                            {flag.expected_range}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
 
+                                                            {/* Action Footer: Inspect vs Dismiss */}
+                                                            <div className="flex items-center justify-between gap-2 pt-0.5">
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => handleNavigate(flag)}
-                                                                    className="px-2.5 py-1 rounded-lg bg-surface-subtle hover:bg-surface-pill border border-border-subtle text-xs font-semibold text-text-primary hover:text-accent-text flex items-center gap-1 transition-all active:scale-95"
+                                                                    className="px-3.5 py-2 rounded-xl bg-surface-pill hover:bg-surface-hover border border-border-subtle hover:border-border-default text-xs font-semibold text-text-primary hover:text-accent-text flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
                                                                 >
-                                                                    <span>{flag.anomaly_type === 'settle_up_aging' ? 'View Settle Up' : 'View Transaction'}</span>
+                                                                    <span>{flag.anomaly_type === 'settle_up_aging' ? 'Inspect in Settle Up' : 'Inspect Transaction'}</span>
                                                                     <ExternalLink size={12} />
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => handleDismiss(e, flag.id)}
+                                                                    className="px-3 py-2 rounded-xl bg-surface-pill hover:bg-surface-hover border border-border-subtle hover:border-status-danger-border text-xs font-semibold text-text-muted hover:text-status-danger flex items-center gap-1.5 transition-all active:scale-95"
+                                                                    title="Dismiss anomaly flag"
+                                                                >
+                                                                    <Check size={12} />
+                                                                    <span>Dismiss</span>
                                                                 </button>
                                                             </div>
                                                         </motion.div>
