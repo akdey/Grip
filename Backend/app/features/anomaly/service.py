@@ -7,7 +7,7 @@ import zoneinfo
 import numpy as np
 import pandas as pd
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func, or_
+from sqlalchemy import select, and_, func, or_, delete
 
 from app.core.config import get_settings
 from app.features.anomaly.models import AnomalyFlag
