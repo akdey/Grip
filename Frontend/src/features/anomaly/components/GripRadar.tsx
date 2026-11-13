@@ -1,4 +1,5 @@
 import React, { memo, useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
     ShieldAlert,
     ShieldCheck,
@@ -13,10 +14,9 @@ import {
     ArrowRight,
     ExternalLink,
     AlertTriangle,
-    Check,
-    CheckCheck
+    Check
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
     useAnomalyFlags,
@@ -37,43 +37,43 @@ const getAnomalyMeta = (type: string) => {
             return {
                 label: 'Spend Spike',
                 icon: TrendingUp,
-                colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+                colorClass: 'badge-warning'
             };
         case 'near_duplicate':
             return {
                 label: 'Duplicate Charge',
                 icon: Copy,
-                colorClass: 'text-rose-500 bg-rose-500/10 border-rose-500/20'
+                colorClass: 'badge-danger'
             };
         case 'category_burn':
             return {
                 label: 'Category Velocity',
                 icon: Flame,
-                colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+                colorClass: 'badge-warning'
             };
         case 'recurring_drift':
             return {
                 label: 'Surety Drift',
                 icon: RefreshCw,
-                colorClass: 'text-blue-500 bg-blue-500/10 border-blue-500/20'
+                colorClass: 'badge-neutral'
             };
         case 'new_merchant_high':
             return {
                 label: 'First-time Merchant',
                 icon: Store,
-                colorClass: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20'
+                colorClass: 'badge-neutral'
             };
         case 'settle_up_aging':
             return {
                 label: 'Aging Debt',
                 icon: Handshake,
-                colorClass: 'text-rose-500 bg-rose-500/10 border-rose-500/20'
+                colorClass: 'badge-danger'
             };
         default:
             return {
                 label: 'Anomaly',
                 icon: AlertTriangle,
-                colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+                colorClass: 'badge-warning'
             };
     }
 };
@@ -87,15 +87,26 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
+    const dragControls = useDragControls();
 
-    // Body scroll lock when drawer is open
+    // Body scroll lock & Escape key dismiss when drawer is open
     useEffect(() => {
-        if (isDrawerOpen) {
-            document.body.style.overflow = 'hidden';
-            return () => {
-                document.body.style.overflow = '';
-            };
-        }
+        if (!isDrawerOpen) return;
+
+        document.body.style.overflow = 'hidden';
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                haptics.selection();
+                setIsDrawerOpen(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.body.style.overflow = '';
+            window.removeEventListener('keydown', handleKeyDown);
+        };
     }, [isDrawerOpen]);
 
     const handleScan = async (e?: React.MouseEvent) => {
@@ -138,7 +149,7 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
         }
     };
 
-    const flags = data?.flags || [];
+    const flags = useMemo(() => data?.flags || [], [data?.flags]);
     const hasFlags = flags.length > 0;
     const hasHighSeverity = (data?.high_severity_count || 0) > 0;
     const totalFlaggedVolume = useMemo(() => {
@@ -146,7 +157,7 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
     }, [flags]);
 
     const topFlag = flags[0];
-    const topSignals = flags.slice(0, 2);
+    const topSignals = useMemo(() => flags.slice(0, 2), [flags]);
 
     // 1. Loading Skeleton
     if (isLoading) {
@@ -182,11 +193,11 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                         </div>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-black uppercase tracking-[3px] text-text-muted">
+                                <span className="text-[10px] font-black uppercase tracking-[3px] text-text-muted">
                                     Grip Radar
                                 </span>
-                                <span className="badge-success text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1 border">
-                                    <Check size={10} /> All Clear
+                                <span className="badge-success text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1 border">
+                                    <Check size={12} /> All Clear
                                 </span>
                             </div>
                             <p className="text-xs text-text-muted truncate mt-0.5">
@@ -234,14 +245,14 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                             <div className="flex items-center gap-2">
                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center border shadow-inner ${hasHighSeverity ? 'badge-danger' : 'badge-warning'
                                     }`}>
-                                    <ShieldAlert size={13} />
+                                    <ShieldAlert size={16} />
                                 </div>
-                                <h2 className="text-[9px] font-black uppercase tracking-[3px] text-text-muted">
+                                <h2 className="text-[10px] font-black uppercase tracking-[3px] text-text-muted">
                                     Grip Radar
                                 </h2>
                             </div>
 
-                            <span className={`text-[8.5px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 border ${hasHighSeverity ? 'badge-danger' : 'badge-warning'
+                            <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 border ${hasHighSeverity ? 'badge-danger' : 'badge-warning'
                                 }`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${hasHighSeverity ? 'bg-status-danger animate-ping' : 'bg-status-warning'}`} />
                                 {flags.length} {flags.length === 1 ? 'Anomaly' : 'Anomalies'} Detected
@@ -253,11 +264,11 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                             <p className="text-2xl sm:text-3xl font-black text-primary tracking-tight tabular-nums">
                                 {formatCurrency(totalFlaggedVolume)}
                             </p>
-                            <p className="text-[9px] text-text-muted font-bold uppercase tracking-widest mt-1">
+                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">
                                 Flagged Outflow • Requires Review
                             </p>
                             {topFlag?.description && (
-                                <p className="text-[10.5px] font-medium leading-relaxed mt-2.5 max-w-[340px] text-text-secondary line-clamp-2">
+                                <p className="text-xs font-medium leading-relaxed mt-2.5 max-w-[340px] text-text-secondary line-clamp-2">
                                     "{topFlag.description}"
                                 </p>
                             )}
@@ -271,7 +282,7 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                                     return (
                                         <span
                                             key={f.id}
-                                            className="text-[9px] font-bold px-2.5 py-1 rounded-lg bg-surface border border-border-subtle text-text-muted flex items-center gap-1.5 uppercase tracking-wider"
+                                            className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-surface border border-border-subtle text-text-muted flex items-center gap-1.5 uppercase tracking-wider"
                                         >
                                             <span className={`w-1.5 h-1.5 rounded-full ${f.severity === 'high' ? 'bg-status-danger' : 'bg-status-warning'}`} />
                                             <span className="text-text-primary font-semibold truncate max-w-[120px]">
@@ -286,7 +297,7 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                                     );
                                 })}
                                 {flags.length > 2 && (
-                                    <span className="text-[9px] font-bold px-2 py-1 rounded-lg bg-surface-pill border border-border-subtle text-text-muted">
+                                    <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-surface-pill border border-border-subtle text-text-muted">
                                         +{flags.length - 2} more
                                     </span>
                                 )}
@@ -295,7 +306,7 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
 
                         {/* Action Footer */}
                         <div className="flex items-center justify-between pt-1 border-t border-border-subtle/50 text-text-muted group-hover:text-accent-text transition-colors">
-                            <span className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
                                 Review & Triage Signals
                             </span>
                             <span className="text-[10px] font-bold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
@@ -307,231 +318,243 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                 </div>
             )}
 
-            {/* Apple-grade Review Bottom Sheet Drawer: Natural Height & Fits Contents */}
-            <AnimatePresence>
-                {isDrawerOpen && (
-                    <div className="fixed inset-0 z-[2000] flex justify-center pointer-events-none">
-                        {/* Backdrop with progressive blur & dimming */}
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => {
-                                haptics.selection();
-                                setIsDrawerOpen(false);
-                            }}
-                            className="absolute inset-0 bg-overlay backdrop-blur-md pointer-events-auto"
-                        />
+            {/* Apple-grade Review Bottom Sheet Drawer rendered in Portal */}
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {isDrawerOpen && (
+                        <div className="fixed inset-0 z-[2000] flex items-end justify-center pointer-events-none">
+                            {/* Backdrop with progressive blur & dimming */}
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.25, ease: 'easeOut' }}
+                                onClick={() => {
+                                    haptics.selection();
+                                    setIsDrawerOpen(false);
+                                }}
+                                className="absolute inset-0 bg-overlay backdrop-blur-md pointer-events-auto"
+                            />
 
-                        {/* Bottom Sheet Surface: Natural height (max-h-[82vh] h-auto) so it stays low when few items */}
-                        <motion.div
-                            initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
-                            transition={{ type: 'spring', damping: 28, stiffness: 340, mass: 0.85 }}
-                            drag="y"
-                            dragConstraints={{ top: 0, bottom: 0 }}
-                            dragElastic={{ top: 0.14, bottom: 0.8 }}
-                            onDragEnd={(_, info) => {
-                                    if (info.offset.y > 120 || info.velocity.y > 500) {
+                            {/* Bottom Sheet Surface: Centered by flexbox, naturally sized, sits fully above mobile dock */}
+                            <motion.div
+                                initial={{ y: '100%' }}
+                                animate={{ y: 0 }}
+                                exit={{ y: '100%' }}
+                                transition={{ type: 'spring', damping: 28, stiffness: 340, mass: 0.85 }}
+                                drag="y"
+                                dragControls={dragControls}
+                                dragListener={false}
+                                dragConstraints={{ top: 0, bottom: 0 }}
+                                dragElastic={{ top: 0.08, bottom: 0.75 }}
+                                onDragEnd={(_, info) => {
+                                    if (info.offset.y > 100 || info.velocity.y > 450) {
                                         haptics.impact('light');
                                         setIsDrawerOpen(false);
                                     } else {
                                         haptics.selection();
                                     }
-                                }
-                            }
-                            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg max-h-[82vh] h-auto glass-drawer rounded-t-[2.5rem] flex flex-col shadow-2xl overflow-hidden pointer-events-auto z-[2000]"
-                        >
-                            {/* Grabber Handle */}
-                            <div
-                                className="flex justify-center pt-3 pb-1.5 shrink-0 cursor-grab active:cursor-grabbing select-none"
-                                onClick={() => {
-                                    haptics.selection();
-                                    setIsDrawerOpen(false);
                                 }}
+                                className="relative w-full max-w-lg max-h-[85vh] h-auto glass-drawer rounded-t-[2.5rem] flex flex-col shadow-2xl overflow-hidden pointer-events-auto z-[2000] touch-manipulation"
                             >
-                                <div className="w-10 h-1 bg-border-strong rounded-full transition-colors active:scale-95" />
-                            </div>
-
-                            {/* Clean, Compact Header Bar */}
-                            <div className="px-5 sm:px-6 py-3 border-b border-border-subtle flex items-center justify-between shrink-0 bg-surface/80 backdrop-blur-md">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                                        hasFlags ? (hasHighSeverity ? 'badge-danger' : 'badge-warning') : 'badge-success'
-                                    }`}>
-                                        {hasFlags ? <ShieldAlert size={16} /> : <ShieldCheck size={16} />}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="text-base font-bold text-text-primary tracking-tight truncate heading-apple">
-                                                Grip Radar
-                                            </h3>
-                                            {hasFlags && (
-                                                <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                                                    hasHighSeverity ? 'badge-danger' : 'badge-warning'
-                                                }`}>
-                                                    {flags.length} {flags.length === 1 ? 'Signal' : 'Signals'}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="text-[11px] text-text-muted truncate">
-                                            {hasFlags ? `Total flagged: ${formatCurrency(totalFlaggedVolume)}` : 'All signals clear'}
-                                        </p>
-                                    </div>
+                                {/* Grabber Handle Area: Dedicated drag trigger */}
+                                <div
+                                    className="flex justify-center pt-3.5 pb-2 shrink-0 cursor-grab active:cursor-grabbing select-none touch-none"
+                                    onPointerDown={(e) => dragControls.start(e)}
+                                    onClick={() => {
+                                        haptics.selection();
+                                        setIsDrawerOpen(false);
+                                    }}
+                                >
+                                    <div className="w-10 h-1.5 bg-border-strong rounded-full transition-colors active:scale-95" />
                                 </div>
 
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleScan()}
-                                        disabled={isScanning}
-                                        className="p-2 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-text-muted hover:text-text-primary transition-all active:scale-95"
-                                        title="Scan transactions now"
-                                        aria-label="Scan transactions now"
-                                    >
-                                        <RotateCw size={13} className={isScanning ? 'animate-spin text-accent-text' : ''} />
-                                    </button>
+                                {/* Clean, Compact Header Bar: Dedicated drag trigger (except buttons) */}
+                                <div
+                                    className="px-5 sm:px-6 py-3 border-b border-border-subtle flex items-center justify-between shrink-0 bg-surface/80 backdrop-blur-md cursor-grab active:cursor-grabbing select-none touch-none"
+                                    onPointerDown={(e) => {
+                                        if ((e.target as HTMLElement).closest('button')) return;
+                                        dragControls.start(e);
+                                    }}
+                                >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                                            hasFlags ? (hasHighSeverity ? 'badge-danger' : 'badge-warning') : 'badge-success'
+                                        }`}>
+                                            {hasFlags ? <ShieldAlert size={16} /> : <ShieldCheck size={16} />}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="text-base font-bold text-text-primary tracking-tight truncate heading-apple">
+                                                    Grip Radar
+                                                </h3>
+                                                {hasFlags && (
+                                                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                                                        hasHighSeverity ? 'badge-danger' : 'badge-warning'
+                                                    }`}>
+                                                        {flags.length} {flags.length === 1 ? 'Signal' : 'Signals'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-text-muted truncate mt-0.5">
+                                                {hasFlags ? `Total flagged: ${formatCurrency(totalFlaggedVolume)}` : 'All signals clear'}
+                                            </p>
+                                        </div>
+                                    </div>
 
-                                    {flags.length > 1 && (
+                                    <div className="flex items-center gap-2 shrink-0">
                                         <button
                                             type="button"
-                                            onClick={handleDismissAll}
-                                            disabled={dismissAllMutation.isPending}
-                                            className="px-2.5 py-1.5 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-[11px] font-semibold text-text-muted hover:text-text-primary active:scale-95 transition-all"
+                                            onClick={() => handleScan()}
+                                            disabled={isScanning}
+                                            className="p-2 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-text-muted hover:text-text-primary transition-all active:scale-95"
+                                            title="Scan transactions now"
+                                            aria-label="Scan transactions now"
                                         >
-                                            Dismiss All
+                                            <RotateCw size={16} className={isScanning ? 'animate-spin text-accent-text' : ''} />
                                         </button>
-                                    )}
 
-                                    <button
-                                        onClick={() => {
-                                            haptics.selection();
-                                            setIsDrawerOpen(false);
-                                        }}
-                                        className="w-8 h-8 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary active:scale-90 transition-all shadow-xs"
-                                        aria-label="Close"
-                                    >
-                                        <ChevronDown size={18} />
-                                    </button>
+                                        {flags.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={handleDismissAll}
+                                                disabled={dismissAllMutation.isPending}
+                                                className="px-2.5 py-1.5 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-xs font-semibold text-text-muted hover:text-text-primary active:scale-95 transition-all"
+                                            >
+                                                Dismiss All
+                                            </button>
+                                        )}
+
+                                        <button
+                                            onClick={() => {
+                                                haptics.selection();
+                                                setIsDrawerOpen(false);
+                                            }}
+                                            className="w-8 h-8 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary active:scale-90 transition-all shadow-xs"
+                                            aria-label="Close"
+                                        >
+                                            <ChevronDown size={20} />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
 
-                                    {/* Scrollable Content Body: Immediately displays anomalies */}
-                                    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-3.5 custom-scrollbar touch-pan-y overscroll-contain">
-                                        {!hasFlags ? (
-                                            // Empty state inside drawer
-                                                    <div className="py-12 px-4 text-center space-y-3">
-                                                        <div className="w-12 h-12 rounded-2xl badge-success flex items-center justify-center mx-auto shadow-sm">
-                                                            <ShieldCheck size={24} />
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                                <h4 className="text-base font-bold text-text-primary">
-                                                                    All Clear • Zero Active Anomalies
-                                                                </h4>
-                                                                <p className="text-xs text-text-muted max-w-sm mx-auto leading-relaxed">
-                                                                    All transactions and committed subscriptions align with historical baselines.
-                                                                </p>
-                                                        </div>
-                                                    </div>
-                                                    ) : (
-                                                                <div className="space-y-3">
-                                                                    <AnimatePresence mode="popLayout">
-                                                                        {flags.map((flag) => {
-                                                                            const meta = getAnomalyMeta(flag.anomaly_type);
-                                                                            const Icon = meta.icon;
-                                                                            const isHigh = flag.severity === 'high';
+                                {/* Scrollable Content Body: Naturally scrolls without triggering drawer drag */}
+                                <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-3.5 custom-scrollbar touch-pan-y overscroll-contain pb-[max(2rem,env(safe-area-inset-bottom,1.5rem))]">
+                                    {!hasFlags ? (
+                                        // Empty state inside drawer
+                                        <div className="py-12 px-4 text-center space-y-3">
+                                            <div className="w-12 h-12 rounded-2xl badge-success flex items-center justify-center mx-auto shadow-sm border">
+                                                <ShieldCheck size={24} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <h4 className="text-base font-bold text-text-primary">
+                                                    All Clear • Zero Active Anomalies
+                                                </h4>
+                                                <p className="text-xs text-text-muted max-w-sm mx-auto leading-relaxed">
+                                                    All transactions and committed subscriptions align with historical baselines.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <AnimatePresence mode="popLayout">
+                                                {flags.map((flag) => {
+                                                    const meta = getAnomalyMeta(flag.anomaly_type);
+                                                    const Icon = meta.icon;
+                                                    const isHigh = flag.severity === 'high';
 
-                                                return (
-                                                                                        <motion.div
-                                                                                            key={flag.id}
-                                                                                            layout
-                                                                                            initial={{ opacity: 0, y: 8 }}
-                                                                                            animate={{ opacity: 1, y: 0 }}
-                                                                                            exit={{ opacity: 0, scale: 0.96 }}
-                                                                                            transition={{ duration: 0.2 }}
-                                                                                            className={`p-4 rounded-2xl bg-surface border transition-all space-y-3 shadow-xs ${isHigh
-                                                                                                    ? 'border-status-danger-border/40 hover:border-status-danger-border/70'
-                                                                                                    : 'border-border-subtle hover:border-border-default'
-                                                                                                }`}
-                                                                                        >
-                                                                    {/* Row 1: Badges & Amount */}
-                                                                    <div className="flex items-center justify-between gap-2">
-                                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                                            <div className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center border ${meta.colorClass}`}>
-                                                                                <Icon size={14} />
-                                                                            </div>
-                                                                            <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-md ${isHigh ? 'badge-danger' : 'badge-warning'
-                                                                                }`}>
-                                                                                {isHigh ? 'High Priority' : 'Review'}
-                                                                            </span>
-                                                                            <span className="badge-neutral text-[9px] font-semibold uppercase px-2 py-0.5 rounded-md">
-                                                                                {meta.label}
-                                                                            </span>
-                                                                        </div>
-
-                                                                        {flag.amount != null && (
-                                                                            <span className="text-base font-black text-text-primary tabular-nums shrink-0">
-                                                                                {formatCurrency(Math.abs(Number(flag.amount)))}
-                                                                            </span>
-                                                                        )}
+                                                    return (
+                                                        <motion.div
+                                                            key={flag.id}
+                                                            layout
+                                                            initial={{ opacity: 0, y: 8 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, scale: 0.96 }}
+                                                            transition={{ duration: 0.2 }}
+                                                            className={`p-4 rounded-2xl bg-surface border transition-all space-y-3 shadow-xs ${isHigh
+                                                                    ? 'border-status-danger-border/40 hover:border-status-danger-border/70'
+                                                                    : 'border-border-subtle hover:border-border-default'
+                                                                }`}
+                                                        >
+                                                            {/* Row 1: Badges & Amount */}
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <div className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center border ${meta.colorClass}`}>
+                                                                        <Icon size={16} />
                                                                     </div>
+                                                                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${isHigh ? 'badge-danger' : 'badge-warning'
+                                                                        }`}>
+                                                                        {isHigh ? 'High Priority' : 'Review'}
+                                                                    </span>
+                                                                    <span className="badge-neutral text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md border">
+                                                                        {meta.label}
+                                                                    </span>
+                                                                </div>
 
-                                                            {/* Row 2: Full Title / Entity without cutoffs */}
+                                                                {flag.amount != null && (
+                                                                    <span className="text-base font-black text-text-primary tabular-nums shrink-0">
+                                                                        {formatCurrency(Math.abs(Number(flag.amount)))}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Row 2: Full Title */}
                                                             <div>
                                                                 <h4 className="text-sm sm:text-base font-bold text-text-primary leading-snug break-words">
                                                                     {flag.title}
                                                                 </h4>
                                                             </div>
 
-                                                                {/* Row 3: Narrative Explanation & Baseline Tag */}
-                                                                <div className="p-3 rounded-xl bg-surface-subtle border border-border-subtle/70 space-y-2">
-                                                                    <p className="text-xs text-text-secondary leading-relaxed break-words">
-                                                                        {flag.description}
-                                                                    </p>
+                                                            {/* Row 3: Narrative Explanation & Baseline Tag */}
+                                                            <div className="p-3 rounded-xl bg-surface-subtle border border-border-subtle/70 space-y-2">
+                                                                <p className="text-xs text-text-secondary leading-relaxed break-words">
+                                                                    {flag.description}
+                                                                </p>
 
-                                                                                            {flag.expected_range && (
-                                                                                                <div className="flex items-center gap-2 pt-1.5 border-t border-border-subtle/50 text-[11px] flex-wrap">
-                                                                                                    <span className="text-text-muted font-medium">Expected:</span>
-                                                                                                    <span className="font-mono text-text-primary bg-surface-pill px-2 py-0.5 rounded border border-border-subtle/50 font-semibold">
-                                                                                                        {flag.expected_range}
-                                                                                                    </span>
-                                                                                                </div>
-                                                                                            )}
-                                                                                        </div>
+                                                                {flag.expected_range && (
+                                                                    <div className="flex items-center gap-2 pt-1.5 border-t border-border-subtle/50 text-xs flex-wrap">
+                                                                        <span className="text-text-muted font-medium">Expected:</span>
+                                                                        <span className="font-mono text-text-primary bg-surface-pill px-2 py-0.5 rounded border border-border-subtle/50 font-semibold">
+                                                                            {flag.expected_range}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
 
-                                                                                    {/* Row 4: Dedicated Full-width Actions */}
-                                                                                    <div className="flex items-center justify-between gap-2 pt-1">
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() => handleNavigate(flag)}
-                                                                                            className="flex-1 py-2 px-3 rounded-xl bg-surface-pill hover:bg-surface-hover border border-border-subtle text-xs font-semibold text-text-primary hover:text-accent-text flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs"
-                                                                                        >
-                                                                                            <span>{flag.anomaly_type === 'settle_up_aging' ? 'Inspect Settle Up' : 'Inspect Transaction'}</span>
-                                                                                            <ExternalLink size={12} />
-                                                                                        </button>
+                                                            {/* Row 4: Dedicated Full-width Actions */}
+                                                            <div className="flex items-center justify-between gap-2 pt-1">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleNavigate(flag)}
+                                                                    className="flex-1 py-2 px-3 rounded-xl bg-surface-pill hover:bg-surface-hover border border-border-subtle text-xs font-semibold text-text-primary hover:text-accent-text flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs"
+                                                                >
+                                                                    <span>{flag.anomaly_type === 'settle_up_aging' ? 'Inspect Settle Up' : 'Inspect Transaction'}</span>
+                                                                    <ExternalLink size={12} />
+                                                                </button>
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => handleDismiss(e, flag.id)}
-                                                                className="py-2 px-3.5 rounded-xl bg-surface-pill hover:bg-surface-hover border border-border-subtle hover:border-status-danger-border text-xs font-semibold text-text-muted hover:text-status-danger flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                                                                title="Dismiss anomaly flag"
-                                                            >
-                                                                <Check size={12} />
-                                                                <span>Dismiss</span>
-                                                            </button>
-                                                        </div>
-                                                    </motion.div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => handleDismiss(e, flag.id)}
+                                                                    className="py-2 px-3.5 rounded-xl bg-surface-pill hover:bg-surface-hover border border-border-subtle hover:border-status-danger-border text-xs font-semibold text-text-muted hover:text-status-danger flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                                                                    title="Dismiss anomaly flag"
+                                                                >
+                                                                    <Check size={12} />
+                                                                    <span>Dismiss</span>
+                                                                </button>
+                                                            </div>
+                                                        </motion.div>
                                                     );
-                                            })}
-                                                </AnimatePresence>
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            </div>
-                )}
-                        </AnimatePresence>
-                    </>
-                );
+                                                })}
+                                            </AnimatePresence>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+        </>
+    );
 });
