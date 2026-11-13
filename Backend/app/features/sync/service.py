@@ -116,69 +116,13 @@ class SyncService:
         await self.db.commit()
         return result.rowcount
 
-    def _compress_email_body(self, text: str) -> str:
-        """
-        Semantic Compression (LLMLingua-2 Concept).
-        Identifies and removes low-information boilerplate while preserving signals.
-        """
+    def _clean_email_body(self, text: str) -> str:
+        """Normalizes excessive whitespace without stripping critical context."""
         if not text:
             return ""
-        
-        # 1. Normalize whitespace and remove common repeated characters
-        text = re.sub(r'[\r\n]{2,}', '\n', text)
+        text = re.sub(r'[\r\n]{3,}', '\n\n', text)
         text = re.sub(r'[ \t]{2,}', ' ', text)
-        text = re.sub(r'-{3,}', '---', text)
-        text = re.sub(r'\.{3,}', '...', text)
-
-        # 2. List of standard low-information bank boilerplate patterns to discard
-        boilerplate_patterns = [
-            r'(?i)If this transaction was not initiated by you.*',
-            r'(?i)To block (?:your|UPI|Card).*',
-            r'(?i)Call us at.*',
-            r'(?i)Always open to help you.*',
-            r'(?i)This is an auto-generated.*',
-            r'(?i)Kindly do not reply.*',
-            r'(?i)Download our app.*',
-            r'(?i)For details on the transaction.*',
-            r'(?i)Important notice:.*',
-            r'(?i)Register for.*',
-            r'(?i)Please note that.*',
-            r'(?i)You are eligible for.*',
-            r'(?i)Pre-approved (?:loan|card|limit).*',
-            r'(?i)Cashback offer.*',
-            r'(?i)Reward points.*',
-            r'(?i)Enjoy (?:benefits|discounts).*'
-        ]
-        
-        lines = text.split('\n')
-        compressed_lines = []
-        
-        # 3. Preserve lines that have "signal" tokens
-        signal_keywords = [
-            r'(?:Rs\.?|INR|₹)\s*[\d,]+', # Amount
-            r'UPI/(?:P2P|P2M)/',        # UPI Path
-            r'[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}', # UPI ID
-            r'(?:Spent|Debited|Credited|Transferred|Paid)', # Verbs
-            r'\d{2}[-/]\d{2}[-/]\d{2,4}', # Dates
-            r'VPA|Merchant|Ref No|Txn ID|Order|Booking|Invoice|Billing|Reference|Thank you for' # Identifiers and human indicators
-        ]
-        signal_re = re.compile('|'.join(signal_keywords), re.IGNORECASE)
-
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-                
-            # Skip if matches minor boilerplate within a line
-            is_boilerplate = any(re.search(p, line) for p in boilerplate_patterns)
-            if is_boilerplate and len(line) > 50:
-                continue
-                
-            # Always keep short lines or lines with signal
-            if len(line) < 100 or signal_re.search(line):
-                compressed_lines.append(line)
-
-        return '\n'.join(compressed_lines)
+        return text.strip()
 
     def _extract_email_body(self, payload: dict) -> str:
         """Recursively extract text/plain or text/html body from message payload."""
@@ -238,48 +182,50 @@ class SyncService:
         if categories_context:
             cat_str = "Available Categories and Sub-categories:\n" + "\n".join([f"- {c}" for c in categories_context]) #[:30]
 
-        # Reordering prompt for KV Cache optimization (Instructions at TOP)
-        # Stage 0: Semantic Compression (LLMLingua-2 Concept)
-        compressed_text = self._compress_email_body(text)
+        # Clean whitespace without stripping meaningful sentences or context
+        cleaned_text = self._clean_email_body(text)
         
-        # Stage 1: KV Cache Optimization & Prompt Reordering
-        # Instructions at top for better prompt caching
         prompt = f"""
         You are a high-precision financial intelligence engine. 
-        TASK: Extract transaction details from the bank notification below.
+        TASK: Determine if an actual financial transaction took place and extract its details.
 
-        CRITICAL EVALUATION: First, carefully read the email to determine if a real transaction ACTUALLY took place. Did money successfully leave or enter the account? Do not assume it is a transaction just because an amount is mentioned.
+        CRITICAL EVALUATION RULE:
+        - Set "is_transaction" to TRUE ONLY if real money was successfully debited, credited, spent, or transferred, changing an account balance.
+        - Set "is_transaction" to FALSE for:
+          * Login alerts, login attempts, or failed access notifications (e.g. "Your attempt to log into Mobile Banking App could not be processed")
+          * Mutual fund NAV notifications, unit allotments, or portfolio valuation statements
+          * Promotional offers, discounts, or pre-approved loans (e.g. "Get 10% off at Croma", "Pre-approved loan")
+          * One-Time Passwords (OTPs) or 2FA verification codes
+          * Payment reminders, bills due alerts, or minimum amount due notices (where no money was paid yet)
+          * Declined or failed transactions
 
-        1. is_transaction: (boolean) 
-           - Set to TRUE ONLY for actual successful DEBIT, CREDIT, or SPEND events that result in money moving and changing a balance.
-           - Set to FALSE for all other transaction-related or generic emails, specifically:
-             * One-Time Passwords (OTPs) / Verification Codes (e.g. "OTP for transaction...", "Code to authorize...")
-             * Declined / Failed / Cancelled / Rejected transaction alerts (e.g. "transaction declined due to...", "transaction failed")
-             * Payment Reminders or Bills Due alerts (e.g. "Your bill of Rs. X is due", "Minimum payment due...")
-             * Promotional offers / Pre-approved limits (e.g. "Pre-approved loan", "Save Rs. X", "Apply for card")
-             * Rewards / Cashback / Points balance updates (unless it is an actual cashback CREDIT transaction changing your balance)
-             * Login alerts / Security alerts / Card block notifications (e.g. "Login detected", "Card blocked")
-             * Statement notifications (e.g. "Monthly statement for card ending...")
-             * Beneficiary additions (e.g. "Beneficiary successfully registered")
-        
-        2. amount: (float) The exact numerical value transferred.
-        
-        3. merchant_name: (string) The actual BRAND, PERSON, or BILLING DESCRIPTOR you paid/transferred to.
-           - SEARCH PATTERNS: 'at [Merchant]', 'by [Merchant]', 'to [Merchant]', 'towards [Merchant]'.
-           - UPI HINT: In 'UPI/P2M/some-id/MerchantName', 'MerchantName' is the target.
-           - DESCRIPTORS: If paid to a clearing house or billing service (e.g. 'ACH-DR-Indian Clearing Cor', 'BILLDESK', 'PAYTM', etc.), extract that billing descriptor as the merchant name.
-           - PROHIBITED: NEVER use a BANK NAME (e.g. Axis, HDFC, ICICI, SBI) as the merchant regardless of where it appears.
-           - CLEANING: Remove any UPI IDs or reference numbers from the name.
-        
-        4. category/sub_category: Use provided context if available.
-        5. account_type: [SAVINGS, CREDIT_CARD, CASH].
-        6. transaction_type: [DEBIT, CREDIT].
-        7. extracted_date: ISO format (YYYY-MM-DD).
+        EXTRACTION FIELDS:
+        1. is_transaction: (boolean) True only if real money moved. Otherwise false.
+        2. amount: (float) The exact value transferred. Set to 0.0 if is_transaction is false.
+        3. merchant_name: (string) The brand, person, or clearing descriptor paid to.
+           - Rule: NEVER use a bank name (HDFC, ICICI, SBI, Axis) as the merchant.
+           - Clean reference numbers and UPI handles from the name.
+           - Set to "NONE" if is_transaction is false.
+        4. category/sub_category: Matched from available categories below, or "Uncategorized".
+        5. account_type: "SAVINGS", "CREDIT_CARD", or "CASH".
+        6. transaction_type: "DEBIT" or "CREDIT".
+        7. extracted_date: ISO format (YYYY-MM-DD), or null.
 
-        Example: 'Spent 500 at Starbucks using HDFC Card' -> Merchant: 'Starbucks', is_transaction: true.
-        Example: 'Get 10% off at Croma' -> is_transaction: false.
-        Example: 'OTP for transaction of Rs 500 at Amazon' -> is_transaction: false.
-        Example: 'Your transaction of Rs 1000 at Zomato was declined' -> is_transaction: false.
+        FEW-SHOT EXAMPLES:
+        Example 1: "Spent Rs. 450 at Starbucks on HDFC Card ending 1234 on 12-Nov-2026"
+        -> {{"is_transaction": true, "amount": 450.0, "currency": "INR", "merchant_name": "Starbucks", "category": "Food", "sub_category": "Restaurants", "account_type": "CREDIT_CARD", "transaction_type": "DEBIT", "extracted_date": "2026-11-12"}}
+
+        Example 2: "Your attempt to log into Mobile Banking App, open could not be processed"
+        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null}}
+
+        Example 3: "NAV of ICICI Prudential Bluechip Fund as on 10-Nov-2026 is 89.42"
+        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null}}
+
+        Example 4: "Special offer: Apply now and get Rs. 1000 cashback on your new card"
+        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "CREDIT_CARD", "transaction_type": "DEBIT", "extracted_date": null}}
+
+        Example 5: "OTP for transaction of Rs 500 at Amazon is 123456"
+        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null}}
 
         {cat_str}
 
@@ -287,14 +233,14 @@ class SyncService:
         SUBJECT: {subject}
         SENDER: {sender}
         BODY:
-        \"\"\"{compressed_text[:6000]}\"\"\"
+        \"\"\"{cleaned_text[:4000]}\"\"\"
 
-        RETURN ONLY RAW JSON (Ensure all strings are quoted properly):
+        RETURN ONLY RAW JSON:
         {{
-          "is_transaction": "<bool: true if it is really a transaction, else false>",
-          "amount": "<float: the value of the transaction>",
+          "is_transaction": <bool>,
+          "amount": <float: exact value transferred, or 0.0>,
           "currency": "INR",
-          "merchant_name": "<string: name of the merchant>",
+          "merchant_name": "<string: name of merchant, or NONE>",
           "category": "<string: category name>",
           "sub_category": "<string: sub-category name>",
           "account_type": "<SAVINGS or CREDIT_CARD>",
@@ -302,27 +248,38 @@ class SyncService:
           "extracted_date": "<YYYY-MM-DD or null>"
         }}
         """
-         # Stage 1: Try Local LLM
+        # Step 1: Query Local LLM (Gemma 4)
         data = await self.llm.generate_json(prompt, temperature=0.1)
         
-        # Retry with higher temperature if basic local extraction failed 
-        if not data or not data.get("is_transaction") or abs(data.get("amount", 0.0)) == 0:
-            logger.warning(f"[Brain:{user_id}] Initial LLM extraction failed or returned 0 amount. Retrying with higher temp.")
-            retry_prompt = prompt + "\n\nCRITICAL: You MUST output valid JSON. Extract the transaction amount. Do not output 0 if a payment occurred."
-            data = await self.llm.generate_json(retry_prompt, temperature=0.4)
+        # Retry ONLY if LLM returned null/invalid JSON (crash or timeout), never if it made an intentional decision
+        if data is None:
+            logger.warning(f"[Brain:{user_id}] Initial LLM execution failed or returned invalid JSON. Retrying.")
+            data = await self.llm.generate_json(prompt, temperature=0.3)
 
-        # Stage 2: Fallback to Groq if Local fails or returns non-transaction
-        # if not data and self.llm.groq_api_key:
-        #     logger.warning(f"[Brain:{user_id}] Local LLM failed. Falling back to Groq.")
-        #     data = await self.llm.generate_json(prompt, temperature=0.1)
+        # Step 2: Handle intentional non-transaction classification
+        if data and not data.get("is_transaction"):
+            logger.info(f"[Brain:{user_id}] Gemma 4 evaluated notification as NON-TRANSACTION for '{subject}'. Skipping.")
+            return {
+                "amount": 0.0,
+                "currency": "INR",
+                "merchant_name": "NON_TRANSACTION",
+                "category": "Uncategorized",
+                "sub_category": "Uncategorized",
+                "account_type": "SAVINGS",
+                "transaction_type": "DEBIT",
+                "extracted_date": None,
+                "is_transaction": False,
+                "extractor": "🤖 Gemma"
+            }
 
+        # Step 3: Handle verified transaction
         if data and data.get("is_transaction"):
             merchant = (data.get("merchant_name") or data.get("merchant") or "UNKNOWN").strip()
-            if abs(data.get("amount", 0.0)) > 0:
-                logger.info(f"[Brain:{user_id}] Extracted: ₹{data.get('amount')} | Merchant: {merchant}")
-                # Ensure required fields exist even if LLM missed them
+            amount = float(data.get("amount") or 0.0)
+            if abs(amount) > 0 and merchant.upper() != "NONE":
+                logger.info(f"[Brain:{user_id}] Extracted: ₹{amount} | Merchant: {merchant}")
                 return {
-                    "amount": float(data.get("amount") or 0.0),
+                    "amount": amount,
                     "currency": data.get("currency") or "INR",
                     "merchant_name": merchant.title(),
                     "category": data.get("category") or "Uncategorized",
@@ -330,12 +287,17 @@ class SyncService:
                     "account_type": data.get("account_type") or "SAVINGS",
                     "transaction_type": data.get("transaction_type") or "DEBIT",
                     "extracted_date": data.get("extracted_date"),
-                    "extractor": "🤖 L"
+                    "is_transaction": True,
+                    "extractor": "🤖 Gemma"
                 }
 
-        # Stage 3: Regex Fallback Network 
-        # If LLM completely failed, at least try to salvage the amount and merchant UPI
-        return self._regex_fallback_txn(text, user_id)
+        # Step 4: Regex Fallback - ONLY if LLM crashed/timed out completely (data is None)
+        if data is None:
+            logger.warning(f"[Brain:{user_id}] LLM failed completely. Falling back to regex.")
+            return self._regex_fallback_txn(text, user_id)
+
+        # Default fallback for unparseable output
+        return self._fallback_txn()
 
     def _regex_fallback_txn(self, text: str, user_id: uuid.UUID) -> dict:
         import re
@@ -717,15 +679,14 @@ class SyncService:
                     t_brain = (time.perf_counter() - t_brain_start) * 1000
                     logger.debug(f"[Sync:{user_id}] Brain extraction for {msg['id']} took {t_brain:.2f}ms")
                     
-                    # Skip if no valid amount was extracted (LLM timeout/failure or non-transaction email)
-                    if abs(extracted["amount"]) == 0:
+                    # Skip if non-transaction or no valid amount was extracted
+                    if not extracted.get("is_transaction", True) or abs(extracted.get("amount", 0.0)) == 0:
                         merchant = extracted.get("merchant_name", "UNKNOWN")
-                        if merchant == "UNCATEGORIZED" or merchant == "UNKNOWN":
-                            llm_failed += 1
-                            logger.warning(f"[Sync:{user_id}] LLM failed for '{msg['subject']}' ({msg['id']}). Snippet: {msg['snippet'][:50]}...")
+                        if merchant in ("UNCATEGORIZED", "UNKNOWN", "NON_TRANSACTION", "NONE"):
+                            logger.info(f"[Sync:{user_id}] Non-transaction notification for '{msg['subject']}'. Skipping.")
                         else:
                             zero_amount_skipped += 1
-                            logger.info(f"[Sync:{user_id}] ₹0 found for '{merchant}' in '{msg['subject']}'. Skipping.")
+                            logger.info(f"[Sync:{user_id}] ₹0 or non-transaction found for '{merchant}' in '{msg['subject']}'. Skipping.")
                         continue
 
                     mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
