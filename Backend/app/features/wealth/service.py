@@ -1485,7 +1485,7 @@ class WealthService:
                         allotted_units = net_invested / price
                         sip_delta = sip_amount
                         holding.total_invested = (holding.total_invested or 0.0) + sip_amount
-                        logger.info(f"Auto-executed SIP for {holding.name}: Rs {sip_amount} -> {allotted_units:.4f} units at NAV {price}")
+                        logger.info(f"Auto-executed SIP installment for holding {holding.id}")
 
                 final_units = base_units + allotted_units
 

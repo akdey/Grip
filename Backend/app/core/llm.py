@@ -296,7 +296,7 @@ class LLMService:
             content = content.strip().replace('```json', '').replace('```', '').strip()
             return json.loads(content)
         except (json.JSONDecodeError, IndexError) as e:
-            logger.error(f"LLM JSON Decode Error: {e}. Content: {content[:200]}...")
+            logger.error(f"LLM JSON Decode Error: {e}")
             try:
                 # Last resort cleanup
                 cleaned = re.sub(r',\s*([\]\}])', r'\1', content)

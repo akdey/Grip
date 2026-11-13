@@ -1210,6 +1210,7 @@ We utilize a dual-track AI system for maximum reliability:
 
 ### 🔐 Security Measures
 - **Sanitization First**: All PII (PAN, Account numbers) is masked via local regex logic *before* being processed by any AI engine.
+- **Zero-Leak Logging Architecture**: System logs are sanitized through `PIISanitizingFormatter` at the root logger level. All financial amounts (`₹`, `INR`, `Rs.`), card numbers, bank accounts, emails, bearer tokens, OAuth authorization codes, and full database UUIDs are masked before outputting to `stdout`, preventing sensitive data leaks on public runtime logs (such as public Hugging Face Spaces).
 - **Scoped Ingress**: Gmail OAuth is restricted to `gmail.readonly` and specifically queries for transaction-only keywords.
 
 ---

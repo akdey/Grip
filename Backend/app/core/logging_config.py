@@ -6,16 +6,24 @@ from logging.handlers import RotatingFileHandler
 
 from app.core.config import get_settings
 
-# PII Patterns (Sync with SanitizerService)
+# PII & Sensitive Financial Patterns
 PII_PATTERNS = {
-    # 'UPI': re.compile(r'[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}'),
     'EMAIL': re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'),
     'PHONE': re.compile(r'(?:\+?91|0)?[6-9]\d{9}'),
-    'CARD': re.compile(r'(?:\d[ -]*?){12,19}'),
+    'CARD': re.compile(r'\b(?:\d[ -]*?){13,18}\d\b'),
     'ACCOUNT': re.compile(r'[Xx]+\d{3,6}'),
     'PAN': re.compile(r'[A-Z]{5}[0-9]{4}[A-Z]{1}'),
     'AADHAAR': re.compile(r'\d{4}\s\d{4}\s\d{4}'),
+    'AMOUNT': re.compile(r'(?:₹\s*[\d,]+(?:\.\d+)?|\b(?:INR|Rs\.?)\s*[\d,]+(?:\.\d+)?)', re.IGNORECASE),
+    'BEARER_TOKEN': re.compile(r'(?i)\bbearer\s+[A-Za-z0-9\-_\.~+/=]+'),
+    'AUTH_CODE': re.compile(r'(?i)(code=)[A-Za-z0-9\-_/]+'),
 }
+
+# Regex to safely truncate 36-character UUIDs to first 8 characters
+UUID_PATTERN = re.compile(r'\b([0-9a-f]{8})-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b', re.IGNORECASE)
+
+# Regex to sanitize auth/refresh tokens in key-value strings or dict dumps
+SECRET_PARAM_PATTERN = re.compile(r'(?i)(["\']?(?:access_token|refresh_token|client_secret|api_key)["\']?\s*[:=]\s*["\']?)[^"\'\s,]+')
 
 class PIISanitizingFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -25,9 +33,20 @@ class PIISanitizingFormatter(logging.Formatter):
         # Sanitize greetings
         message = re.sub(r'(?i)(Dear|Hello|Hi)\s+[A-Za-z\s]+,', r'\1 Customer,', message)
         
+        # Sanitize sensitive params / tokens
+        message = SECRET_PARAM_PATTERN.sub(r'\1<REDACTED>', message)
+        
+        # Truncate full UUIDs to prevent revealing complete user/account database IDs
+        message = UUID_PATTERN.sub(r'\1...', message)
+        
         # Sanitize patterns
         for label, pattern in PII_PATTERNS.items():
-            message = pattern.sub(f'<{label}>', message)
+            if label == 'AUTH_CODE':
+                message = pattern.sub(r'\1<AUTH_CODE>', message)
+            elif label == 'BEARER_TOKEN':
+                message = pattern.sub(r'Bearer <TOKEN>', message)
+            else:
+                message = pattern.sub(f'<{label}>', message)
             
         return message
 

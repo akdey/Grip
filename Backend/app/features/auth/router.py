@@ -539,7 +539,7 @@ async def test_emergency_contact(
             else:
                 failed_to.append(dest)
         except Exception as send_err:
-            logger.error(f"Error sending test email to {dest}: {send_err}")
+            logger.error(f"Error sending test email: {send_err}")
             failed_to.append(dest)
 
     if not sent_to and failed_to:

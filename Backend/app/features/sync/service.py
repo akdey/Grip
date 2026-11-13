@@ -249,17 +249,17 @@ class SyncService:
         }}
         """
         # Step 1: Query Local LLM (Gemma 4)
-        logger.info(f"🔍 [Brain:{user_id}] Analyzing email: '{subject}' | Sender: '{sender}'")
+        logger.info(f"🔍 [Brain:{str(user_id)[:8]}] Analyzing incoming message via LLM...")
         data = await self.llm.generate_json(prompt, temperature=0.1)
         
         # Retry ONLY if LLM returned null/invalid JSON (crash or timeout), never if it made an intentional decision
         if data is None:
-            logger.warning(f"⚠️ [Brain:{user_id}] LLM response was null/invalid JSON. Retrying (temp=0.3)...")
+            logger.warning(f"⚠️ [Brain:{str(user_id)[:8]}] LLM response was null/invalid JSON. Retrying (temp=0.3)...")
             data = await self.llm.generate_json(prompt, temperature=0.3)
 
         # Step 2: Handle intentional non-transaction classification
         if data and not data.get("is_transaction"):
-            logger.info(f"🛑 [Brain:{user_id}] Verdict: NON-TRANSACTION | Subject: '{subject}' | Skipped.")
+            logger.info(f"🛑 [Brain:{str(user_id)[:8]}] Verdict: NON-TRANSACTION | Skipped.")
             return {
                 "amount": 0.0,
                 "currency": "INR",
@@ -282,8 +282,7 @@ class SyncService:
                 txn_type = data.get("transaction_type", "DEBIT")
                 cat = data.get("category", "Uncategorized")
                 logger.info(
-                    f"✅ [Brain:{user_id}] Verdict: TRANSACTION | "
-                    f"₹{amount:,.2f} ({txn_type}) | Merchant: '{merchant}' | "
+                    f"✅ [Brain:{str(user_id)[:8]}] Verdict: TRANSACTION ({txn_type}) | "
                     f"Category: {cat} | Account: {acc_type}"
                 )
                 return {
@@ -301,7 +300,7 @@ class SyncService:
 
         # Step 4: Regex Fallback - ONLY if LLM crashed/timed out completely (data is None)
         if data is None:
-            logger.warning(f"⚠️ [Brain:{user_id}] LLM failed completely. Falling back to Regex parser.")
+            logger.warning(f"⚠️ [Brain:{str(user_id)[:8]}] LLM failed completely. Falling back to Regex parser.")
             return self._regex_fallback_txn(text, user_id)
 
         # Default fallback for unparseable output
@@ -351,7 +350,7 @@ class SyncService:
                          merchant = candidate
                          break
                  
-             logger.info(f"[Brain:{user_id}] Regex Fallback Extracted: ₹{amount} | Merchant: {merchant} | Type: {txn_type}")
+             logger.info(f"[Brain:{str(user_id)[:8]}] Regex Fallback matched transaction ({txn_type})")
 
         return {
             "amount": amount,
@@ -669,7 +668,7 @@ class SyncService:
                     content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
                     
                     if await self.txn_service.get_transaction_by_hash(content_hash):
-                        logger.info(f"⏭️ [Sync:{user_id}] Duplicate skipped: '{msg.get('subject', 'No Subject')}'")
+                        logger.info(f"⏭️ [Sync:{str(user_id)[:8]}] Duplicate message skipped.")
                         dedup_skipped += 1
                         continue
                     
@@ -746,14 +745,14 @@ class SyncService:
                         "remarks": improved_remarks,
                         "is_surety": is_surety_flag
                     })
-                    logger.info(f"💾 [Sync:{user_id}] Saved PENDING Transaction: {extracted['merchant_name']} | ₹{final_amount:,.2f} ({cat})")
+                    logger.info(f"💾 [Sync:{str(user_id)[:8]}] Recorded new PENDING transaction | Category: {cat}")
                     
                     # Attempt to map to Wealth/Investment (INTEGRATED)
                     wealth_mapped = False
                     try:
                         wealth_mapped = await self.wealth_service.process_transaction_match(new_txn)
                     except Exception as w_ex:
-                        logger.error(f"[Sync:{user_id}] Wealth mapping failed for txn {new_txn.id}: {type(w_ex).__name__}")
+                        logger.error(f"[Sync:{str(user_id)[:8]}] Wealth mapping failed for transaction: {type(w_ex).__name__}")
 
                     sync_summary.append({
                         "id": str(new_txn.id),
@@ -773,7 +772,7 @@ class SyncService:
                         logger.warning(f"[Sync:{user_id}] Safe spend cache invalidation failed: {ex}")
 
                 logger.info(
-                    f"📊 [Sync:{user_id}] Sync Summary: "
+                    f"📊 [Sync:{str(user_id)[:8]}] Sync Summary: "
                     f"Total Fetched: {len(messages)} | "
                     f"New Transactions: {processed_count} | "
                     f"Non-Transactions Filtered: {zero_amount_skipped} | "
@@ -784,7 +783,7 @@ class SyncService:
                 
             except Exception as e:
                 error_type = type(e).__name__
-                logger.error(f"[Sync:{user_id}] Sync process FAILED: {error_type}: {e}")
+                logger.error(f"[Sync:{str(user_id)[:8]}] Sync process FAILED: {error_type}")
                 if str(e) == "GMAIL_DISCONNECTED":
                     # Fetch user for notification
                     result = await self.db.execute(select(User).where(User.id == user_id))
@@ -793,10 +792,10 @@ class SyncService:
                         await self.notification_service.notify_gmail_disconnection(user_id, user.email, user.full_name or "Grip User")
                     await self._log_end(log, "FAILED", 0, "Gmail connection lost. Please reconnect.")
                 else:
-                    await self._log_end(log, "FAILED", 0, f"{error_type}: {e}")
+                    await self._log_end(log, "FAILED", 0, f"{error_type}")
                     
         except Exception as e:
-            logger.error(f"[Sync:{user_id}] Fatal error in execute_sync: {e}")
+            logger.error(f"[Sync:{str(user_id)[:8]}] Fatal error in execute_sync: {type(e).__name__}")
         finally:
             # 3. Release the guard so next sync can run
             SyncService._active_syncs.discard(user_id)

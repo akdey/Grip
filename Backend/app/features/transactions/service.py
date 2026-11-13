@@ -492,7 +492,7 @@ class TransactionService:
                 existing_offset.credit_card_id = target_card_id or existing_offset.credit_card_id
                 existing_offset.status = TransactionStatus.VERIFIED
                 await self.db.commit()
-                logger.info(f"[DoubleEntry] Updated CC credit offset {existing_offset.id} for txn {txn.id}, Amount: +{credit_amount}")
+                logger.info(f"[DoubleEntry] Updated CC credit offset {existing_offset.id} for txn {txn.id}")
             else:
                 offset_txn = Transaction(
                     user_id=txn.user_id,
@@ -512,7 +512,7 @@ class TransactionService:
                 )
                 self.db.add(offset_txn)
                 await self.db.commit()
-                logger.info(f"[DoubleEntry] Created CC credit offset {offset_txn.id} for txn {txn.id}, Amount: +{credit_amount}")
+                logger.info(f"[DoubleEntry] Created CC credit offset {offset_txn.id} for txn {txn.id}")
         else:
             if existing_offset:
                 await self.db.delete(existing_offset)
@@ -551,7 +551,7 @@ class TransactionService:
                 entry.amount = settle_amount
                 entry.remarks = txn.remarks
                 entry.date = tx_date
-                logger.info(f"[SettleUp] Updated entry {entry.id} for txn {txn.id} -> Peer: {peer_name}, Amount: {settle_amount}")
+                logger.info(f"[SettleUp] Updated entry {entry.id} for txn {txn.id}")
             else:
                 entry = SettleUpEntry(
                     user_id=txn.user_id,
@@ -562,7 +562,7 @@ class TransactionService:
                     date=tx_date
                 )
                 self.db.add(entry)
-                logger.info(f"[SettleUp] Created entry for txn {txn.id} -> Peer: {peer_name}, Amount: {settle_amount}")
+                logger.info(f"[SettleUp] Created entry for txn {txn.id}")
             await self.db.commit()
         else:
             if entry:

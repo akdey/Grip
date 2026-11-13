@@ -74,7 +74,7 @@ async def google_auth(
     )
     
     effective_redirect = redirect_uri or settings.GOOGLE_REDIRECT_URI
-    logger.info(f"Generated OAuth URL with redirect_uri: {effective_redirect}")
+    logger.info("Generated OAuth URL successfully")
     
     return {"url": auth_url}
 
@@ -87,7 +87,7 @@ async def google_callback(
     code = payload.get("code")
     redirect_uri = payload.get("redirect_uri", "postmessage")
     
-    logger.info(f"Received Google callback for user {current_user.email} with redirect_uri: {redirect_uri}")
+    logger.info(f"Received Google callback for user {str(current_user.id)[:8]}")
     
     if not code:
         logger.error("No code provided in callback payload")
@@ -96,10 +96,10 @@ async def google_callback(
     flow = get_google_flow(redirect_uri)
     try:
         # Fetch token using the authorization code
-        logger.debug(f"Fetching token for code: {code[:10]}...")
+        logger.debug("Fetching token for authorization code...")
         flow.fetch_token(code=code)
         creds = flow.credentials
-        logger.info(f"Successfully fetched token for {current_user.email}")
+        logger.info(f"Successfully fetched token for user {str(current_user.id)[:8]}")
         
         # Fresh fetch from DB to avoid session/detachment issues
         user_stmt = select(User).where(User.id == current_user.id)
@@ -107,7 +107,7 @@ async def google_callback(
         db_user = result.scalar_one_or_none()
         
         if not db_user:
-            logger.error(f"User {current_user.id} not found in DB during callback")
+            logger.error(f"User {str(current_user.id)[:8]} not found in DB during callback")
             raise HTTPException(status_code=404, detail="User not found")
             
         # Update credentials
@@ -124,9 +124,9 @@ async def google_callback(
             user_info = user_info_service.userinfo().get().execute()
             if user_info and user_info.get("name"):
                 db_user.full_name = user_info.get("name")
-                logger.info(f"Extracted name '{db_user.full_name}' from Google profile for {db_user.email}")
+                logger.info(f"Extracted profile name for user {str(db_user.id)[:8]}")
         except Exception as profile_ex:
-            logger.warning(f"Failed to fetch profile info for {current_user.email}: {profile_ex}")
+            logger.warning(f"Failed to fetch profile info for user {str(current_user.id)[:8]}: {profile_ex}")
 
         # PROACTIVE: Setup Gmail Push Notifications
         if settings.GMAIL_PUBSUB_TOPIC:
@@ -137,17 +137,17 @@ async def google_callback(
                     'topicName': settings.GMAIL_PUBSUB_TOPIC
                 }
                 watch_response = gmail_service.users().watch(userId='me', body=watch_request).execute()
-                logger.info(f"Successfully enabled Gmail push notifications for {db_user.email}. HistoryId: {watch_response.get('historyId')}")
+                logger.info(f"Successfully enabled Gmail push notifications for user {str(db_user.id)[:8]}")
             except Exception as watch_ex:
-                logger.warning(f"Failed to enable Gmail push notifications for {db_user.email}: {watch_ex}")
+                logger.warning(f"Failed to enable Gmail push notifications for user {str(db_user.id)[:8]}: {watch_ex}")
 
         await db.commit()
-        logger.info(f"Committed Gmail credentials for {current_user.email}")
+        logger.info(f"Committed Gmail credentials for user {str(current_user.id)[:8]}")
         
         return {"status": "success"}
     except Exception as e:
-        logger.error(f"Token exchange failed for {current_user.email}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=400, detail=f"Invalid authorization code: {str(e)}")
+        logger.error(f"Token exchange failed for user {str(current_user.id)[:8]}: {type(e).__name__}")
+        raise HTTPException(status_code=400, detail="Invalid authorization code")
 
 @router.post("/webhook", status_code=status.HTTP_202_ACCEPTED)
 @router.post("/webhook/", status_code=status.HTTP_202_ACCEPTED)
@@ -175,7 +175,7 @@ async def webhook_ingress(
         data_json = json.loads(data_str)
         email = data_json.get("emailAddress")
         historyId = data_json.get("historyId")
-        logger.info(f"Webhook decoded for email: {email}, historyId: {historyId}")
+        logger.info("Webhook payload decoded successfully.")
     except Exception as e:
         logger.error(f"Failed to decode Pub/Sub message: {e}")
         return {"status": "invalid_payload"}
@@ -255,7 +255,7 @@ async def disconnect_gmail(
     current_user.gmail_credentials = None
     await db.commit()
     
-    logger.info(f"User {current_user.email} disconnected Gmail")
+    logger.info(f"User {str(current_user.id)[:8]} disconnected Gmail")
     return {"status": "disconnected"}
 
 @router.get("/history")

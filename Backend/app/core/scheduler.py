@@ -548,7 +548,7 @@ async def run_settle_up_email_reminders():
                     )
                     reminded_count += 1
             except Exception as e:
-                logger.error(f"Failed automated reminder for {contact.peer_name}: {e}")
+                logger.error(f"Failed automated settle-up reminder for contact ID {contact.id}: {e}")
 
         logger.info(f"Automated Settle Up Reminders finished. Sent {reminded_count} emails.")
 
