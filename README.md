@@ -54,18 +54,16 @@ While others make you wait for "syncs" or manual entries, Grip is built to get y
 - **Timing Leakage Reports**: Detailed breakdown of how much "extra" money you could have made by simply shifting your SIP date.
 
 ### 🤖 Hybrid Intelligence — Fast, Private, Reliable
-- **Local LLM Engine (Primary)**: A high-privacy, zero-cost LLM (SmolLM2-1.7B) runs natively on your server for extraction. With 2048-token(configurable) context window handles even the longest transaction alerts.
-- **Semantic Email Compression**: Inspired by LLMLingua-2, Grip semantically strips 60-70% of email boilerplate (disclaimers, etc.) while preserving high-signal transaction data, ensuring 2x-3x faster and more reliable extraction.
-- **KV Cache Optimization**: Prompts are reordered to put static context at the top, allowing the local LLM to cache instruction states and significantly speed up batch processing of multiple emails.
-- **Rule Engine (Secondary)**: A deterministic, zero-latency pattern-matching engine handles common Indian bank email formats.
+- **Local LLM Engine (Primary)**: Google's Gemma 4 E4B Instruct model (`bartowski/google_gemma-4-E4B-it-GGUF` via `llama-cpp-python`) runs natively on your server for transaction classification and entity extraction. Its 4096-token context window comfortably ingests full notifications with complete contextual disclaimers.
+- **Rule Engine (Fallback)**: A deterministic pattern-matching engine handles edge-case formats if local inference is unavailable.
 - **Automatic Transaction Extraction**: Connect Gmail once; transactions are extracted from bank alerts automatically.
 - **Webhook Sync Optimization**: Intelligent 5-second debouncing and concurrency guards prevent redundant syncs from batch emails.
 - **Autonomous Notification Engine**: Scheduled email alerts for Gmail disconnection, consolidated surety bill briefings (twice-daily digest a day before payment), spending insights, and automated weekly borrower reminders for outstanding loans.
 - **Tabular ML Forecasting**: LightGBM Tabular Machine Learning (category/subcategory features + 1-month and 12-month lag memory) to predict month-end expenses.
 - **Smart Learning**: Remembers your merchant preferences, auto-categorizes future transactions.
-- **Multi-Layer Spam Filter**: Sender whitelist + subject gates + body signals distinguish real transactions from marketing emails.
+- **Few-Shot Negative Gating**: Uses negative few-shot guidance to distinguish real debit/credit transactions from app login attempts, mutual fund NAV updates, and marketing offers.
 ### 🔒 Privacy Built-In, Not Bolted-On
-- **100% On-Server Extraction**: Local LLM (SmolLM2-1.7B) runs natively on our server. Your financial data **never leaves your infrastructure** for extraction.
+- **100% On-Server Extraction**: Local LLM (Gemma 4) runs natively on our server. Your financial data **never leaves your infrastructure** for extraction.
 - **Real-Time Privacy**: Gmail webhooks (via Google Pub/Sub) trigger immediate, secure parsing.
 - **Sanitization Before Processing**: PAN, Aadhaar, and Credit Card numbers are masked *before* the LLM even sees them, providing double-layered privacy.
 - **No Data Selling**: Your financial data stays yours. Period.
@@ -104,7 +102,7 @@ Grip processes your financial data through a sophisticated, privacy-preserving p
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ 3. AI EXTRACTION (Local SmolLM2-1.7B)                           │
+│ 3. AI EXTRACTION (Local Gemma 4 E4B)                            │
 │    Natural Language → Structured JSON                           │
 │    "Rs 1,250 debited from Card ending 4521 at Swiggy"          │
 │    ↓                                                             │
@@ -652,7 +650,8 @@ Masked:   "UPI: ****@paytm paid ****@phonepe"
 - **Framework**: FastAPI (Python 3.12+) - High-performance async API
 - **Database**: PostgreSQL with SQLAlchemy (async) + asyncpg
 - **AI/ML & Analytics**:
-  - **Groq** (Llama 3.3 70B) & **Local LLM** (SmolLM2-1.7B) - Transaction extraction & conversational briefings
+  - **Gemma 4 E4B** (`bartowski/google_gemma-4-E4B-it-GGUF` via `llama-cpp-python`) - Primary on-server transaction classification & extraction
+  - **Groq** (Llama 3.3 70B) - Cloud API fallback
   - **LightGBM** - Tabular gradient boosted machine learning for category & subcategory expense forecasting
   - **scipy / numpy / pandas** - Anomaly detection ($Z$-score filters, rolling median divergence), XIRR calculation (Newton-Raphson)
   - **openpyxl & xlsx** - Multi-sheet corporate transaction & contingency financial statement workbooks
@@ -720,7 +719,7 @@ DATABASE_URL=postgresql://user:pass@host:port/dbname
 SECRET_KEY=your-secret-key-here
 GRIP_SECRET=webhook-secret
 
-# AI Features (Local SmolLM2-1.7B)
+# AI Features (Local Gemma 4 E4B)
 USE_AI_FORECASTING=true
 ENABLE_SCHEDULER=true
 GROQ_API_KEY=your-groq-api-key # Optional fallback
