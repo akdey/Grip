@@ -138,7 +138,7 @@ class LocalLLMEngine:
 
             inf_time = (time.perf_counter() - start_t) * 1000
             text = self._strip_thoughts(raw_text)
-            logger.info(f"LocalLLMEngine: Inference complete. Took {inf_time:.2f}ms. Generated {len(text)} characters.")
+            logger.info(f"⚡ [Gemma 4] Inference complete in {inf_time:.0f}ms (generated {len(text)} chars)")
             return text
         except Exception as e:
             logger.error(f"Error during local LLM inference: {e}")

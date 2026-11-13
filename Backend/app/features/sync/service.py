@@ -249,16 +249,17 @@ class SyncService:
         }}
         """
         # Step 1: Query Local LLM (Gemma 4)
+        logger.info(f"🔍 [Brain:{user_id}] Analyzing email: '{subject}' | Sender: '{sender}'")
         data = await self.llm.generate_json(prompt, temperature=0.1)
         
         # Retry ONLY if LLM returned null/invalid JSON (crash or timeout), never if it made an intentional decision
         if data is None:
-            logger.warning(f"[Brain:{user_id}] Initial LLM execution failed or returned invalid JSON. Retrying.")
+            logger.warning(f"⚠️ [Brain:{user_id}] LLM response was null/invalid JSON. Retrying (temp=0.3)...")
             data = await self.llm.generate_json(prompt, temperature=0.3)
 
         # Step 2: Handle intentional non-transaction classification
         if data and not data.get("is_transaction"):
-            logger.info(f"[Brain:{user_id}] Gemma 4 evaluated notification as NON-TRANSACTION for '{subject}'. Skipping.")
+            logger.info(f"🛑 [Brain:{user_id}] Verdict: NON-TRANSACTION | Subject: '{subject}' | Skipped.")
             return {
                 "amount": 0.0,
                 "currency": "INR",
@@ -277,15 +278,22 @@ class SyncService:
             merchant = (data.get("merchant_name") or data.get("merchant") or "UNKNOWN").strip()
             amount = float(data.get("amount") or 0.0)
             if abs(amount) > 0 and merchant.upper() != "NONE":
-                logger.info(f"[Brain:{user_id}] Extracted: ₹{amount} | Merchant: {merchant}")
+                acc_type = data.get("account_type", "SAVINGS")
+                txn_type = data.get("transaction_type", "DEBIT")
+                cat = data.get("category", "Uncategorized")
+                logger.info(
+                    f"✅ [Brain:{user_id}] Verdict: TRANSACTION | "
+                    f"₹{amount:,.2f} ({txn_type}) | Merchant: '{merchant}' | "
+                    f"Category: {cat} | Account: {acc_type}"
+                )
                 return {
                     "amount": amount,
                     "currency": data.get("currency") or "INR",
                     "merchant_name": merchant.title(),
-                    "category": data.get("category") or "Uncategorized",
+                    "category": cat,
                     "sub_category": data.get("sub_category") or "Uncategorized",
-                    "account_type": data.get("account_type") or "SAVINGS",
-                    "transaction_type": data.get("transaction_type") or "DEBIT",
+                    "account_type": acc_type,
+                    "transaction_type": txn_type,
                     "extracted_date": data.get("extracted_date"),
                     "is_transaction": True,
                     "extractor": "🤖 Gemma"
@@ -293,7 +301,7 @@ class SyncService:
 
         # Step 4: Regex Fallback - ONLY if LLM crashed/timed out completely (data is None)
         if data is None:
-            logger.warning(f"[Brain:{user_id}] LLM failed completely. Falling back to regex.")
+            logger.warning(f"⚠️ [Brain:{user_id}] LLM failed completely. Falling back to Regex parser.")
             return self._regex_fallback_txn(text, user_id)
 
         # Default fallback for unparseable output
@@ -661,6 +669,7 @@ class SyncService:
                     content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
                     
                     if await self.txn_service.get_transaction_by_hash(content_hash):
+                        logger.info(f"⏭️ [Sync:{user_id}] Duplicate skipped: '{msg.get('subject', 'No Subject')}'")
                         dedup_skipped += 1
                         continue
                     
@@ -677,16 +686,10 @@ class SyncService:
                         sender=msg.get('sender', '')
                     )
                     t_brain = (time.perf_counter() - t_brain_start) * 1000
-                    logger.debug(f"[Sync:{user_id}] Brain extraction for {msg['id']} took {t_brain:.2f}ms")
                     
                     # Skip if non-transaction or no valid amount was extracted
                     if not extracted.get("is_transaction", True) or abs(extracted.get("amount", 0.0)) == 0:
-                        merchant = extracted.get("merchant_name", "UNKNOWN")
-                        if merchant in ("UNCATEGORIZED", "UNKNOWN", "NON_TRANSACTION", "NONE"):
-                            logger.info(f"[Sync:{user_id}] Non-transaction notification for '{msg['subject']}'. Skipping.")
-                        else:
-                            zero_amount_skipped += 1
-                            logger.info(f"[Sync:{user_id}] ₹0 or non-transaction found for '{merchant}' in '{msg['subject']}'. Skipping.")
+                        zero_amount_skipped += 1
                         continue
 
                     mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
@@ -743,6 +746,7 @@ class SyncService:
                         "remarks": improved_remarks,
                         "is_surety": is_surety_flag
                     })
+                    logger.info(f"💾 [Sync:{user_id}] Saved PENDING Transaction: {extracted['merchant_name']} | ₹{final_amount:,.2f} ({cat})")
                     
                     # Attempt to map to Wealth/Investment (INTEGRATED)
                     wealth_mapped = False
@@ -769,10 +773,12 @@ class SyncService:
                         logger.warning(f"[Sync:{user_id}] Safe spend cache invalidation failed: {ex}")
 
                 logger.info(
-                    f"[Sync:{user_id}] Sync complete. "
-                    f"fetched={len(messages)}, dedup_skipped={dedup_skipped}, "
-                    f"llm_failed={llm_failed}, zero_amount_skipped={zero_amount_skipped}, "
-                    f"processed={processed_count}"
+                    f"📊 [Sync:{user_id}] Sync Summary: "
+                    f"Total Fetched: {len(messages)} | "
+                    f"New Transactions: {processed_count} | "
+                    f"Non-Transactions Filtered: {zero_amount_skipped} | "
+                    f"Duplicates Skipped: {dedup_skipped} | "
+                    f"Errors: {llm_failed}"
                 )
                 await self._log_end(log, "SUCCESS", processed_count, summary=sync_summary)
                 
