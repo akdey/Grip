@@ -214,70 +214,63 @@ class SyncService:
         # Clean whitespace without stripping meaningful sentences or context
         cleaned_text = self._clean_email_body(text)
         
-        prompt = f"""
-        You are a high-precision financial intelligence engine. 
-        TASK: Determine if an actual financial transaction took place and extract its details.
+        # Static prompt prefix: Contains all rules, few-shots, categories and schema.
+        # This prefix is 100% identical for all emails in the sync, allowing LlamaRAMCache
+        # to reuse cached KV states instantly across the batch.
+        system_prompt = f"""You are a high-precision financial intelligence engine.
+TASK: Determine if an actual financial transaction took place and extract its details.
 
-        CRITICAL EVALUATION RULE:
-        - Set "is_transaction" to TRUE ONLY if real money was successfully debited, credited, spent, or transferred, changing an account balance.
-        - Set "is_transaction" to FALSE for:
-          * Login alerts, login attempts, or failed access notifications (e.g. "Your attempt to log into Mobile Banking App could not be processed")
-          * Mutual fund NAV notifications, unit allotments, or portfolio valuation statements
-          * Promotional offers, discounts, or pre-approved loans (e.g. "Get 10% off at Croma", "Pre-approved loan")
-          * One-Time Passwords (OTPs) or 2FA verification codes
-          * Payment reminders, bills due alerts, or minimum amount due notices (where no money was paid yet)
-          * Declined or failed transactions
+CRITICAL EVALUATION RULES:
+- Set "is_transaction" to TRUE ONLY if real money was successfully debited, credited, spent, or transferred, changing an account balance.
+- Set "is_transaction" to FALSE for:
+  * Login alerts, login attempts, or failed access notifications (e.g. "Your attempt to log into Mobile Banking App could not be processed")
+  * Mutual fund NAV notifications, unit allotments, or portfolio valuation statements
+  * Promotional offers, discounts, or pre-approved loans (e.g. "Get 10% off at Croma", "Pre-approved loan")
+  * One-Time Passwords (OTPs) or 2FA verification codes
+  * Payment reminders, bills due alerts, or minimum amount due notices (where no money was paid yet)
+  * Declined or failed transactions
 
-        EXTRACTION FIELDS:
-        1. is_transaction: (boolean) True only if real money moved. Otherwise false.
-        2. amount: (float) The exact value transferred. Set to 0.0 if is_transaction is false.
-        3. merchant_name: (string) The brand, person, or clearing descriptor paid to.
-           - Rule: NEVER use a bank name (HDFC, ICICI, SBI, Axis) as the merchant.
-           - Clean reference numbers and UPI handles from the name.
-           - Set to "NONE" if is_transaction is false.
-        4. category/sub_category: Matched from available categories below, or "Uncategorized".
-        5. account_type: "SAVINGS", "CREDIT_CARD", or "CASH".
-        6. transaction_type: "DEBIT" or "CREDIT".
-        7. extracted_date: ISO format (YYYY-MM-DD), or null.
-        8. reason: (string) Short 3-6 word summary (e.g. "Card spend at Starbucks", "Security login alert", "Mutual fund NAV update", "Promotional offer", "OTP verification code").
+EXTRACTION FIELDS:
+1. is_transaction: (boolean) True only if real money moved. Otherwise false.
+2. amount: (float) Exact value transferred. Set to 0.0 if is_transaction is false.
+3. merchant_name: (string) The brand, person, or clearing descriptor paid to.
+   - Rule: NEVER use a bank name (HDFC, ICICI, SBI, Axis) as the merchant.
+   - Clean reference numbers and UPI handles from the name.
+   - Set to "NONE" if is_transaction is false.
+4. category/sub_category: Matched from available categories below, or "Uncategorized".
+5. account_type: "SAVINGS", "CREDIT_CARD", or "CASH".
+6. transaction_type: "DEBIT" or "CREDIT".
+7. extracted_date: ISO format (YYYY-MM-DD), or null.
+8. reason: (string) Short 3-6 word summary (e.g. "Card spend at Starbucks", "Security login alert", "Mutual fund NAV update", "Promotional offer", "OTP verification code").
 
-        FEW-SHOT EXAMPLES:
-        Example 1 (Transaction): "Spent Rs. 450 at Starbucks on HDFC Card ending 1234 on 12-Nov-2026"
-        -> {{"is_transaction": true, "amount": 450.0, "currency": "INR", "merchant_name": "Starbucks", "category": "Food", "sub_category": "Restaurants", "account_type": "CREDIT_CARD", "transaction_type": "DEBIT", "extracted_date": "2026-11-12", "reason": "Card spend at Starbucks"}}
+FEW-SHOT EXAMPLES:
+Example 1 (Transaction): "Spent Rs. 450 at Starbucks on HDFC Card ending 1234 on 12-Nov-2026"
+-> {{"is_transaction": true, "amount": 450.0, "currency": "INR", "merchant_name": "Starbucks", "category": "Food", "sub_category": "Restaurants", "account_type": "CREDIT_CARD", "transaction_type": "DEBIT", "extracted_date": "2026-11-12", "reason": "Card spend at Starbucks"}}
 
-        Example 2 (Non-Transaction Alert): "Your attempt to log into Mobile Banking App could not be processed"
-        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Security login alert"}}
+Example 2 (Non-Transaction Alert): "Your attempt to log into Mobile Banking App could not be processed"
+-> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Security login alert"}}
 
-        {cat_str}
+{cat_str}
 
-        NOTIFICATION CONTENT:
-        SUBJECT: {subject}
-        SENDER: {sender}
-        BODY:
-        \"\"\"{cleaned_text[:1500]}\"\"\"
+RETURN ONLY RAW JSON with keys:
+"is_transaction", "amount", "currency", "merchant_name", "category", "sub_category", "account_type", "transaction_type", "extracted_date", "reason"
+"""
 
-        RETURN ONLY RAW JSON:
-        {{
-          "is_transaction": <bool>,
-          "amount": <float: exact value transferred, or 0.0>,
-          "currency": "INR",
-          "merchant_name": "<string: name of merchant, or NONE>",
-          "category": "<string: category name>",
-          "sub_category": "<string: sub-category name>",
-          "account_type": "<SAVINGS or CREDIT_CARD>",
-          "transaction_type": "<DEBIT or CREDIT>",
-          "extracted_date": "<YYYY-MM-DD or null>",
-          "reason": "<string: short 3-6 word summary>"
-        }}
-        """
-        # Step 1: Query Local LLM (Gemma 4)
+        # Dynamic user message: Contains ONLY the email being evaluated
+        user_prompt = f"""NOTIFICATION CONTENT:
+SUBJECT: {subject}
+SENDER: {sender}
+BODY:
+\"\"\"{cleaned_text[:1500]}\"\"\""""
+
+        # Step 1: Query Local LLM (Gemma 4) with cached system prefix
         logger.info(f"🔍 [Brain:{str(user_id)[:8]}] Analyzing incoming message via LLM...")
-        data = await self.llm.generate_json(prompt, temperature=0.1)
+        data = await self.llm.generate_json(prompt=user_prompt, system_prompt=system_prompt, temperature=0.1)
         
         # Retry ONLY if LLM returned null/invalid JSON (crash or timeout), never if it made an intentional decision
         if data is None:
             logger.warning(f"⚠️ [Brain:{str(user_id)[:8]}] LLM response was null/invalid JSON. Retrying (temp=0.3)...")
-            data = await self.llm.generate_json(prompt, temperature=0.3)
+            data = await self.llm.generate_json(prompt=user_prompt, system_prompt=system_prompt, temperature=0.3)
 
         # Step 2: Handle intentional non-transaction classification
         if data and not data.get("is_transaction"):

@@ -107,6 +107,15 @@ class LocalLLMEngine:
                         flash_attn=False,
                         verbose=False
                     )
+
+                # Attach KV RAM Cache for instant prompt prefix reuse across emails in a sync
+                try:
+                    from llama_cpp import LlamaRAMCache
+                    self._model.set_cache(LlamaRAMCache(capacity_bytes=256 * 1024 * 1024))
+                    logger.info("LocalLLMEngine: Attached LlamaRAMCache for KV prefix caching.")
+                except Exception as cache_err:
+                    logger.debug(f"LocalLLMEngine: KV cache setup skipped: {cache_err}")
+
                 logger.info(f"Local LLM engine initialized (ctx: {settings.LOCAL_LLM_CONTEXT}, threads: {threads}, gpu_layers: {gpu_layers}).")
                 return self._model
             except Exception as e:
