@@ -130,8 +130,12 @@ export const useSyncHistory = () => {
         refetchInterval: (query: any) => {
             // Support both React Query v4 and v5 signatures
             const data = query?.state?.data || query;
-            return data?.syncs?.some((s: any) => s.status === 'IN_PROGRESS') ? 3000 : false;
-        }
+            const isSyncing = data?.syncs?.some((s: any) => s.status === 'IN_PROGRESS');
+            // Fast 2.5s updates during active sync; quiet 30s check when idle to catch webhook events
+            return isSyncing ? 2500 : 30000;
+        },
+        refetchIntervalInBackground: false, // Freeze completely when browser tab is hidden or minimized
+        refetchOnWindowFocus: true,          // Instant fresh fetch when user focuses tab or window
     });
 };
 
