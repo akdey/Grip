@@ -32,7 +32,12 @@ class LocalLLMEngine:
         self._lock = threading.Lock()
         self.repo_id = settings.LOCAL_MODEL_REPO
         self.filename = settings.LOCAL_MODEL_FILE
-        self.models_dir = settings.LOCAL_MODEL_DIR
+        # Anchor models_dir reliably to Backend/models or settings.LOCAL_MODEL_DIR
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        if os.path.isabs(settings.LOCAL_MODEL_DIR):
+            self.models_dir = settings.LOCAL_MODEL_DIR
+        else:
+            self.models_dir = os.path.join(base_dir, settings.LOCAL_MODEL_DIR)
         
     def _ensure_model(self):
         """Lazy load and potentially download the model. Thread-safe."""
@@ -51,43 +56,57 @@ class LocalLLMEngine:
                 # Create models directory if it doesn't exist
                 os.makedirs(self.models_dir, exist_ok=True)
                 
-                # Check for model existence. Use absolute path for reliability in Docker containers.
+                # Check for model existence. Use absolute path for reliability
                 model_path = os.path.abspath(os.path.join(self.models_dir, self.filename))
                 logger.info(f"LocalLLMEngine: Checking for model at {model_path}")
                 
                 if os.path.exists(model_path):
                     file_size = os.path.getsize(model_path)
                     logger.info(f"LocalLLMEngine: Model file found. Size: {file_size / (1024*1024):.2f} MB")
-                    if file_size < 100 * 1024 * 1024: # Less than 100MB is likely a pointer/corrupted for a 1.7B model
-                        logger.warning(f"LocalLLMEngine: Model file seems too small ({file_size} bytes). It might be an LFS pointer. Re-downloading...")
+                    if file_size < 100 * 1024 * 1024: # Less than 100MB is likely a pointer/corrupted
+                        logger.warning(f"LocalLLMEngine: Model file seems too small ({file_size} bytes). Re-downloading...")
                         os.remove(model_path)
                 
                 if not os.path.exists(model_path):
-                    logger.warning(f"LocalLLMEngine: Model not found at expected path or removed. Attempting download from {self.repo_id}...")
+                    logger.info(f"LocalLLMEngine: Model not found at '{model_path}'. Downloading from {self.repo_id}...")
                     downloaded_path = hf_hub_download(
                         repo_id=self.repo_id,
                         filename=self.filename,
                         local_dir=self.models_dir
                     )
                     model_path = os.path.abspath(downloaded_path)
-                    logger.info(f"LocalLLMEngine: Download complete. Size: {os.path.getsize(model_path) / (1024*1024):.2f} MB")
+                    logger.info(f"LocalLLMEngine: Download complete ({os.path.getsize(model_path) / (1024*1024):.2f} MB).")
                 
-                # Initialize Llama-cpp with optimized context and caching
-                # n_ctx: 2048 (default) - Sufficient for long emails + context
-                # n_threads: Use all available cores to speed up inference
+                # Initialize Llama-cpp with optimized context and threading
                 import multiprocessing
+                import platform
                 threads = max(2, multiprocessing.cpu_count())
                 
-                self._model = Llama(
-                    model_path=model_path,
-                    n_ctx=settings.LOCAL_LLM_CONTEXT,
-                    n_threads=threads,
-                    n_gpu_layers=0, # Force CPU
-                    logits_all=False,
-                    flash_attn=False, # Disabled: prevents GGML SWA assertion crash on CPU
-                    verbose=False
-                )
-                logger.info(f"Local LLM engine initialized (ctx: {settings.LOCAL_LLM_CONTEXT}, threads: {threads}).")
+                # Use Metal GPU acceleration on macOS for fast local inference; 0 for CPU containers
+                gpu_layers = -1 if platform.system() == "Darwin" else 0
+                
+                try:
+                    self._model = Llama(
+                        model_path=model_path,
+                        n_ctx=settings.LOCAL_LLM_CONTEXT,
+                        n_threads=threads,
+                        n_gpu_layers=gpu_layers,
+                        logits_all=False,
+                        flash_attn=False, # Disabled: prevents GGML SWA assertion crash on CPU
+                        verbose=False
+                    )
+                except Exception as gpu_err:
+                    logger.warning(f"Llama GPU offload init failed ({gpu_err}), falling back to CPU.")
+                    self._model = Llama(
+                        model_path=model_path,
+                        n_ctx=settings.LOCAL_LLM_CONTEXT,
+                        n_threads=threads,
+                        n_gpu_layers=0,
+                        logits_all=False,
+                        flash_attn=False,
+                        verbose=False
+                    )
+                logger.info(f"Local LLM engine initialized (ctx: {settings.LOCAL_LLM_CONTEXT}, threads: {threads}, gpu_layers: {gpu_layers}).")
                 return self._model
             except Exception as e:
                 logger.error(f"Failed to initialize local LLM engine: {e}")
@@ -121,7 +140,7 @@ class LocalLLMEngine:
 
                 output = model.create_chat_completion(
                     messages=messages,
-                    max_tokens=512,
+                    max_tokens=160, # 160 tokens is optimal for financial JSON extraction
                     temperature=temperature
                 )
                 raw_text = output['choices'][0]['message']['content'].strip()
@@ -130,7 +149,7 @@ class LocalLLMEngine:
                 formatted_prompt = f"System: {system_prompt}\nUser: {prompt}\nAssistant:"
                 output = model(
                     formatted_prompt,
-                    max_tokens=512,
+                    max_tokens=160,
                     temperature=temperature,
                     echo=False
                 )
@@ -189,22 +208,25 @@ class LLMService:
         """Generic method to generate a response, prioritizing local execution."""
         global HAS_LLAMA_CPP
         
-        # 1. Try Local Engine (Primary — high privacy, no costs)
+        # 1. Local Engine (100% Local Gemma 4 via llama-cpp-python)
         if HAS_LLAMA_CPP:
-            # We run in a threadpool to avoid blocking the event loop
             try:
                 loop = asyncio.get_event_loop()
-                res = await loop.run_in_executor(
-                    None, 
-                    self.local_engine.generate, 
-                    prompt, 
-                    system_prompt, 
-                    temperature
+                res = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None, 
+                        self.local_engine.generate, 
+                        prompt, 
+                        system_prompt, 
+                        temperature
+                    ),
+                    timeout=timeout
                 )
                 if res:
                     logger.info(">>> LLM_ENGINE: Local (Gemma 4) success.")
                     return res
-                # If we get here it means inference failed or engine is broken
+            except asyncio.TimeoutError:
+                logger.warning(f">>> LLM_ENGINE: Local engine timed out after {timeout}s.")
             except Exception as e:
                 # If it fails once with a severe error (like shared lib missing), we can disable it 
                 # for the rest of this worker's lifecycle to stop log spam.

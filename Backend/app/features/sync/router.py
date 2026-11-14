@@ -11,6 +11,7 @@ from app.features.auth.models import User
 from app.features.sync.service import SyncService
 import base64
 import json
+from datetime import datetime, timezone
 from app.features.sync.models import SyncLog
 from app.features.transactions.models import Transaction
 
@@ -293,6 +294,37 @@ async def get_sync_history(
                                 pass
             except Exception:
                 pass
+
+    # Auto-heal only truly abandoned sync jobs (no activity/heartbeat for > 25 minutes)
+    now = datetime.now(timezone.utc)
+    stale_recovered = False
+    for log in logs:
+        if log.status == "IN_PROGRESS" and log.start_time:
+            summary_info = parsed_summaries.get(log.id, {})
+            last_activity_str = summary_info.get("last_activity") if isinstance(summary_info, dict) else None
+            
+            # Use last heartbeat if available, otherwise fallback to start_time
+            last_active = None
+            if last_activity_str:
+                try:
+                    last_active = datetime.fromisoformat(last_activity_str)
+                    if not last_active.tzinfo:
+                        last_active = last_active.replace(tzinfo=timezone.utc)
+                except Exception:
+                    pass
+            
+            if not last_active:
+                last_active = log.start_time if log.start_time.tzinfo else log.start_time.replace(tzinfo=timezone.utc)
+            
+            # An active sync taking 15-20+ minutes on CPU or large batches is healthy.
+            # Only mark dead if it had ZERO activity for > 25 minutes (1500 seconds).
+            if (now - last_active).total_seconds() > 1500:
+                log.status = "FAILED"
+                log.error_message = "Sync timed out (no activity for 25 minutes)"
+                log.end_time = datetime.now()
+                stale_recovered = True
+    if stale_recovered:
+        await db.commit()
 
     # Batch query live transaction status
     live_status_map = {}

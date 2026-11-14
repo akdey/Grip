@@ -695,6 +695,7 @@ class SyncService:
                     "imported_count": 0,
                     "non_transaction_count": 0,
                     "duplicate_count": 0,
+                    "last_activity": datetime.now(timezone.utc).isoformat(),
                     "items": []
                 })
                 await self.db.commit()
@@ -752,6 +753,7 @@ class SyncService:
                             "imported_count": processed_count,
                             "non_transaction_count": zero_amount_skipped,
                             "duplicate_count": dedup_skipped,
+                            "last_activity": datetime.now(timezone.utc).isoformat(),
                             "items": sync_items
                         })
                         await self.db.commit()
@@ -794,6 +796,7 @@ class SyncService:
                             "imported_count": processed_count,
                             "non_transaction_count": zero_amount_skipped,
                             "duplicate_count": dedup_skipped,
+                            "last_activity": datetime.now(timezone.utc).isoformat(),
                             "items": sync_items
                         })
                         await self.db.commit()
@@ -889,6 +892,7 @@ class SyncService:
                         "imported_count": processed_count,
                         "non_transaction_count": zero_amount_skipped,
                         "duplicate_count": dedup_skipped,
+                        "last_activity": datetime.now(timezone.utc).isoformat(),
                         "items": sync_items
                     })
                     await self.db.commit()
