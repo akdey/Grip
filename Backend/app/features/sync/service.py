@@ -5,9 +5,9 @@ import uuid
 import logging
 import json
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
-from sqlalchemy import select, desc, delete, or_, and_
+from sqlalchemy import select, desc, delete, or_, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 import time
@@ -97,21 +97,53 @@ class SyncService:
             log.summary = None
         await self.db.commit()
 
-    async def prune_sync_logs(self, keep_days: int = 30, keep_empty_days: int = 3) -> int:
+    async def prune_sync_logs(self, keep_days: int = 30, keep_empty_days: int = 3, user_id: Optional[uuid.UUID] = None) -> int:
         """
         Purges old sync logs to keep the database footprint minimal.
-        - Logs with 0 records processed are purged after `keep_empty_days` (default 3 days).
+        - Logs with 0 or NULL records processed (or failed/stale) are purged after `keep_empty_days` (default 3 days).
         - All other logs older than `keep_days` (default 30 days) are purged.
+        - Always preserves each user's latest successful sync log so `last_sync` is never lost.
         """
-        cutoff_all = datetime.now() - timedelta(days=keep_days)
-        cutoff_empty = datetime.now() - timedelta(days=keep_empty_days)
+        now = datetime.now(timezone.utc)
+        cutoff_all = now - timedelta(days=keep_days)
+        cutoff_empty = now - timedelta(days=keep_empty_days)
 
-        stmt = delete(SyncLog).where(
+        empty_condition = and_(
+            or_(
+                SyncLog.records_processed == 0,
+                SyncLog.records_processed.is_(None),
+                SyncLog.status.in_(["FAILED", "IN_PROGRESS"])
+            ),
+            SyncLog.start_time < cutoff_empty
+        )
+
+        conditions = [
             or_(
                 SyncLog.start_time < cutoff_all,
-                and_(SyncLog.records_processed == 0, SyncLog.start_time < cutoff_empty)
+                empty_condition
             )
+        ]
+
+        if user_id:
+            conditions.append(SyncLog.user_id == user_id)
+
+        # Protect each user's latest successful sync log so last_sync is never lost
+        latest_success_subq = (
+            select(func.max(SyncLog.id))
+            .where(SyncLog.status == "SUCCESS")
         )
+        if user_id:
+            latest_success_subq = latest_success_subq.where(SyncLog.user_id == user_id)
+        else:
+            latest_success_subq = latest_success_subq.group_by(SyncLog.user_id)
+
+        latest_ids_res = await self.db.execute(latest_success_subq)
+        protected_ids = set(latest_ids_res.scalars().all())
+
+        if protected_ids:
+            conditions.append(SyncLog.id.notin_(protected_ids))
+
+        stmt = delete(SyncLog).where(and_(*conditions))
         result = await self.db.execute(stmt)
         await self.db.commit()
         return result.rowcount

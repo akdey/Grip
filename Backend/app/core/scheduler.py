@@ -389,6 +389,14 @@ async def run_gmail_sync():
                 await sync_service.execute_sync(user.id, "SCHEDULED_TASK")
             except Exception as e:
                 logger.error(f"Gmail sync failed for user {user.id}: {e}")
+
+        # Post-sync database hygiene: prune stale/empty sync logs to keep Supabase storage minimal
+        try:
+            pruned_count = await sync_service.prune_sync_logs(keep_days=30, keep_empty_days=3)
+            if pruned_count > 0:
+                logger.info(f"Post-sync maintenance: Pruned {pruned_count} old sync log(s).")
+        except Exception as e:
+            logger.error(f"Post-sync log pruning failed: {e}")
                 
     logger.info("Gmail Sync Completed.")
 

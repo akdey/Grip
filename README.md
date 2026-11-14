@@ -1030,8 +1030,9 @@ APP_TAGLINE=Money that minds itself.
 
 2. **Workflows are already configured**:
    - `daily-price-sync.yml`: Runs at 3:30 PM IST (Price updates).
-   - `gmail_sync.yml`: Runs every hour (Transactions).
-   - `daily-intelligence.yml`: Runs at 9:00 AM IST (Reminders & Insights).
+   - `gmail_sync.yml`: Runs every day at 10:00 AM IST (Transactions sync).
+   - `db-maintenance.yml`: Runs daily at 4:00 AM IST (Prunes stale sync logs and database hygiene).
+   - `db-backup.yml`: Runs daily at 5:30 AM IST (Database backup).
 
 3. **Test the Workflow**:
    - Go to Actions tab
