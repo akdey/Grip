@@ -30,6 +30,7 @@ class LocalLLMEngine:
     def __init__(self):
         self._model = None
         self._lock = threading.Lock()
+        self._inference_lock = threading.Lock()
         self.repo_id = settings.LOCAL_MODEL_REPO
         self.filename = settings.LOCAL_MODEL_FILE
         # Anchor models_dir reliably to Backend/models or settings.LOCAL_MODEL_DIR
@@ -126,6 +127,11 @@ class LocalLLMEngine:
         if not model:
             return None
             
+        # Strictly serialize inference — never allow concurrent forward passes in llama.cpp
+        if not self._inference_lock.acquire(blocking=True, timeout=120):
+            logger.error("LocalLLMEngine: Engine is busy with another evaluation. Skipping concurrent collision.")
+            return None
+
         try:
             logger.debug(f"LocalLLMEngine: Starting inference with Gemma 4...")
             import time
@@ -140,7 +146,7 @@ class LocalLLMEngine:
 
                 output = model.create_chat_completion(
                     messages=messages,
-                    max_tokens=160, # 160 tokens is optimal for financial JSON extraction
+                    max_tokens=140, # 140 tokens is plenty for financial JSON extraction
                     temperature=temperature
                 )
                 raw_text = output['choices'][0]['message']['content'].strip()
@@ -149,7 +155,7 @@ class LocalLLMEngine:
                 formatted_prompt = f"System: {system_prompt}\nUser: {prompt}\nAssistant:"
                 output = model(
                     formatted_prompt,
-                    max_tokens=160,
+                    max_tokens=140,
                     temperature=temperature,
                     echo=False
                 )
@@ -162,6 +168,8 @@ class LocalLLMEngine:
         except Exception as e:
             logger.error(f"Error during local LLM inference: {e}")
             return None
+        finally:
+            self._inference_lock.release()
 
 class LLMService:
     """Centralized service for Large Language Model interactions."""

@@ -242,20 +242,11 @@ class SyncService:
         8. reason: (string) Short 3-6 word summary (e.g. "Card spend at Starbucks", "Security login alert", "Mutual fund NAV update", "Promotional offer", "OTP verification code").
 
         FEW-SHOT EXAMPLES:
-        Example 1: "Spent Rs. 450 at Starbucks on HDFC Card ending 1234 on 12-Nov-2026"
+        Example 1 (Transaction): "Spent Rs. 450 at Starbucks on HDFC Card ending 1234 on 12-Nov-2026"
         -> {{"is_transaction": true, "amount": 450.0, "currency": "INR", "merchant_name": "Starbucks", "category": "Food", "sub_category": "Restaurants", "account_type": "CREDIT_CARD", "transaction_type": "DEBIT", "extracted_date": "2026-11-12", "reason": "Card spend at Starbucks"}}
 
-        Example 2: "Your attempt to log into Mobile Banking App, open could not be processed"
+        Example 2 (Non-Transaction Alert): "Your attempt to log into Mobile Banking App could not be processed"
         -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Security login alert"}}
-
-        Example 3: "NAV of ICICI Prudential Bluechip Fund as on 10-Nov-2026 is 89.42"
-        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Mutual fund NAV update"}}
-
-        Example 4: "Special offer: Apply now and get Rs. 1000 cashback on your new card"
-        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "CREDIT_CARD", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Promotional cashback offer"}}
-
-        Example 5: "OTP for transaction of Rs 500 at Amazon is 123456"
-        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "OTP verification code"}}
 
         {cat_str}
 
@@ -263,7 +254,7 @@ class SyncService:
         SUBJECT: {subject}
         SENDER: {sender}
         BODY:
-        \"\"\"{cleaned_text[:4000]}\"\"\"
+        \"\"\"{cleaned_text[:1500]}\"\"\"
 
         RETURN ONLY RAW JSON:
         {{
