@@ -265,12 +265,12 @@ BODY:
 
         # Step 1: Query Local LLM (Gemma 4) with cached system prefix
         logger.info(f"🔍 [Brain:{str(user_id)[:8]}] Analyzing incoming message via LLM...")
-        data = await self.llm.generate_json(prompt=user_prompt, system_prompt=system_prompt, temperature=0.1)
+        data = await self.llm.generate_json(prompt=user_prompt, system_prompt=system_prompt, temperature=0.1, timeout=150.0)
         
         # Retry ONLY if LLM returned null/invalid JSON (crash or timeout), never if it made an intentional decision
         if data is None:
             logger.warning(f"⚠️ [Brain:{str(user_id)[:8]}] LLM response was null/invalid JSON. Retrying (temp=0.3)...")
-            data = await self.llm.generate_json(prompt=user_prompt, system_prompt=system_prompt, temperature=0.3)
+            data = await self.llm.generate_json(prompt=user_prompt, system_prompt=system_prompt, temperature=0.3, timeout=150.0)
 
         # Step 2: Handle intentional non-transaction classification
         if data and not data.get("is_transaction"):

@@ -81,7 +81,10 @@ class LocalLLMEngine:
                 # Initialize Llama-cpp with optimized context and threading
                 import multiprocessing
                 import platform
-                threads = max(2, multiprocessing.cpu_count())
+                # In llama.cpp, 4-8 threads is the optimal sweet spot for CPU inference.
+                # Exceeding 8 threads (e.g. 16) causes severe thread contention and cache thrashing.
+                raw_cpus = os.cpu_count() or 4
+                threads = min(8, max(2, raw_cpus // 2 if raw_cpus > 8 else raw_cpus))
                 
                 # Use Metal GPU acceleration on macOS for fast local inference; 0 for CPU containers
                 gpu_layers = -1 if platform.system() == "Darwin" else 0
@@ -313,7 +316,7 @@ class LLMService:
         prompt: str, 
         system_prompt: Optional[str] = "You are a financial intelligence engine. Always output valid JSON objects.",
         temperature: float = 0.2,
-        timeout: float = 60.0
+        timeout: float = 150.0
     ) -> Optional[Dict[str, Any]]:
         """Method specifically for JSON responses with robust parsing."""
         content = await self.generate_response(

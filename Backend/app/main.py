@@ -58,6 +58,19 @@ async def lifespan(app: FastAPI):
         start_scheduler()
     except Exception as e:
         logger.error(f"Failed to start scheduler: {e}")
+
+    # Warm up Local LLM in the background so the first request doesn't spend 16s loading from disk
+    async def _warmup_llm():
+        try:
+            from app.core.llm import get_llm_service
+            llm = get_llm_service()
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, llm.local_engine._ensure_model)
+            logger.info("Local LLM model pre-warmed and resident in memory.")
+        except Exception as ex:
+            logger.warning(f"LLM pre-warm skipped: {ex}")
+
+    asyncio.create_task(_warmup_llm())
         
     yield
 
