@@ -564,7 +564,7 @@ Result: Prevents surprise salary drains by previewing next month's recurring com
 **Sync Features:**
 - **Manual Trigger**: Click "Sync Now" anytime for instant update
 - **Connection Status**: See last sync time, total transactions imported
-- **Sync History**: Complete log with status, errors, records processed
+- **Sync History & Deep Audit Feed**: Complete log with status, errors, and an expandable email inspection feed detailing classification verdicts (Transaction vs Non-Transaction), reason explanations, inference latencies (ms), and duplicate detections directly in the UI.
 - **Easy Disconnect**: One-click disconnect, reconnect anytime
 - **Format-Agnostic**: Works with different email formats via natural language AI
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     Mail,
     CheckCircle,
@@ -9,13 +9,283 @@ import {
     AlertCircle,
     TrendingUp,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Zap,
+    ShieldAlert
 } from 'lucide-react';
 import { useGmailStatus, useConnectGmail, useDisconnectGmail, useManualSync, useSyncHistory } from '../features/sync/hooks';
+import type { SyncAuditItem, SyncHistoryItem } from '../features/sync/types';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Loader } from '../components/ui/Loader';
 import { formatDistanceToNow } from 'date-fns';
+
+interface ParsedSyncData {
+    total_fetched: number;
+    imported_count: number;
+    non_transaction_count: number;
+    duplicate_count: number;
+    items: SyncAuditItem[];
+}
+
+function parseSyncSummary(rawSummary: string | null, recordsProcessed: number): ParsedSyncData {
+    if (!rawSummary) {
+        return {
+            total_fetched: recordsProcessed,
+            imported_count: recordsProcessed,
+            non_transaction_count: 0,
+            duplicate_count: 0,
+            items: []
+        };
+    }
+    try {
+        const parsed = JSON.parse(rawSummary);
+        if (parsed && typeof parsed === 'object') {
+            if (Array.isArray(parsed.items)) {
+                return {
+                    total_fetched: parsed.total_fetched ?? parsed.items.length,
+                    imported_count: parsed.imported_count ?? recordsProcessed,
+                    non_transaction_count: parsed.non_transaction_count ?? 0,
+                    duplicate_count: parsed.duplicate_count ?? 0,
+                    items: parsed.items
+                };
+            }
+            if (Array.isArray(parsed)) {
+                const items: SyncAuditItem[] = parsed.map((it: any, idx: number) => ({
+                    id: it.id || String(idx),
+                    subject: it.merchant || 'Transaction Alert',
+                    sender: '',
+                    status: 'IMPORTED',
+                    verdict: 'TRANSACTION',
+                    reason: it.category || 'Imported Transaction',
+                    time_taken_ms: 0,
+                    amount: it.amount,
+                    merchant: it.merchant,
+                    category: it.category,
+                    wealth_mapped: it.wealth_mapped
+                }));
+                return {
+                    total_fetched: items.length,
+                    imported_count: items.length,
+                    non_transaction_count: 0,
+                    duplicate_count: 0,
+                    items
+                };
+            }
+        }
+    } catch {
+        // Fallback for non-JSON or corrupted summaries
+    }
+    return {
+        total_fetched: recordsProcessed,
+        imported_count: recordsProcessed,
+        non_transaction_count: 0,
+        duplicate_count: 0,
+        items: []
+    };
+}
+
+interface SyncLogCardProps {
+    sync: SyncHistoryItem;
+    isExpanded: boolean;
+    onToggle: () => void;
+}
+
+const SyncLogCard: React.FC<SyncLogCardProps> = ({ sync, isExpanded, onToggle }) => {
+    const [filter, setFilter] = useState<'ALL' | 'IMPORTED' | 'NON_TRANSACTION' | 'DUPLICATE'>('ALL');
+    const summaryData = useMemo(() => parseSyncSummary(sync.summary, sync.records_processed), [sync.summary, sync.records_processed]);
+
+    const filteredItems = useMemo(() => {
+        if (filter === 'ALL') return summaryData.items;
+        return summaryData.items.filter(item => item.status === filter);
+    }, [summaryData.items, filter]);
+
+    const hasItems = summaryData.items.length > 0;
+
+    const durationSeconds = useMemo(() => {
+        if (!sync.start_time || !sync.end_time) return null;
+        const diffMs = new Date(sync.end_time).getTime() - new Date(sync.start_time).getTime();
+        return diffMs > 0 ? (diffMs / 1000).toFixed(1) : null;
+    }, [sync.start_time, sync.end_time]);
+
+    return (
+        <div className="space-y-2">
+            <div
+                onClick={() => hasItems && onToggle()}
+                className={`flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-surface border border-border-subtle hover:bg-surface-hover transition-colors ${hasItems ? 'cursor-pointer' : ''} ${isExpanded ? 'bg-surface-hover border-border-default' : ''}`}
+            >
+                <div className="flex items-center gap-3.5 min-w-0">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${
+                        sync.status === 'SUCCESS' ? 'bg-status-success-solid' :
+                        sync.status === 'FAILED' ? 'bg-status-danger-solid' :
+                        'bg-status-warning-solid animate-pulse'
+                    }`} />
+
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold text-text-primary">
+                                {sync.status === 'SUCCESS' && (
+                                    sync.records_processed > 0
+                                        ? `${sync.records_processed} transaction${sync.records_processed > 1 ? 's' : ''} synced`
+                                        : summaryData.total_fetched > 0
+                                            ? `${summaryData.total_fetched} email${summaryData.total_fetched > 1 ? 's' : ''} evaluated (0 imported)`
+                                            : '0 new transactions'
+                                )}
+                                {sync.status === 'FAILED' && 'Sync failed'}
+                                {sync.status === 'IN_PROGRESS' && 'Syncing...'}
+                            </p>
+                            {durationSeconds && (
+                                <span className="text-[10px] text-text-muted bg-surface-pill px-1.5 py-0.5 rounded border border-border-subtle tabular-nums font-mono">
+                                    {durationSeconds}s
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-xs text-text-muted mt-0.5 truncate">
+                            {formatDistanceToNow(new Date(sync.start_time), { addSuffix: true })} • {sync.trigger_source}
+                        </p>
+                        {sync.error_message && (
+                            <p className="text-xs text-status-danger-text mt-1">{sync.error_message}</p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0">
+                    {hasItems && (
+                        <div className="text-text-muted">
+                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </div>
+                    )}
+                    {sync.status === 'SUCCESS' && <CheckCircle size={16} className="text-status-success-text" />}
+                    {sync.status === 'FAILED' && <XCircle size={16} className="text-status-danger-text" />}
+                </div>
+            </div>
+
+            {isExpanded && hasItems && (
+                <div className="ml-3 sm:ml-5 pl-3 sm:pl-4 border-l border-border-subtle space-y-3 pt-1 pb-2 animate-in slide-in-from-top-2">
+                    {/* Filter Pills */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                        <h4 className="text-[10px] font-extrabold uppercase tracking-[2px] text-text-muted">
+                            Sync Audit & Latency
+                        </h4>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setFilter('ALL'); }}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${filter === 'ALL' ? 'bg-surface-pill border-border-default text-text-primary' : 'border-border-subtle text-text-muted hover:text-text-secondary'}`}
+                            >
+                                All ({summaryData.items.length})
+                            </button>
+                            {summaryData.imported_count > 0 && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setFilter('IMPORTED'); }}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${filter === 'IMPORTED' ? 'badge-success border-status-success-border font-extrabold' : 'border-border-subtle text-text-muted hover:text-text-secondary'}`}
+                                >
+                                    Imported ({summaryData.imported_count})
+                                </button>
+                            )}
+                            {summaryData.non_transaction_count > 0 && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setFilter('NON_TRANSACTION'); }}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${filter === 'NON_TRANSACTION' ? 'bg-surface-pill border-border-default text-text-primary font-extrabold' : 'border-border-subtle text-text-muted hover:text-text-secondary'}`}
+                                >
+                                    Non-Txn ({summaryData.non_transaction_count})
+                                </button>
+                            )}
+                            {summaryData.duplicate_count > 0 && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setFilter('DUPLICATE'); }}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${filter === 'DUPLICATE' ? 'badge-warning border-status-warning-border font-extrabold' : 'border-border-subtle text-text-muted hover:text-text-secondary'}`}
+                                >
+                                    Duplicates ({summaryData.duplicate_count})
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Email Inspection Feed */}
+                    <div className="space-y-2">
+                        {filteredItems.map((item, idx) => {
+                            const isImported = item.status === 'IMPORTED';
+                            const isNonTxn = item.status === 'NON_TRANSACTION';
+                            const isDuplicate = item.status === 'DUPLICATE';
+
+                            return (
+                                <div key={item.id || idx} className="p-3 rounded-xl bg-surface border border-border-subtle space-y-1.5 hover:border-border-default transition-colors">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            {isImported && (
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold badge-success">
+                                                    <CheckCircle size={12} className="shrink-0" />
+                                                    TRANSACTION
+                                                </span>
+                                            )}
+                                            {isNonTxn && (
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-surface-pill border border-border-subtle text-text-muted">
+                                                    <ShieldAlert size={12} className="shrink-0" />
+                                                    NON-TRANSACTION
+                                                </span>
+                                            )}
+                                            {isDuplicate && (
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold badge-warning">
+                                                    <RefreshCw size={12} className="shrink-0" />
+                                                    DUPLICATE
+                                                </span>
+                                            )}
+
+                                            {item.time_taken_ms > 0 && (
+                                                <span className="inline-flex items-center gap-0.5 text-[10px] font-mono tabular-nums text-text-muted">
+                                                    <Zap size={10} className="text-accent" />
+                                                    {item.time_taken_ms}ms
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {isImported && item.amount !== null && item.amount !== undefined && item.amount !== 0 && (
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                {item.wealth_mapped && (
+                                                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-accent-subtle border border-accent-border">
+                                                        <TrendingUp size={10} className="text-accent-text" />
+                                                        <span className="text-[8px] font-black uppercase text-accent-text tracking-wider">Wealth Sync</span>
+                                                    </div>
+                                                )}
+                                                <p className={`text-xs font-bold tabular-nums ${item.amount < 0 ? 'text-text-primary' : 'text-status-success-text'}`}>
+                                                    {item.amount < 0 ? '-' : '+'}₹{Math.abs(item.amount).toLocaleString('en-IN')}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Subject & Sender */}
+                                    <div>
+                                        <p className="text-xs font-bold text-text-primary leading-snug line-clamp-1">
+                                            {item.subject}
+                                        </p>
+                                        {item.sender && (
+                                            <p className="text-[10px] text-text-muted truncate mt-0.5">
+                                                {item.sender}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Reasoning & Category Meta */}
+                                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-border-subtle text-[10px]">
+                                        <span className="text-text-muted italic truncate">
+                                            {item.reason || (isImported ? 'Real money movement' : 'Notification evaluated')}
+                                        </span>
+                                        {isImported && item.merchant && (
+                                            <span className="text-text-secondary font-semibold shrink-0 bg-surface-pill px-2 py-0.5 rounded-full border border-border-subtle">
+                                                {item.merchant} • {item.category || 'Uncategorized'}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const Sync: React.FC = () => {
     const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
@@ -199,78 +469,14 @@ const Sync: React.FC = () => {
                                 </h3>
 
                                 <div className="space-y-2.5">
-                                    {history.syncs.map((sync) => {
-                                        const summary = sync.summary ? JSON.parse(sync.summary) : [];
-                                        const isExpanded = expandedSync === sync.id;
-
-                                        return (
-                                            <div key={sync.id} className="space-y-2">
-                                                <div
-                                                    onClick={() => summary.length > 0 && setExpandedSync(isExpanded ? null : sync.id)}
-                                                    className={`flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-surface border border-border-subtle hover:bg-surface-hover transition-colors cursor-pointer ${isExpanded ? 'bg-surface-hover border-border-strong' : ''}`}
-                                                >
-                                                    <div className="flex items-center gap-3.5">
-                                                        <div className={`w-2 h-2 rounded-full ${sync.status === 'SUCCESS' ? 'bg-status-success-solid' :
-                                                            sync.status === 'FAILED' ? 'bg-status-danger-solid' :
-                                                                'bg-status-warning-solid'
-                                                            }`} />
-
-                                                        <div>
-                                                            <p className="text-sm font-semibold text-text-primary">
-                                                                {sync.status === 'SUCCESS' && `${sync.records_processed} transactions synced`}
-                                                                {sync.status === 'FAILED' && 'Sync failed'}
-                                                                {sync.status === 'IN_PROGRESS' && 'Syncing...'}
-                                                            </p>
-                                                            <p className="text-xs text-text-muted mt-0.5">
-                                                                {formatDistanceToNow(new Date(sync.start_time), { addSuffix: true })} • {sync.trigger_source}
-                                                            </p>
-                                                            {sync.error_message && (
-                                                                <p className="text-xs text-status-danger-text mt-1">{sync.error_message}</p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2.5">
-                                                        {sync.status === 'SUCCESS' && summary.length > 0 && (
-                                                            <div className="text-text-muted">
-                                                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                            </div>
-                                                        )}
-                                                        {sync.status === 'SUCCESS' && <CheckCircle size={16} className="text-status-success-text" />}
-                                                        {sync.status === 'FAILED' && <XCircle size={16} className="text-status-danger-text" />}
-                                                    </div>
-                                                </div>
-
-                                                {isExpanded && summary.length > 0 && (
-                                                    <div className="ml-5 pl-4 border-l border-border-subtle space-y-2 animate-in slide-in-from-top-2">
-                                                        <h4 className="text-[10px] font-extrabold uppercase tracking-[2px] text-text-muted mb-2">Intelligence Feed</h4>
-                                                        {summary.map((item: any, idx: number) => (
-                                                            <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-surface border border-border-subtle">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className={`w-1.5 h-1.5 rounded-full ${item.amount < 0 ? 'bg-status-danger-solid' : 'bg-status-success-solid'}`} />
-                                                                    <div>
-                                                                        <p className="text-xs font-bold text-text-primary">{item.merchant}</p>
-                                                                        <p className="text-[10px] text-text-muted">{item.category}</p>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex items-center gap-3">
-                                                                    {item.wealth_mapped && (
-                                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent-subtle border border-accent-border">
-                                                                            <TrendingUp size={10} className="text-accent-text" />
-                                                                            <span className="text-[8px] font-black uppercase text-accent-text tracking-wider">Wealth Sync</span>
-                                                                        </div>
-                                                                    )}
-                                                                    <p className={`text-xs font-bold ${item.amount < 0 ? 'text-text-primary' : 'text-status-success-text'}`}>
-                                                                        {item.amount < 0 ? '-' : '+'}₹{Math.abs(item.amount).toLocaleString()}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                    {history.syncs.map((sync) => (
+                                        <SyncLogCard
+                                            key={sync.id}
+                                            sync={sync}
+                                            isExpanded={expandedSync === sync.id}
+                                            onToggle={() => setExpandedSync(expandedSync === sync.id ? null : sync.id)}
+                                        />
+                                    ))}
                                 </div>
                             </Card>
                         )}

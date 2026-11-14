@@ -2,9 +2,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 
-import type { GmailStatus, SyncHistory, SyncTrend, SyncTrendResponse } from './types';
+import type { GmailStatus, SyncHistory, SyncTrend, SyncTrendResponse, SyncAuditItem, SyncAuditSummary } from './types';
 
-export type { GmailStatus, SyncHistory, SyncTrend, SyncTrendResponse };
+export type { GmailStatus, SyncHistory, SyncTrend, SyncTrendResponse, SyncAuditItem, SyncAuditSummary };
 
 export const useGmailStatus = () => {
     return useQuery({

@@ -6,7 +6,7 @@ import logging
 import json
 import base64
 from datetime import datetime, timedelta, timezone
-from typing import Optional, List
+from typing import Optional, List, Union
 from sqlalchemy import select, desc, delete, or_, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
@@ -82,17 +82,14 @@ class SyncService:
         await self.db.refresh(log)
         return log
 
-    async def _log_end(self, log: SyncLog, status: str, count: int = 0, error: str = None, summary: List[dict] = None):
+    async def _log_end(self, log: SyncLog, status: str, count: int = 0, error: str = None, summary: Union[dict, list] = None):
         log.end_time = datetime.now()
         log.status = status
         log.records_processed = count
         log.error_message = error[:500] if error else None
         
-        # Avoid storing giant raw JSON summary payloads to prevent DB bloat.
-        # Store at most a compact summary dict only when records were actually processed.
-        if summary and count > 0:
-            compact_merchants = list({s.get("merchant", "") for s in summary if s.get("merchant")})[:5]
-            log.summary = json.dumps({"count": count, "sample_merchants": compact_merchants})
+        if summary is not None:
+            log.summary = json.dumps(summary)
         else:
             log.summary = None
         await self.db.commit()
@@ -242,22 +239,23 @@ class SyncService:
         5. account_type: "SAVINGS", "CREDIT_CARD", or "CASH".
         6. transaction_type: "DEBIT" or "CREDIT".
         7. extracted_date: ISO format (YYYY-MM-DD), or null.
+        8. reason: (string) Short 3-6 word summary (e.g. "Card spend at Starbucks", "Security login alert", "Mutual fund NAV update", "Promotional offer", "OTP verification code").
 
         FEW-SHOT EXAMPLES:
         Example 1: "Spent Rs. 450 at Starbucks on HDFC Card ending 1234 on 12-Nov-2026"
-        -> {{"is_transaction": true, "amount": 450.0, "currency": "INR", "merchant_name": "Starbucks", "category": "Food", "sub_category": "Restaurants", "account_type": "CREDIT_CARD", "transaction_type": "DEBIT", "extracted_date": "2026-11-12"}}
+        -> {{"is_transaction": true, "amount": 450.0, "currency": "INR", "merchant_name": "Starbucks", "category": "Food", "sub_category": "Restaurants", "account_type": "CREDIT_CARD", "transaction_type": "DEBIT", "extracted_date": "2026-11-12", "reason": "Card spend at Starbucks"}}
 
         Example 2: "Your attempt to log into Mobile Banking App, open could not be processed"
-        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null}}
+        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Security login alert"}}
 
         Example 3: "NAV of ICICI Prudential Bluechip Fund as on 10-Nov-2026 is 89.42"
-        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null}}
+        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Mutual fund NAV update"}}
 
         Example 4: "Special offer: Apply now and get Rs. 1000 cashback on your new card"
-        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "CREDIT_CARD", "transaction_type": "DEBIT", "extracted_date": null}}
+        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "CREDIT_CARD", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Promotional cashback offer"}}
 
         Example 5: "OTP for transaction of Rs 500 at Amazon is 123456"
-        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null}}
+        -> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "OTP verification code"}}
 
         {cat_str}
 
@@ -277,7 +275,8 @@ class SyncService:
           "sub_category": "<string: sub-category name>",
           "account_type": "<SAVINGS or CREDIT_CARD>",
           "transaction_type": "<DEBIT or CREDIT>",
-          "extracted_date": "<YYYY-MM-DD or null>"
+          "extracted_date": "<YYYY-MM-DD or null>",
+          "reason": "<string: short 3-6 word summary>"
         }}
         """
         # Step 1: Query Local LLM (Gemma 4)
@@ -302,6 +301,7 @@ class SyncService:
                 "transaction_type": "DEBIT",
                 "extracted_date": None,
                 "is_transaction": False,
+                "reason": data.get("reason") or "Classified as non-financial notification (no balance change)",
                 "extractor": "🤖 Gemma"
             }
 
@@ -327,6 +327,7 @@ class SyncService:
                     "transaction_type": txn_type,
                     "extracted_date": data.get("extracted_date"),
                     "is_transaction": True,
+                    "reason": data.get("reason") or f"Real money {txn_type.lower()} transfer",
                     "extractor": "🤖 Gemma"
                 }
 
@@ -392,6 +393,8 @@ class SyncService:
             "sub_category": "Uncategorized",
             "account_type": "SAVINGS",
             "transaction_type": txn_type,
+            "is_transaction": amount > 0,
+            "reason": f"Regex parsed {txn_type.lower()}" if amount > 0 else "Regex did not find amount",
             "extractor": "🔍 R"
         }
 
@@ -403,7 +406,9 @@ class SyncService:
             "category": "Uncategorized",
             "sub_category": "Uncategorized",
             "account_type": "SAVINGS",
-            "transaction_type": "DEBIT"
+            "transaction_type": "DEBIT",
+            "is_transaction": False,
+            "reason": "Unrecognized notification format"
         }
 
     async def fetch_gmail_changes(self, user_id: uuid.UUID, start_time: datetime = None) -> List[dict]:
@@ -461,21 +466,21 @@ class SyncService:
                 logger.warning(f"[Sync:{user_id}] No refresh_token available. If access token is stale, sync will fail.")
 
             service = build('gmail', 'v1', credentials=creds)
-            # Specific keywords to catch transactions without pulling in too much noise
-            query = "debit OR debited OR credit OR alert OR spent"
+            # Targeted keywords to catch banking and payment notifications while preserving privacy
+            query = 'debit OR debited OR credit OR credited OR alert OR spent OR transaction OR transferred OR paid OR "payment of" OR "payment received" OR UPI OR refund'
             if start_time:
                 query += f" after:{int(start_time.timestamp())}"
             
-            logger.info(f"[Sync:{user_id}] Gmail query: after={start_time.isoformat() if start_time else 'None'}")
+            logger.info(f"[Sync:{str(user_id)[:8]}] Gmail query: after={start_time.isoformat() if start_time else 'None'}")
             
             results = service.users().messages().list(userId='me', q=query, maxResults=50, includeSpamTrash=True).execute()
             messages = results.get('messages', [])
             
-            logger.info(f"[Sync:{user_id}] Gmail returned {len(messages)} message(s) matching query.")
+            logger.info(f"[Sync:{str(user_id)[:8]}] Gmail returned {len(messages)} message(s) matching query.")
 
             # After API call, persist any auto-refreshed token back to DB
             if creds.token != creds_data.get('token'):
-                logger.info(f"[Sync:{user_id}] Token was auto-refreshed during API call. Saving new token.")
+                logger.info(f"[Sync:{str(user_id)[:8]}] Token was auto-refreshed during API call. Saving new token.")
                 user.gmail_credentials = {
                     "token": creds.token,
                     "refresh_token": creds.refresh_token,
@@ -673,8 +678,15 @@ class SyncService:
                 logger.info(f"[Sync:{user_id}] Gmail fetch complete. Found {len(messages)} items in {t_fetch:.2f}ms")
                 
                 if not messages:
-                    logger.info(f"[Sync:{user_id}] No messages returned from Gmail. Completing with 0 records.")
-                    await self._log_end(log, "SUCCESS", 0)
+                    logger.info(f"[Sync:{str(user_id)[:8]}] No messages returned from Gmail. Completing with 0 records.")
+                    empty_summary = {
+                        "total_fetched": 0,
+                        "imported_count": 0,
+                        "non_transaction_count": 0,
+                        "duplicate_count": 0,
+                        "items": []
+                    }
+                    await self._log_end(log, "SUCCESS", 0, summary=empty_summary)
                     return
                 
                 # Fetch categories once for context
@@ -693,15 +705,33 @@ class SyncService:
                 dedup_skipped = 0
                 llm_failed = 0
                 zero_amount_skipped = 0
-                sync_summary = []
+                sync_items = []
 
                 for msg in messages:
-                    dedup_payload = f"{msg['id']}:{msg['internalDate']}"
+                    t_item_start = time.perf_counter()
+                    msg_id = msg['id']
+                    msg_subject = msg.get('subject', 'No Subject')
+                    msg_sender = msg.get('sender', '')
+
+                    dedup_payload = f"{msg_id}:{msg['internalDate']}"
                     content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
                     
                     if await self.txn_service.get_transaction_by_hash(content_hash):
                         logger.info(f"⏭️ [Sync:{str(user_id)[:8]}] Duplicate message skipped.")
                         dedup_skipped += 1
+                        t_item = (time.perf_counter() - t_item_start) * 1000
+                        sync_items.append({
+                            "id": msg_id,
+                            "subject": msg_subject,
+                            "sender": msg_sender,
+                            "status": "DUPLICATE",
+                            "verdict": "DUPLICATE",
+                            "reason": "Already imported in a previous sync",
+                            "time_taken_ms": round(t_item),
+                            "amount": None,
+                            "merchant": None,
+                            "category": None
+                        })
                         continue
                     
                     # Sanitize and send to extraction pipeline
@@ -713,14 +743,26 @@ class SyncService:
                         text=clean_text,
                         user_id=user_id,
                         categories_context=cat_list,
-                        subject=msg.get('subject', ''),
-                        sender=msg.get('sender', '')
+                        subject=msg_subject,
+                        sender=msg_sender
                     )
                     t_brain = (time.perf_counter() - t_brain_start) * 1000
                     
                     # Skip if non-transaction or no valid amount was extracted
                     if not extracted.get("is_transaction", True) or abs(extracted.get("amount", 0.0)) == 0:
                         zero_amount_skipped += 1
+                        sync_items.append({
+                            "id": msg_id,
+                            "subject": msg_subject,
+                            "sender": msg_sender,
+                            "status": "NON_TRANSACTION",
+                            "verdict": "NON_TRANSACTION",
+                            "reason": extracted.get("reason") or "Classified as non-financial notification (no balance change)",
+                            "time_taken_ms": round(t_brain),
+                            "amount": 0.0,
+                            "merchant": None,
+                            "category": None
+                        })
                         continue
 
                     mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
@@ -757,7 +799,7 @@ class SyncService:
                         tx_date = datetime.fromtimestamp(int(msg['internalDate']) / 1000).date()
 
                     # Append sanitized subject to remarks for better manual review
-                    clean_subject = self.sanitizer.sanitize(msg.get('subject', ''))
+                    clean_subject = self.sanitizer.sanitize(msg_subject)
                     ext_icon = extracted.get("extractor", "")
                     prefix = f"{ext_icon} | " if ext_icon else ""
                     improved_remarks = f"{prefix}Synced via {source} | Subject: {clean_subject}"
@@ -786,11 +828,20 @@ class SyncService:
                     except Exception as w_ex:
                         logger.error(f"[Sync:{str(user_id)[:8]}] Wealth mapping failed for transaction: {type(w_ex).__name__}")
 
-                    sync_summary.append({
+                    sync_items.append({
                         "id": str(new_txn.id),
-                        "merchant": extracted["merchant_name"],
+                        "subject": msg_subject,
+                        "sender": msg_sender,
+                        "status": "IMPORTED",
+                        "verdict": "TRANSACTION",
+                        "reason": extracted.get("reason") or f"Real money {extracted.get('transaction_type', 'DEBIT').lower()} ({cat})",
+                        "time_taken_ms": round(t_brain),
                         "amount": final_amount,
+                        "merchant": extracted["merchant_name"],
                         "category": cat,
+                        "sub_category": sub,
+                        "account_type": extracted.get("account_type"),
+                        "transaction_type": extracted.get("transaction_type"),
                         "wealth_mapped": wealth_mapped
                     })
 
@@ -811,7 +862,14 @@ class SyncService:
                     f"Duplicates Skipped: {dedup_skipped} | "
                     f"Errors: {llm_failed}"
                 )
-                await self._log_end(log, "SUCCESS", processed_count, summary=sync_summary)
+                sync_summary_payload = {
+                    "total_fetched": len(messages),
+                    "imported_count": processed_count,
+                    "non_transaction_count": zero_amount_skipped,
+                    "duplicate_count": dedup_skipped,
+                    "items": sync_items
+                }
+                await self._log_end(log, "SUCCESS", processed_count, summary=sync_summary_payload)
                 
             except Exception as e:
                 error_type = type(e).__name__
