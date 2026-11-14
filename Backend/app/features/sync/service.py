@@ -688,6 +688,16 @@ class SyncService:
                     }
                     await self._log_end(log, "SUCCESS", 0, summary=empty_summary)
                     return
+
+                # Initialize in-progress summary so polling client immediately sees total message count
+                log.summary = json.dumps({
+                    "total_fetched": len(messages),
+                    "imported_count": 0,
+                    "non_transaction_count": 0,
+                    "duplicate_count": 0,
+                    "items": []
+                })
+                await self.db.commit()
                 
                 # Fetch categories once for context
                 db_categories = await self.category_service.get_categories(user_id)
@@ -716,22 +726,35 @@ class SyncService:
                     dedup_payload = f"{msg_id}:{msg['internalDate']}"
                     content_hash = hashlib.sha256(dedup_payload.encode()).hexdigest()
                     
-                    if await self.txn_service.get_transaction_by_hash(content_hash):
+                    existing_txn = await self.txn_service.get_transaction_by_hash(content_hash)
+                    if existing_txn:
                         logger.info(f"⏭️ [Sync:{str(user_id)[:8]}] Duplicate message skipped.")
                         dedup_skipped += 1
                         t_item = (time.perf_counter() - t_item_start) * 1000
                         sync_items.append({
                             "id": msg_id,
+                            "transaction_id": str(existing_txn.id),
                             "subject": msg_subject,
                             "sender": msg_sender,
                             "status": "DUPLICATE",
                             "verdict": "DUPLICATE",
-                            "reason": "Already imported in a previous sync",
+                            "validation_status": existing_txn.status,
+                            "reason": f"Already imported (Status: {existing_txn.status})",
                             "time_taken_ms": round(t_item),
-                            "amount": None,
-                            "merchant": None,
-                            "category": None
+                            "amount": float(existing_txn.amount) if existing_txn.amount else None,
+                            "merchant": existing_txn.merchant_name,
+                            "category": existing_txn.category,
+                            "account_type": existing_txn.account_type
                         })
+                        # Live intermediate progress commit
+                        log.summary = json.dumps({
+                            "total_fetched": len(messages),
+                            "imported_count": processed_count,
+                            "non_transaction_count": zero_amount_skipped,
+                            "duplicate_count": dedup_skipped,
+                            "items": sync_items
+                        })
+                        await self.db.commit()
                         continue
                     
                     # Sanitize and send to extraction pipeline
@@ -753,16 +776,27 @@ class SyncService:
                         zero_amount_skipped += 1
                         sync_items.append({
                             "id": msg_id,
+                            "transaction_id": None,
                             "subject": msg_subject,
                             "sender": msg_sender,
                             "status": "NON_TRANSACTION",
                             "verdict": "NON_TRANSACTION",
+                            "validation_status": "EXCLUDED",
                             "reason": extracted.get("reason") or "Classified as non-financial notification (no balance change)",
                             "time_taken_ms": round(t_brain),
                             "amount": 0.0,
                             "merchant": None,
                             "category": None
                         })
+                        # Live intermediate progress commit
+                        log.summary = json.dumps({
+                            "total_fetched": len(messages),
+                            "imported_count": processed_count,
+                            "non_transaction_count": zero_amount_skipped,
+                            "duplicate_count": dedup_skipped,
+                            "items": sync_items
+                        })
+                        await self.db.commit()
                         continue
 
                     mapping = await self.txn_service.get_merchant_mapping(extracted["merchant_name"])
@@ -829,11 +863,13 @@ class SyncService:
                         logger.error(f"[Sync:{str(user_id)[:8]}] Wealth mapping failed for transaction: {type(w_ex).__name__}")
 
                     sync_items.append({
-                        "id": str(new_txn.id),
+                        "id": msg_id,
+                        "transaction_id": str(new_txn.id),
                         "subject": msg_subject,
                         "sender": msg_sender,
                         "status": "IMPORTED",
                         "verdict": "TRANSACTION",
+                        "validation_status": new_txn.status,
                         "reason": extracted.get("reason") or f"Real money {extracted.get('transaction_type', 'DEBIT').lower()} ({cat})",
                         "time_taken_ms": round(t_brain),
                         "amount": final_amount,
@@ -846,6 +882,16 @@ class SyncService:
                     })
 
                     processed_count += 1
+                    # Live intermediate progress commit
+                    log.records_processed = processed_count
+                    log.summary = json.dumps({
+                        "total_fetched": len(messages),
+                        "imported_count": processed_count,
+                        "non_transaction_count": zero_amount_skipped,
+                        "duplicate_count": dedup_skipped,
+                        "items": sync_items
+                    })
+                    await self.db.commit()
                 
                 if processed_count > 0:
                     try:

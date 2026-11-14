@@ -7,10 +7,12 @@ export interface GmailStatus {
 
 export interface SyncAuditItem {
     id: string;
+    transaction_id?: string | null;
     subject: string;
     sender: string;
     status: 'IMPORTED' | 'NON_TRANSACTION' | 'DUPLICATE' | 'FAILED';
     verdict: 'TRANSACTION' | 'NON_TRANSACTION' | 'DUPLICATE' | 'ERROR';
+    validation_status?: 'VERIFIED' | 'PENDING' | 'REJECTED' | 'EXCLUDED' | string;
     reason?: string;
     time_taken_ms: number;
     amount?: number | null;

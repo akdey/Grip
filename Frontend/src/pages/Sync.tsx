@@ -47,16 +47,21 @@ function parseSyncSummary(rawSummary: string | null, recordsProcessed: number): 
                     imported_count: parsed.imported_count ?? recordsProcessed,
                     non_transaction_count: parsed.non_transaction_count ?? 0,
                     duplicate_count: parsed.duplicate_count ?? 0,
-                    items: parsed.items
+                    items: parsed.items.map((it: any) => ({
+                        ...it,
+                        validation_status: it.validation_status || (it.status === 'IMPORTED' ? 'PENDING' : (it.status === 'NON_TRANSACTION' ? 'EXCLUDED' : 'VERIFIED'))
+                    }))
                 };
             }
             if (Array.isArray(parsed)) {
                 const items: SyncAuditItem[] = parsed.map((it: any, idx: number) => ({
                     id: it.id || String(idx),
+                    transaction_id: it.id,
                     subject: it.merchant || 'Transaction Alert',
                     sender: '',
                     status: 'IMPORTED',
                     verdict: 'TRANSACTION',
+                    validation_status: 'VERIFIED',
                     reason: it.category || 'Imported Transaction',
                     time_taken_ms: 0,
                     amount: it.amount,
@@ -92,21 +97,20 @@ interface SyncLogCardProps {
 }
 
 const SyncLogCard: React.FC<SyncLogCardProps> = ({ sync, isExpanded, onToggle }) => {
-    const [filter, setFilter] = useState<'ALL' | 'IMPORTED' | 'NON_TRANSACTION' | 'DUPLICATE'>('ALL');
+    const [filter, setFilter] = useState<'ALL' | 'VERIFIED' | 'PENDING' | 'NON_TRANSACTION' | 'DUPLICATE'>('ALL');
     const summaryData = useMemo(() => parseSyncSummary(sync.summary, sync.records_processed), [sync.summary, sync.records_processed]);
+
+    const verifiedCount = useMemo(() => summaryData.items.filter(it => it.validation_status === 'VERIFIED').length, [summaryData.items]);
+    const pendingCount = useMemo(() => summaryData.items.filter(it => it.validation_status === 'PENDING').length, [summaryData.items]);
 
     const filteredItems = useMemo(() => {
         if (filter === 'ALL') return summaryData.items;
+        if (filter === 'VERIFIED') return summaryData.items.filter(item => item.validation_status === 'VERIFIED');
+        if (filter === 'PENDING') return summaryData.items.filter(item => item.validation_status === 'PENDING');
         return summaryData.items.filter(item => item.status === filter);
     }, [summaryData.items, filter]);
 
     const hasItems = summaryData.items.length > 0;
-
-    const durationSeconds = useMemo(() => {
-        if (!sync.start_time || !sync.end_time) return null;
-        const diffMs = new Date(sync.end_time).getTime() - new Date(sync.start_time).getTime();
-        return diffMs > 0 ? (diffMs / 1000).toFixed(1) : null;
-    }, [sync.start_time, sync.end_time]);
 
     return (
         <div className="space-y-2">
@@ -122,24 +126,21 @@ const SyncLogCard: React.FC<SyncLogCardProps> = ({ sync, isExpanded, onToggle })
                     }`} />
 
                     <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-semibold text-text-primary">
-                                {sync.status === 'SUCCESS' && (
-                                    sync.records_processed > 0
-                                        ? `${sync.records_processed} transaction${sync.records_processed > 1 ? 's' : ''} synced`
-                                        : summaryData.total_fetched > 0
-                                            ? `${summaryData.total_fetched} email${summaryData.total_fetched > 1 ? 's' : ''} evaluated (0 imported)`
-                                            : '0 new transactions'
-                                )}
-                                {sync.status === 'FAILED' && 'Sync failed'}
-                                {sync.status === 'IN_PROGRESS' && 'Syncing...'}
-                            </p>
-                            {durationSeconds && (
-                                <span className="text-[10px] text-text-muted bg-surface-pill px-1.5 py-0.5 rounded border border-border-subtle tabular-nums font-mono">
-                                    {durationSeconds}s
-                                </span>
+                        <p className="text-sm font-semibold text-text-primary">
+                            {sync.status === 'SUCCESS' && (
+                                sync.records_processed > 0
+                                    ? `${sync.records_processed} transaction${sync.records_processed > 1 ? 's' : ''} synced`
+                                    : summaryData.total_fetched > 0
+                                        ? `${summaryData.total_fetched} email${summaryData.total_fetched > 1 ? 's' : ''} evaluated (0 imported)`
+                                        : '0 new transactions'
                             )}
-                        </div>
+                            {sync.status === 'FAILED' && 'Sync failed'}
+                            {sync.status === 'IN_PROGRESS' && (
+                                summaryData.total_fetched > 0
+                                    ? `Syncing... (${summaryData.items.length} of ${summaryData.total_fetched} evaluated)`
+                                    : 'Syncing...'
+                            )}
+                        </p>
                         <p className="text-xs text-text-muted mt-0.5 truncate">
                             {formatDistanceToNow(new Date(sync.start_time), { addSuffix: true })} • {sync.trigger_source}
                         </p>
@@ -157,15 +158,16 @@ const SyncLogCard: React.FC<SyncLogCardProps> = ({ sync, isExpanded, onToggle })
                     )}
                     {sync.status === 'SUCCESS' && <CheckCircle size={16} className="text-status-success-text" />}
                     {sync.status === 'FAILED' && <XCircle size={16} className="text-status-danger-text" />}
+                    {sync.status === 'IN_PROGRESS' && <RefreshCw size={16} className="text-status-warning-text animate-spin" />}
                 </div>
             </div>
 
             {isExpanded && hasItems && (
                 <div className="ml-3 sm:ml-5 pl-3 sm:pl-4 border-l border-border-subtle space-y-3 pt-1 pb-2 animate-in slide-in-from-top-2">
-                    {/* Filter Pills */}
+                    {/* Filter Pills with Live Validation Status */}
                     <div className="flex items-center justify-between flex-wrap gap-2">
                         <h4 className="text-[10px] font-extrabold uppercase tracking-[2px] text-text-muted">
-                            Sync Audit & Latency
+                            Sync Audit & Validation Feed
                         </h4>
                         <div className="flex items-center gap-1.5 flex-wrap">
                             <button
@@ -174,12 +176,20 @@ const SyncLogCard: React.FC<SyncLogCardProps> = ({ sync, isExpanded, onToggle })
                             >
                                 All ({summaryData.items.length})
                             </button>
-                            {summaryData.imported_count > 0 && (
+                            {verifiedCount > 0 && (
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); setFilter('IMPORTED'); }}
-                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${filter === 'IMPORTED' ? 'badge-success border-status-success-border font-extrabold' : 'border-border-subtle text-text-muted hover:text-text-secondary'}`}
+                                    onClick={(e) => { e.stopPropagation(); setFilter('VERIFIED'); }}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${filter === 'VERIFIED' ? 'badge-success border-status-success-border font-extrabold' : 'border-border-subtle text-text-muted hover:text-text-secondary'}`}
                                 >
-                                    Imported ({summaryData.imported_count})
+                                    Verified ({verifiedCount})
+                                </button>
+                            )}
+                            {pendingCount > 0 && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setFilter('PENDING'); }}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${filter === 'PENDING' ? 'badge-warning border-status-warning-border font-extrabold' : 'border-border-subtle text-text-muted hover:text-text-secondary'}`}
+                                >
+                                    Pending ({pendingCount})
                                 </button>
                             )}
                             {summaryData.non_transaction_count > 0 && (
@@ -193,7 +203,7 @@ const SyncLogCard: React.FC<SyncLogCardProps> = ({ sync, isExpanded, onToggle })
                             {summaryData.duplicate_count > 0 && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setFilter('DUPLICATE'); }}
-                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${filter === 'DUPLICATE' ? 'badge-warning border-status-warning-border font-extrabold' : 'border-border-subtle text-text-muted hover:text-text-secondary'}`}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${filter === 'DUPLICATE' ? 'bg-surface-pill border-border-default text-text-primary' : 'border-border-subtle text-text-muted hover:text-text-secondary'}`}
                                 >
                                     Duplicates ({summaryData.duplicate_count})
                                 </button>
@@ -201,7 +211,7 @@ const SyncLogCard: React.FC<SyncLogCardProps> = ({ sync, isExpanded, onToggle })
                         </div>
                     </div>
 
-                    {/* Email Inspection Feed */}
+                    {/* Email Inspection Feed with Detailed Validation Status */}
                     <div className="space-y-2">
                         {filteredItems.map((item, idx) => {
                             const isImported = item.status === 'IMPORTED';
@@ -211,35 +221,47 @@ const SyncLogCard: React.FC<SyncLogCardProps> = ({ sync, isExpanded, onToggle })
                             return (
                                 <div key={item.id || idx} className="p-3 rounded-xl bg-surface border border-border-subtle space-y-1.5 hover:border-border-default transition-colors">
                                     <div className="flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2">
-                                            {isImported && (
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold badge-success">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            {/* Validation Status Badge */}
+                                            {item.validation_status === 'VERIFIED' && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold badge-success">
                                                     <CheckCircle size={12} className="shrink-0" />
-                                                    TRANSACTION
+                                                    VERIFIED
+                                                </span>
+                                            )}
+                                            {item.validation_status === 'PENDING' && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold badge-warning">
+                                                    <Clock size={12} className="shrink-0" />
+                                                    PENDING REVIEW
+                                                </span>
+                                            )}
+                                            {item.validation_status === 'REJECTED' && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold badge-danger">
+                                                    <XCircle size={12} className="shrink-0" />
+                                                    REJECTED
                                                 </span>
                                             )}
                                             {isNonTxn && (
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-surface-pill border border-border-subtle text-text-muted">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-surface-pill border border-border-subtle text-text-muted">
                                                     <ShieldAlert size={12} className="shrink-0" />
                                                     NON-TRANSACTION
                                                 </span>
                                             )}
                                             {isDuplicate && (
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold badge-warning">
-                                                    <RefreshCw size={12} className="shrink-0" />
-                                                    DUPLICATE
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-pill border border-border-subtle text-text-muted">
+                                                    PREVIOUS SYNC
                                                 </span>
                                             )}
 
                                             {item.time_taken_ms > 0 && (
-                                                <span className="inline-flex items-center gap-0.5 text-[10px] font-mono tabular-nums text-text-muted">
+                                                <span className="inline-flex items-center gap-0.5 text-[10px] font-mono tabular-nums text-text-muted ml-1">
                                                     <Zap size={10} className="text-accent" />
                                                     {item.time_taken_ms}ms
                                                 </span>
                                             )}
                                         </div>
 
-                                        {isImported && item.amount !== null && item.amount !== undefined && item.amount !== 0 && (
+                                        {item.amount !== null && item.amount !== undefined && item.amount !== 0 && (
                                             <div className="flex items-center gap-2 shrink-0">
                                                 {item.wealth_mapped && (
                                                     <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-accent-subtle border border-accent-border">
@@ -269,9 +291,9 @@ const SyncLogCard: React.FC<SyncLogCardProps> = ({ sync, isExpanded, onToggle })
                                     {/* Reasoning & Category Meta */}
                                     <div className="flex items-center justify-between gap-2 pt-1 border-t border-border-subtle text-[10px]">
                                         <span className="text-text-muted italic truncate">
-                                            {item.reason || (isImported ? 'Real money movement' : 'Notification evaluated')}
+                                            {item.reason || (item.validation_status ? `Validation: ${item.validation_status}` : 'Evaluated')}
                                         </span>
-                                        {isImported && item.merchant && (
+                                        {item.merchant && (
                                             <span className="text-text-secondary font-semibold shrink-0 bg-surface-pill px-2 py-0.5 rounded-full border border-border-subtle">
                                                 {item.merchant} • {item.category || 'Uncategorized'}
                                             </span>
@@ -280,6 +302,12 @@ const SyncLogCard: React.FC<SyncLogCardProps> = ({ sync, isExpanded, onToggle })
                                 </div>
                             );
                         })}
+                        {sync.status === 'IN_PROGRESS' && (
+                            <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-surface border border-border-subtle text-xs text-text-muted animate-pulse">
+                                <RefreshCw size={12} className="animate-spin text-accent" />
+                                <span>Evaluating remaining emails in real-time...</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

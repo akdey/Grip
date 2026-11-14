@@ -264,7 +264,7 @@ async def get_sync_history(
     db: Annotated[AsyncSession, Depends(get_db)],
     limit: int = 20
 ):
-    """Get sync history for the user."""
+    """Get sync history for the user with live validation status."""
     stmt = (
         select(SyncLog)
         .where(SyncLog.user_id == current_user.id)
@@ -274,20 +274,59 @@ async def get_sync_history(
     result = await db.execute(stmt)
     logs = result.scalars().all()
     
-    return {
-        "syncs": [
-            {
-                "id": log.id,
-                "start_time": log.start_time,
-                "end_time": log.end_time,
-                "status": log.status,
-                "records_processed": log.records_processed,
-                "trigger_source": log.trigger_source,
-                "error_message": log.error_message
-            }
-            for log in logs
-        ]
-    }
+    # Collect all transaction IDs to hydrate their latest live validation status
+    all_txn_ids = []
+    parsed_summaries = {}
+    import uuid
+    for log in logs:
+        if log.summary:
+            try:
+                data = json.loads(log.summary)
+                parsed_summaries[log.id] = data
+                if isinstance(data, dict) and "items" in data:
+                    for it in data["items"]:
+                        tid = it.get("transaction_id")
+                        if tid:
+                            try:
+                                all_txn_ids.append(uuid.UUID(str(tid)))
+                            except (ValueError, TypeError):
+                                pass
+            except Exception:
+                pass
+
+    # Batch query live transaction status
+    live_status_map = {}
+    if all_txn_ids:
+        txn_stmt = select(Transaction.id, Transaction.status).where(Transaction.id.in_(all_txn_ids))
+        txn_res = await db.execute(txn_stmt)
+        for t_id, t_status in txn_res.all():
+            live_status_map[str(t_id)] = t_status
+
+    # Build response payload with live validation status
+    sync_records = []
+    for log in logs:
+        summary_payload = log.summary
+        if log.id in parsed_summaries:
+            data = parsed_summaries[log.id]
+            if isinstance(data, dict) and "items" in data and live_status_map:
+                for it in data["items"]:
+                    tid = it.get("transaction_id")
+                    if tid and str(tid) in live_status_map:
+                        it["validation_status"] = live_status_map[str(tid)]
+                summary_payload = json.dumps(data)
+
+        sync_records.append({
+            "id": log.id,
+            "start_time": log.start_time,
+            "end_time": log.end_time,
+            "status": log.status,
+            "records_processed": log.records_processed,
+            "trigger_source": log.trigger_source,
+            "error_message": log.error_message,
+            "summary": summary_payload
+        })
+
+    return {"syncs": sync_records}
 
 @router.get("/trends")
 async def get_sync_trends(
