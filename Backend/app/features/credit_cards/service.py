@@ -401,7 +401,10 @@ class CreditCardService:
             if recommended_card.last_four_digits:
                 card_desc += f" (••{recommended_card.last_four_digits})"
             due_fmt = recommended_card.payment_due_date_resolved.strftime("%b %d, %Y")
-            insight = f"Swipe {card_desc} today for a maximum {recommended_card.grace_days}-day interest-free float (due on {due_fmt})."
+            if recommended_card.days_until_statement <= 1:
+                insight = f"Statement closes in {recommended_card.days_until_statement}d. Swiping today gives {recommended_card.grace_days}d float (due {due_fmt}). Waiting for the new cycle unlocks up to ~50 days float."
+            else:
+                insight = f"Swipe {card_desc} today for an optimal {recommended_card.grace_days}-day interest-free float (due on {due_fmt})."
         else:
             insight = "No cards available to evaluate."
             
