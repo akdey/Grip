@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime, date
 from decimal import Decimal
