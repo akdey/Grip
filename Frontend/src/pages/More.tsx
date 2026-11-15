@@ -54,7 +54,19 @@ import { useTheme } from '../lib/theme';
 import { getBiometricsStatus, registerBiometricCredential, getDeviceBiometricName } from '../lib/webauthn';
 import { haptics } from '../lib/haptics';
 
-const FEATURE_CARDS = [
+interface FeatureCardItem {
+    id: string;
+    label: string;
+    icon: React.ComponentType<{ size?: number; className?: string }>;
+    path?: string;
+    action?: string;
+    color: string;
+    bgColor: string;
+    badge?: string;
+    description?: string;
+}
+
+const FEATURE_CARDS: FeatureCardItem[] = [
     { id: 'sync', label: 'Gmail Sync', icon: Mail, path: '/sync', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'pending', label: 'Action Center', icon: Sparkles, path: '/transactions?view=pending', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'transactions', label: 'History', icon: History, path: '/transactions', color: 'text-primary', bgColor: 'bg-surface-subtle' },
@@ -66,9 +78,9 @@ const FEATURE_CARDS = [
     { id: 'export', label: 'Export Data', icon: Download, action: 'OPEN_EXPORTS', color: 'text-primary', bgColor: 'bg-surface-subtle' },
 ];
 
-const EXPERIMENTAL_CARDS = [
+const EXPERIMENTAL_CARDS: FeatureCardItem[] = [
     { id: 'goals', label: 'Goals', icon: Wallet, path: '/goals', color: 'text-primary', bgColor: 'bg-surface-subtle' },
-    { id: 'card-optimizer', label: 'Swipe Optimizer', icon: CreditCard, path: '/credit-cards/optimizer', color: 'text-primary', bgColor: 'bg-surface-subtle', badge: 'NEW' },
+    { id: 'card-optimizer', label: 'Swipe Optimizer', icon: CreditCard, path: '/credit-cards/optimizer', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'anomaly', label: 'Anomaly Radar', icon: ShieldAlert, path: '/anomalies', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'wealth-lab', label: 'Wealth Lab', icon: LineChart, path: '/wealth/lab', color: 'text-primary', bgColor: 'bg-surface-subtle' },
 ];
@@ -393,7 +405,7 @@ const More: React.FC = () => {
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                    <span className="text-[11px] font-bold text-secondary group-hover:text-primary tracking-wide uppercase whitespace-nowrap transition-colors truncate">
+                                    <span className="text-[10px] font-semibold text-secondary group-hover:text-primary tracking-wider uppercase whitespace-nowrap transition-colors truncate">
                                         {isCardLoading ? 'Exporting...' : card.label}
                                     </span>
                                     {(card as any).badge && (
@@ -418,7 +430,6 @@ const More: React.FC = () => {
                                 Beta
                             </span>
                         </div>
-                        <span className="text-[10px] text-text-muted font-medium">Research Tools</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
@@ -433,7 +444,7 @@ const More: React.FC = () => {
                                     <card.icon size={15} className="text-primary" />
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                    <span className="text-[11px] font-bold text-secondary group-hover:text-primary tracking-wide uppercase whitespace-nowrap transition-colors truncate">
+                                    <span className="text-[10px] font-semibold text-secondary group-hover:text-primary tracking-wider uppercase whitespace-nowrap transition-colors truncate">
                                         {card.label}
                                     </span>
                                     {card.badge && (
