@@ -28,3 +28,17 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>,
 );
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        console.log('Grip PWA ServiceWorker registered with scope:', registration.scope);
+      })
+      .catch((error) => {
+        console.warn('Grip PWA ServiceWorker registration failed:', error);
+      });
+  });
+}

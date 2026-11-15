@@ -1,33 +1,49 @@
 {
-    "short_name": "Grip",
-    "name": "Grip - Financial Intelligence",
-    "icons": [
-        {
-            "src": "logo.svg",
-            "sizes": "192x192 512x512",
-            "type": "image/svg+xml",
-            "purpose": "any maskable"
-        },
-        {
-            "src": "pwa-192x192.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "pwa-512x512.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        }
-    ],
-    "start_url": "/",
-    "display": "standalone",
-    "display_override": [
-        "window-controls-overlay",
-        "standalone",
-        "fullscreen",
-        "minimal-ui"
-    ],
-    "theme_color": "#050505",
-    "background_color": "#050505",
-    "orientation": "portrait"
+  "id": "/",
+  "name": "Grip - Financial Intelligence",
+  "short_name": "Grip",
+  "description": "Grip is your private financial intelligence engine. Track expenses, forecast budgets, and manage wealth.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "window-controls-overlay"
+  ],
+  "theme_color": "#050505",
+  "background_color": "#050505",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }
