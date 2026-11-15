@@ -50,3 +50,30 @@ class CreditCardCycleInfo(BaseModel):
 
 class CreditCardWithCycleInfo(CreditCardResponse):
     cycle_info: CreditCardCycleInfo
+
+
+class CardGraceEvaluation(BaseModel):
+    card_id: UUID
+    card_name: str
+    last_four_digits: Optional[str] = None
+    statement_date: int
+    payment_due_date: int
+    credit_limit: Optional[Decimal] = None
+    unbilled_amount: Decimal
+    utilization_percentage: Optional[float] = None
+    grace_days: int
+    days_until_statement: int
+    next_statement_date: date
+    payment_due_date_resolved: date
+    status_label: str
+    is_recommended: bool
+    warning: Optional[str] = None
+
+
+class GraceOptimizerResponse(BaseModel):
+    reference_date: date
+    recommended_card: Optional[CardGraceEvaluation] = None
+    cards: List[CardGraceEvaluation]
+    max_grace_days: int
+    insight: str
+

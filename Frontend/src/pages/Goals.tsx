@@ -4,7 +4,11 @@ import { Target, Plus, Trash2, Calendar, TrendingUp, AlertCircle, CheckCircle } 
 import { useGoals, useCreateGoal, useDeleteGoal, useCheckFeasibility } from '../features/goals/goalHooks';
 import { Loader } from '../components/ui/Loader';
 
-const Goals: React.FC = () => {
+interface GoalsProps {
+    embedded?: boolean;
+}
+
+const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
     const { data: goals, isLoading } = useGoals();
     const createGoalMutation = useCreateGoal();
     const deleteGoalMutation = useDeleteGoal();
@@ -60,35 +64,37 @@ const Goals: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-page flex items-center justify-center">
+            <div className={embedded ? "py-16 flex items-center justify-center" : "min-h-screen bg-page flex items-center justify-center"}>
                 <Loader />
             </div>
         );
     }
 
-    return (
-        <div className="min-h-screen text-primary pb-24">
-            {/* Header */}
-            <header className="px-4 py-6 flex items-center justify-between border-b border-border-subtle sticky top-0 bg-page/80 backdrop-blur-3xl z-30">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-accent-subtle flex items-center justify-center border border-accent-border text-accent-text">
-                        <Target size={20} />
+    const content = (
+        <div className={embedded ? "space-y-4" : "px-4 py-6 space-y-4"}>
+            {/* Embedded Action Bar */}
+            {embedded && (
+                <div className="flex items-center justify-between p-4 bg-surface rounded-2xl border border-border-subtle">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-accent-subtle flex items-center justify-center border border-accent-border text-accent-text">
+                            <Target size={18} />
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-black uppercase tracking-tight text-primary">Financial Goals</h2>
+                            <p className="text-[10px] text-text-muted font-bold">Dual-Bucket Pacing & Surplus Allocation</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-lg font-black uppercase tracking-tight text-primary heading-apple">Goals</h1>
-                        <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold">Financial Targets</p>
-                    </div>
+                    <button
+                        onClick={() => setShowForm(!showForm)}
+                        className="px-3.5 py-2 rounded-xl bg-accent text-accent-text font-bold text-xs flex items-center gap-1.5 hover:opacity-90 transition-all active:scale-95 shadow-sm"
+                    >
+                        <Plus size={14} />
+                        <span>{showForm ? 'Close' : 'New Goal'}</span>
+                    </button>
                 </div>
-                <button
-                    onClick={() => setShowForm(!showForm)}
-                    className="w-10 h-10 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center hover:bg-surface-hover text-text-muted hover:text-primary transition-all active:scale-95"
-                >
-                    <Plus size={18} />
-                </button>
-            </header>
+            )}
 
-            <div className="px-4 py-6 space-y-4">
-                {/* Create Goal Form */}
+            {/* Create Goal Form */}
                 <AnimatePresence>
                     {showForm && (
                         <motion.div
@@ -253,6 +259,32 @@ const Goals: React.FC = () => {
                     </div>
                 )}
             </div>
+        );
+
+    if (embedded) {
+        return content;
+    }
+
+    return (
+        <div className="min-h-screen text-primary pb-24">
+            <header className="px-4 py-6 flex items-center justify-between border-b border-border-subtle sticky top-0 bg-page/80 backdrop-blur-3xl z-30">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-accent-subtle flex items-center justify-center border border-accent-border text-accent-text">
+                        <Target size={20} />
+                    </div>
+                    <div>
+                        <h1 className="text-lg font-black uppercase tracking-tight text-primary heading-apple">Goals</h1>
+                        <p className="text-[9px] text-text-muted uppercase tracking-widest font-bold">Financial Targets</p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => setShowForm(!showForm)}
+                    className="w-10 h-10 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center hover:bg-surface-hover text-text-muted hover:text-primary transition-all active:scale-95"
+                >
+                    <Plus size={18} />
+                </button>
+            </header>
+            {content}
         </div>
     );
 };

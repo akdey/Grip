@@ -67,3 +67,41 @@ export const useUpdateCreditCard = () => {
         },
     });
 };
+
+export interface CardGraceEvaluation {
+    card_id: string;
+    card_name: string;
+    last_four_digits?: string;
+    statement_date: number;
+    payment_due_date: number;
+    credit_limit?: number;
+    unbilled_amount: number;
+    utilization_percentage?: number;
+    grace_days: number;
+    days_until_statement: number;
+    next_statement_date: string;
+    payment_due_date_resolved: string;
+    status_label: string;
+    is_recommended: boolean;
+    warning?: string;
+}
+
+export interface GraceOptimizerResponse {
+    reference_date: string;
+    recommended_card?: CardGraceEvaluation;
+    cards: CardGraceEvaluation[];
+    max_grace_days: number;
+    insight: string;
+}
+
+export const useCreditCardGraceOptimizer = (referenceDate?: string) => {
+    return useQuery({
+        queryKey: ['credit-card-grace-optimizer', referenceDate],
+        queryFn: async () => {
+            const params = referenceDate ? { reference_date: referenceDate } : {};
+            const { data } = await api.get<GraceOptimizerResponse>('/credit-cards/grace-optimizer', { params });
+            return data;
+        },
+    });
+};
+

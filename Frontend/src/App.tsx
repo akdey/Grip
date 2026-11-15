@@ -20,6 +20,7 @@ const Wealth = React.lazy(() => import('./pages/Wealth'));
 const WealthLab = React.lazy(() => import('./pages/WealthLab'));
 const Tags = React.lazy(() => import('./pages/Tags'));
 const Goals = React.lazy(() => import('./pages/Goals'));
+const Lab = React.lazy(() => import('./pages/Lab'));
 const Sureties = React.lazy(() => import('./pages/Sureties'));
 const Sync = React.lazy(() => import('./pages/Sync'));
 const SettleUp = React.lazy(() => import('./pages/SettleUp'));
@@ -59,7 +60,9 @@ function App() {
               <Route path="/wealth/lab" element={<WealthLab />} />
               <Route path="/more" element={<More />} />
               <Route path="/tags" element={<Tags />} />
-              <Route path="/goals" element={<Goals />} />
+              <Route path="/goals" element={<Navigate to="/lab?tab=goals" replace />} />
+              <Route path="/lab" element={<Lab />} />
+              <Route path="/experimental" element={<Navigate to="/lab" replace />} />
               <Route path="/sureties" element={<Sureties />} />
               <Route path="/settle-up" element={<SettleUp />} />
             </Route>

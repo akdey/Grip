@@ -34,7 +34,8 @@ import {
     Fingerprint,
     Loader2,
     Send,
-    X
+    X,
+    FlaskConical
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
@@ -51,11 +52,12 @@ import { getBiometricsStatus, registerBiometricCredential, getDeviceBiometricNam
 import { haptics } from '../lib/haptics';
 
 const FEATURE_CARDS = [
+    { id: 'lab', label: 'Grip Lab', icon: FlaskConical, path: '/lab', color: 'text-accent-text', bgColor: 'bg-accent-subtle', badge: 'BETA' },
     { id: 'sync', label: 'Gmail Sync', icon: Mail, path: '/sync', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'pending', label: 'Action Center', icon: Sparkles, path: '/transactions?view=pending', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'transactions', label: 'History', icon: History, path: '/transactions', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'sureties', label: 'Sureties', icon: CalendarClock, path: '/sureties', color: 'text-primary', bgColor: 'bg-surface-subtle' },
-    { id: 'goals', label: 'Goals', icon: Wallet, path: '/goals', color: 'text-primary', bgColor: 'bg-surface-subtle' },
+    { id: 'goals', label: 'Goals (Lab)', icon: Wallet, path: '/lab?tab=goals', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'categories', label: 'Categories', icon: LayoutGrid, action: 'OPEN_CATEGORIES', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'export', label: 'Export Data', icon: Download, action: 'OPEN_EXPORTS', color: 'text-primary', bgColor: 'bg-surface-subtle' },
@@ -382,9 +384,16 @@ const More: React.FC = () => {
                                         </span>
                                     )}
                                 </div>
-                                <span className="text-[11px] font-bold text-secondary group-hover:text-primary tracking-wide uppercase whitespace-nowrap transition-colors">
-                                    {isCardLoading ? 'Exporting...' : card.label}
-                                </span>
+                                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                    <span className="text-[11px] font-bold text-secondary group-hover:text-primary tracking-wide uppercase whitespace-nowrap transition-colors truncate">
+                                        {isCardLoading ? 'Exporting...' : card.label}
+                                    </span>
+                                    {(card as any).badge && (
+                                        <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-accent text-accent-text shrink-0 leading-none">
+                                            {(card as any).badge}
+                                        </span>
+                                    )}
+                                </div>
                             </motion.button>
                         );
                     })}

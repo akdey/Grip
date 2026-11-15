@@ -467,26 +467,30 @@ Result: Prevents surprise salary drains by previewing next month's recurring com
 └────────────────────────────────────────┘
 ```
 
-### 🎯 Financial Goals
+### 🧪 Grip Lab (Experimental Zone)
 
-**Goal Setting & Tracking**
-- Set savings goals with target amounts and deadlines
-- Track progress towards each goal
-- Visual progress indicators
-- Automatic calculation of monthly savings needed
-- Integration with Safe-to-Spend (optional goal reserves)
+The **Grip Lab** (`/lab`) is a dedicated sandbox for cutting-edge financial algorithms and experimental intelligence tools:
 
-**Goal Types:**
-- Emergency Fund
-- Vacation
-- Gadget Purchase
-- Down Payment
-- Custom Goals
+1. **Credit Card Grace Period Optimizer (`/api/v1/credit-cards/grace-optimizer`)**:
+   - **"Which Card Should I Swipe Today?"**: Automatically analyzes statement cycles and payment due dates across all active cards to pinpoint the card offering the maximum 0% interest float (up to 45–52 days).
+   - **Interactive Date Simulation**: Simulate future purchase dates to identify which card to deploy for major planned expenses.
+   - **Credit Utilization Guards**: Balances interest-free days with credit health, penalizing cards with >80% utilization to protect credit scores.
 
-**Smart Recommendations:**
-- "Save ₹8,500/month to reach ₹1,00,000 goal by December"
-- "You're 45% towards your iPhone fund!"
-- "Adjust Safe-to-Spend buffer to include goal savings"
+2. **Anomaly Radar**:
+   - Autonomous outflow surveillance transferred from the main dashboard into a dedicated security lab.
+   - Real-time detection of spend spikes, duplicate swipes, category velocity surges, and surety drifts with one-click inspection drawers.
+
+3. **Financial Goals & Dual-Bucket Pacing**:
+   - Day-accurate goal feasibility engine evaluating 90-day surplus after fixed obligations and living burn.
+   - **Don't-Starve Dual-Bucket Allocation**: Clicks into current liquidity without depleting living cash buffers, pacing remaining targets against projected future income.
+
+4. **Zero-Income Runway Stress-Tester**:
+   - Interactive cashflow survival simulator calculating exact runway in days and months if all income ceased today.
+   - Dynamic discretionary burn slider (0% austerity to 150% high burn) for real-time runway forecasting.
+
+5. **Wealth Lab Portal**:
+   - Direct gateway to Facebook Prophet multi-decade portfolio projections and historical SIP timing optimization.
+
 
 ### 🤝 Settle Up (Peer-to-Peer Balances)
 

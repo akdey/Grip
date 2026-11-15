@@ -266,3 +266,150 @@ class CreditCardService:
         """Get total unbilled amount across all credit card exposure for a user."""
         res = await self.get_card_exposure_ledger(db, user_id)
         return res["total_exposure"]
+
+    async def get_grace_optimizer(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        reference_date: Optional[date] = None
+    ):
+        """
+        Evaluate all active credit cards to determine maximum interest-free float.
+        Recommends the best card to swipe today based on statement dates, due dates,
+        and credit limit utilization.
+        """
+        from calendar import monthrange
+        from app.features.credit_cards.schemas import CardGraceEvaluation, GraceOptimizerResponse
+        
+        if reference_date is None:
+            reference_date = get_current_date()
+            
+        cards = await self.get_user_cards(db, user_id, active_only=True)
+        if not cards:
+            return GraceOptimizerResponse(
+                reference_date=reference_date,
+                recommended_card=None,
+                cards=[],
+                max_grace_days=0,
+                insight="No active credit cards registered. Add a card to start optimizing interest-free grace periods."
+            )
+            
+        evaluated_cards: List[CardGraceEvaluation] = []
+        year = reference_date.year
+        month = reference_date.month
+        
+        for card in cards:
+            stmt_day_spec = card.statement_date
+            due_day_spec = card.payment_due_date
+            
+            # Determine billing statement date for reference_date
+            days_in_cur_month = monthrange(year, month)[1]
+            cur_stmt_day = min(stmt_day_spec, days_in_cur_month)
+            cur_stmt_date = date(year, month, cur_stmt_day)
+            
+            if reference_date <= cur_stmt_date:
+                billing_stmt_date = cur_stmt_date
+            else:
+                if month == 12:
+                    next_year = year + 1
+                    next_month = 1
+                else:
+                    next_year = year
+                    next_month = month + 1
+                days_in_next_month = monthrange(next_year, next_month)[1]
+                billing_stmt_date = date(next_year, next_month, min(stmt_day_spec, days_in_next_month))
+                
+            # Determine payment due date for this billing statement
+            b_year = billing_stmt_date.year
+            b_month = billing_stmt_date.month
+            
+            if due_day_spec > billing_stmt_date.day:
+                due_year = b_year
+                due_month = b_month
+            else:
+                if b_month == 12:
+                    due_year = b_year + 1
+                    due_month = 1
+                else:
+                    due_year = b_year
+                    due_month = b_month + 1
+            days_in_due_month = monthrange(due_year, due_month)[1]
+            resolved_due_date = date(due_year, due_month, min(due_day_spec, days_in_due_month))
+            
+            grace_days = max(0, (resolved_due_date - reference_date).days)
+            days_until_statement = max(0, (billing_stmt_date - reference_date).days)
+            
+            # Unbilled balance & utilization
+            cycle_dates = get_billing_cycle_dates(card.statement_date, reference_date=reference_date)
+            unbilled = await self.get_unbilled_amount(
+                db,
+                card.id,
+                cycle_dates["cycle_start"],
+                cycle_dates["cycle_end"]
+            )
+            
+            utilization = None
+            if card.credit_limit and card.credit_limit > 0:
+                utilization = round(float((unbilled / card.credit_limit) * 100), 1)
+                
+            warning = None
+            if utilization is not None and utilization >= 80:
+                warning = f"High utilization ({utilization}%). Consider another card to protect credit score."
+                status_label = "High Utilization"
+            elif grace_days >= 40:
+                status_label = "Optimal Float"
+            elif grace_days >= 25:
+                status_label = "Moderate Float"
+            else:
+                status_label = "Cycle Ending Soon"
+                
+            evaluated_cards.append(
+                CardGraceEvaluation(
+                    card_id=card.id,
+                    card_name=card.card_name,
+                    last_four_digits=card.last_four_digits,
+                    statement_date=card.statement_date,
+                    payment_due_date=card.payment_due_date,
+                    credit_limit=card.credit_limit,
+                    unbilled_amount=unbilled,
+                    utilization_percentage=utilization,
+                    grace_days=grace_days,
+                    days_until_statement=days_until_statement,
+                    next_statement_date=billing_stmt_date,
+                    payment_due_date_resolved=resolved_due_date,
+                    status_label=status_label,
+                    is_recommended=False,
+                    warning=warning
+                )
+            )
+            
+        def rank_key(c: CardGraceEvaluation):
+            is_over_limit = 1 if (c.utilization_percentage and c.utilization_percentage >= 80) else 0
+            return (is_over_limit, -c.grace_days, c.utilization_percentage if c.utilization_percentage is not None else 0.0)
+            
+        evaluated_cards.sort(key=rank_key)
+        
+        recommended_card = None
+        if evaluated_cards:
+            recommended_card = evaluated_cards[0]
+            recommended_card.is_recommended = True
+            
+        max_grace_days = max((c.grace_days for c in evaluated_cards), default=0)
+        
+        if recommended_card:
+            card_desc = f"{recommended_card.card_name}"
+            if recommended_card.last_four_digits:
+                card_desc += f" (••{recommended_card.last_four_digits})"
+            due_fmt = recommended_card.payment_due_date_resolved.strftime("%b %d, %Y")
+            insight = f"Swipe {card_desc} today for a maximum {recommended_card.grace_days}-day interest-free float (due on {due_fmt})."
+        else:
+            insight = "No cards available to evaluate."
+            
+        return GraceOptimizerResponse(
+            reference_date=reference_date,
+            recommended_card=recommended_card,
+            cards=evaluated_cards,
+            max_grace_days=max_grace_days,
+            insight=insight
+        )
+

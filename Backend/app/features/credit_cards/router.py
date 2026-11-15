@@ -1,6 +1,7 @@
-from typing import Annotated, List
+from typing import Annotated, List, Optional
+from datetime import date
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.features.auth.deps import get_current_user
@@ -9,7 +10,8 @@ from app.features.credit_cards.schemas import (
     CreditCardCreate,
     CreditCardUpdate,
     CreditCardResponse,
-    CreditCardCycleInfo
+    CreditCardCycleInfo,
+    GraceOptimizerResponse
 )
 from app.features.credit_cards.service import CreditCardService
 
@@ -48,6 +50,20 @@ async def get_card_exposure(
 ):
     """Get all unsettled credit card swipes and active exposure breakdown."""
     return await service.get_card_exposure_ledger(db, current_user.id)
+
+
+@router.get("/grace-optimizer", response_model=GraceOptimizerResponse)
+async def get_grace_period_optimizer(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[CreditCardService, Depends()],
+    reference_date: Optional[date] = Query(None, description="Reference date to evaluate grace periods (defaults to today)")
+):
+    """
+    Evaluate all credit cards to find the optimal card to swipe today.
+    Calculates interest-free days remaining until payment due date and factors in credit utilization.
+    """
+    return await service.get_grace_optimizer(db, current_user.id, reference_date=reference_date)
 
 
 @router.get("/{card_id}", response_model=CreditCardResponse)
