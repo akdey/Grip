@@ -16,8 +16,7 @@ import {
     Sparkles,
     TrendingUp,
     Repeat,
-    Target,
-    Plus
+    Target
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '../components/ui/Loader';
@@ -326,10 +325,9 @@ const Dashboard: React.FC = () => {
                                             setShowObligations(false);
                                             navigate('/bills');
                                         }}
-                                        className="px-3 py-2 rounded-full bg-primary text-text-inverse text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-xs touch-manipulation"
+                                        className="px-3.5 py-2 rounded-full bg-surface-pill border border-border-subtle text-text-secondary hover:text-text-primary text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all touch-manipulation"
                                     >
-                                        <Plus size={14} strokeWidth={2.5} />
-                                        <span>Add Bill</span>
+                                        <span>View Bills</span>
                                     </button>
                                     <button
                                         onClick={() => {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Plus, Trash2, Calendar, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { Target, Plus, Trash2, Calendar, TrendingUp, AlertCircle, CheckCircle, Wallet, Edit3, RefreshCw } from 'lucide-react';
 import { useGoals, useCreateGoal, useDeleteGoal, useCheckFeasibility } from '../features/goals/goalHooks';
 import { Loader } from '../components/ui/Loader';
 
@@ -21,16 +21,23 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
         target_date: '',
     });
     const [feasibility, setFeasibility] = useState<any>(null);
+    const [customIncome, setCustomIncome] = useState<string>('');
+    const [isEditingIncome, setIsEditingIncome] = useState(false);
 
-    const handleCheckFeasibility = async () => {
+    const handleCheckFeasibility = async (overrideIncome?: number) => {
         if (!formData.name || !formData.target_amount || !formData.target_date) return;
 
+        const incomeToUse = overrideIncome !== undefined ? overrideIncome : (customIncome ? parseFloat(customIncome) : undefined);
         const result = await checkFeasibilityMutation.mutateAsync({
             name: formData.name,
             target_amount: parseFloat(formData.target_amount),
             target_date: formData.target_date,
+            custom_expected_income: incomeToUse,
         });
         setFeasibility(result);
+        if (result.detected_income && !customIncome && overrideIncome === undefined) {
+            setCustomIncome(result.detected_income.toString());
+        }
     };
 
     const handleCreateGoal = async () => {
@@ -40,9 +47,12 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
             name: formData.name,
             target_amount: parseFloat(formData.target_amount),
             target_date: formData.target_date,
+            custom_expected_income: customIncome ? parseFloat(customIncome) : undefined,
         });
 
         setFormData({ name: '', target_amount: '', target_date: '' });
+        setCustomIncome('');
+        setIsEditingIncome(false);
         setFeasibility(null);
         setShowForm(false);
     };
@@ -146,22 +156,72 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
                                                 <AlertCircle size={18} className="text-amber-400 mt-0.5" />
                                             )}
                                             <div className="flex-1">
-                                                <p className="text-xs text-text-secondary mb-2">{feasibility.message}</p>
-                                                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                                <p className="text-xs text-text-secondary mb-3 leading-relaxed">{feasibility.message}</p>
+                                                <div className="grid grid-cols-2 gap-2 text-[10px] mb-3">
+                                                    <div className="bg-surface/60 rounded-lg p-2 border border-border-subtle">
+                                                        <span className="text-text-muted block">Cash in Hand</span>
+                                                        <span className="text-primary font-bold text-xs">{formatCurrency(feasibility.available_monthly_liquidity)}</span>
+                                                    </div>
                                                     <div className="bg-surface/60 rounded-lg p-2 border border-border-subtle">
                                                         <span className="text-text-muted block">Freeze Now</span>
                                                         <span className="text-primary font-bold text-xs">{formatCurrency(feasibility.current_cycle_freeze ?? feasibility.required_monthly_savings)}</span>
                                                     </div>
                                                     <div className="bg-surface/60 rounded-lg p-2 border border-border-subtle">
+                                                        <span className="text-text-muted block">Projected Capacity</span>
+                                                        <span className="text-primary font-bold text-xs">{formatCurrency(feasibility.projected_total_savings ?? 0)}</span>
+                                                    </div>
+                                                    <div className="bg-surface/60 rounded-lg p-2 border border-border-subtle">
                                                         <span className="text-text-muted block">Cushion Left</span>
                                                         <span className="text-primary font-bold text-xs">{formatCurrency(Math.max(0, feasibility.available_monthly_liquidity - (feasibility.current_cycle_freeze ?? 0)))}</span>
                                                     </div>
-                                                    {feasibility.next_cycle_contribution && feasibility.next_cycle_contribution > 0 ? (
-                                                        <div className="bg-surface/60 rounded-lg p-2 border border-border-subtle col-span-2 flex items-center justify-between">
-                                                            <span className="text-text-muted">From Future Income:</span>
-                                                            <span className="text-primary font-bold">{formatCurrency(feasibility.next_cycle_contribution)}</span>
+                                                </div>
+
+                                                {/* Expected Income Override Widget */}
+                                                <div className="pt-2.5 border-t border-border-subtle/70 space-y-2">
+                                                    <div className="flex items-center justify-between text-[11px]">
+                                                        <span className="text-text-muted font-medium flex items-center gap-1.5">
+                                                            <Wallet size={13} className="text-primary/70" />
+                                                            Expected Monthly Income:
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsEditingIncome(!isEditingIncome)}
+                                                            className="text-[10px] text-accent-text font-bold hover:underline"
+                                                        >
+                                                            {isEditingIncome ? 'Close' : 'Adjust'}
+                                                        </button>
+                                                    </div>
+
+                                                    {isEditingIncome ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="relative flex-1">
+                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-text-muted">₹</span>
+                                                                <input
+                                                                    type="number"
+                                                                    value={customIncome}
+                                                                    placeholder={(feasibility.detected_income || 0).toString()}
+                                                                    onChange={(e) => setCustomIncome(e.target.value)}
+                                                                    className="w-full bg-surface border border-border-subtle rounded-lg pl-7 pr-3 py-1.5 text-xs text-primary font-bold focus:outline-none focus:border-border-default"
+                                                                />
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleCheckFeasibility(customIncome ? parseFloat(customIncome) : undefined)}
+                                                                className="px-3 py-1.5 rounded-lg bg-primary text-text-inverse text-xs font-bold active:scale-95 transition-all shadow-xs"
+                                                            >
+                                                                Apply
+                                                            </button>
                                                         </div>
-                                                    ) : null}
+                                                    ) : (
+                                                        <div className="flex items-center justify-between bg-surface/60 rounded-lg p-2 border border-border-subtle text-[11px]">
+                                                            <span className="text-primary font-black">
+                                                                {formatCurrency(customIncome ? parseFloat(customIncome) : (feasibility.detected_income || 0))}
+                                                            </span>
+                                                            <span className="text-[10px] text-text-muted">
+                                                                {feasibility.salary_cycles_count ? `${feasibility.salary_cycles_count} payday(s) before target` : 'Before next payday'}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -170,7 +230,8 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
 
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={handleCheckFeasibility}
+                                        type="button"
+                                        onClick={() => handleCheckFeasibility()}
                                         disabled={!formData.name || !formData.target_amount || !formData.target_date}
                                         className="flex-1 py-3 rounded-xl bg-surface border border-border-subtle text-xs font-bold text-text-muted uppercase tracking-wide hover:text-primary transition-all disabled:opacity-50"
                                     >

@@ -145,3 +145,20 @@ async def mark_bill_paid(
         )
     
     return bill
+
+
+@router.delete("/{bill_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_bill(
+    bill_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[BillService, Depends()]
+):
+    """Delete a bill."""
+    deleted = await service.delete_bill(db, bill_id, current_user.id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bill not found"
+        )
+    return None

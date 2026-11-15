@@ -7,6 +7,7 @@ class GoalBase(BaseModel):
     name: str # string -> str
     target_amount: float
     target_date: date
+    custom_expected_income: Optional[float] = None
 
 class GoalCreate(GoalBase):
     pass
@@ -37,4 +38,8 @@ class FeasibilityCheck(BaseModel):
     next_cycle_contribution: float = 0.0
     days_remaining: int = 0
     daily_saving_needed: float = 0.0
+    detected_income: float = 0.0
+    detected_payday_day: int = 1
+    salary_cycles_count: int = 0
+    monthly_obligations_burn: float = 0.0
     message: str

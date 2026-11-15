@@ -8,14 +8,18 @@ export interface Bill {
     due_date: string;
     is_paid: boolean;
     is_recurring: boolean;
+    recurrence_day?: number;
     category: string;
+    sub_category?: string;
+    created_at?: string;
 }
 
-export const useBills = (paid: boolean = false) => {
+export const useBills = (paid?: boolean) => {
     return useQuery({
         queryKey: ['bills', paid],
         queryFn: async () => {
-            const { data } = await api.get<Bill[]>(`/bills?paid=${paid}`);
+            const url = paid !== undefined ? `/bills?paid=${paid}` : '/bills';
+            const { data } = await api.get<Bill[]>(url);
             return data;
         },
     });
@@ -49,10 +53,42 @@ export const useAddBill = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (bill: Partial<Bill>) => {
-            await api.post('/bills', bill);
+            const res = await api.post<Bill>('/bills', bill);
+            return res.data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['bills'] });
+            queryClient.invalidateQueries({ queryKey: ['bills-upcoming'] });
+            queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+        },
+    });
+};
+
+export const useUpdateBill = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, data }: { id: string; data: Partial<Bill> }) => {
+            const res = await api.put<Bill>(`/bills/${id}`, data);
+            return res.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['bills'] });
+            queryClient.invalidateQueries({ queryKey: ['bills-upcoming'] });
+            queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+        },
+    });
+};
+
+export const useDeleteBill = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            await api.delete(`/bills/${id}`);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['bills'] });
+            queryClient.invalidateQueries({ queryKey: ['bills-upcoming'] });
+            queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
         },
     });
 };

@@ -28,13 +28,44 @@ class GoalService:
         daily_saving = round(target_amount / days_remaining, 2)
         return (days_remaining, months_remaining, required_monthly, daily_saving)
 
-    async def _get_historical_surplus(self, db: AsyncSession, user_id: UUID) -> tuple[float, float, float]:
+    def _count_salary_cycles(self, start_date: date, end_date: date, payday_day: int) -> int:
+        """Counts how many times payday_day occurs strictly after start_date and up to end_date."""
+        if start_date >= end_date:
+            return 0
+        
+        cycles = 0
+        cur_year = start_date.year
+        cur_month = start_date.month
+        
+        while True:
+            _, max_days = calendar.monthrange(cur_year, cur_month)
+            actual_day = min(payday_day, max_days)
+            pay_date = date(cur_year, cur_month, actual_day)
+            
+            if start_date < pay_date <= end_date:
+                cycles += 1
+                
+            if pay_date > end_date:
+                break
+                
+            if cur_month == 12:
+                cur_month = 1
+                cur_year += 1
+            else:
+                cur_month += 1
+                
+            if (cur_year - start_date.year) * 12 + (cur_month - start_date.month) > 120:
+                break
+                
+        return cycles
+
+    async def _get_historical_surplus(self, db: AsyncSession, user_id: UUID) -> tuple[float, float, float, float, int]:
         today = date.today()
         ninety_days_ago = today - timedelta(days=90)
 
-        # 1. Total liquid income in last 90 days
+        # 1. Total liquid income in last 90 days and date patterns
         income_stmt = (
-            select(func.sum(Transaction.amount))
+            select(Transaction.amount, Transaction.transaction_date)
             .where(Transaction.user_id == user_id)
             .where(Transaction.transaction_date >= ninety_days_ago)
             .where(
@@ -45,7 +76,9 @@ class GoalService:
             )
         )
         income_res = await db.execute(income_stmt)
-        total_income_90d = float(income_res.scalar() or 0.0)
+        income_rows = income_res.all()
+        
+        total_income_90d = float(sum((r[0] for r in income_rows if r[0] is not None), 0.0))
 
         # Check earliest transaction to know months active
         earliest_stmt = select(func.min(Transaction.transaction_date)).where(Transaction.user_id == user_id)
@@ -57,6 +90,13 @@ class GoalService:
             months_active = 1.0
 
         avg_monthly_income = total_income_90d / months_active
+
+        # Auto-detect most frequent payday day of month from substantial income credits
+        detected_payday_day = 1
+        substantial_days = [r[1].day for r in income_rows if r[1] and (r[0] or 0) >= 5000]
+        if substantial_days:
+            from collections import Counter
+            detected_payday_day = Counter(substantial_days).most_common(1)[0][0]
 
         # 2. Get real fixed obligations and living buffer from AnalyticsService
         safe_resp = await self.analytics_service.calculate_safe_to_spend_amount(db, user_id)
@@ -76,7 +116,7 @@ class GoalService:
         net_monthly_surplus = max(0.0, avg_monthly_income - total_monthly_burn)
         current_safe = float(safe_resp.safe_to_spend)
 
-        return (avg_monthly_income, net_monthly_surplus, current_safe)
+        return (avg_monthly_income, total_monthly_burn, net_monthly_surplus, current_safe, detected_payday_day)
 
     def _calculate_monthly_contribution(self, target_amount: float, target_date: date) -> float:
         _, months_remaining, required_monthly, _ = self._calculate_timeline(target_amount, target_date)
@@ -87,28 +127,30 @@ class GoalService:
             goal.target_amount, goal.target_date
         )
         
-        avg_income, monthly_surplus, current_safe = await self._get_historical_surplus(db, user_id)
+        avg_income, total_monthly_burn, net_monthly_surplus, current_safe, payday_day = await self._get_historical_surplus(db, user_id)
 
-        # Pacing calculation: Don't bankrupt the current cycle!
-        if days_remaining <= 30:
-            # Short-term (target is within the current month/cycle)
+        # Determine effective income and surplus (custom user override takes precedence)
+        has_custom_income = goal.custom_expected_income is not None and goal.custom_expected_income > 0
+        effective_income = goal.custom_expected_income if has_custom_income else avg_income
+        effective_surplus = max(0.0, effective_income - total_monthly_burn)
+
+        # Count actual salary cycles arriving before target date
+        salary_cycles = self._count_salary_cycles(date.today(), goal.target_date, payday_day)
+
+        if salary_cycles == 0:
+            # Short-term (target date is before next salary payday)
             current_freeze = min(goal.target_amount, current_safe)
             next_cycle_contrib = max(0.0, goal.target_amount - current_freeze)
             projected_total = current_safe
             is_feasible = current_safe >= goal.target_amount
         else:
-            # Multi-cycle (spans across future income/salary cycles)
-            # Cap current cycle freeze so user preserves at least 50% of current safe-to-spend for living expenses
+            # One or more salary cycles arrive before target deadline!
             safe_cap = max(0.0, current_safe * 0.5)
             current_freeze = min(required_monthly, safe_cap)
             next_cycle_contrib = max(0.0, goal.target_amount - current_freeze)
             
-            # Future income cycles contribute from their projected monthly surplus (income - bills - living)
-            future_cycles = max(0.0, months_remaining - 0.5)
-            projected_future_savings = future_cycles * monthly_surplus
+            projected_future_savings = salary_cycles * effective_surplus
             projected_total = current_safe + projected_future_savings
-            
-            # Feasible if current safe buffer + projected future surplus covers target
             is_feasible = (projected_total >= goal.target_amount) or (current_safe >= goal.target_amount)
 
         current_freeze = round(current_freeze, 2)
@@ -117,33 +159,45 @@ class GoalService:
 
         # Diagnostic explanation message
         if is_feasible:
-            if days_remaining > 30 and next_cycle_contrib > 0:
-                cushion = max(0.0, current_safe - current_freeze)
+            cushion = max(0.0, current_safe - current_freeze)
+            if salary_cycles > 0:
+                surplus_buffer = projected_total - goal.target_amount
                 msg = (
                     f"✅ Plan looks solid! Target ₹{goal.target_amount:,.0f} across {days_remaining} days. "
-                    f"Freezing ₹{current_freeze:,.0f} now (leaving ₹{cushion:,.0f} safe cushion till next income). "
-                    f"Remaining ₹{next_cycle_contrib:,.0f} will be funded from upcoming income surplus (~₹{monthly_surplus:,.0f}/mo after bills & living)."
+                    f"With {salary_cycles} upcoming salary cycle(s) adding ~₹{effective_surplus:,.0f} net surplus each, "
+                    f"your projected savings capacity is ₹{projected_total:,.0f} (buffer of ₹{surplus_buffer:,.0f}). "
+                    f"Freezing ₹{current_freeze:,.0f} now leaves ₹{cushion:,.0f} cushion."
                 )
             else:
-                msg = f"✅ Plan looks solid! ₹{goal.target_amount:,.0f} is fully covered by your current safe buffer."
+                msg = f"✅ Plan looks solid! ₹{goal.target_amount:,.0f} is fully covered by your current safe buffer (₹{current_safe:,.0f})."
         else:
             shortfall = max(0.0, goal.target_amount - projected_total)
-            msg = (
-                f"⚠️ Target is tight. Over {days_remaining} days, your projected savings capacity is ₹{projected_total:,.0f} "
-                f"(shortfall of ₹{shortfall:,.0f}). After obligations and living expenses, monthly surplus is ~₹{monthly_surplus:,.0f}. "
-                f"To hit ₹{goal.target_amount:,.0f}, you need ₹{daily_needed:,.0f}/day."
-            )
+            if salary_cycles > 0:
+                msg = (
+                    f"⚠️ Target is tight. Even with {salary_cycles} expected salary cycle(s), your projected savings capacity is "
+                    f"₹{projected_total:,.0f} (shortfall of ₹{shortfall:,.0f}). After obligations & living burn (~₹{total_monthly_burn:,.0f}/mo), "
+                    f"monthly surplus is ~₹{effective_surplus:,.0f}. To hit ₹{goal.target_amount:,.0f}, you need ₹{daily_needed:,.0f}/day."
+                )
+            else:
+                msg = (
+                    f"⚠️ Due before next payday. Target date is before your next salary cycle. "
+                    f"Available cash in hand is ₹{current_safe:,.0f} (shortfall of ₹{shortfall:,.0f})."
+                )
 
         return FeasibilityCheck(
             is_feasible=is_feasible,
             required_monthly_savings=required_monthly,
             available_monthly_liquidity=current_safe,
-            projected_monthly_surplus=round(monthly_surplus, 2),
+            projected_monthly_surplus=round(effective_surplus, 2),
             projected_total_savings=projected_total,
             current_cycle_freeze=current_freeze,
             next_cycle_contribution=next_cycle_contrib,
             days_remaining=days_remaining,
             daily_saving_needed=daily_needed,
+            detected_income=round(effective_income, 2),
+            detected_payday_day=payday_day,
+            salary_cycles_count=salary_cycles,
+            monthly_obligations_burn=round(total_monthly_burn, 2),
             message=msg
         )
 
@@ -151,10 +205,11 @@ class GoalService:
         days_remaining, months_remaining, required_monthly, _ = self._calculate_timeline(
             goal_data.target_amount, goal_data.target_date
         )
-        _, _, current_safe = await self._get_historical_surplus(db, user_id)
+        _, _, _, current_safe, payday_day = await self._get_historical_surplus(db, user_id)
+        salary_cycles = self._count_salary_cycles(date.today(), goal_data.target_date, payday_day)
         
         # Calculate safe current freeze so we don't starve the current cycle
-        if days_remaining <= 30:
+        if salary_cycles == 0:
             monthly_contrib = min(goal_data.target_amount, current_safe)
         else:
             safe_cap = max(0.0, current_safe * 0.5)

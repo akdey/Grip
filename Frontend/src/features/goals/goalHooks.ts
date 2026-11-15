@@ -16,6 +16,7 @@ export interface GoalCreate {
     name: string;
     target_amount: number;
     target_date: string;
+    custom_expected_income?: number;
 }
 
 export interface FeasibilityCheck {
@@ -28,6 +29,10 @@ export interface FeasibilityCheck {
     next_cycle_contribution?: number;
     days_remaining?: number;
     daily_saving_needed?: number;
+    detected_income?: number;
+    detected_payday_day?: number;
+    salary_cycles_count?: number;
+    monthly_obligations_burn?: number;
     message: string;
 }
 

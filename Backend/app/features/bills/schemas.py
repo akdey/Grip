@@ -10,8 +10,8 @@ class BillBase(BaseModel):
     due_date: date = Field(..., description="Due date for the bill")
     is_recurring: bool = Field(default=False, description="Whether this is a recurring bill")
     recurrence_day: Optional[int] = Field(None, ge=1, le=31, description="Day of month for recurring bills")
-    category: str
-    sub_category: str
+    category: str = Field(default="Utilities", description="Category")
+    sub_category: Optional[str] = Field(default="General", description="Subcategory")
 
 class BillCreate(BillBase):
     pass

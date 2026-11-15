@@ -43,6 +43,8 @@ class BillService:
     ) -> Bill:
         """Create a new bill."""
         data = bill_data.model_dump()
+        if not data.get("sub_category"):
+            data["sub_category"] = "General"
         # Default recurrence_day to due_date day if it's recurring but day not specified
         if data.get("is_recurring") and not data.get("recurrence_day"):
             data["recurrence_day"] = data["due_date"].day
@@ -116,6 +118,22 @@ class BillService:
         self._invalidate_safe_spend_cache(user_id)
         logger.info(f"Updated bill {bill_id}")
         return bill
+
+    async def delete_bill(
+        self,
+        db: AsyncSession,
+        bill_id: UUID,
+        user_id: UUID
+    ) -> bool:
+        """Delete a bill."""
+        bill = await self.get_bill_by_id(db, bill_id, user_id)
+        if not bill:
+            return False
+        await db.delete(bill)
+        await db.commit()
+        self._invalidate_safe_spend_cache(user_id)
+        logger.info(f"Deleted bill {bill_id}")
+        return True
     
     async def mark_paid(
         self,
