@@ -258,7 +258,7 @@ const Wealth: React.FC = () => {
                     {/* Consolidated Action Bar */}
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                         {/* Statement Export */}
-                        <button
+                        {/* <button
                             onClick={handleExportStatement}
                             disabled={exportingStatement}
                             className="px-3 py-2 rounded-xl bg-surface-pill hover:bg-surface-hover text-text-secondary hover:text-primary text-xs font-medium border border-border-subtle transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
@@ -266,7 +266,7 @@ const Wealth: React.FC = () => {
                         >
                             <FileSpreadsheet size={14} className={exportingStatement ? "animate-pulse" : ""} />
                             <span className="hidden sm:inline">Statement</span>
-                        </button>
+                        </button> */}
 
                         {/* Link Unassigned Debits (if any) */}
                         {unassignedTxns.length > 0 && (
@@ -363,8 +363,8 @@ const Wealth: React.FC = () => {
                                 <div className="h-7 w-28 bg-surface-pill rounded-xl animate-pulse" />
                             ) : (
                                 <div className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 ${absoluteReturn >= 0
-                                        ? 'badge-success'
-                                        : 'badge-danger'
+                                    ? 'badge-success'
+                                    : 'badge-danger'
                                     }`}>
                                     {absoluteReturn >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                                     <span>
@@ -474,8 +474,8 @@ const Wealth: React.FC = () => {
                                     setSelectedClassFilter(tab.key);
                                 }}
                                 className={`px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all cursor-pointer ${selectedClassFilter === tab.key
-                                        ? 'bg-white text-black font-bold shadow-sm'
-                                        : 'bg-surface-pill hover:bg-surface-hover text-text-muted hover:text-primary border border-border-subtle'
+                                    ? 'bg-white text-black font-bold shadow-sm'
+                                    : 'bg-surface-pill hover:bg-surface-hover text-text-muted hover:text-primary border border-border-subtle'
                                     }`}
                             >
                                 {tab.label}
