@@ -199,6 +199,14 @@ const Goals: React.FC = () => {
                                         <div className="flex items-center gap-2 text-[10px] text-text-muted">
                                             <Calendar size={12} />
                                             <span>Target: {formatDate(goal.target_date)}</span>
+                                            {(() => {
+                                                const daysLeft = Math.ceil((new Date(goal.target_date).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24));
+                                                return (
+                                                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-surface border border-border-subtle font-medium text-text-secondary">
+                                                        {daysLeft > 0 ? `${daysLeft}d left` : 'Due today'}
+                                                    </span>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                     <button
@@ -215,7 +223,7 @@ const Goals: React.FC = () => {
                                         <p className="text-base font-black text-primary">{formatCurrency(goal.target_amount)}</p>
                                     </div>
                                     <div className="bg-accent-subtle rounded-xl p-3 border border-accent-border">
-                                        <p className="text-[9px] text-accent-text uppercase tracking-widest mb-1 font-bold">Monthly</p>
+                                        <p className="text-[9px] text-accent-text uppercase tracking-widest mb-1 font-bold">Current Freeze</p>
                                         <p className="text-base font-black text-primary">{formatCurrency(goal.monthly_contribution)}</p>
                                     </div>
                                 </div>
