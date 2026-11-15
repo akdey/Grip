@@ -8,7 +8,7 @@ from sqlalchemy import select, func
 from app.features.credit_cards.models import CreditCard
 from app.features.credit_cards.schemas import CreditCardCreate, CreditCardUpdate, CreditCardCycleInfo
 from app.features.transactions.models import Transaction
-from app.utils.finance_utils import get_billing_cycle_dates
+from app.utils.finance_utils import get_billing_cycle_dates, get_current_date
 
 logger = logging.getLogger(__name__)
 
