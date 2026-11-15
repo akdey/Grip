@@ -10,8 +10,7 @@ import {
     LayoutGrid,
     LogOut,
     Sun,
-    Moon,
-    FlaskConical
+    Moon
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/store';
 import { Button } from '../ui/Button';
@@ -29,7 +28,6 @@ export const Sidebar: React.FC = () => {
         { path: '/bills', label: 'Scheduled', icon: CalendarClock },
         { path: '/analytics', label: 'Flow', icon: BarChart3 },
         { path: '/wealth', label: 'Wealth', icon: Briefcase },
-        { path: '/lab', label: 'Grip Lab', icon: FlaskConical },
         { path: '/more', label: 'Explorer', icon: LayoutGrid },
     ];
 

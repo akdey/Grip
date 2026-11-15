@@ -467,28 +467,24 @@ Result: Prevents surprise salary drains by previewing next month's recurring com
 └────────────────────────────────────────┘
 ```
 
-### 🧪 Grip Lab (Experimental Zone)
+### 🧪 Experimental Intelligence Hub
 
-The **Grip Lab** (`/lab`) is a dedicated sandbox for cutting-edge financial algorithms and experimental intelligence tools:
+Accessible directly from the **Experimental** section in Explorer (**More**):
 
-1. **Credit Card Grace Period Optimizer (`/api/v1/credit-cards/grace-optimizer`)**:
+1. **Credit Card Grace Period Optimizer (`/credit-cards/optimizer`)**:
    - **"Which Card Should I Swipe Today?"**: Automatically analyzes statement cycles and payment due dates across all active cards to pinpoint the card offering the maximum 0% interest float (up to 45–52 days).
    - **Interactive Date Simulation**: Simulate future purchase dates to identify which card to deploy for major planned expenses.
    - **Credit Utilization Guards**: Balances interest-free days with credit health, penalizing cards with >80% utilization to protect credit scores.
 
-2. **Anomaly Radar**:
-   - Autonomous outflow surveillance transferred from the main dashboard into a dedicated security lab.
+2. **Anomaly Radar (`/anomalies`)**:
+   - Autonomous outflow surveillance transferred from the main dashboard into a dedicated security surface.
    - Real-time detection of spend spikes, duplicate swipes, category velocity surges, and surety drifts with one-click inspection drawers.
 
-3. **Financial Goals & Dual-Bucket Pacing**:
+3. **Financial Goals & Dual-Bucket Pacing (`/goals`)**:
    - Day-accurate goal feasibility engine evaluating 90-day surplus after fixed obligations and living burn.
    - **Don't-Starve Dual-Bucket Allocation**: Clicks into current liquidity without depleting living cash buffers, pacing remaining targets against projected future income.
 
-4. **Zero-Income Runway Stress-Tester**:
-   - Interactive cashflow survival simulator calculating exact runway in days and months if all income ceased today.
-   - Dynamic discretionary burn slider (0% austerity to 150% high burn) for real-time runway forecasting.
-
-5. **Wealth Lab Portal**:
+4. **Wealth Lab (`/wealth/lab`)**:
    - Direct gateway to Facebook Prophet multi-decade portfolio projections and historical SIP timing optimization.
 
 

@@ -35,7 +35,10 @@ import {
     Loader2,
     Send,
     X,
-    FlaskConical
+    FlaskConical,
+    CreditCard,
+    ShieldAlert,
+    LineChart
 } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
@@ -52,17 +55,22 @@ import { getBiometricsStatus, registerBiometricCredential, getDeviceBiometricNam
 import { haptics } from '../lib/haptics';
 
 const FEATURE_CARDS = [
-    { id: 'lab', label: 'Grip Lab', icon: FlaskConical, path: '/lab', color: 'text-accent-text', bgColor: 'bg-accent-subtle', badge: 'BETA' },
     { id: 'sync', label: 'Gmail Sync', icon: Mail, path: '/sync', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'pending', label: 'Action Center', icon: Sparkles, path: '/transactions?view=pending', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'transactions', label: 'History', icon: History, path: '/transactions', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'sureties', label: 'Sureties', icon: CalendarClock, path: '/sureties', color: 'text-primary', bgColor: 'bg-surface-subtle' },
-    { id: 'goals', label: 'Goals (Lab)', icon: Wallet, path: '/lab?tab=goals', color: 'text-primary', bgColor: 'bg-surface-subtle' },
+    { id: 'vault', label: 'Vault', icon: Target, path: '/credit-cards', color: 'text-primary', bgColor: 'bg-surface-subtle' },
+    { id: 'settle-up', label: 'Settle Up', icon: ArrowUpRight, path: '/settle-up', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'categories', label: 'Categories', icon: LayoutGrid, action: 'OPEN_CATEGORIES', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'tags', label: 'Hash Tags', icon: Hash, path: '/tags', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'export', label: 'Export Data', icon: Download, action: 'OPEN_EXPORTS', color: 'text-primary', bgColor: 'bg-surface-subtle' },
-    { id: 'vault', label: 'Vault', icon: Target, path: '/credit-cards', color: 'text-primary', bgColor: 'bg-surface-subtle' },
-    { id: 'settle-up', label: 'Settle Up', icon: ArrowUpRight, path: '/settle-up', color: 'text-primary', bgColor: 'bg-surface-subtle' },
+];
+
+const EXPERIMENTAL_CARDS = [
+    { id: 'goals', label: 'Goals', icon: Wallet, path: '/goals', color: 'text-primary', bgColor: 'bg-surface-subtle' },
+    { id: 'card-optimizer', label: 'Swipe Optimizer', icon: CreditCard, path: '/credit-cards/optimizer', color: 'text-primary', bgColor: 'bg-surface-subtle', badge: 'NEW' },
+    { id: 'anomaly', label: 'Anomaly Radar', icon: ShieldAlert, path: '/anomalies', color: 'text-primary', bgColor: 'bg-surface-subtle' },
+    { id: 'wealth-lab', label: 'Wealth Lab', icon: LineChart, path: '/wealth/lab', color: 'text-primary', bgColor: 'bg-surface-subtle' },
 ];
 
 const SystemIntelligence: React.FC = () => {
@@ -389,7 +397,7 @@ const More: React.FC = () => {
                                         {isCardLoading ? 'Exporting...' : card.label}
                                     </span>
                                     {(card as any).badge && (
-                                        <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-accent text-accent-text shrink-0 leading-none">
+                                        <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded badge-neutral shrink-0 leading-none">
                                             {(card as any).badge}
                                         </span>
                                     )}
@@ -397,6 +405,46 @@ const More: React.FC = () => {
                             </motion.button>
                         );
                     })}
+                </div>
+
+                {/* Experimental Zone Section */}
+                <div className="space-y-2.5">
+                    <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                                Experimental
+                            </h3>
+                            <span className="badge-neutral px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider">
+                                Beta
+                            </span>
+                        </div>
+                        <span className="text-[10px] text-text-muted font-medium">Research Tools</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        {EXPERIMENTAL_CARDS.map((card) => (
+                            <motion.button
+                                key={card.id}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleFeatureClick(card)}
+                                className="flex items-center gap-2.5 p-3 rounded-[1.2rem] bg-surface-subtle border border-border-subtle hover:bg-surface-hover hover:border-accent-border/40 transition-all text-left group relative"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-surface-pill text-primary border border-border-subtle group-hover:bg-surface-hover group-hover:text-primary transition-colors flex items-center justify-center shadow-xs group-hover:scale-105 shrink-0 relative">
+                                    <card.icon size={15} className="text-primary" />
+                                </div>
+                                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                    <span className="text-[11px] font-bold text-secondary group-hover:text-primary tracking-wide uppercase whitespace-nowrap transition-colors truncate">
+                                        {card.label}
+                                    </span>
+                                    {card.badge && (
+                                        <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded badge-neutral shrink-0 leading-none">
+                                            {card.badge}
+                                        </span>
+                                    )}
+                                </div>
+                            </motion.button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Smart Views Section */}
@@ -427,14 +475,14 @@ const More: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border-subtle">
                                 <div>
-                                    <p className="text-[7px] text-text-muted font-bold uppercase tracking-wider">In</p>
-                                    <p className="text-[11px] font-black text-emerald-400 tracking-tight">
+                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">In</p>
+                                    <p className="text-[11px] font-black text-status-success tracking-tight">
                                         +{formatCompact(daySummary?.total_income || 0)}
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[7px] text-text-muted font-bold uppercase tracking-wider">Out</p>
-                                    <p className="text-[11px] font-black text-rose-400 tracking-tight">
+                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Out</p>
+                                    <p className="text-[11px] font-black text-status-danger tracking-tight">
                                         -{formatCompact(daySummary?.cash_outflow ?? daySummary?.total_expense ?? 0)}
                                     </p>
                                 </div>
@@ -460,14 +508,14 @@ const More: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border-subtle">
                                 <div>
-                                    <p className="text-[7px] text-text-muted font-bold uppercase tracking-wider">In</p>
-                                    <p className="text-[11px] font-black text-emerald-400 tracking-tight">
+                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">In</p>
+                                    <p className="text-[11px] font-black text-status-success tracking-tight">
                                         +{formatCompact(monthSummary?.total_income || 0)}
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[7px] text-text-muted font-bold uppercase tracking-wider">Out</p>
-                                    <p className="text-[11px] font-black text-rose-400 tracking-tight">
+                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Out</p>
+                                    <p className="text-[11px] font-black text-status-danger tracking-tight">
                                         -{formatCompact(monthSummary?.cash_outflow ?? monthSummary?.total_expense ?? 0)}
                                     </p>
                                 </div>
@@ -490,14 +538,14 @@ const More: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border-subtle">
                                 <div>
-                                    <p className="text-[7px] text-text-muted font-bold uppercase tracking-wider">In</p>
-                                    <p className="text-[11px] font-black text-emerald-400 tracking-tight">
+                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">In</p>
+                                    <p className="text-[11px] font-black text-status-success tracking-tight">
                                         +{formatCompact(yearSummary?.total_income || 0)}
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[7px] text-text-muted font-bold uppercase tracking-wider">Out</p>
-                                    <p className="text-[11px] font-black text-rose-400 tracking-tight">
+                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Out</p>
+                                    <p className="text-[11px] font-black text-status-danger tracking-tight">
                                         -{formatCompact(yearSummary?.cash_outflow ?? yearSummary?.total_expense ?? 0)}
                                     </p>
                                 </div>
@@ -663,7 +711,7 @@ const More: React.FC = () => {
                             <div className="flex items-center justify-between pt-2 border-t border-border-subtle">
                                 <div className="flex items-center gap-1.5">
                                     {biometricsStatus?.hasBiometrics ? (
-                                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1">
+                                        <span className="badge-success text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1">
                                             <Check size={11} />
                                             <span>Active</span>
                                         </span>
@@ -697,14 +745,14 @@ const More: React.FC = () => {
                             </div>
 
                             {biometricsMsg && (
-                                <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-semibold px-1">
+                                <div className="flex items-center gap-1.5 text-status-success text-[11px] font-semibold px-1">
                                     <Check size={13} />
                                     <span>{biometricsMsg}</span>
                                 </div>
                             )}
 
                             {biometricsErr && (
-                                <div className="flex items-center gap-1.5 text-rose-400 text-[11px] font-semibold px-1">
+                                <div className="flex items-center gap-1.5 text-status-danger text-[11px] font-semibold px-1">
                                     <AlertCircle size={13} />
                                     <span>{biometricsErr}</span>
                                 </div>
@@ -753,7 +801,7 @@ const More: React.FC = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveEmail(em)}
-                                                className="text-text-muted hover:text-rose-400 p-0.5 rounded-full transition-colors"
+                                                className="text-text-muted hover:text-status-danger p-0.5 rounded-full transition-colors"
                                                 title={`Remove ${em}`}
                                             >
                                                 <X size={11} />
@@ -783,21 +831,21 @@ const More: React.FC = () => {
                                 </div>
 
                                 {saveSuccess && (
-                                    <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-semibold px-1">
+                                    <div className="flex items-center gap-1.5 text-status-success text-[11px] font-semibold px-1">
                                         <Check size={13} />
                                         <span>Nominee contact(s) updated successfully</span>
                                     </div>
                                 )}
 
                                 {saveError && (
-                                    <div className="flex items-center gap-1.5 text-rose-400 text-[11px] font-semibold px-1">
+                                    <div className="flex items-center gap-1.5 text-status-danger text-[11px] font-semibold px-1">
                                         <AlertCircle size={13} />
                                         <span>{saveError}</span>
                                     </div>
                                 )}
 
                                 {testStatus && (
-                                    <div className={`flex items-start gap-1.5 text-[11px] font-semibold px-1 py-1 rounded-lg ${testStatus.success ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-rose-400 bg-rose-500/10 border border-rose-500/20'}`}>
+                                    <div className={`flex items-start gap-1.5 text-[11px] font-semibold px-2 py-1.5 rounded-lg border ${testStatus.success ? 'badge-success' : 'badge-danger'}`}>
                                         {testStatus.success ? <Check size={13} className="shrink-0 mt-0.5" /> : <AlertCircle size={13} className="shrink-0 mt-0.5" />}
                                         <span className="leading-tight">{testStatus.message}</span>
                                     </div>
@@ -849,7 +897,7 @@ const More: React.FC = () => {
                                 setIsProfileOpen(false);
                                 logout();
                             }}
-                            className="w-full p-3.5 rounded-2xl bg-surface-subtle border border-border-subtle hover:bg-rose-500/10 hover:border-rose-500/20 text-rose-400 active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-xs font-semibold"
+                            className="w-full p-3.5 rounded-2xl bg-surface-subtle border border-border-subtle hover:border-status-danger-border text-status-danger active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-xs font-semibold"
                         >
                             <LogOut size={15} />
                             <span>Sign Out</span>
