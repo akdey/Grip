@@ -16,7 +16,8 @@ import {
     Sparkles,
     TrendingUp,
     Repeat,
-    Target
+    Target,
+    Plus
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '../components/ui/Loader';
@@ -318,16 +319,29 @@ const Dashboard: React.FC = () => {
                                     <h2 className="text-xl sm:text-2xl font-black text-text-primary tracking-tight heading-apple">Obligation Ledger</h2>
                                     <p className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mt-0.5">Identified commitments & recurring surety</p>
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        haptics.selection();
-                                        setShowObligations(false);
-                                    }}
-                                    className="w-10 h-10 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary active:scale-90 transition-all shadow-xs group touch-manipulation"
-                                    aria-label="Close obligations ledger"
-                                >
-                                    <ChevronDown size={20} className="group-hover:translate-y-0.5 transition-transform" />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            haptics.selection();
+                                            setShowObligations(false);
+                                            navigate('/bills');
+                                        }}
+                                        className="px-3 py-2 rounded-full bg-primary text-text-inverse text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-xs touch-manipulation"
+                                    >
+                                        <Plus size={14} strokeWidth={2.5} />
+                                        <span>Add Bill</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            haptics.selection();
+                                            setShowObligations(false);
+                                        }}
+                                        className="w-10 h-10 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary active:scale-90 transition-all shadow-xs group touch-manipulation"
+                                        aria-label="Close obligations ledger"
+                                    >
+                                        <ChevronDown size={20} className="group-hover:translate-y-0.5 transition-transform" />
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-2.5 custom-scrollbar select-text">
