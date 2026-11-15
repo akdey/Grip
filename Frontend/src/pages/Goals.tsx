@@ -142,14 +142,20 @@ const Goals: React.FC = () => {
                                             <div className="flex-1">
                                                 <p className="text-xs text-text-secondary mb-2">{feasibility.message}</p>
                                                 <div className="grid grid-cols-2 gap-2 text-[10px]">
-                                                    <div>
-                                                        <span className="text-text-muted block">Required/Month</span>
-                                                        <span className="text-primary font-bold">{formatCurrency(feasibility.required_monthly_savings)}</span>
+                                                    <div className="bg-surface/60 rounded-lg p-2 border border-border-subtle">
+                                                        <span className="text-text-muted block">Freeze Now</span>
+                                                        <span className="text-primary font-bold text-xs">{formatCurrency(feasibility.current_cycle_freeze ?? feasibility.required_monthly_savings)}</span>
                                                     </div>
-                                                    <div>
-                                                        <span className="text-text-muted block">Available Capacity</span>
-                                                        <span className="text-primary font-bold">{formatCurrency(feasibility.available_monthly_liquidity)}</span>
+                                                    <div className="bg-surface/60 rounded-lg p-2 border border-border-subtle">
+                                                        <span className="text-text-muted block">Cushion Left</span>
+                                                        <span className="text-primary font-bold text-xs">{formatCurrency(Math.max(0, feasibility.available_monthly_liquidity - (feasibility.current_cycle_freeze ?? 0)))}</span>
                                                     </div>
+                                                    {feasibility.next_cycle_contribution && feasibility.next_cycle_contribution > 0 ? (
+                                                        <div className="bg-surface/60 rounded-lg p-2 border border-border-subtle col-span-2 flex items-center justify-between">
+                                                            <span className="text-text-muted">From Future Income:</span>
+                                                            <span className="text-primary font-bold">{formatCurrency(feasibility.next_cycle_contribution)}</span>
+                                                        </div>
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         </div>

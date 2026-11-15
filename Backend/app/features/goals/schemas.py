@@ -31,4 +31,10 @@ class FeasibilityCheck(BaseModel):
     is_feasible: bool
     required_monthly_savings: float
     available_monthly_liquidity: float
+    projected_monthly_surplus: float = 0.0
+    projected_total_savings: float = 0.0
+    current_cycle_freeze: float = 0.0
+    next_cycle_contribution: float = 0.0
+    days_remaining: int = 0
+    daily_saving_needed: float = 0.0
     message: str

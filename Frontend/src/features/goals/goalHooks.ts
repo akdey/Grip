@@ -22,6 +22,12 @@ export interface FeasibilityCheck {
     is_feasible: boolean;
     required_monthly_savings: number;
     available_monthly_liquidity: number;
+    projected_monthly_surplus?: number;
+    projected_total_savings?: number;
+    current_cycle_freeze?: number;
+    next_cycle_contribution?: number;
+    days_remaining?: number;
+    daily_saving_needed?: number;
     message: string;
 }
 
