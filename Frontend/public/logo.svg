@@ -1,32 +1,57 @@
-<svg width="512" height="512" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
-    <defs>
-        <linearGradient id="grip-logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#10b981" />
-            <stop offset="50%" stop-color="#06b6d4" />
-            <stop offset="100%" stop-color="#3b82f6" />
-        </linearGradient>
-    </defs>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
+  <defs>
+    <!-- Grip Light Theme Brand Accent Gradient (Greenish Nordic Petrol / Marine Slate) -->
+    <linearGradient id="grip-brand-grad" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="35%" stop-color="#059669" />
+      <stop offset="70%" stop-color="#0e7490" />
+      <stop offset="100%" stop-color="#0e4d66" />
+    </linearGradient>
+
+    <filter id="grip-soft-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g filter="url(#grip-soft-glow)" fill-rule="evenodd">
+    <!-- Piece 1: Finger 1 (Top Chevron) -->
     <path
-        d="M 78 68 A 35 35 0 1 1 62 22"
-        stroke="url(#grip-logo-gradient)"
-        stroke-width="12"
-        stroke-linecap="round"
-        fill="none"
+      d="M 315.0 42.0 L 382.0 68.5 L 382.0 122.0 L 348.0 142.0 L 348.0 92.0 L 280.0 62.0 Z"
+      fill="url(#grip-brand-grad)"
     />
+
+    <!-- Piece 2: Finger 2 (Upper-Middle Chevron) -->
     <path
-        d="M 35 65 L 48 52 L 58 62 L 92 18"
-        stroke="url(#grip-logo-gradient)"
-        stroke-width="12"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        fill="none"
+      d="M 267.0 69.7 L 334.0 96.2 L 334.0 149.7 L 300.0 169.7 L 300.0 119.7 L 232.0 89.7 Z"
+      fill="url(#grip-brand-grad)"
     />
+
+    <!-- Piece 3: Finger 3 (Lower-Middle Chevron) -->
     <path
-        d="M 76 18 L 92 18 L 92 34"
-        stroke="url(#grip-logo-gradient)"
-        stroke-width="12"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        fill="none"
+      d="M 219.0 97.4 L 286.0 123.9 L 286.0 177.4 L 252.0 197.4 L 252.0 147.4 L 184.0 117.4 Z"
+      fill="url(#grip-brand-grad)"
     />
+
+    <!-- Piece 4: Finger 4 & Palm Base (G Foundation with closer thumb & fingers) -->
+    <path
+      d="M 142.0 142.0 L 171.0 125.1 L 238.0 151.6 L 238.0 205.1 L 204.0 225.1 L 204.0 178.0 L 182.0 169.0 L 182.0 313.15 C 182.0 323.0 188.0 327.88 198.75 327.88 L 313.45 327.88 C 324.0 327.88 330.5 323.0 330.5 313.15 L 330.5 253.24 L 235.0 253.24 L 235.0 225.24 L 378.55 142.36 L 383.98 144.86 L 383.98 313.15 C 383.98 358.0 358.0 380.57 321.2 380.57 L 195.0 380.57 C 160.0 380.57 142.0 355.0 142.0 313.15 Z"
+      fill="url(#grip-brand-grad)"
+    />
+  </g>
+
+  <!-- Wordmark below: GRIP -->
+  <text
+    x="256"
+    y="442"
+    text-anchor="middle"
+    fill="url(#grip-brand-grad)"
+    font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, sans-serif"
+    font-size="44"
+    font-weight="900"
+    letter-spacing="0.38em"
+  >GRIP</text>
 </svg>

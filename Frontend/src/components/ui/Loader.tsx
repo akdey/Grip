@@ -6,57 +6,59 @@ interface LoaderProps {
     text?: string;
 }
 
-// ─── Simple & Clean Transparent Grip Logo Mark ───────────────────────────────
-const GripMark: React.FC<{ size?: number }> = ({ size = 64 }) => (
+// ─── 2D Geometric Fist "G" Mark (Light Theme Greenish Accent) ────────────────
+export const GripFistMark: React.FC<{ size?: number }> = ({ size = 64 }) => (
     <svg
         width={size}
         height={size}
-        viewBox="0 0 100 100"
+        viewBox="0 0 512 512"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         shapeRendering="geometricPrecision"
-        className="overflow-visible"
+        className="overflow-visible select-none"
     >
         <defs>
-            <linearGradient id="ldr-grip-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="ldr-brand-grad" x1="15%" y1="10%" x2="85%" y2="90%">
                 <stop offset="0%" stopColor="#10b981" />
-                <stop offset="50%" stopColor="#06b6d4" />
-                <stop offset="100%" stopColor="#3b82f6" />
+                <stop offset="35%" stopColor="#059669" />
+                <stop offset="70%" stopColor="#0e7490" />
+                <stop offset="100%" stopColor="#0e4d66" />
             </linearGradient>
-            <filter id="ldr-soft-glow" x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="4" result="blur" />
+
+            <filter id="ldr-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
                 <feMerge>
                     <feMergeNode in="blur" />
                     <feMergeNode in="SourceGraphic" />
                 </feMerge>
             </filter>
         </defs>
-        <path
-            d="M 78 68 A 35 35 0 1 1 62 22"
-            stroke="url(#ldr-grip-grad)"
-            strokeWidth="12"
-            strokeLinecap="round"
-            fill="none"
-            filter="url(#ldr-soft-glow)"
-        />
-        <path
-            d="M 35 65 L 48 52 L 58 62 L 92 18"
-            stroke="url(#ldr-grip-grad)"
-            strokeWidth="12"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-            filter="url(#ldr-soft-glow)"
-        />
-        <path
-            d="M 76 18 L 92 18 L 92 34"
-            stroke="url(#ldr-grip-grad)"
-            strokeWidth="12"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-            filter="url(#ldr-soft-glow)"
-        />
+
+        <g filter="url(#ldr-glow)" fillRule="evenodd">
+            {/* Piece 1: Finger 1 (Top Chevron) */}
+            <path
+                d="M 315.0 42.0 L 382.0 68.5 L 382.0 122.0 L 348.0 142.0 L 348.0 92.0 L 280.0 62.0 Z"
+                fill="url(#ldr-brand-grad)"
+            />
+
+            {/* Piece 2: Finger 2 (Upper-Middle Chevron) */}
+            <path
+                d="M 267.0 69.7 L 334.0 96.2 L 334.0 149.7 L 300.0 169.7 L 300.0 119.7 L 232.0 89.7 Z"
+                fill="url(#ldr-brand-grad)"
+            />
+
+            {/* Piece 3: Finger 3 (Lower-Middle Chevron) */}
+            <path
+                d="M 219.0 97.4 L 286.0 123.9 L 286.0 177.4 L 252.0 197.4 L 252.0 147.4 L 184.0 117.4 Z"
+                fill="url(#ldr-brand-grad)"
+            />
+
+            {/* Piece 4: Finger 4 & Palm Base (G Foundation with closer thumb & fingers) */}
+            <path
+                d="M 142.0 142.0 L 171.0 125.1 L 238.0 151.6 L 238.0 205.1 L 204.0 225.1 L 204.0 178.0 L 182.0 169.0 L 182.0 313.15 C 182.0 323.0 188.0 327.88 198.75 327.88 L 313.45 327.88 C 324.0 327.88 330.5 323.0 330.5 313.15 L 330.5 253.24 L 235.0 253.24 L 235.0 225.24 L 378.55 142.36 L 383.98 144.86 L 383.98 313.15 C 383.98 358.0 358.0 380.57 321.2 380.57 L 195.0 380.57 C 160.0 380.57 142.0 355.0 142.0 313.15 Z"
+                fill="url(#ldr-brand-grad)"
+            />
+        </g>
     </svg>
 );
 
@@ -64,17 +66,17 @@ export const Loader: React.FC<LoaderProps> = ({ fullPage = false, text }) => {
     if (fullPage) {
         return (
             <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-page select-none">
-                {/* Subtle soft ambient back-glow */}
+                {/* Soft ambient back-glow in mint / petrol green */}
                 <motion.div
                     className="absolute rounded-full pointer-events-none"
                     style={{
-                        width: 220,
-                        height: 220,
-                        background: 'radial-gradient(circle, rgba(6,182,212,0.18) 0%, transparent 70%)'
+                        width: 240,
+                        height: 240,
+                        background: 'radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%)'
                     }}
                     animate={{
                         scale: [1, 1.15, 1],
-                        opacity: [0.5, 0.9, 0.5]
+                        opacity: [0.5, 0.85, 0.5]
                     }}
                     transition={{
                         duration: 3,
@@ -83,18 +85,19 @@ export const Loader: React.FC<LoaderProps> = ({ fullPage = false, text }) => {
                     }}
                 />
 
-                {/* Clean, Transparent Logo Mark with gentle breathing */}
+                {/* Fist "G" with breathing motion */}
                 <motion.div
                     animate={{
-                        scale: [1, 1.05, 1]
+                        scale: [1, 1.04, 1],
+                        y: [0, -3, 0]
                     }}
                     transition={{
-                        duration: 2.4,
+                        duration: 2.6,
                         repeat: Infinity,
                         ease: 'easeInOut'
                     }}
                 >
-                    <GripMark size={84} />
+                    <GripFistMark size={96} />
                 </motion.div>
 
                 {/* Branded Wordmark */}
@@ -105,7 +108,7 @@ export const Loader: React.FC<LoaderProps> = ({ fullPage = false, text }) => {
                     transition={{ duration: 0.6 }}
                 >
                     <h1
-                        className="text-[22px] font-black tracking-[0.35em] text-text-primary uppercase"
+                        className="text-[22px] font-black tracking-[0.38em] text-text-primary uppercase"
                         style={{ fontFamily: '-apple-system, "SF Pro Display", sans-serif' }}
                     >
                         GRIP
@@ -128,7 +131,7 @@ export const Loader: React.FC<LoaderProps> = ({ fullPage = false, text }) => {
             <motion.div
                 animate={{
                     scale: [1, 1.08, 1],
-                    opacity: [0.8, 1, 0.8]
+                    opacity: [0.85, 1, 0.85]
                 }}
                 transition={{
                     duration: 1.8,
@@ -136,7 +139,7 @@ export const Loader: React.FC<LoaderProps> = ({ fullPage = false, text }) => {
                     ease: 'easeInOut'
                 }}
             >
-                <GripMark size={38} />
+                <GripFistMark size={40} />
             </motion.div>
             {text && (
                 <p className="text-[9px] font-bold text-text-muted uppercase tracking-[0.2em] animate-pulse">
