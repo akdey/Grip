@@ -929,6 +929,19 @@ PUT    /api/v1/settle-up/{entry_id}               # Update entry
 DELETE /api/v1/settle-up/{entry_id}               # Delete entry
 ```
 
+#### Scheduled Bills & Obligations
+```bash
+GET    /api/v1/bills                              # List all bills (optional ?paid=true/false)
+POST   /api/v1/bills                              # Create new bill (one-time or recurring)
+GET    /api/v1/bills/upcoming                     # Upcoming bills due within X days
+GET    /api/v1/bills/{id}                         # Get bill details
+PUT    /api/v1/bills/{id}                         # Update bill details
+DELETE /api/v1/bills/{id}                         # Delete bill and unfreeze funds
+POST   /api/v1/bills/{id}/mark-paid               # Mark bill paid (advances recurring cycle) or unpaid
+GET    /api/v1/bills/surety/list                  # List auto-detected surety obligations
+POST   /api/v1/bills/surety/exclusion             # Create exclusion rule for surety
+```
+
 #### Export
 ```bash
 GET /api/v1/export/csv                   # Export raw transactions

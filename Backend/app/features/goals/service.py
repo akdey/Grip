@@ -78,7 +78,7 @@ class GoalService:
         income_res = await db.execute(income_stmt)
         income_rows = income_res.all()
         
-        total_income_90d = float(sum((r[0] for r in income_rows if r[0] is not None), 0.0))
+        total_income_90d = float(sum((Decimal(str(r[0])) for r in income_rows if r[0] is not None), Decimal(0)))
 
         # Check earliest transaction to know months active
         earliest_stmt = select(func.min(Transaction.transaction_date)).where(Transaction.user_id == user_id)
