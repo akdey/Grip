@@ -217,10 +217,11 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
                                 <motion.div
                                     initial={{ opacity: 0, y: -8 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className={`p-4 rounded-2xl border ${feasibility.is_feasible
+                                    className={`p-4 rounded-2xl border ${
+                                        feasibility.is_feasible
                                             ? 'bg-status-success-bg/40 border-status-success-border'
                                             : 'bg-status-warning-bg/40 border-status-warning-border'
-                                        }`}
+                                    }`}
                                 >
                                     <div className="flex items-start gap-3">
                                         {feasibility.is_feasible ? (
@@ -460,10 +461,11 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
                         haptics.selection();
                         setShowForm(!showForm);
                     }}
-                    className={`w-10 h-10 rounded-2xl border flex items-center justify-center transition-all active:scale-95 ${showForm
+                    className={`w-10 h-10 rounded-2xl border flex items-center justify-center transition-all active:scale-95 ${
+                        showForm
                             ? 'bg-primary text-text-inverse border-transparent shadow-sm'
                             : 'bg-surface-subtle hover:bg-surface border-border-subtle text-text-muted hover:text-text-primary'
-                        }`}
+                    }`}
                     aria-label="Toggle new goal form"
                 >
                     <Plus size={18} className={`transition-transform duration-200 ${showForm ? 'rotate-45' : ''}`} />
