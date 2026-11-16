@@ -10,6 +10,7 @@ from sqlalchemy import select, func, desc, or_, and_
 from app.features.goals.models import Goal
 from app.features.goals.schemas import GoalCreate, FeasibilityCheck
 from app.features.analytics.service import AnalyticsService
+from app.features.bills.service import BillService
 from app.features.transactions.models import Transaction, AccountType
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 class GoalService:
     def __init__(self):
         self.analytics_service = AnalyticsService()
+        self.bill_service = BillService()
 
     def _calculate_timeline(self, target_amount: float, target_date: date) -> tuple[int, float, float, float]:
         today = date.today()
@@ -99,13 +101,37 @@ class GoalService:
             from collections import Counter
             detected_payday_day = Counter(substantial_days).most_common(1)[0][0]
 
-        # 2. Get real fixed obligations and living buffer from AnalyticsService
+        # 2. Get real fixed obligations for upcoming monthly cycle
+        # Query ahead 60 days to capture the upcoming month's full recurring commitments (Sureties + Recurring Bills)
+        if today.month == 12:
+            next_m_year = today.year + 1
+            next_m_month = 1
+        else:
+            next_m_year = today.year
+            next_m_month = today.month + 1
+
+        upcoming_ledger = await self.bill_service.get_obligations_ledger(db, user_id, days_ahead=60, include_hidden=False)
+        upcoming_items = [
+            item for item in upcoming_ledger.get("items", [])
+            if item.due_date and item.due_date.year == next_m_year and item.due_date.month == next_m_month
+        ]
+        upcoming_fixed_obligations = sum(float(item.amount) for item in upcoming_items)
+
+        # Current cycle safe response for Cash in Hand and baseline living buffer
         safe_resp = await self.analytics_service.calculate_safe_to_spend_amount(db, user_id)
-        fixed_obligations = float(
-            safe_resp.frozen_funds.unpaid_bills +
-            safe_resp.frozen_funds.projected_surety +
-            safe_resp.frozen_funds.unbilled_cc
-        )
+        current_safe = float(safe_resp.safe_to_spend)
+
+        # Fallback if no upcoming month items yet: use current total burden
+        if upcoming_fixed_obligations <= 0:
+            upcoming_fixed_obligations = float(
+                safe_resp.frozen_funds.unpaid_bills +
+                safe_resp.frozen_funds.projected_surety +
+                safe_resp.frozen_funds.unbilled_cc
+            )
+
+        # Account for existing goals in the monthly burden
+        existing_goals_contrib = await self.get_total_monthly_goal_contribution(db, user_id)
+        upcoming_fixed_obligations += float(existing_goals_contrib)
 
         # Discretionary daily rate scaled to 30 days
         _, days_in_month = calendar.monthrange(today.year, today.month)
@@ -113,11 +139,10 @@ class GoalService:
         daily_discretionary = float(safe_resp.buffer_amount) / days_left_in_month
         monthly_discretionary = daily_discretionary * 30.0
 
-        total_monthly_burn = fixed_obligations + monthly_discretionary
+        total_monthly_burn = upcoming_fixed_obligations + monthly_discretionary
         net_monthly_surplus = max(0.0, avg_monthly_income - total_monthly_burn)
-        current_safe = float(safe_resp.safe_to_spend)
 
-        return (avg_monthly_income, total_monthly_burn, net_monthly_surplus, current_safe, detected_payday_day)
+        return (avg_monthly_income, total_monthly_burn, net_monthly_surplus, current_safe, detected_payday_day, upcoming_fixed_obligations, monthly_discretionary)
 
     def _calculate_monthly_contribution(self, target_amount: float, target_date: date) -> float:
         _, months_remaining, required_monthly, _ = self._calculate_timeline(target_amount, target_date)
@@ -128,7 +153,7 @@ class GoalService:
             goal.target_amount, goal.target_date
         )
         
-        avg_income, total_monthly_burn, net_monthly_surplus, current_safe, payday_day = await self._get_historical_surplus(db, user_id)
+        avg_income, total_monthly_burn, net_monthly_surplus, current_safe, payday_day, upcoming_obligations, monthly_living = await self._get_historical_surplus(db, user_id)
 
         # Determine effective income and surplus (custom user override takes precedence)
         has_custom_income = goal.custom_expected_income is not None and goal.custom_expected_income > 0
@@ -165,7 +190,8 @@ class GoalService:
                 surplus_buffer = projected_total - goal.target_amount
                 msg = (
                     f"✅ Plan looks solid! Target ₹{goal.target_amount:,.0f} across {days_remaining} days. "
-                    f"With {salary_cycles} upcoming salary cycle(s) adding ~₹{effective_surplus:,.0f} net surplus each, "
+                    f"With {salary_cycles} upcoming salary cycle(s) adding ~₹{effective_surplus:,.0f} net surplus each "
+                    f"(after ₹{upcoming_obligations:,.0f} obligations & ~₹{monthly_living:,.0f}/mo living burn), "
                     f"your projected savings capacity is ₹{projected_total:,.0f} (buffer of ₹{surplus_buffer:,.0f}). "
                     f"Freezing ₹{current_freeze:,.0f} now leaves ₹{cushion:,.0f} cushion."
                 )
@@ -176,7 +202,8 @@ class GoalService:
             if salary_cycles > 0:
                 msg = (
                     f"⚠️ Target is tight. Even with {salary_cycles} expected salary cycle(s), your projected savings capacity is "
-                    f"₹{projected_total:,.0f} (shortfall of ₹{shortfall:,.0f}). After obligations & living burn (~₹{total_monthly_burn:,.0f}/mo), "
+                    f"₹{projected_total:,.0f} (shortfall of ₹{shortfall:,.0f}). "
+                    f"After upcoming recurring obligations (~₹{upcoming_obligations:,.0f}) and living burn (~₹{monthly_living:,.0f}/mo), "
                     f"monthly surplus is ~₹{effective_surplus:,.0f}. To hit ₹{goal.target_amount:,.0f}, you need ₹{daily_needed:,.0f}/day."
                 )
             else:
@@ -206,7 +233,7 @@ class GoalService:
         days_remaining, months_remaining, required_monthly, _ = self._calculate_timeline(
             goal_data.target_amount, goal_data.target_date
         )
-        _, _, _, current_safe, payday_day = await self._get_historical_surplus(db, user_id)
+        _, _, _, current_safe, payday_day, *_ = await self._get_historical_surplus(db, user_id)
         salary_cycles = self._count_salary_cycles(date.today(), goal_data.target_date, payday_day)
         
         # Calculate safe current freeze so we don't starve the current cycle
