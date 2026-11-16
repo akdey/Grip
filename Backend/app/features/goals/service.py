@@ -1,7 +1,7 @@
 import logging
 import calendar
 import math
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import List, Optional
@@ -302,6 +302,7 @@ class GoalService:
         monthly_contrib = round(monthly_contrib, 2)
         
         goal = Goal(
+            id=uuid4(),
             user_id=user_id,
             name=goal_data.name,
             target_amount=goal_data.target_amount,
