@@ -3,7 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
-import { OfflineBanner } from '../ui/OfflineBanner';
+import { OfflineGame } from '../ui/OfflineGame';
 import { Smartphone, X } from 'lucide-react';
 
 export const Layout: React.FC = () => {
@@ -16,7 +16,7 @@ export const Layout: React.FC = () => {
 
     return (
         <div className="min-h-screen text-primary flex flex-col">
-            <OfflineBanner />
+            <OfflineGame />
             {!isEntryPage && <Sidebar />}
 
             <main className={`min-h-screen transition-all duration-300 flex-1 flex flex-col ${!isEntryPage ? 'md:pl-72' : 'pb-0'}`}>
@@ -36,7 +36,7 @@ export const Layout: React.FC = () => {
                     </div>
                 )}
 
-                <div className={`container mx-auto max-w-7xl flex-1 ${!isEntryPage ? 'animate-enter px-0 md:px-12 md:py-8 pb-8' : 'p-0'}`}>
+                <div className={`container mx-auto max-w-7xl flex-1 ${!isEntryPage ? 'animate-enter px-0 md:px-12 md:py-8' : 'p-0'}`}>
                     <Outlet />
                 </div>
 
