@@ -110,10 +110,11 @@ class GoalService:
             next_m_year = today.year
             next_m_month = today.month + 1
 
-        upcoming_ledger = await self.bill_service.get_obligations_ledger(db, user_id, days_ahead=60, include_hidden=False)
+        upcoming_ledger = await self.bill_service.get_obligations_ledger(db, user_id, days_ahead=60, include_hidden=True)
         upcoming_items = [
             item for item in upcoming_ledger.get("items", [])
             if item.due_date and item.due_date.year == next_m_year and item.due_date.month == next_m_month
+            and getattr(item, "status", "") != "TERMINATED"
         ]
         upcoming_fixed_obligations = sum(float(item.amount) for item in upcoming_items)
 
