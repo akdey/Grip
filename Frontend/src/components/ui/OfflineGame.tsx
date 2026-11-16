@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { WifiOff, RefreshCw, Trophy, ArrowRight, RotateCcw, Zap, Sparkles } from 'lucide-react';
+import { WifiOff, RefreshCw, Trophy, ArrowRight, RotateCcw, Play, Gamepad2, Sparkles } from 'lucide-react';
 import { Logo } from './Logo';
 import { haptics } from '../../lib/haptics';
 
@@ -55,24 +55,23 @@ export const OfflineGame: React.FC = () => {
         }
     });
     const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'GAMEOVER'>('IDLE');
-    const [isThrusting, setIsThrusting] = useState(false);
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const containerRef = useRef<HTMLDivElement | null>(null);
+    const arenaRef = useRef<HTMLDivElement | null>(null);
     const animFrameRef = useRef<number | null>(null);
     const thrustingRef = useRef(false);
 
-    // Physics & State Ref for silky 60fps loop without React re-render lag
+    // Physics state
     const stateRef = useRef({
-        width: 400,
-        height: 600,
-        playerX: 80,
-        playerY: 300,
+        width: 360,
+        height: 220,
+        playerX: 60,
+        playerY: 110,
         velocity: 0,
         rotation: 0,
-        gravity: 0.38,
-        thrust: -0.68,
-        maxVelocity: 8,
+        gravity: 0.36,
+        thrust: -0.65,
+        maxVelocity: 7.5,
         speed: 3.2,
         score: 0,
         streak: 0,
@@ -118,13 +117,13 @@ export const OfflineGame: React.FC = () => {
         };
     }, []);
 
-    // Resize canvas with device pixel ratio for retina crispness
+    // Resize canvas with device pixel ratio
     const updateCanvasDimensions = useCallback(() => {
         const canvas = canvasRef.current;
-        const container = containerRef.current;
-        if (!canvas || !container) return;
+        const arena = arenaRef.current;
+        if (!canvas || !arena) return;
 
-        const rect = container.getBoundingClientRect();
+        const rect = arena.getBoundingClientRect();
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
         canvas.width = rect.width * dpr;
@@ -138,16 +137,15 @@ export const OfflineGame: React.FC = () => {
         stateRef.current.width = rect.width;
         stateRef.current.height = rect.height;
 
-        // Initialize background stars
         if (stateRef.current.stars.length === 0) {
             const stars: Star[] = [];
-            for (let i = 0; i < 45; i++) {
+            for (let i = 0; i < 30; i++) {
                 stars.push({
                     x: Math.random() * rect.width,
                     y: Math.random() * rect.height,
-                    radius: Math.random() * 1.5 + 0.5,
-                    speed: Math.random() * 0.8 + 0.3,
-                    alpha: Math.random() * 0.6 + 0.2,
+                    radius: Math.random() * 1.4 + 0.5,
+                    speed: Math.random() * 0.7 + 0.3,
+                    alpha: Math.random() * 0.5 + 0.2,
                 });
             }
             stateRef.current.stars = stars;
@@ -162,27 +160,25 @@ export const OfflineGame: React.FC = () => {
         }
     }, [isOnline, dismissed, updateCanvasDimensions]);
 
-    // Input handlers
+    // Thrust handlers
     const startThrust = useCallback(() => {
         thrustingRef.current = true;
-        setIsThrusting(true);
         haptics.impact('light');
     }, []);
 
     const stopThrust = useCallback(() => {
         thrustingRef.current = false;
-        setIsThrusting(false);
     }, []);
 
     const startGame = useCallback(() => {
-        const h = stateRef.current.height || 600;
+        const h = stateRef.current.height || 220;
         stateRef.current = {
             ...stateRef.current,
-            playerX: 80,
+            playerX: 60,
             playerY: h / 2,
             velocity: 0,
             rotation: 0,
-            speed: 3.4,
+            speed: 3.2,
             score: 0,
             streak: 0,
             frameCount: 0,
@@ -194,59 +190,58 @@ export const OfflineGame: React.FC = () => {
         setStreak(0);
         setGameState('PLAYING');
         thrustingRef.current = true;
-        setIsThrusting(true);
         haptics.impact('medium');
     }, []);
 
-    // Particle emission helpers
+    // Particle helpers
     const emitJetParticles = (x: number, y: number) => {
         const p = stateRef.current.particles;
         for (let i = 0; i < 2; i++) {
             p.push({
-                x: x - 14,
-                y: y + (Math.random() - 0.5) * 8,
-                vx: -stateRef.current.speed - Math.random() * 3,
+                x: x - 12,
+                y: y + (Math.random() - 0.5) * 6,
+                vx: -stateRef.current.speed - Math.random() * 2.5,
                 vy: (Math.random() - 0.5) * 1.5,
-                size: Math.random() * 3.5 + 2,
+                size: Math.random() * 3 + 1.5,
                 color: Math.random() > 0.4 ? '#38bdf8' : '#818cf8',
                 alpha: 0.85,
-                decay: 0.035,
+                decay: 0.04,
             });
         }
     };
 
     const emitCoinBurst = (x: number, y: number) => {
         const p = stateRef.current.particles;
-        for (let i = 0; i < 14; i++) {
+        for (let i = 0; i < 12; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 4 + 1.5;
+            const speed = Math.random() * 3.5 + 1.5;
             p.push({
                 x,
                 y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
-                size: Math.random() * 3 + 1.5,
+                size: Math.random() * 2.5 + 1.5,
                 color: Math.random() > 0.3 ? '#fbbf24' : '#f59e0b',
                 alpha: 1,
-                decay: 0.025,
+                decay: 0.03,
             });
         }
     };
 
     const emitExplosion = (x: number, y: number) => {
         const p = stateRef.current.particles;
-        for (let i = 0; i < 25; i++) {
+        for (let i = 0; i < 20; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 6 + 2;
+            const speed = Math.random() * 5 + 2;
             p.push({
                 x,
                 y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
-                size: Math.random() * 4 + 2,
+                size: Math.random() * 3.5 + 1.5,
                 color: Math.random() > 0.5 ? '#f87171' : '#fb923c',
                 alpha: 1,
-                decay: 0.02,
+                decay: 0.025,
             });
         }
     };
@@ -271,10 +266,10 @@ export const OfflineGame: React.FC = () => {
 
             s.frameCount++;
 
-            // 1. Clear Screen
+            // 1. Clear
             ctx.clearRect(0, 0, width, height);
 
-            // 2. Stars Parallax Background
+            // 2. Stars
             for (const star of s.stars) {
                 star.x -= star.speed * dt;
                 if (star.x < 0) star.x = width;
@@ -284,16 +279,16 @@ export const OfflineGame: React.FC = () => {
                 ctx.fill();
             }
 
-            // 3. Subtle Horizon Grid line at bottom
-            const horizonY = height - 12;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+            // 3. Bottom guideline
+            const horizonY = height - 6;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(0, horizonY);
             ctx.lineTo(width, horizonY);
             ctx.stroke();
 
-            // 4. Update Player Physics
+            // 4. Update Player
             if (thrustingRef.current) {
                 s.velocity += s.thrust * dt;
                 emitJetParticles(s.playerX, s.playerY);
@@ -301,97 +296,82 @@ export const OfflineGame: React.FC = () => {
                 s.velocity += s.gravity * dt;
             }
 
-            // Clamp velocity
             s.velocity = Math.max(-s.maxVelocity, Math.min(s.velocity, s.maxVelocity));
             s.playerY += s.velocity * dt;
 
-            // Target rotation based on velocity
-            const targetRotation = Math.max(-0.45, Math.min(s.velocity * 0.06, 0.55));
+            const targetRotation = Math.max(-0.4, Math.min(s.velocity * 0.06, 0.5));
             s.rotation += (targetRotation - s.rotation) * 0.15;
 
-            // Boundary collision
-            if (s.playerY < 20) {
-                s.playerY = 20;
+            // Boundaries
+            if (s.playerY < 16) {
+                s.playerY = 16;
                 s.velocity = 0;
             }
-            if (s.playerY > height - 25) {
-                s.playerY = height - 25;
+            if (s.playerY > height - 18) {
+                s.playerY = height - 18;
                 emitExplosion(s.playerX, s.playerY);
                 endGame();
                 return;
             }
 
-            // 5. Spawn Obstacles (Obsidian Volatility Pillars)
-            const spawnInterval = Math.max(90, 130 - Math.floor(s.score / 150));
+            // 5. Spawn Obstacles
+            const spawnInterval = Math.max(80, 115 - Math.floor(s.score / 150));
             if (s.frameCount % spawnInterval === 0) {
-                const gap = Math.max(140, 175 - Math.floor(s.score / 200));
-                const minH = 60;
-                const maxTop = height - gap - minH - 30;
-                const topH = Math.floor(Math.random() * (maxTop - minH)) + minH;
+                const gap = Math.max(105, 125 - Math.floor(s.score / 250));
+                const minH = 30;
+                const maxTop = height - gap - minH - 15;
+                const topH = Math.floor(Math.random() * Math.max(10, maxTop - minH)) + minH;
 
                 s.obstacles.push({
-                    x: width + 20,
+                    x: width + 15,
                     topHeight: topH,
                     bottomY: topH + gap,
-                    width: 52,
+                    width: 40,
                     passed: false,
                 });
 
-                // Spawn a golden coin in the middle of the gap
-                if (Math.random() > 0.25) {
+                if (Math.random() > 0.3) {
                     s.coins.push({
-                        x: width + 46,
+                        x: width + 35,
                         y: topH + gap / 2,
-                        radius: 13,
+                        radius: 11,
                         collected: false,
                         bobOffset: Math.random() * Math.PI,
                     });
                 }
             }
 
-            // 6. Update & Render Obstacles
+            // 6. Obstacles
             for (let i = s.obstacles.length - 1; i >= 0; i--) {
                 const obs = s.obstacles[i];
                 obs.x -= s.speed * dt;
 
-                // Score on pass
                 if (!obs.passed && obs.x + obs.width < s.playerX) {
                     obs.passed = true;
                     s.score += 25;
                     setScore(s.score);
-                    s.speed = Math.min(6.5, s.speed + 0.04);
+                    s.speed = Math.min(5.5, s.speed + 0.03);
                 }
 
-                // Render Top Pillar
-                const topGrad = ctx.createLinearGradient(obs.x, 0, obs.x + obs.width, 0);
-                topGrad.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
-                topGrad.addColorStop(0.5, 'rgba(239, 68, 68, 0.45)');
-                topGrad.addColorStop(1, 'rgba(239, 68, 68, 0.25)');
-
-                ctx.fillStyle = topGrad;
-                ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)';
                 ctx.lineWidth = 1.5;
 
-                // Top block
+                // Top pillar
                 ctx.beginPath();
-                ctx.roundRect(obs.x, -10, obs.width, obs.topHeight + 10, [0, 0, 14, 14]);
+                ctx.roundRect(obs.x, -5, obs.width, obs.topHeight + 5, [0, 0, 10, 10]);
                 ctx.fill();
                 ctx.stroke();
 
-                // Bottom block
+                // Bottom pillar
                 const btmH = height - obs.bottomY;
                 ctx.beginPath();
-                ctx.roundRect(obs.x, obs.bottomY, obs.width, btmH + 10, [14, 14, 0, 0]);
+                ctx.roundRect(obs.x, obs.bottomY, obs.width, btmH + 5, [10, 10, 0, 0]);
                 ctx.fill();
                 ctx.stroke();
 
-                // Glow lines at pillar tips
-                ctx.fillStyle = '#ef4444';
-                ctx.fillRect(obs.x + 4, obs.topHeight - 3, obs.width - 8, 3);
-                ctx.fillRect(obs.x + 4, obs.bottomY, obs.width - 8, 3);
-
-                // Collision Detection with Player (Player radius ~ 15)
-                const pr = 14;
+                // Collision check
+                const pr = 12;
                 const inX = s.playerX + pr > obs.x && s.playerX - pr < obs.x + obs.width;
                 const hitTop = s.playerY - pr < obs.topHeight;
                 const hitBottom = s.playerY + pr > obs.bottomY;
@@ -402,24 +382,22 @@ export const OfflineGame: React.FC = () => {
                     return;
                 }
 
-                // Cleanup off-screen
                 if (obs.x + obs.width < -30) {
                     s.obstacles.splice(i, 1);
                 }
             }
 
-            // 7. Update & Render Coins
+            // 7. Coins
             for (let i = s.coins.length - 1; i >= 0; i--) {
                 const c = s.coins[i];
                 c.x -= s.speed * dt;
 
-                const bob = Math.sin(s.frameCount * 0.08 + c.bobOffset) * 4;
+                const bob = Math.sin(s.frameCount * 0.08 + c.bobOffset) * 3;
                 const currentY = c.y + bob;
 
                 if (!c.collected) {
-                    // Check collection
                     const dist = Math.hypot(s.playerX - c.x, s.playerY - currentY);
-                    if (dist < 26) {
+                    if (dist < 22) {
                         c.collected = true;
                         s.score += 50;
                         s.streak += 1;
@@ -431,24 +409,21 @@ export const OfflineGame: React.FC = () => {
                 }
 
                 if (!c.collected) {
-                    // Draw glowing golden coin
                     ctx.save();
                     ctx.shadowColor = '#fbbf24';
-                    ctx.shadowBlur = 12;
-
+                    ctx.shadowBlur = 10;
                     ctx.fillStyle = '#f59e0b';
                     ctx.beginPath();
                     ctx.arc(c.x, currentY, c.radius, 0, Math.PI * 2);
                     ctx.fill();
 
                     ctx.strokeStyle = '#fef08a';
-                    ctx.lineWidth = 1.5;
+                    ctx.lineWidth = 1.2;
                     ctx.stroke();
 
-                    // Currency symbol
                     ctx.shadowBlur = 0;
                     ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+                    ctx.font = 'bold 9px Inter, system-ui, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText('₹', c.x, currentY + 0.5);
@@ -460,7 +435,7 @@ export const OfflineGame: React.FC = () => {
                 }
             }
 
-            // 8. Update & Render Particles
+            // 8. Particles
             for (let i = s.particles.length - 1; i >= 0; i--) {
                 const pt = s.particles[i];
                 pt.x += pt.vx;
@@ -480,36 +455,32 @@ export const OfflineGame: React.FC = () => {
                 ctx.globalAlpha = 1;
             }
 
-            // 9. Render Player (Grip Neon Falcon Orb)
+            // 9. Player (Grip Falcon Logo)
             ctx.save();
             ctx.translate(s.playerX, s.playerY);
             ctx.rotate(s.rotation);
 
-            // Outer Neon Halo
             ctx.shadowColor = thrustingRef.current ? '#38bdf8' : '#6366f1';
-            ctx.shadowBlur = 16;
+            ctx.shadowBlur = 12;
 
-            // Core Capsule
-            const pGrad = ctx.createLinearGradient(-15, -15, 15, 15);
+            const pGrad = ctx.createLinearGradient(-12, -12, 12, 12);
             pGrad.addColorStop(0, '#38bdf8');
             pGrad.addColorStop(1, '#1d4ed8');
             ctx.fillStyle = pGrad;
 
             ctx.beginPath();
-            ctx.roundRect(-16, -16, 32, 32, 10);
+            ctx.roundRect(-12, -12, 24, 24, 7);
             ctx.fill();
 
-            // Inner Ring / Logo Accent
             ctx.shadowBlur = 0;
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.arc(0, 0, 7.5, 0, Math.PI * 2);
+            ctx.arc(0, 0, 6, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Grip Letter
             ctx.fillStyle = '#ffffff';
-            ctx.font = '900 11px Inter, system-ui, sans-serif';
+            ctx.font = '900 9px Inter, system-ui, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('G', 0, 0.5);
@@ -542,23 +513,23 @@ export const OfflineGame: React.FC = () => {
         }
     };
 
-    // Keyboard support for desktop
+    // Keyboard controls for desktop
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.code === 'Space' || e.key === ' ' || e.code === 'ArrowUp') {
-                e.preventDefault();
                 if (gameState === 'PLAYING') {
+                    e.preventDefault();
                     startThrust();
-                } else if (gameState === 'IDLE' || gameState === 'GAMEOVER') {
-                    startGame();
                 }
             }
         };
 
         const handleKeyUp = (e: KeyboardEvent) => {
             if (e.code === 'Space' || e.key === ' ' || e.code === 'ArrowUp') {
-                e.preventDefault();
-                stopThrust();
+                if (gameState === 'PLAYING') {
+                    e.preventDefault();
+                    stopThrust();
+                }
             }
         };
 
@@ -568,19 +539,9 @@ export const OfflineGame: React.FC = () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [gameState, startThrust, stopThrust, startGame]);
+    }, [gameState, startThrust, stopThrust]);
 
     if (isOnline || dismissed) return null;
-
-    // Financial Tier Label based on Score
-    const getTierLabel = (val: number) => {
-        if (val >= 600) return { title: 'Financial Titan', color: 'text-amber-400', badge: 'bg-amber-500/10 border-amber-500/30' };
-        if (val >= 350) return { title: 'Wealth Builder', color: 'text-emerald-400', badge: 'bg-emerald-500/10 border-emerald-500/30' };
-        if (val >= 150) return { title: 'Smart Investor', color: 'text-sky-400', badge: 'bg-sky-500/10 border-sky-500/30' };
-        return { title: 'Disciplined Saver', color: 'text-purple-400', badge: 'bg-purple-500/10 border-purple-500/30' };
-    };
-
-    const currentTier = getTierLabel(score);
 
     return (
         <AnimatePresence>
@@ -588,188 +549,149 @@ export const OfflineGame: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] bg-[#07080b] flex flex-col justify-between overflow-hidden select-none touch-none"
+                className="fixed inset-0 z-[100] bg-[#090a0f] text-white flex flex-col justify-between overflow-y-auto select-none p-5 sm:p-7"
             >
-                {/* 1. TOP FLOATING HUD BAR (Apple Glass Pill) */}
-                <header className="pt-safe px-4 pt-3 z-30 flex items-center justify-between w-full max-w-lg mx-auto">
-                    {/* Status Pill */}
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg">
-                        <div className="relative flex items-center justify-center">
-                            <span className="w-2 h-2 rounded-full bg-amber-400" />
-                            <span className="absolute w-4 h-4 rounded-full bg-amber-400/30 animate-ping" />
+                {/* 1. TOP BRAND HEADER */}
+                <header className="pt-safe flex items-center justify-between w-full max-w-md mx-auto">
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-1 rounded-xl bg-white/5 border border-white/10 shadow-sm">
+                            <Logo size={24} />
                         </div>
-                        <span className="text-[11px] font-bold text-white/90 tracking-wide">
-                            Vault Offline
+                        <span className="text-sm font-extrabold tracking-tight text-white heading-apple">
+                            Grip
                         </span>
                     </div>
 
-                    {/* Score / Best Pill */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl">
-                            <Trophy size={13} className="text-amber-400" />
-                            <span className="text-xs font-black text-white tabular-nums">
-                                ₹{highScore.toLocaleString()}
-                            </span>
-                        </div>
-
-                        {/* Reconnect Button */}
-                        <button
-                            onClick={handleRetry}
-                            disabled={isChecking}
-                            className="p-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 text-white/80 transition-all disabled:opacity-50"
-                            aria-label="Check Connection"
-                        >
-                            <RefreshCw size={13} className={isChecking ? 'animate-spin text-sky-400' : ''} />
-                        </button>
+                    {/* Offline Signal Badge */}
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                        <span className="text-[10px] font-bold tracking-wider uppercase">
+                            Offline
+                        </span>
                     </div>
                 </header>
 
-                {/* 2. MAIN FULL-BLEED GAME ARENA */}
-                <div
-                    ref={containerRef}
-                    onPointerDown={() => {
-                        if (gameState === 'PLAYING') startThrust();
-                        else if (gameState === 'IDLE') startGame();
-                    }}
-                    onPointerUp={stopThrust}
-                    onPointerCancel={stopThrust}
-                    className="relative flex-1 w-full h-full cursor-pointer flex items-center justify-center overflow-hidden"
-                >
-                    <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
+                {/* 2. HERO STATEMENT: Clear, human, direct */}
+                <div className="my-auto py-4 w-full max-w-md mx-auto flex flex-col items-center text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80 mb-3 shadow-inner">
+                        <WifiOff size={26} className="text-red-400" />
+                    </div>
 
-                    {/* LIVE IN-GAME HUD (When Playing) */}
-                    {gameState === 'PLAYING' && (
-                        <div className="absolute top-4 inset-x-0 flex flex-col items-center pointer-events-none">
-                            <motion.span
-                                key={score}
-                                initial={{ scale: 1.15 }}
-                                animate={{ scale: 1 }}
-                                className="text-4xl font-black tracking-tight text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] tabular-nums font-mono"
-                            >
-                                ₹{score.toLocaleString()}
-                            </motion.span>
-                            {streak > 1 && (
-                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1 mt-1 tracking-wider uppercase animate-pulse">
-                                    <Sparkles size={11} /> {streak}x Yield Streak
+                    <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white heading-apple">
+                        Grip is Offline
+                    </h1>
+                    <p className="text-xs text-text-muted mt-1.5 max-w-xs leading-relaxed">
+                        No internet connection detected. Grip will automatically reconnect once your signal is restored.
+                    </p>
+
+                    {/* Quick Action Buttons */}
+                    <div className="mt-5 w-full flex items-center gap-3">
+                        <button
+                            onClick={handleRetry}
+                            disabled={isChecking}
+                            className="flex-1 py-3 px-4 rounded-xl bg-white text-black font-extrabold text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            <RefreshCw size={13} className={isChecking ? 'animate-spin' : ''} />
+                            <span>{isChecking ? 'Reconnecting...' : 'Try Reconnecting'}</span>
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                haptics.selection();
+                                setDismissed(true);
+                            }}
+                            className="py-3 px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/90 font-bold text-xs active:scale-95 transition-all flex items-center gap-1.5"
+                        >
+                            <span>Browse Cached</span>
+                            <ArrowRight size={13} />
+                        </button>
+                    </div>
+
+                    {/* 3. OPTIONAL MINI-GAME CARD ("Play if you wish") */}
+                    <div className="mt-6 w-full rounded-2xl bg-white/[0.03] border border-white/10 p-3.5 flex flex-col text-left">
+                        {/* Mini-Game Header */}
+                        <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-white/5">
+                            <div className="flex items-center gap-2">
+                                <Gamepad2 size={14} className="text-sky-400" />
+                                <span className="text-[11px] font-bold text-white/90">
+                                    Play while you wait
                                 </span>
+                            </div>
+
+                            <div className="flex items-center gap-1 text-[11px] font-bold text-amber-400 tabular-nums">
+                                <Trophy size={11} />
+                                <span>₹{highScore.toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        {/* Interactive Arena */}
+                        <div
+                            ref={arenaRef}
+                            onPointerDown={() => {
+                                if (gameState === 'PLAYING') startThrust();
+                                else if (gameState === 'IDLE') startGame();
+                            }}
+                            onPointerUp={stopThrust}
+                            onPointerCancel={stopThrust}
+                            className="relative w-full h-44 sm:h-48 rounded-xl bg-[#07080d] border border-white/5 overflow-hidden flex items-center justify-center cursor-pointer select-none touch-none"
+                        >
+                            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
+
+                            {/* In-game live score */}
+                            {gameState === 'PLAYING' && (
+                                <div className="absolute top-2.5 inset-x-0 flex items-center justify-center pointer-events-none">
+                                    <span className="text-xl font-black text-white tabular-nums drop-shadow-md">
+                                        ₹{score.toLocaleString()}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* IDLE: Play if you wish prompt */}
+                            {gameState === 'IDLE' && (
+                                <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex flex-col items-center justify-center p-3 text-center">
+                                    <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-lg mb-2 active:scale-95 transition-transform">
+                                        <Play size={16} className="ml-0.5 fill-black" />
+                                    </div>
+                                    <p className="text-xs font-bold text-white">
+                                        Tap to play Grip Glider
+                                    </p>
+                                    <p className="text-[10px] text-white/40 mt-0.5 font-medium">
+                                        Hold to thrust upward • Collect ₹ coins
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* GAMEOVER */}
+                            {gameState === 'GAMEOVER' && (
+                                <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex flex-col items-center justify-center p-3 text-center">
+                                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest">
+                                        Game Over
+                                    </span>
+                                    <span className="text-xl font-black text-white tabular-nums my-1">
+                                        ₹{score.toLocaleString()}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            startGame();
+                                        }}
+                                        className="mt-1 px-3.5 py-1.5 rounded-full bg-white text-black font-extrabold text-[11px] flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                                    >
+                                        <RotateCcw size={11} />
+                                        <span>Play Again</span>
+                                    </button>
+                                </div>
                             )}
                         </div>
-                    )}
-
-                    {/* START SCREEN MODAL */}
-                    {gameState === 'IDLE' && (
-                        <motion.div
-                            initial={{ scale: 0.94, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="relative z-20 w-[90%] max-w-sm rounded-[32px] bg-white/[0.04] border border-white/10 backdrop-blur-2xl p-7 text-center shadow-2xl flex flex-col items-center"
-                        >
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-600 p-0.5 shadow-[0_0_30px_rgba(56,189,248,0.35)] mb-4 flex items-center justify-center">
-                                <div className="w-full h-full rounded-[14px] bg-[#0c1017] flex items-center justify-center">
-                                    <Logo size={32} />
-                                </div>
-                            </div>
-
-                            <h2 className="text-xl font-black text-white tracking-tight heading-apple">
-                                Grip Vault Glider
-                            </h2>
-                            <p className="text-xs text-text-muted mt-1.5 leading-relaxed max-w-[240px]">
-                                Navigate market volatility and harvest yield while signal reconnects.
-                            </p>
-
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    startGame();
-                                }}
-                                className="mt-6 w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold text-sm shadow-[0_8px_25px_rgba(56,189,248,0.4)] active:scale-95 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Zap size={16} className="fill-white" />
-                                <span>Tap to Launch</span>
-                            </button>
-
-                            <p className="text-[10px] text-white/30 font-medium mt-3 tracking-wide">
-                                Hold to thrust upward • Release to glide
-                            </p>
-                        </motion.div>
-                    )}
-
-                    {/* GAME OVER SCREEN MODAL */}
-                    {gameState === 'GAMEOVER' && (
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0, y: 15 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            className="relative z-20 w-[90%] max-w-sm rounded-[32px] bg-white/[0.05] border border-white/10 backdrop-blur-2xl p-7 text-center shadow-2xl flex flex-col items-center"
-                        >
-                            <span className="text-[10px] font-black tracking-widest text-red-400 uppercase">
-                                Volatility Spike
-                            </span>
-
-                            <h3 className="text-3xl font-black text-white tracking-tight mt-1 tabular-nums font-mono">
-                                ₹{score.toLocaleString()}
-                            </h3>
-
-                            {/* Tier Badge */}
-                            <div className={`mt-2 px-3 py-1 rounded-full border text-[11px] font-bold ${currentTier.color} ${currentTier.badge} flex items-center gap-1.5`}>
-                                <Sparkles size={12} />
-                                <span>{currentTier.title}</span>
-                            </div>
-
-                            {/* New High Score Callout */}
-                            {score >= highScore && score > 0 && (
-                                <span className="text-[10px] text-amber-400 font-extrabold tracking-wider uppercase mt-2 animate-bounce">
-                                    ★ New Personal Best! ★
-                                </span>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="mt-6 w-full flex flex-col gap-2.5">
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        startGame();
-                                    }}
-                                    className="w-full py-3.5 px-6 rounded-2xl bg-white text-black font-extrabold text-sm shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <RotateCcw size={15} />
-                                    <span>Relaunch Vault</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRetry();
-                                    }}
-                                    disabled={isChecking}
-                                    className="w-full py-2.5 px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/80 font-bold text-xs active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                                >
-                                    <RefreshCw size={12} className={isChecking ? 'animate-spin' : ''} />
-                                    <span>{isChecking ? 'Connecting...' : 'Check Internet Connection'}</span>
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
+                    </div>
                 </div>
 
-                {/* 3. BOTTOM UTILITY BAR */}
-                <footer className="pb-safe px-4 pb-4 z-30 flex items-center justify-between w-full max-w-lg mx-auto">
-                    <button
-                        onClick={() => {
-                            haptics.selection();
-                            setDismissed(true);
-                        }}
-                        className="text-xs text-white/50 hover:text-white font-medium transition-colors flex items-center gap-1.5 py-1 px-2"
-                    >
-                        <span>Browse cached app</span>
-                        <ArrowRight size={13} />
-                    </button>
-
-                    <div className="flex items-center gap-1 text-[10px] text-white/30 font-mono">
-                        <WifiOff size={11} />
-                        <span>Offline Ready</span>
-                    </div>
+                {/* 4. FOOTER NOTE */}
+                <footer className="pb-safe pt-2 text-center w-full max-w-md mx-auto">
+                    <p className="text-[10px] text-white/30 font-medium">
+                        Grip will automatically sync your data when back online
+                    </p>
                 </footer>
             </motion.div>
         </AnimatePresence>
