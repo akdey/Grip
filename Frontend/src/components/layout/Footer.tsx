@@ -2,14 +2,14 @@ import React from 'react';
 
 export const Footer: React.FC = () => {
     return (
-        <footer className="mt-auto py-6 text-center pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-4 px-4 select-none">
-            <p className="text-xs sm:text-[11px] font-medium text-text-muted tracking-tight">
-                Grip • Developed & Engineered by{' '}
+        <footer className="mt-auto pt-6 text-center pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] md:pb-6 px-4 select-none">
+            <p className="text-[10px] font-normal text-text-muted/45 tracking-wider">
+                Grip <span className="opacity-40">•</span> Developed & Engineered by{' '}
                 <a
                     href="https://portfolio.akdey.vercel.app/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-text-primary hover:text-accent-text font-semibold transition-colors underline decoration-border-default hover:decoration-accent-text underline-offset-2"
+                    className="text-text-muted/65 hover:text-text-secondary font-medium transition-colors underline decoration-border-subtle/50 hover:decoration-text-muted underline-offset-2"
                 >
                     AMIT KUMAR DEY
                 </a>

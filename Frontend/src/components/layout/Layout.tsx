@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
+import { OfflineBanner } from '../ui/OfflineBanner';
 import { Smartphone, X } from 'lucide-react';
 
 export const Layout: React.FC = () => {
@@ -15,6 +16,7 @@ export const Layout: React.FC = () => {
 
     return (
         <div className="min-h-screen text-primary flex flex-col">
+            <OfflineBanner />
             {!isEntryPage && <Sidebar />}
 
             <main className={`min-h-screen transition-all duration-300 flex-1 flex flex-col ${!isEntryPage ? 'md:pl-72' : 'pb-0'}`}>
