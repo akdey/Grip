@@ -1,0 +1,62 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch: # Allows manual 1-click trigger from GitHub Actions tab
+  push:
+    branches:
+      - main
+    paths:
+      - 'Frontend/**'
+      - '.github/workflows/build-apk.yml'
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'Frontend/package-lock.json'
+
+      - name: Install Frontend Dependencies
+        working-directory: Frontend
+        run: npm ci
+
+      - name: Build Web Application
+        working-directory: Frontend
+        run: npm run build
+
+      - name: Sync Web Assets to Android
+        working-directory: Frontend
+        run: npx cap sync android
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Make Gradlew Executable
+        working-directory: Frontend/android
+        run: chmod +x gradlew
+
+      - name: Compile Debug APK
+        working-directory: Frontend/android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Grip-debug-apk
+          path: Frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
