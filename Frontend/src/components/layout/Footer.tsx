@@ -2,7 +2,7 @@ import React from 'react';
 
 export const Footer: React.FC = () => {
     return (
-        <footer className="mt-auto pt-2 text-center pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:pb-4 px-4 select-none">
+        <footer className="mt-auto pt-3 text-center pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:pb-5 px-4 select-none">
             <p className="text-[10px] font-normal text-text-muted/40 tracking-wider">
                 Grip <span className="opacity-40">•</span> Developed & Engineered by{' '}
                 <a

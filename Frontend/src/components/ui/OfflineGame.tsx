@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff, RefreshCw, Trophy, ArrowRight, Play, RotateCcw } from 'lucide-react';
+import { Logo } from './Logo';
 import { haptics } from '../../lib/haptics';
 
 interface Obstacle {
@@ -36,6 +37,16 @@ export const OfflineGame: React.FC = () => {
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const animFrameRef = useRef<number | null>(null);
+    const logoImgRef = useRef<HTMLImageElement | null>(null);
+
+    // Preload Grip app icon for canvas player
+    useEffect(() => {
+        const img = new Image();
+        img.src = '/pwa-192x192.png';
+        img.onload = () => {
+            logoImgRef.current = img;
+        };
+    }, []);
 
     // Game physics state stored in refs for 60fps loop
     const stateRef = useRef({
@@ -164,28 +175,35 @@ export const OfflineGame: React.FC = () => {
                 s.isGrounded = true;
             }
 
-            // 4. Draw Player (Grip Shield Token)
-            const playerX = 45;
+            // 4. Draw Player (Grip Official Logo Icon)
+            const playerX = 48;
             const playerY = s.playerY;
-            const playerSize = 22;
+            const playerSize = 28;
 
-            // Glow effect
-            ctx.shadowColor = '#3b82f6';
-            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#10b981';
+            ctx.shadowBlur = 14;
 
-            // Outer Shield
-            ctx.fillStyle = '#2563eb';
-            ctx.beginPath();
-            ctx.roundRect(playerX - playerSize / 2, playerY - playerSize / 2, playerSize, playerSize, 6);
-            ctx.fill();
+            if (logoImgRef.current && logoImgRef.current.complete) {
+                ctx.drawImage(
+                    logoImgRef.current,
+                    playerX - playerSize / 2,
+                    playerY - playerSize / 2,
+                    playerSize,
+                    playerSize
+                );
+            } else {
+                ctx.fillStyle = '#10b981';
+                ctx.beginPath();
+                ctx.roundRect(playerX - playerSize / 2, playerY - playerSize / 2, playerSize, playerSize, 6);
+                ctx.fill();
 
-            // Inner Accent Ring
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px Inter, system-ui, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('G', playerX, playerY + 1);
+            }
             ctx.shadowBlur = 0;
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 12px Inter, system-ui, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('₹', playerX, playerY + 1);
 
             // 5. Spawn Obstacles (Expense Spikes)
             if (s.frameCount % 95 === 0) {
@@ -334,20 +352,26 @@ export const OfflineGame: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex flex-col justify-between p-5 pb-safe overflow-hidden select-none"
+                className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex flex-col justify-between p-6 pb-safe overflow-hidden select-none"
             >
                 {/* Header */}
                 <div className="pt-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
-                            <WifiOff size={16} />
+                    <div className="flex items-center gap-3">
+                        <div className="p-1 rounded-xl bg-surface border border-border-subtle shadow-md">
+                            <Logo size={28} />
                         </div>
                         <div>
-                            <h2 className="text-sm font-black tracking-tight text-white uppercase heading-apple">
-                                Signal Lost
-                            </h2>
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-sm font-black tracking-tight text-white uppercase heading-apple">
+                                    Grip Vault Runner
+                                </h2>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-status-danger-bg border border-status-danger-border text-status-danger-text font-bold uppercase tracking-wider flex items-center gap-1">
+                                    <WifiOff size={10} />
+                                    Offline
+                                </span>
+                            </div>
                             <p className="text-[10px] text-text-muted font-bold tracking-wider uppercase">
-                                Grip Vault Runner
+                                Protect your Safe-to-Spend
                             </p>
                         </div>
                     </div>
@@ -355,7 +379,7 @@ export const OfflineGame: React.FC = () => {
                     <button
                         onClick={handleRetry}
                         disabled={isChecking}
-                        className="px-3.5 py-1.5 rounded-full bg-surface-subtle border border-border-subtle hover:bg-surface-hover text-xs font-bold text-text-primary flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-50"
+                        className="px-3.5 py-1.5 rounded-full bg-surface border border-border-subtle hover:bg-surface-hover text-xs font-bold text-text-primary flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-50"
                     >
                         <RefreshCw size={12} className={isChecking ? 'animate-spin' : ''} />
                         <span>{isChecking ? 'Reconnecting...' : 'Reconnect'}</span>
@@ -382,12 +406,12 @@ export const OfflineGame: React.FC = () => {
                             if (gameState === 'PLAYING') jump();
                             else startGame();
                         }}
-                        className="w-full h-48 bg-gradient-to-b from-surface/30 to-surface/80 border border-border-subtle rounded-3xl relative overflow-hidden flex items-center justify-center cursor-pointer touch-manipulation active:scale-[0.99] transition-transform shadow-2xl"
+                        className="w-full h-52 sm:h-60 bg-gradient-to-b from-surface/20 to-surface/80 border border-border-subtle rounded-3xl relative overflow-hidden flex items-center justify-center cursor-pointer touch-manipulation active:scale-[0.99] transition-transform shadow-2xl"
                     >
                         <canvas
                             ref={canvasRef}
-                            width={360}
-                            height={192}
+                            width={380}
+                            height={210}
                             className="w-full h-full block"
                         />
 

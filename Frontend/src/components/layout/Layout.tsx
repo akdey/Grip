@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
@@ -9,6 +9,21 @@ import { Smartphone, X } from 'lucide-react';
 export const Layout: React.FC = () => {
     const location = useLocation();
     const [showDesktopWarning, setShowDesktopWarning] = useState(true);
+    const [isOnline, setIsOnline] = useState<boolean>(() =>
+        typeof navigator !== 'undefined' ? navigator.onLine : true
+    );
+
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
+
     const isEntryPage = location.pathname === '/add' ||
         location.pathname.startsWith('/transactions/') ||
         location.pathname === '/settings/categories' ||
@@ -17,10 +32,10 @@ export const Layout: React.FC = () => {
     return (
         <div className="min-h-screen text-primary flex flex-col">
             <OfflineGame />
-            {!isEntryPage && <Sidebar />}
+            {!isEntryPage && isOnline && <Sidebar />}
 
-            <main className={`min-h-screen transition-all duration-300 flex-1 flex flex-col ${!isEntryPage ? 'md:pl-72' : 'pb-0'}`}>
-                {showDesktopWarning && !isEntryPage && (
+            <main className={`min-h-screen transition-all duration-300 flex-1 flex flex-col ${!isEntryPage && isOnline ? 'md:pl-72' : 'pb-0'}`}>
+                {showDesktopWarning && !isEntryPage && isOnline && (
                     <div className="hidden md:flex items-center justify-between bg-surface-subtle border-b border-border-subtle px-8 py-3 text-xs font-medium text-text-secondary backdrop-blur-md sticky top-0 z-40">
                         <span className="flex items-center gap-2 tracking-wide">
                             <Smartphone size={14} className="text-accent-text" />
@@ -40,10 +55,10 @@ export const Layout: React.FC = () => {
                     <Outlet />
                 </div>
 
-                {!isEntryPage && <Footer />}
+                {!isEntryPage && isOnline && <Footer />}
             </main>
 
-            {!isEntryPage && <Navbar />}
+            {!isEntryPage && isOnline && <Navbar />}
         </div>
     );
 };
