@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { WifiOff, RefreshCw, Trophy, ArrowRight, RotateCcw, Play, Gamepad2, Sparkles } from 'lucide-react';
+import { WifiOff, RefreshCw, Trophy, ArrowRight, RotateCcw } from 'lucide-react';
 import { Logo } from './Logo';
 import { haptics } from '../../lib/haptics';
 
@@ -46,7 +46,6 @@ export const OfflineGame: React.FC = () => {
     const [isChecking, setIsChecking] = useState(false);
     const [dismissed, setDismissed] = useState(false);
     const [score, setScore] = useState(0);
-    const [streak, setStreak] = useState(0);
     const [highScore, setHighScore] = useState<number>(() => {
         try {
             return parseInt(localStorage.getItem('grip_offline_highscore') || '0', 10);
@@ -57,24 +56,24 @@ export const OfflineGame: React.FC = () => {
     const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'GAMEOVER'>('IDLE');
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const arenaRef = useRef<HTMLDivElement | null>(null);
     const animFrameRef = useRef<number | null>(null);
-    const thrustingRef = useRef(false);
+    const topOverlayRef = useRef<HTMLDivElement | null>(null);
+    const bottomOverlayRef = useRef<HTMLDivElement | null>(null);
 
-    // Physics state
+    // Physics & State
     const stateRef = useRef({
-        width: 360,
-        height: 220,
-        playerX: 60,
-        playerY: 110,
+        width: 400,
+        height: 800,
+        topCeilingY: 180, // Dynamic: cannot bounce beyond writings
+        bottomFloorY: 700, // Dynamic: above bottom buttons
+        playerX: 70,
+        playerY: 350,
         velocity: 0,
         rotation: 0,
-        gravity: 0.36,
-        thrust: -0.65,
-        maxVelocity: 7.5,
+        gravity: 0.44, // Constant downward pull
+        hopStrength: -8.8, // Upward impulse on tap
         speed: 3.2,
         score: 0,
-        streak: 0,
         frameCount: 0,
         obstacles: [] as Obstacle[],
         coins: [] as Coin[],
@@ -117,35 +116,52 @@ export const OfflineGame: React.FC = () => {
         };
     }, []);
 
-    // Resize canvas with device pixel ratio
-    const updateCanvasDimensions = useCallback(() => {
+    // Resize canvas to full viewport with Retina scaling and calculate bounds
+    const updateCanvasBounds = useCallback(() => {
         const canvas = canvasRef.current;
-        const arena = arenaRef.current;
-        if (!canvas || !arena) return;
+        if (!canvas) return;
 
-        const rect = arena.getBoundingClientRect();
+        const w = window.innerWidth;
+        const h = window.innerHeight;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
 
         const ctx = canvas.getContext('2d');
         if (ctx) {
             ctx.scale(dpr, dpr);
         }
 
-        stateRef.current.width = rect.width;
-        stateRef.current.height = rect.height;
+        stateRef.current.width = w;
+        stateRef.current.height = h;
 
+        // Measure Top Overlay to set ceiling right below writings
+        if (topOverlayRef.current) {
+            const rect = topOverlayRef.current.getBoundingClientRect();
+            stateRef.current.topCeilingY = Math.max(140, rect.bottom + 16);
+        } else {
+            stateRef.current.topCeilingY = 180;
+        }
+
+        // Measure Bottom Overlay to set floor above bottom controls
+        if (bottomOverlayRef.current) {
+            const rect = bottomOverlayRef.current.getBoundingClientRect();
+            stateRef.current.bottomFloorY = Math.min(h - 40, rect.top - 16);
+        } else {
+            stateRef.current.bottomFloorY = h - 90;
+        }
+
+        // Background stars
         if (stateRef.current.stars.length === 0) {
             const stars: Star[] = [];
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 40; i++) {
                 stars.push({
-                    x: Math.random() * rect.width,
-                    y: Math.random() * rect.height,
-                    radius: Math.random() * 1.4 + 0.5,
-                    speed: Math.random() * 0.7 + 0.3,
-                    alpha: Math.random() * 0.5 + 0.2,
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    radius: Math.random() * 1.5 + 0.4,
+                    speed: Math.random() * 0.6 + 0.2,
+                    alpha: Math.random() * 0.5 + 0.15,
                 });
             }
             stateRef.current.stars = stars;
@@ -154,54 +170,21 @@ export const OfflineGame: React.FC = () => {
 
     useEffect(() => {
         if (!isOnline && !dismissed) {
-            updateCanvasDimensions();
-            window.addEventListener('resize', updateCanvasDimensions);
-            return () => window.removeEventListener('resize', updateCanvasDimensions);
+            updateCanvasBounds();
+            window.addEventListener('resize', updateCanvasBounds);
+            return () => window.removeEventListener('resize', updateCanvasBounds);
         }
-    }, [isOnline, dismissed, updateCanvasDimensions]);
+    }, [isOnline, dismissed, updateCanvasBounds]);
 
-    // Thrust handlers
-    const startThrust = useCallback(() => {
-        thrustingRef.current = true;
-        haptics.impact('light');
-    }, []);
-
-    const stopThrust = useCallback(() => {
-        thrustingRef.current = false;
-    }, []);
-
-    const startGame = useCallback(() => {
-        const h = stateRef.current.height || 220;
-        stateRef.current = {
-            ...stateRef.current,
-            playerX: 60,
-            playerY: h / 2,
-            velocity: 0,
-            rotation: 0,
-            speed: 3.2,
-            score: 0,
-            streak: 0,
-            frameCount: 0,
-            obstacles: [],
-            coins: [],
-            particles: [],
-        };
-        setScore(0);
-        setStreak(0);
-        setGameState('PLAYING');
-        thrustingRef.current = true;
-        haptics.impact('medium');
-    }, []);
-
-    // Particle helpers
-    const emitJetParticles = (x: number, y: number) => {
+    // Particle emission helpers
+    const emitHopParticles = (x: number, y: number) => {
         const p = stateRef.current.particles;
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < 4; i++) {
             p.push({
-                x: x - 12,
-                y: y + (Math.random() - 0.5) * 6,
-                vx: -stateRef.current.speed - Math.random() * 2.5,
-                vy: (Math.random() - 0.5) * 1.5,
+                x: x - 4,
+                y: y + 8 + (Math.random() - 0.5) * 4,
+                vx: -1.5 + (Math.random() - 0.5) * 2,
+                vy: Math.random() * 3 + 1.5,
                 size: Math.random() * 3 + 1.5,
                 color: Math.random() > 0.4 ? '#38bdf8' : '#818cf8',
                 alpha: 0.85,
@@ -212,15 +195,15 @@ export const OfflineGame: React.FC = () => {
 
     const emitCoinBurst = (x: number, y: number) => {
         const p = stateRef.current.particles;
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 14; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 3.5 + 1.5;
+            const speed = Math.random() * 4 + 1.5;
             p.push({
                 x,
                 y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
-                size: Math.random() * 2.5 + 1.5,
+                size: Math.random() * 3 + 1.5,
                 color: Math.random() > 0.3 ? '#fbbf24' : '#f59e0b',
                 alpha: 1,
                 decay: 0.03,
@@ -230,7 +213,7 @@ export const OfflineGame: React.FC = () => {
 
     const emitExplosion = (x: number, y: number) => {
         const p = stateRef.current.particles;
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 22; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = Math.random() * 5 + 2;
             p.push({
@@ -238,7 +221,7 @@ export const OfflineGame: React.FC = () => {
                 y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
-                size: Math.random() * 3.5 + 1.5,
+                size: Math.random() * 4 + 1.5,
                 color: Math.random() > 0.5 ? '#f87171' : '#fb923c',
                 alpha: 1,
                 decay: 0.025,
@@ -246,10 +229,69 @@ export const OfflineGame: React.FC = () => {
         }
     };
 
-    // 60FPS Game loop
-    useEffect(() => {
-        if (gameState !== 'PLAYING') return;
+    // Tap-tap Hop action
+    const handleTap = useCallback(() => {
+        if (gameState === 'IDLE') {
+            const { topCeilingY, bottomFloorY } = stateRef.current;
+            const midY = (topCeilingY + bottomFloorY) / 2;
+            stateRef.current.playerY = midY;
+            stateRef.current.velocity = stateRef.current.hopStrength;
+            stateRef.current.score = 0;
+            stateRef.current.speed = 3.2;
+            stateRef.current.frameCount = 0;
+            stateRef.current.obstacles = [];
+            stateRef.current.coins = [];
+            stateRef.current.particles = [];
+            setScore(0);
+            setGameState('PLAYING');
+            emitHopParticles(stateRef.current.playerX, midY);
+            haptics.impact('light');
+            return;
+        }
 
+        if (gameState === 'PLAYING') {
+            // Apply upward impulse
+            stateRef.current.velocity = stateRef.current.hopStrength;
+            emitHopParticles(stateRef.current.playerX, stateRef.current.playerY);
+            haptics.impact('light');
+            return;
+        }
+
+        if (gameState === 'GAMEOVER') {
+            const { topCeilingY, bottomFloorY } = stateRef.current;
+            const midY = (topCeilingY + bottomFloorY) / 2;
+            stateRef.current.playerY = midY;
+            stateRef.current.velocity = stateRef.current.hopStrength;
+            stateRef.current.score = 0;
+            stateRef.current.speed = 3.2;
+            stateRef.current.frameCount = 0;
+            stateRef.current.obstacles = [];
+            stateRef.current.coins = [];
+            stateRef.current.particles = [];
+            setScore(0);
+            setGameState('PLAYING');
+            emitHopParticles(stateRef.current.playerX, midY);
+            haptics.impact('medium');
+        }
+    }, [gameState]);
+
+    const endGame = () => {
+        haptics.notification('error');
+        setGameState('GAMEOVER');
+
+        const finalScore = stateRef.current.score;
+        if (finalScore > highScore) {
+            setHighScore(finalScore);
+            try {
+                localStorage.setItem('grip_offline_highscore', finalScore.toString());
+            } catch {
+                // ignore
+            }
+        }
+    };
+
+    // 60FPS Game Loop
+    useEffect(() => {
         let lastTime = performance.now();
 
         const loop = (currentTime: number) => {
@@ -262,7 +304,7 @@ export const OfflineGame: React.FC = () => {
             if (!ctx) return;
 
             const s = stateRef.current;
-            const { width, height } = s;
+            const { width, height, topCeilingY, bottomFloorY } = s;
 
             s.frameCount++;
 
@@ -279,163 +321,185 @@ export const OfflineGame: React.FC = () => {
                 ctx.fill();
             }
 
-            // 3. Bottom guideline
-            const horizonY = height - 6;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            // 3. Play Zone Guidelines (Ceiling and Floor lines)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
             ctx.lineWidth = 1;
+            ctx.setLineDash([4, 6]);
+
+            // Ceiling line (below writings)
             ctx.beginPath();
-            ctx.moveTo(0, horizonY);
-            ctx.lineTo(width, horizonY);
+            ctx.moveTo(0, topCeilingY);
+            ctx.lineTo(width, topCeilingY);
             ctx.stroke();
 
-            // 4. Update Player
-            if (thrustingRef.current) {
-                s.velocity += s.thrust * dt;
-                emitJetParticles(s.playerX, s.playerY);
-            } else {
+            // Floor line (above bottom bar)
+            ctx.beginPath();
+            ctx.moveTo(0, bottomFloorY);
+            ctx.lineTo(width, bottomFloorY);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+
+            // 4. Update Physics if Playing
+            if (gameState === 'PLAYING') {
+                // Gravity pulls down
                 s.velocity += s.gravity * dt;
-            }
+                s.playerY += s.velocity * dt;
 
-            s.velocity = Math.max(-s.maxVelocity, Math.min(s.velocity, s.maxVelocity));
-            s.playerY += s.velocity * dt;
+                // Rotation based on velocity
+                const targetRotation = Math.max(-0.45, Math.min(s.velocity * 0.06, 0.5));
+                s.rotation += (targetRotation - s.rotation) * 0.2;
 
-            const targetRotation = Math.max(-0.4, Math.min(s.velocity * 0.06, 0.5));
-            s.rotation += (targetRotation - s.rotation) * 0.15;
-
-            // Boundaries
-            if (s.playerY < 16) {
-                s.playerY = 16;
-                s.velocity = 0;
-            }
-            if (s.playerY > height - 18) {
-                s.playerY = height - 18;
-                emitExplosion(s.playerX, s.playerY);
-                endGame();
-                return;
-            }
-
-            // 5. Spawn Obstacles
-            const spawnInterval = Math.max(80, 115 - Math.floor(s.score / 150));
-            if (s.frameCount % spawnInterval === 0) {
-                const gap = Math.max(105, 125 - Math.floor(s.score / 250));
-                const minH = 30;
-                const maxTop = height - gap - minH - 15;
-                const topH = Math.floor(Math.random() * Math.max(10, maxTop - minH)) + minH;
-
-                s.obstacles.push({
-                    x: width + 15,
-                    topHeight: topH,
-                    bottomY: topH + gap,
-                    width: 40,
-                    passed: false,
-                });
-
-                if (Math.random() > 0.3) {
-                    s.coins.push({
-                        x: width + 35,
-                        y: topH + gap / 2,
-                        radius: 11,
-                        collected: false,
-                        bobOffset: Math.random() * Math.PI,
-                    });
-                }
-            }
-
-            // 6. Obstacles
-            for (let i = s.obstacles.length - 1; i >= 0; i--) {
-                const obs = s.obstacles[i];
-                obs.x -= s.speed * dt;
-
-                if (!obs.passed && obs.x + obs.width < s.playerX) {
-                    obs.passed = true;
-                    s.score += 25;
-                    setScore(s.score);
-                    s.speed = Math.min(5.5, s.speed + 0.03);
+                // Ceiling constraint: CANNOT BOUNCE BEYOND WRITINGS
+                const radius = 13;
+                if (s.playerY - radius < topCeilingY) {
+                    s.playerY = topCeilingY + radius;
+                    s.velocity = 0; // Bonk on ceiling
                 }
 
-                ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
-                ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)';
-                ctx.lineWidth = 1.5;
-
-                // Top pillar
-                ctx.beginPath();
-                ctx.roundRect(obs.x, -5, obs.width, obs.topHeight + 5, [0, 0, 10, 10]);
-                ctx.fill();
-                ctx.stroke();
-
-                // Bottom pillar
-                const btmH = height - obs.bottomY;
-                ctx.beginPath();
-                ctx.roundRect(obs.x, obs.bottomY, obs.width, btmH + 5, [10, 10, 0, 0]);
-                ctx.fill();
-                ctx.stroke();
-
-                // Collision check
-                const pr = 12;
-                const inX = s.playerX + pr > obs.x && s.playerX - pr < obs.x + obs.width;
-                const hitTop = s.playerY - pr < obs.topHeight;
-                const hitBottom = s.playerY + pr > obs.bottomY;
-
-                if (inX && (hitTop || hitBottom)) {
+                // Floor collision (falls down if not tapped)
+                if (s.playerY + radius > bottomFloorY) {
+                    s.playerY = bottomFloorY - radius;
                     emitExplosion(s.playerX, s.playerY);
                     endGame();
                     return;
                 }
 
-                if (obs.x + obs.width < -30) {
-                    s.obstacles.splice(i, 1);
-                }
-            }
+                // 5. Spawn Obstacles within the play zone (between ceiling & floor)
+                const playZoneHeight = bottomFloorY - topCeilingY;
+                const spawnInterval = Math.max(85, 120 - Math.floor(s.score / 150));
 
-            // 7. Coins
-            for (let i = s.coins.length - 1; i >= 0; i--) {
-                const c = s.coins[i];
-                c.x -= s.speed * dt;
+                if (s.frameCount % spawnInterval === 0) {
+                    const gap = Math.max(120, 150 - Math.floor(s.score / 200));
+                    const minPillar = 30;
+                    const maxTop = playZoneHeight - gap - minPillar;
+                    const topH = Math.floor(Math.random() * Math.max(10, maxTop)) + minPillar;
 
-                const bob = Math.sin(s.frameCount * 0.08 + c.bobOffset) * 3;
-                const currentY = c.y + bob;
+                    s.obstacles.push({
+                        x: width + 20,
+                        topHeight: topCeilingY + topH,
+                        bottomY: topCeilingY + topH + gap,
+                        width: 44,
+                        passed: false,
+                    });
 
-                if (!c.collected) {
-                    const dist = Math.hypot(s.playerX - c.x, s.playerY - currentY);
-                    if (dist < 22) {
-                        c.collected = true;
-                        s.score += 50;
-                        s.streak += 1;
-                        setScore(s.score);
-                        setStreak(s.streak);
-                        emitCoinBurst(c.x, currentY);
-                        haptics.impact('light');
+                    // Golden coin in middle
+                    if (Math.random() > 0.3) {
+                        s.coins.push({
+                            x: width + 42,
+                            y: topCeilingY + topH + gap / 2,
+                            radius: 12,
+                            collected: false,
+                            bobOffset: Math.random() * Math.PI,
+                        });
                     }
                 }
 
-                if (!c.collected) {
-                    ctx.save();
-                    ctx.shadowColor = '#fbbf24';
-                    ctx.shadowBlur = 10;
-                    ctx.fillStyle = '#f59e0b';
-                    ctx.beginPath();
-                    ctx.arc(c.x, currentY, c.radius, 0, Math.PI * 2);
-                    ctx.fill();
+                // 6. Update Obstacles
+                for (let i = s.obstacles.length - 1; i >= 0; i--) {
+                    const obs = s.obstacles[i];
+                    obs.x -= s.speed * dt;
 
-                    ctx.strokeStyle = '#fef08a';
-                    ctx.lineWidth = 1.2;
+                    // Pass score
+                    if (!obs.passed && obs.x + obs.width < s.playerX) {
+                        obs.passed = true;
+                        s.score += 25;
+                        setScore(s.score);
+                        s.speed = Math.min(5.5, s.speed + 0.03);
+                    }
+
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.28)';
+                    ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+                    ctx.lineWidth = 1.5;
+
+                    // Top pillar (starts from ceiling down)
+                    const topBlockH = obs.topHeight - topCeilingY;
+                    ctx.beginPath();
+                    ctx.roundRect(obs.x, topCeilingY, obs.width, topBlockH, [0, 0, 10, 10]);
+                    ctx.fill();
                     ctx.stroke();
 
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 9px Inter, system-ui, sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText('₹', c.x, currentY + 0.5);
-                    ctx.restore();
+                    // Bottom pillar (starts from bottomY to floor)
+                    const btmBlockH = bottomFloorY - obs.bottomY;
+                    ctx.beginPath();
+                    ctx.roundRect(obs.x, obs.bottomY, obs.width, btmBlockH, [10, 10, 0, 0]);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Red warning indicator at tips
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(obs.x + 3, obs.topHeight - 2, obs.width - 6, 2);
+                    ctx.fillRect(obs.x + 3, obs.bottomY, obs.width - 6, 2);
+
+                    // Collision check
+                    const inX = s.playerX + radius > obs.x && s.playerX - radius < obs.x + obs.width;
+                    const hitTop = s.playerY - radius < obs.topHeight;
+                    const hitBottom = s.playerY + radius > obs.bottomY;
+
+                    if (inX && (hitTop || hitBottom)) {
+                        emitExplosion(s.playerX, s.playerY);
+                        endGame();
+                        return;
+                    }
+
+                    if (obs.x + obs.width < -30) {
+                        s.obstacles.splice(i, 1);
+                    }
                 }
 
-                if (c.x < -30 || c.collected) {
-                    s.coins.splice(i, 1);
+                // 7. Update Coins
+                for (let i = s.coins.length - 1; i >= 0; i--) {
+                    const c = s.coins[i];
+                    c.x -= s.speed * dt;
+
+                    const bob = Math.sin(s.frameCount * 0.08 + c.bobOffset) * 3;
+                    const currentY = c.y + bob;
+
+                    if (!c.collected) {
+                        const dist = Math.hypot(s.playerX - c.x, s.playerY - currentY);
+                        if (dist < 24) {
+                            c.collected = true;
+                            s.score += 50;
+                            setScore(s.score);
+                            emitCoinBurst(c.x, currentY);
+                            haptics.impact('light');
+                        }
+                    }
+
+                    if (!c.collected) {
+                        ctx.save();
+                        ctx.shadowColor = '#fbbf24';
+                        ctx.shadowBlur = 10;
+                        ctx.fillStyle = '#f59e0b';
+                        ctx.beginPath();
+                        ctx.arc(c.x, currentY, c.radius, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.strokeStyle = '#fef08a';
+                        ctx.lineWidth = 1.2;
+                        ctx.stroke();
+
+                        ctx.shadowBlur = 0;
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('₹', c.x, currentY + 0.5);
+                        ctx.restore();
+                    }
+
+                    if (c.x < -30 || c.collected) {
+                        s.coins.splice(i, 1);
+                    }
                 }
+            } else if (gameState === 'IDLE') {
+                // Gentle floating bob in the center
+                const midY = (topCeilingY + bottomFloorY) / 2;
+                s.playerY = midY + Math.sin(s.frameCount * 0.05) * 8;
+                s.rotation = 0;
             }
 
-            // 8. Particles
+            // 8. Render Particles
             for (let i = s.particles.length - 1; i >= 0; i--) {
                 const pt = s.particles[i];
                 pt.x += pt.vx;
@@ -455,32 +519,35 @@ export const OfflineGame: React.FC = () => {
                 ctx.globalAlpha = 1;
             }
 
-            // 9. Player (Grip Falcon Logo)
+            // 9. Render Player (Grip Ball / Falcon Token)
             ctx.save();
             ctx.translate(s.playerX, s.playerY);
             ctx.rotate(s.rotation);
 
-            ctx.shadowColor = thrustingRef.current ? '#38bdf8' : '#6366f1';
+            ctx.shadowColor = '#38bdf8';
             ctx.shadowBlur = 12;
 
-            const pGrad = ctx.createLinearGradient(-12, -12, 12, 12);
+            const pGrad = ctx.createLinearGradient(-13, -13, 13, 13);
             pGrad.addColorStop(0, '#38bdf8');
             pGrad.addColorStop(1, '#1d4ed8');
             ctx.fillStyle = pGrad;
 
+            // Rounded ball
             ctx.beginPath();
-            ctx.roundRect(-12, -12, 24, 24, 7);
+            ctx.arc(0, 0, 13, 0, Math.PI * 2);
             ctx.fill();
 
+            // Inner Accent
             ctx.shadowBlur = 0;
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.arc(0, 0, 6, 0, Math.PI * 2);
+            ctx.arc(0, 0, 6.5, 0, Math.PI * 2);
             ctx.stroke();
 
+            // G initial
             ctx.fillStyle = '#ffffff';
-            ctx.font = '900 9px Inter, system-ui, sans-serif';
+            ctx.font = '900 9.5px Inter, system-ui, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('G', 0, 0.5);
@@ -497,49 +564,18 @@ export const OfflineGame: React.FC = () => {
         };
     }, [gameState]);
 
-    const endGame = () => {
-        haptics.notification('error');
-        setGameState('GAMEOVER');
-        stopThrust();
-
-        const finalScore = stateRef.current.score;
-        if (finalScore > highScore) {
-            setHighScore(finalScore);
-            try {
-                localStorage.setItem('grip_offline_highscore', finalScore.toString());
-            } catch {
-                // ignore
-            }
-        }
-    };
-
-    // Keyboard controls for desktop
+    // Keyboard support for spacebar tap
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.code === 'Space' || e.key === ' ' || e.code === 'ArrowUp') {
-                if (gameState === 'PLAYING') {
-                    e.preventDefault();
-                    startThrust();
-                }
-            }
-        };
-
-        const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.code === 'Space' || e.key === ' ' || e.code === 'ArrowUp') {
-                if (gameState === 'PLAYING') {
-                    e.preventDefault();
-                    stopThrust();
-                }
+                e.preventDefault();
+                handleTap();
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('keyup', handleKeyUp);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
-        };
-    }, [gameState, startThrust, stopThrust]);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleTap]);
 
     if (isOnline || dismissed) return null;
 
@@ -549,150 +585,125 @@ export const OfflineGame: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] bg-[#090a0f] text-white flex flex-col justify-between overflow-y-auto select-none p-5 sm:p-7"
+                onPointerDown={(e) => {
+                    // Check if clicked inside a button; if not, trigger game tap
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button')) return;
+                    handleTap();
+                }}
+                className="fixed inset-0 z-[100] bg-[#07080c] text-white flex flex-col justify-between overflow-hidden select-none touch-manipulation cursor-pointer"
             >
-                {/* 1. TOP BRAND HEADER */}
-                <header className="pt-safe flex items-center justify-between w-full max-w-md mx-auto">
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-1 rounded-xl bg-white/5 border border-white/10 shadow-sm">
-                            <Logo size={24} />
+                {/* 1. FULLSCREEN BACKGROUND CANVAS */}
+                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block z-0" />
+
+                {/* 2. TOP OVERLAY: Header + WiFi + Brand + Offline Writings */}
+                <div
+                    ref={topOverlayRef}
+                    className="relative z-10 w-full max-w-md mx-auto pt-safe px-5 pt-3 flex flex-col items-center text-center pointer-events-none"
+                >
+                    {/* Header Row */}
+                    <div className="w-full flex items-center justify-between pointer-events-auto">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1 rounded-xl bg-white/5 border border-white/10 shadow-sm">
+                                <Logo size={22} />
+                            </div>
+                            <span className="text-sm font-extrabold tracking-tight text-white heading-apple">
+                                Grip
+                            </span>
                         </div>
-                        <span className="text-sm font-extrabold tracking-tight text-white heading-apple">
-                            Grip
-                        </span>
+
+                        {/* Top Right: Offline Pill + High Score */}
+                        <div className="flex items-center gap-2">
+                            {highScore > 0 && (
+                                <div className="flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-white/5 border border-white/10 px-2.5 py-0.5 rounded-full">
+                                    <Trophy size={11} />
+                                    <span>₹{highScore.toLocaleString()}</span>
+                                </div>
+                            )}
+                            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                                <span className="text-[10px] font-bold tracking-wider uppercase">
+                                    Offline
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Offline Signal Badge */}
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                        <span className="text-[10px] font-bold tracking-wider uppercase">
-                            Offline
-                        </span>
-                    </div>
-                </header>
-
-                {/* 2. HERO STATEMENT: Clear, human, direct */}
-                <div className="my-auto py-4 w-full max-w-md mx-auto flex flex-col items-center text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80 mb-3 shadow-inner">
-                        <WifiOff size={26} className="text-red-400" />
+                    {/* Wifi Icon & Status Statements (Shifted towards top) */}
+                    <div className="mt-2.5 flex flex-col items-center">
+                        <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-red-400 mb-1 shadow-sm">
+                            <WifiOff size={18} />
+                        </div>
+                        <h1 className="text-base sm:text-lg font-black tracking-tight text-white heading-apple leading-tight">
+                            Grip is Offline
+                        </h1>
+                        <p className="text-[11px] text-text-muted mt-0.5 max-w-[280px] leading-relaxed">
+                            No internet connection. Grip will automatically sync when signal returns.
+                        </p>
                     </div>
 
-                    <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white heading-apple">
-                        Grip is Offline
-                    </h1>
-                    <p className="text-xs text-text-muted mt-1.5 max-w-xs leading-relaxed">
-                        No internet connection detected. Grip will automatically reconnect once your signal is restored.
-                    </p>
+                    {/* Tap-tap Hint / In-Game Score */}
+                    {gameState === 'IDLE' && (
+                        <div className="mt-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white/80 text-[10px] font-bold tracking-wide animate-pulse">
+                            Tap to hop • Tap-tap to stay airborne
+                        </div>
+                    )}
 
-                    {/* Quick Action Buttons */}
-                    <div className="mt-5 w-full flex items-center gap-3">
+                    {gameState === 'PLAYING' && (
+                        <div className="mt-1 flex items-center gap-1">
+                            <span className="text-2xl font-black text-white tabular-nums tracking-tight font-mono drop-shadow-md">
+                                ₹{score.toLocaleString()}
+                            </span>
+                        </div>
+                    )}
+
+                    {gameState === 'GAMEOVER' && (
+                        <div className="mt-1 px-3 py-1 rounded-full bg-red-500/20 border border-red-500/30 text-white text-[11px] font-extrabold flex items-center gap-1.5 animate-bounce">
+                            <RotateCcw size={12} />
+                            <span>Score: ₹{score.toLocaleString()} • Tap anywhere to try again</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* 3. BOTTOM OVERLAY: Smaller actions + Subtle Footer */}
+                <div
+                    ref={bottomOverlayRef}
+                    className="relative z-10 w-full max-w-md mx-auto pb-safe px-5 pb-3 flex flex-col items-center gap-2 pointer-events-auto"
+                >
+                    {/* Smaller Action Buttons at bottom */}
+                    <div className="w-full flex items-center gap-2">
                         <button
-                            onClick={handleRetry}
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleRetry();
+                            }}
                             disabled={isChecking}
-                            className="flex-1 py-3 px-4 rounded-xl bg-white text-black font-extrabold text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                            className="flex-1 py-2 px-3 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold text-[11px] active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                         >
-                            <RefreshCw size={13} className={isChecking ? 'animate-spin' : ''} />
-                            <span>{isChecking ? 'Reconnecting...' : 'Try Reconnecting'}</span>
+                            <RefreshCw size={11} className={isChecking ? 'animate-spin' : ''} />
+                            <span>{isChecking ? 'Checking...' : 'Try Reconnecting'}</span>
                         </button>
 
                         <button
-                            onClick={() => {
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 haptics.selection();
                                 setDismissed(true);
                             }}
-                            className="py-3 px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/90 font-bold text-xs active:scale-95 transition-all flex items-center gap-1.5"
+                            className="py-2 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 font-semibold text-[11px] active:scale-95 transition-all flex items-center gap-1"
                         >
                             <span>Browse Cached</span>
-                            <ArrowRight size={13} />
+                            <ArrowRight size={11} />
                         </button>
                     </div>
 
-                    {/* 3. OPTIONAL MINI-GAME CARD ("Play if you wish") */}
-                    <div className="mt-6 w-full rounded-2xl bg-white/[0.03] border border-white/10 p-3.5 flex flex-col text-left">
-                        {/* Mini-Game Header */}
-                        <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-white/5">
-                            <div className="flex items-center gap-2">
-                                <Gamepad2 size={14} className="text-sky-400" />
-                                <span className="text-[11px] font-bold text-white/90">
-                                    Play while you wait
-                                </span>
-                            </div>
-
-                            <div className="flex items-center gap-1 text-[11px] font-bold text-amber-400 tabular-nums">
-                                <Trophy size={11} />
-                                <span>₹{highScore.toLocaleString()}</span>
-                            </div>
-                        </div>
-
-                        {/* Interactive Arena */}
-                        <div
-                            ref={arenaRef}
-                            onPointerDown={() => {
-                                if (gameState === 'PLAYING') startThrust();
-                                else if (gameState === 'IDLE') startGame();
-                            }}
-                            onPointerUp={stopThrust}
-                            onPointerCancel={stopThrust}
-                            className="relative w-full h-44 sm:h-48 rounded-xl bg-[#07080d] border border-white/5 overflow-hidden flex items-center justify-center cursor-pointer select-none touch-none"
-                        >
-                            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
-
-                            {/* In-game live score */}
-                            {gameState === 'PLAYING' && (
-                                <div className="absolute top-2.5 inset-x-0 flex items-center justify-center pointer-events-none">
-                                    <span className="text-xl font-black text-white tabular-nums drop-shadow-md">
-                                        ₹{score.toLocaleString()}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* IDLE: Play if you wish prompt */}
-                            {gameState === 'IDLE' && (
-                                <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex flex-col items-center justify-center p-3 text-center">
-                                    <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-lg mb-2 active:scale-95 transition-transform">
-                                        <Play size={16} className="ml-0.5 fill-black" />
-                                    </div>
-                                    <p className="text-xs font-bold text-white">
-                                        Tap to play Grip Glider
-                                    </p>
-                                    <p className="text-[10px] text-white/40 mt-0.5 font-medium">
-                                        Hold to thrust upward • Collect ₹ coins
-                                    </p>
-                                </div>
-                            )}
-
-                            {/* GAMEOVER */}
-                            {gameState === 'GAMEOVER' && (
-                                <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex flex-col items-center justify-center p-3 text-center">
-                                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest">
-                                        Game Over
-                                    </span>
-                                    <span className="text-xl font-black text-white tabular-nums my-1">
-                                        ₹{score.toLocaleString()}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            startGame();
-                                        }}
-                                        className="mt-1 px-3.5 py-1.5 rounded-full bg-white text-black font-extrabold text-[11px] flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
-                                    >
-                                        <RotateCcw size={11} />
-                                        <span>Play Again</span>
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* 4. FOOTER NOTE */}
-                <footer className="pb-safe pt-2 text-center w-full max-w-md mx-auto">
-                    <p className="text-[10px] text-white/30 font-medium">
-                        Grip will automatically sync your data when back online
+                    {/* Very subtle footer */}
+                    <p className="text-[9px] text-text-muted/40 font-normal tracking-wide select-none">
+                        Grip automatically reconnects and syncs your data
                     </p>
-                </footer>
+                </div>
             </motion.div>
         </AnimatePresence>
     );
