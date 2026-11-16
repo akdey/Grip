@@ -81,6 +81,25 @@ export const OfflineGame: React.FC = () => {
         stars: [] as Star[],
     });
 
+    // Complete reset of game state, physics, and canvas animation loop
+    const resetGameState = useCallback(() => {
+        if (animFrameRef.current) {
+            cancelAnimationFrame(animFrameRef.current);
+            animFrameRef.current = null;
+        }
+        setGameState('IDLE');
+        setScore(0);
+        setIsChecking(false);
+        stateRef.current.velocity = 0;
+        stateRef.current.rotation = 0;
+        stateRef.current.score = 0;
+        stateRef.current.frameCount = 0;
+        stateRef.current.speed = 3.2;
+        stateRef.current.obstacles = [];
+        stateRef.current.coins = [];
+        stateRef.current.particles = [];
+    }, []);
+
     // Check connectivity
     const handleRetry = useCallback(async () => {
         setIsChecking(true);
@@ -89,32 +108,42 @@ export const OfflineGame: React.FC = () => {
             await fetch('/favicon.ico?_t=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
             setIsOnline(true);
             setDismissed(false);
+            resetGameState();
         } catch {
-            setIsOnline(navigator.onLine);
+            const online = typeof navigator !== 'undefined' ? navigator.onLine : false;
+            setIsOnline(online);
+            if (online) {
+                resetGameState();
+            }
         } finally {
             setIsChecking(false);
         }
-    }, []);
+    }, [resetGameState]);
 
     useEffect(() => {
         const handleOnline = () => {
             setIsOnline(true);
             setDismissed(false);
+            resetGameState();
         };
         const handleOffline = () => {
             setIsOnline(false);
             setDismissed(false);
-            setGameState('IDLE');
+            resetGameState();
         };
 
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
 
         return () => {
+            if (animFrameRef.current) {
+                cancelAnimationFrame(animFrameRef.current);
+                animFrameRef.current = null;
+            }
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
-    }, []);
+    }, [resetGameState]);
 
     // Resize canvas to full viewport with Retina scaling and calculate bounds
     const updateCanvasBounds = useCallback(() => {
@@ -481,10 +510,10 @@ export const OfflineGame: React.FC = () => {
 
                         ctx.shadowBlur = 0;
                         ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+                        ctx.font = '900 8.5px Inter, system-ui, sans-serif';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        ctx.fillText('₹', c.x, currentY + 0.5);
+                        ctx.fillText('G', c.x, currentY + 0.5);
                         ctx.restore();
                     }
 
@@ -617,7 +646,7 @@ export const OfflineGame: React.FC = () => {
                             {highScore > 0 && (
                                 <div className="flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-white/5 border border-white/10 px-2.5 py-0.5 rounded-full">
                                     <Trophy size={11} />
-                                    <span>₹{highScore.toLocaleString()}</span>
+                                    <span>{highScore.toLocaleString()} PTS</span>
                                 </div>
                             )}
                             <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
@@ -650,9 +679,12 @@ export const OfflineGame: React.FC = () => {
                     )}
 
                     {gameState === 'PLAYING' && (
-                        <div className="mt-1 flex items-center gap-1">
+                        <div className="mt-1 flex items-baseline gap-1">
                             <span className="text-2xl font-black text-white tabular-nums tracking-tight font-mono drop-shadow-md">
-                                ₹{score.toLocaleString()}
+                                {score.toLocaleString()}
+                            </span>
+                            <span className="text-xs text-white/50 font-sans font-bold tracking-wider">
+                                PTS
                             </span>
                         </div>
                     )}
@@ -660,15 +692,15 @@ export const OfflineGame: React.FC = () => {
                     {gameState === 'GAMEOVER' && (
                         <div className="mt-1 px-3 py-1 rounded-full bg-red-500/20 border border-red-500/30 text-white text-[11px] font-extrabold flex items-center gap-1.5 animate-bounce">
                             <RotateCcw size={12} />
-                            <span>Score: ₹{score.toLocaleString()} • Tap anywhere to try again</span>
+                            <span>Score: {score.toLocaleString()} PTS • Tap anywhere to try again</span>
                         </div>
                     )}
                 </div>
 
-                {/* 3. BOTTOM OVERLAY: Smaller actions + Subtle Footer */}
+                {/* 3. BOTTOM OVERLAY: Smaller actions */}
                 <div
                     ref={bottomOverlayRef}
-                    className="relative z-10 w-full max-w-md mx-auto pb-safe px-5 pb-3 flex flex-col items-center gap-2 pointer-events-auto"
+                    className="relative z-10 w-full max-w-md mx-auto pb-safe px-5 pb-4 flex flex-col items-center gap-2 pointer-events-auto"
                 >
                     {/* Smaller Action Buttons at bottom */}
                     <div className="w-full flex items-center gap-2">
@@ -698,11 +730,6 @@ export const OfflineGame: React.FC = () => {
                             <ArrowRight size={11} />
                         </button>
                     </div>
-
-                    {/* Very subtle footer */}
-                    <p className="text-[9px] text-text-muted/40 font-normal tracking-wide select-none">
-                        Grip automatically reconnects and syncs your data
-                    </p>
                 </div>
             </motion.div>
         </AnimatePresence>
