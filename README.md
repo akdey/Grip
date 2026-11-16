@@ -12,6 +12,8 @@ Import your Consolidated Account Statement (CAMS, KFin, MFCentral) in 60 seconds
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 
+> **Engineered by [AMIT KUMAR DEY](https://portfolio.akdey.vercel.app/)**
+
 ---
 
 ## 🌟 What Makes Grip Different

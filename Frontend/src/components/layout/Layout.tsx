@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
+import { Footer } from './Footer';
 import { Smartphone, X } from 'lucide-react';
 
 export const Layout: React.FC = () => {
@@ -13,10 +14,10 @@ export const Layout: React.FC = () => {
         location.pathname === '/tags';
 
     return (
-        <div className="min-h-screen text-primary">
+        <div className="min-h-screen text-primary flex flex-col">
             {!isEntryPage && <Sidebar />}
 
-            <main className={`min-h-screen transition-all duration-300 ${!isEntryPage ? 'md:pl-72 pb-32 md:pb-12' : 'pb-0'}`}>
+            <main className={`min-h-screen transition-all duration-300 flex-1 flex flex-col ${!isEntryPage ? 'md:pl-72' : 'pb-0'}`}>
                 {showDesktopWarning && !isEntryPage && (
                     <div className="hidden md:flex items-center justify-between bg-surface-subtle border-b border-border-subtle px-8 py-3 text-xs font-medium text-text-secondary backdrop-blur-md sticky top-0 z-40">
                         <span className="flex items-center gap-2 tracking-wide">
@@ -33,9 +34,11 @@ export const Layout: React.FC = () => {
                     </div>
                 )}
 
-                <div className={`container mx-auto max-w-7xl ${!isEntryPage ? 'animate-enter px-0 md:px-12 md:py-8 pb-24' : 'p-0'}`}>
+                <div className={`container mx-auto max-w-7xl flex-1 ${!isEntryPage ? 'animate-enter px-0 md:px-12 md:py-8 pb-8' : 'p-0'}`}>
                     <Outlet />
                 </div>
+
+                {!isEntryPage && <Footer />}
             </main>
 
             {!isEntryPage && <Navbar />}
