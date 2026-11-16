@@ -459,11 +459,12 @@ Result: Prevents surprise salary drains by previewing next month's recurring com
 **Frozen Funds Breakdown:**
 ```
 ┌────────────────────────────────────────┐
-│ Frozen Funds: ₹25,700                  │
+│ Frozen Funds: ₹29,700                  │
 ├────────────────────────────────────────┤
 │ • Unpaid Bills:           ₹10,500      │
 │ • Projected Surety:       ₹12,000      │
 │ • Unbilled CC:             ₹3,200      │
+│ • Active Goals:            ₹4,000      │
 └────────────────────────────────────────┘
 ```
 
@@ -480,9 +481,12 @@ Accessible directly from the **Experimental** section in Explorer (**More**):
    - Autonomous outflow surveillance transferred from the main dashboard into a dedicated security surface.
    - Real-time detection of spend spikes, duplicate swipes, category velocity surges, and surety drifts with one-click inspection drawers.
 
-3. **Financial Goals & Dual-Bucket Pacing (`/goals`)**:
-   - Day-accurate goal feasibility engine evaluating 90-day surplus after fixed obligations and living burn.
-   - **Don't-Starve Dual-Bucket Allocation**: Clicks into current liquidity without depleting living cash buffers, pacing remaining targets against projected future income.
+3. **Financial Goals & Dual-Bucket Feasibility Engine (`/goals`)**:
+   - **Real-World Feasibility Simulation**: Day-accurate feasibility engine that evaluates true saving capacity before committing funds. Cross-references 90-day income patterns, auto-detects monthly salary arrival dates, and pulls the full 60-day upcoming recurring commitments ledger (all bills, auto-detected sureties, and SIPs) alongside discretionary living burn rates.
+   - **"Don't-Starve" Dual-Bucket Allocation**: Capping the immediate current freeze to at most 50% of current liquid Safe-to-Spend cash. This ensures goals never starve everyday living buffers, pacing the remaining target balance smoothly across projected future salary surpluses.
+   - **Interactive Income & What-If Simulation**: Test custom upcoming salaries or planned bonus credits with 1-click real-time re-simulation, receiving instant diagnostic feedback on feasibility status, salary cycles, buffer cushions, or required daily savings rates.
+   - **Apple-Style Goals Interface**: 3-card horizon metrics (Target Capital, Monthly Freeze, Accumulated Fund), tactile creation drawer with currency prefix inputs, date pickers, and safe target commitment / deletion modals.
+   - **Direct Safe-to-Spend Lock**: Committed goals automatically lock their monthly contribution directly into the core Safe-to-Spend `frozen_funds` formula, ring-fencing capital so it is never accidentally spent.
 
 4. **Wealth Lab (`/wealth/lab`)**:
    - Direct gateway to Facebook Prophet multi-decade portfolio projections and historical SIP timing optimization.
@@ -940,6 +944,14 @@ DELETE /api/v1/bills/{id}                         # Delete bill and unfreeze fun
 POST   /api/v1/bills/{id}/mark-paid               # Mark bill paid (advances recurring cycle) or unpaid
 GET    /api/v1/bills/surety/list                  # List auto-detected surety obligations
 POST   /api/v1/bills/surety/exclusion             # Create exclusion rule for surety
+```
+
+#### Financial Goals & Targets
+```bash
+POST   /api/v1/goals/feasibility                  # Real-time goal feasibility check & simulation
+POST   /api/v1/goals                              # Commit a new financial goal / sinking fund
+GET    /api/v1/goals                              # List all active user goals
+DELETE /api/v1/goals/{id}                         # Delete/deactivate a goal and release frozen funds
 ```
 
 #### Export
