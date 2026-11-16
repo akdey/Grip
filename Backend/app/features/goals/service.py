@@ -2,6 +2,7 @@ import logging
 import calendar
 from uuid import UUID
 from datetime import date, timedelta
+from decimal import Decimal
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, or_, and_
@@ -234,31 +235,6 @@ class GoalService:
         await db.refresh(goal)
         AnalyticsService.invalidate_safe_spend_cache(user_id)
         return goal
-
-    async def get_active_goals(self, db: AsyncSession, user_id: UUID) -> List[Goal]:
-        result = await db.execute(
-            select(Goal)
-            .where(Goal.user_id == user_id)
-            .where(Goal.is_active == True)
-            .order_by(Goal.target_date)
-        )
-        return result.scalars().all()
-    
-    async def get_total_monthly_goal_contribution(self, db: AsyncSession, user_id: UUID) -> float:
-        result = await db.execute(
-            select(func.sum(Goal.monthly_contribution))
-            .where(Goal.user_id == user_id)
-            .where(Goal.is_active == True)
-        )
-        return result.scalar() or 0.0
-
-    async def delete_goal(self, db: AsyncSession, user_id: UUID, goal_id: UUID):
-        result = await db.execute(select(Goal).where(Goal.id == goal_id, Goal.user_id == user_id))
-        goal = result.scalar_one_or_none()
-        if goal:
-            await db.delete(goal)
-            await db.commit()
-            AnalyticsService.invalidate_safe_spend_cache(user_id)
 
     async def get_active_goals(self, db: AsyncSession, user_id: UUID) -> List[Goal]:
         result = await db.execute(
