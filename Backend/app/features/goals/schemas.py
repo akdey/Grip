@@ -43,3 +43,6 @@ class FeasibilityCheck(BaseModel):
     salary_cycles_count: int = 0
     monthly_obligations_burn: float = 0.0
     message: str
+    suggested_target_date: Optional[date] = None
+    suggested_target_amount: Optional[float] = None
+    suggested_cycles_needed: Optional[int] = None

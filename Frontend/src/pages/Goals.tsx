@@ -23,7 +23,7 @@ import { Loader } from '../components/ui/Loader';
 import { Drawer } from '../components/ui/Drawer';
 import { formatCurrency } from '../lib/formatters';
 import { haptics } from '../lib/haptics';
-import { addMonths, addYears, endOfYear, format, differenceInCalendarDays } from 'date-fns';
+import { addMonths, addYears, addDays, endOfYear, format, differenceInCalendarDays } from 'date-fns';
 
 interface GoalsProps {
     embedded?: boolean;
@@ -91,17 +91,25 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
         setIsDrawerOpen(true);
     };
 
-    const handleCheckFeasibility = async (overrideIncome?: number) => {
-        if (!formName.trim() || !formAmount || !formDate) return;
+    const handleCheckFeasibility = async (overrideIncome?: number, overrideAmount?: number, overrideDate?: string) => {
+        const amtToUse = overrideAmount !== undefined ? overrideAmount : parseFloat(formAmount);
+        const dateToUse = overrideDate !== undefined ? overrideDate : formDate;
+        const nameToUse = formName.trim() || 'New Target';
+
+        if (!amtToUse || !dateToUse) {
+            setFeasibilityError('Please provide both target amount and deadline to check feasibility.');
+            return;
+        }
+
         haptics.selection();
         setFeasibilityError(null);
 
         const incomeToUse = overrideIncome !== undefined ? overrideIncome : (customIncome ? parseFloat(customIncome) : undefined);
         try {
             const result = await checkFeasibilityMutation.mutateAsync({
-                name: formName.trim(),
-                target_amount: parseFloat(formAmount),
-                target_date: formDate,
+                name: nameToUse,
+                target_amount: amtToUse,
+                target_date: dateToUse,
                 custom_expected_income: incomeToUse,
             });
             setFeasibility(result);
@@ -112,6 +120,33 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
             console.error('Feasibility evaluation failed:', err);
             setFeasibilityError(err?.response?.data?.detail || err?.message || 'Unable to evaluate feasibility. Please verify your inputs.');
         }
+    };
+
+    const handleApplySuggestedDate = (suggestedDate: string) => {
+        haptics.selection();
+        setFormDate(suggestedDate);
+        handleCheckFeasibility(undefined, undefined, suggestedDate);
+    };
+
+    const handleApplySuggestedAmount = (suggestedAmount: number) => {
+        haptics.selection();
+        const cleanAmount = Math.floor(suggestedAmount);
+        setFormAmount(String(cleanAmount));
+        handleCheckFeasibility(undefined, cleanAmount, undefined);
+    };
+
+    const handleQuickExtend = (type: '15d' | '1m' | '2m' | '3m') => {
+        haptics.selection();
+        const base = formDate ? new Date(formDate) : new Date();
+        let nextDate: Date;
+        if (type === '15d') nextDate = addDays(base, 15);
+        else if (type === '1m') nextDate = addMonths(base, 1);
+        else if (type === '2m') nextDate = addMonths(base, 2);
+        else nextDate = addMonths(base, 3);
+
+        const formatted = format(nextDate, 'yyyy-MM-dd');
+        setFormDate(formatted);
+        handleCheckFeasibility(undefined, undefined, formatted);
     };
 
     const handleCreateGoal = async () => {
@@ -607,6 +642,104 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
                                             </span>
                                         </div>
                                     </div>
+
+                                    {/* Smart Feasibility Optimizer / What-If Recommendations */}
+                                    {!feasibility.is_feasible && (feasibility.suggested_target_date || feasibility.suggested_target_amount) && (
+                                        <div className="pt-2.5 pb-1 border-t border-border-subtle/70 space-y-2.5">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1.5 text-xs font-bold text-text-primary">
+                                                    <Sparkles size={13} className="text-accent-text" />
+                                                    <span>What-If Optimizer</span>
+                                                </div>
+                                                <span className="text-[10px] text-text-muted font-medium">1-tap auto-solve</span>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {/* Recommendation 1: Shift Deadline */}
+                                                {feasibility.suggested_target_date && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleApplySuggestedDate(feasibility.suggested_target_date)}
+                                                        className="w-full text-left p-2.5 rounded-xl bg-surface border border-border-subtle hover:border-border-default hover:bg-surface-hover active:scale-[0.98] transition-all flex items-center justify-between group touch-manipulation"
+                                                    >
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-7 h-7 rounded-lg bg-surface-pill border border-border-subtle flex items-center justify-center text-text-muted group-hover:text-text-primary shrink-0">
+                                                                <Calendar size={14} />
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                                                                    <span>Extend to {format(new Date(feasibility.suggested_target_date), 'MMM d, yyyy')}</span>
+                                                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-status-success-bg text-status-success-text font-bold">100% Solid</span>
+                                                                </div>
+                                                                <p className="text-[10px] text-text-muted">
+                                                                    Gives {feasibility.suggested_cycles_needed} salary cycle(s) to hit full ₹{parseFloat(formAmount || '0').toLocaleString()}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-[11px] font-bold text-accent-text group-hover:underline pl-2 shrink-0">Apply</span>
+                                                    </button>
+                                                )}
+
+                                                {/* Recommendation 2: Cap Target Amount */}
+                                                {feasibility.suggested_target_amount && feasibility.suggested_target_amount > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleApplySuggestedAmount(feasibility.suggested_target_amount)}
+                                                        className="w-full text-left p-2.5 rounded-xl bg-surface border border-border-subtle hover:border-border-default hover:bg-surface-hover active:scale-[0.98] transition-all flex items-center justify-between group touch-manipulation"
+                                                    >
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-7 h-7 rounded-lg bg-surface-pill border border-border-subtle flex items-center justify-center text-text-muted group-hover:text-text-primary shrink-0">
+                                                                <Target size={14} />
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                                                                    <span>Cap target at ₹{Math.floor(feasibility.suggested_target_amount).toLocaleString()}</span>
+                                                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-status-success-bg text-status-success-text font-bold">Achievable Now</span>
+                                                                </div>
+                                                                <p className="text-[10px] text-text-muted">
+                                                                    Safe savings capacity by {formDate ? format(new Date(formDate), 'MMM d, yyyy') : 'deadline'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-[11px] font-bold text-accent-text group-hover:underline pl-2 shrink-0">Apply</span>
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Quick Step Sliders / Horizon Pills */}
+                                            <div className="pt-1 flex items-center gap-1.5 flex-wrap">
+                                                <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider mr-1">Shift By:</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleQuickExtend('15d')}
+                                                    className="px-2 py-0.5 rounded-lg bg-surface border border-border-subtle text-[10px] font-bold text-text-muted hover:text-text-primary hover:bg-surface-hover active:scale-95 transition-all"
+                                                >
+                                                    +15 Days
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleQuickExtend('1m')}
+                                                    className="px-2 py-0.5 rounded-lg bg-surface border border-border-subtle text-[10px] font-bold text-text-muted hover:text-text-primary hover:bg-surface-hover active:scale-95 transition-all"
+                                                >
+                                                    +1 Month
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleQuickExtend('2m')}
+                                                    className="px-2 py-0.5 rounded-lg bg-surface border border-border-subtle text-[10px] font-bold text-text-muted hover:text-text-primary hover:bg-surface-hover active:scale-95 transition-all"
+                                                >
+                                                    +2 Months
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleQuickExtend('3m')}
+                                                    className="px-2 py-0.5 rounded-lg bg-surface border border-border-subtle text-[10px] font-bold text-text-muted hover:text-text-primary hover:bg-surface-hover active:scale-95 transition-all"
+                                                >
+                                                    +3 Months
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Expected Income Override Widget */}
                                     <div className="pt-2.5 border-t border-border-subtle/70 space-y-2">

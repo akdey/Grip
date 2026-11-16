@@ -1,5 +1,6 @@
 import logging
 import calendar
+import math
 from uuid import UUID
 from datetime import date, timedelta
 from decimal import Decimal
@@ -61,6 +62,34 @@ class GoalService:
                 break
                 
         return cycles
+
+    def _find_date_for_salary_cycles(self, start_date: date, payday_day: int, cycles_needed: int) -> date:
+        """Find the date after N salary cycles have occurred (payday + 5 days buffer)."""
+        cur_year = start_date.year
+        cur_month = start_date.month
+        cycles_seen = 0
+        
+        while True:
+            _, max_days = calendar.monthrange(cur_year, cur_month)
+            actual_day = min(payday_day, max_days)
+            pay_date = date(cur_year, cur_month, actual_day)
+            
+            if pay_date > start_date:
+                cycles_seen += 1
+                if cycles_seen >= cycles_needed:
+                    target_day = min(actual_day + 5, max_days)
+                    return date(cur_year, cur_month, target_day)
+            
+            if cur_month == 12:
+                cur_month = 1
+                cur_year += 1
+            else:
+                cur_month += 1
+                
+            if (cur_year - start_date.year) * 12 + (cur_month - start_date.month) > 120:
+                break
+                
+        return start_date + timedelta(days=cycles_needed * 30)
 
     async def _get_historical_surplus(self, db: AsyncSession, user_id: UUID) -> tuple[float, float, float, float, int]:
         today = date.today()
@@ -213,6 +242,25 @@ class GoalService:
                     f"Available cash in hand is ₹{current_safe:,.0f} (shortfall of ₹{shortfall:,.0f})."
                 )
 
+        # Suggestions for what-if optimization when tight
+        suggested_target_date = None
+        suggested_target_amount = None
+        suggested_cycles_needed = None
+
+        if not is_feasible:
+            # 1. Suggested amount achievable by current target date
+            if projected_total > 0:
+                suggested_target_amount = round(projected_total, 2)
+            else:
+                suggested_target_amount = round(current_safe, 2)
+
+            # 2. Suggested date to achieve original target amount
+            needed_from_surplus = max(0.0, goal.target_amount - current_safe)
+            if effective_surplus > 0:
+                cycles_needed = math.ceil(needed_from_surplus / effective_surplus)
+                suggested_cycles_needed = max(1, cycles_needed)
+                suggested_target_date = self._find_date_for_salary_cycles(date.today(), payday_day, suggested_cycles_needed)
+
         return FeasibilityCheck(
             is_feasible=is_feasible,
             required_monthly_savings=required_monthly,
@@ -227,7 +275,10 @@ class GoalService:
             detected_payday_day=payday_day,
             salary_cycles_count=salary_cycles,
             monthly_obligations_burn=round(total_monthly_burn, 2),
-            message=msg
+            message=msg,
+            suggested_target_date=suggested_target_date,
+            suggested_target_amount=suggested_target_amount,
+            suggested_cycles_needed=suggested_cycles_needed
         )
 
     async def create_goal(self, db: AsyncSession, user_id: UUID, goal_data: GoalCreate) -> Goal:

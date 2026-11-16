@@ -34,6 +34,9 @@ export interface FeasibilityCheck {
     salary_cycles_count?: number;
     monthly_obligations_burn?: number;
     message: string;
+    suggested_target_date?: string;
+    suggested_target_amount?: number;
+    suggested_cycles_needed?: number;
 }
 
 export const useGoals = () => {
