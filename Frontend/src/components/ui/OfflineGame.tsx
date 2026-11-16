@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff, RefreshCw, Trophy, ArrowRight, RotateCcw } from 'lucide-react';
 import { Logo } from './Logo';
+import { Footer } from '../layout/Footer';
 import { haptics } from '../../lib/haptics';
 
 interface Particle {
@@ -697,10 +698,10 @@ export const OfflineGame: React.FC = () => {
                     )}
                 </div>
 
-                {/* 3. BOTTOM OVERLAY: Smaller actions */}
+                {/* 3. BOTTOM OVERLAY: Smaller actions + Creator Attribution Footer */}
                 <div
                     ref={bottomOverlayRef}
-                    className="relative z-10 w-full max-w-md mx-auto pb-safe px-5 pb-4 flex flex-col items-center gap-2 pointer-events-auto"
+                    className="relative z-10 w-full max-w-md mx-auto pb-safe px-5 pb-3 flex flex-col items-center gap-2.5 pointer-events-auto"
                 >
                     {/* Smaller Action Buttons at bottom */}
                     <div className="w-full flex items-center gap-2">
@@ -730,6 +731,9 @@ export const OfflineGame: React.FC = () => {
                             <ArrowRight size={11} />
                         </button>
                     </div>
+
+                    {/* Reusable Creator Attribution Footer */}
+                    <Footer className="select-none text-center pt-0.5" />
                 </div>
             </motion.div>
         </AnimatePresence>
