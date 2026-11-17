@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff, RefreshCw, Trophy, ArrowRight, RotateCcw } from 'lucide-react';
 import { Logo } from './Logo';
 import { Footer } from '../layout/Footer';
+import { useNetworkStore } from '../../lib/network';
 import { haptics } from '../../lib/haptics';
 
 interface Particle {
@@ -41,9 +42,8 @@ interface Star {
 }
 
 export const OfflineGame: React.FC = () => {
-    const [isOnline, setIsOnline] = useState<boolean>(
-        typeof navigator !== 'undefined' ? navigator.onLine : true
-    );
+    const isOnline = useNetworkStore((state) => state.isOnline);
+    const checkConnection = useNetworkStore((state) => state.checkConnection);
     const [isChecking, setIsChecking] = useState(false);
     const [dismissed, setDismissed] = useState(false);
     const [score, setScore] = useState(0);
@@ -101,50 +101,27 @@ export const OfflineGame: React.FC = () => {
         stateRef.current.particles = [];
     }, []);
 
-    // Check connectivity
+    // Check connectivity via native Capacitor Network + backend ping
     const handleRetry = useCallback(async () => {
         setIsChecking(true);
         haptics.selection();
         try {
-            await fetch('/favicon.ico?_t=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
-            setIsOnline(true);
-            setDismissed(false);
-            resetGameState();
-        } catch {
-            const online = typeof navigator !== 'undefined' ? navigator.onLine : false;
-            setIsOnline(online);
-            if (online) {
+            const connected = await checkConnection();
+            if (connected) {
+                setDismissed(false);
                 resetGameState();
             }
         } finally {
             setIsChecking(false);
         }
-    }, [resetGameState]);
+    }, [checkConnection, resetGameState]);
 
     useEffect(() => {
-        const handleOnline = () => {
-            setIsOnline(true);
+        if (isOnline) {
             setDismissed(false);
             resetGameState();
-        };
-        const handleOffline = () => {
-            setIsOnline(false);
-            setDismissed(false);
-            resetGameState();
-        };
-
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-
-        return () => {
-            if (animFrameRef.current) {
-                cancelAnimationFrame(animFrameRef.current);
-                animFrameRef.current = null;
-            }
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-        };
-    }, [resetGameState]);
+        }
+    }, [isOnline, resetGameState]);
 
     // Resize canvas to full viewport with Retina scaling and calculate bounds
     const updateCanvasBounds = useCallback(() => {

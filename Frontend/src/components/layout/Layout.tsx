@@ -1,28 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
 import { OfflineGame } from '../ui/OfflineGame';
+import { useNetworkStore } from '../../lib/network';
 import { Smartphone, X } from 'lucide-react';
 
 export const Layout: React.FC = () => {
     const location = useLocation();
     const [showDesktopWarning, setShowDesktopWarning] = useState(true);
-    const [isOnline, setIsOnline] = useState<boolean>(() =>
-        typeof navigator !== 'undefined' ? navigator.onLine : true
-    );
-
-    useEffect(() => {
-        const handleOnline = () => setIsOnline(true);
-        const handleOffline = () => setIsOnline(false);
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-        return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-        };
-    }, []);
+    const isOnline = useNetworkStore((state) => state.isOnline);
 
     const isEntryPage = location.pathname === '/add' ||
         location.pathname.startsWith('/transactions/') ||

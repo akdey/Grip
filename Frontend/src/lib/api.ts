@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from './store';
+import { useNetworkStore } from './network';
 
 // Create API instance
 export const api = axios.create({
@@ -21,12 +22,19 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle auth errors
+// Response interceptor to handle auth errors and network drops
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        if (!useNetworkStore.getState().isOnline) {
+            useNetworkStore.getState().setOnline(true);
+        }
+        return response;
+    },
     (error) => {
         if (error.response?.status === 401) {
             useAuthStore.getState().logout();
+        } else if (!error.response || error.code === 'ERR_NETWORK') {
+            useNetworkStore.getState().setOnline(false);
         }
         return Promise.reject(error);
     }

@@ -4,7 +4,11 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { ThemeProvider } from './lib/theme';
+import { initNetworkMonitoring } from './lib/network';
 import './index.css';
+
+// Initialize network monitoring (Capacitor Native + Web)
+initNetworkMonitoring();
 
 const queryClient = new QueryClient({
   defaultOptions: {
