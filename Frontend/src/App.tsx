@@ -30,13 +30,15 @@ const Terms = React.lazy(() => import('./pages/Terms'));
 
 import { AnimatePresence } from 'framer-motion';
 import { Loader } from './components/ui/Loader';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 function App() {
   return (
-    <React.Suspense fallback={<Loader fullPage text="Initializing" />}>
-      <ScrollToTop />
-      <AnimatePresence mode="wait">
-        <Routes>
+    <ErrorBoundary>
+      <React.Suspense fallback={<Loader fullPage text="Initializing" />}>
+        <ScrollToTop />
+        <AnimatePresence mode="wait">
+          <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/home" element={<Home />} />
@@ -75,6 +77,7 @@ function App() {
         </Routes>
       </AnimatePresence>
     </React.Suspense>
+  </ErrorBoundary>
   );
 }
 

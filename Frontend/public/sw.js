@@ -105,6 +105,9 @@ self.addEventListener('fetch', (event) => {
         });
 
         return networkResponse;
+      }).catch(() => {
+        // Return a clean fallback/offline error response rather than an unhandled rejection
+        return new Response('', { status: 504, statusText: 'Gateway Timeout (Offline)' });
       });
     })
   );
