@@ -4,6 +4,8 @@ import {
     platformAuthenticatorIsAvailable,
     browserSupportsWebAuthn,
 } from '@simplewebauthn/browser';
+import { Capacitor } from '@capacitor/core';
+import { BiometricAuth, BiometryType } from '@aparajita/capacitor-biometric-auth';
 import { api } from './api';
 
 export interface BiometricsStatus {
@@ -38,7 +40,8 @@ export function getDeviceBiometricName(): string {
 let cachedSupportPromise: Promise<{ supported: boolean; platformAvailable: boolean }> | null = null;
 
 /**
- * Checks whether the current device supports hardware biometrics (Touch ID / Face ID / Fingerprint)
+ * Checks whether the current device supports hardware biometrics
+ * Automatically adapts between Native Capacitor (Android/iOS) and WebAuthn (Browsers)
  */
 export async function checkBiometricsSupport(): Promise<{ supported: boolean; platformAvailable: boolean }> {
     if (cachedSupportPromise) {
@@ -46,12 +49,23 @@ export async function checkBiometricsSupport(): Promise<{ supported: boolean; pl
     }
     cachedSupportPromise = (async () => {
         try {
+            // 1. Native Capacitor Android/iOS Check
+            if (Capacitor.isNativePlatform()) {
+                const info = await BiometricAuth.checkBiometry();
+                return {
+                    supported: info.biometryType !== BiometryType.none,
+                    platformAvailable: info.isAvailable,
+                };
+            }
+
+            // 2. Standard Web Browser (WebAuthn)
             const supported = browserSupportsWebAuthn();
             if (!supported) return { supported: false, platformAvailable: false };
 
             const platformAvailable = await platformAuthenticatorIsAvailable();
             return { supported, platformAvailable };
-        } catch {
+        } catch (e) {
+            console.warn('Biometric support check error:', e);
             return { supported: false, platformAvailable: false };
         }
     })();
@@ -69,13 +83,20 @@ export async function getBiometricsStatus(): Promise<BiometricsStatus> {
     }
 
     try {
+        if (Capacitor.isNativePlatform()) {
+            const isEnrolled = localStorage.getItem('grip_biometrics_enrolled') === 'true';
+            return {
+                ...support,
+                hasBiometrics: isEnrolled,
+                deviceType,
+                devices: isEnrolled ? [{ id: 'native-device', device_name: 'Android Fingerprint', created_at: new Date().toISOString() }] : []
+            };
+        }
+
         const response = await api.get('/auth/biometrics/status');
         const hasBiometrics = !!response.data?.has_biometrics;
         if (hasBiometrics) {
             localStorage.setItem('grip_biometrics_enrolled', 'true');
-            if (response.data?.devices && response.data.devices.length > 0) {
-                localStorage.setItem('grip_enrolled_credential_id', response.data.devices[0].id);
-            }
         }
         return {
             ...support,
@@ -98,17 +119,29 @@ export async function getBiometricsStatus(): Promise<BiometricsStatus> {
  */
 export async function registerBiometricCredential(deviceName?: string): Promise<{ success: boolean; message?: string }> {
     try {
+        // 1. Native Capacitor Android/iOS Flow
+        if (Capacitor.isNativePlatform()) {
+            await BiometricAuth.authenticate({
+                reason: 'Scan your fingerprint to secure Grip',
+                androidTitle: 'Grip Biometric Security',
+                androidSubtitle: 'Confirm device fingerprint enrollment',
+                cancelTitle: 'Cancel',
+                allowDeviceCredential: true,
+            });
+            localStorage.setItem('grip_biometrics_enrolled', 'true');
+            localStorage.setItem('grip_enrolled_credential_id', 'native-biometric');
+            return { success: true, message: 'Fingerprint registered successfully' };
+        }
+
+        // 2. Web WebAuthn Flow
         const clientOrigin = window.location.origin;
-        // 1. Fetch registration options from backend
         const optionsRes = await api.post('/auth/biometrics/register/options', {}, {
             headers: { 'x-client-origin': clientOrigin }
         });
         const options = optionsRes.data;
 
-        // 2. Trigger native device fingerprint / biometrics prompt
         const credential = await startRegistration({ optionsJSON: options });
 
-        // 3. Send response to backend for verification & storage
         const defaultName = deviceName || (
             navigator.userAgent.includes('iPhone') ? 'Apple Face ID / Touch ID' :
             navigator.userAgent.includes('Mac') ? 'Mac Touch ID' :
@@ -143,17 +176,27 @@ export async function registerBiometricCredential(deviceName?: string): Promise<
  */
 export async function unlockWithBiometrics(): Promise<boolean> {
     try {
+        // 1. Native Capacitor Android/iOS Flow
+        if (Capacitor.isNativePlatform()) {
+            await BiometricAuth.authenticate({
+                reason: 'Scan your fingerprint to unlock the Wealth Vault',
+                androidTitle: 'Unlock Wealth Vault',
+                androidSubtitle: 'Grip Biometric Verification',
+                cancelTitle: 'Use Password',
+                allowDeviceCredential: true,
+            });
+            return true;
+        }
+
+        // 2. Web WebAuthn Flow
         const clientOrigin = window.location.origin;
-        // 1. Fetch unlock authentication options
         const optionsRes = await api.post('/auth/biometrics/unlock/options', {}, {
             headers: { 'x-client-origin': clientOrigin }
         });
         const options = optionsRes.data;
 
-        // 2. Trigger native fingerprint prompt
         const credential = await startAuthentication({ optionsJSON: options });
 
-        // 3. Verify assertion with backend
         const verifyRes = await api.post(
             '/auth/biometrics/unlock/verify',
             { credential },
@@ -178,12 +221,32 @@ export async function loginWithBiometrics(email?: string): Promise<{
     full_name?: string;
 }> {
     try {
+        // 1. Native Capacitor Android/iOS Flow
+        if (Capacitor.isNativePlatform()) {
+            await BiometricAuth.authenticate({
+                reason: 'Scan fingerprint to log in to Grip',
+                androidTitle: 'Grip Biometric Login',
+                cancelTitle: 'Cancel',
+                allowDeviceCredential: true,
+            });
+            // Native platform token retrieval from store
+            const token = localStorage.getItem('grip_token') || sessionStorage.getItem('grip_token');
+            const savedEmail = localStorage.getItem('grip_last_email') || email || '';
+            if (token) {
+                return {
+                    access_token: token,
+                    token_type: 'bearer',
+                    email: savedEmail,
+                };
+            }
+        }
+
+        // 2. Web WebAuthn Flow
         const clientOrigin = window.location.origin;
         const cachedEmail = localStorage.getItem('grip_enrolled_email') || localStorage.getItem('grip_last_email');
         const cachedCredId = localStorage.getItem('grip_enrolled_credential_id');
         const targetEmail = email?.trim() || cachedEmail || null;
 
-        // 1. Fetch login options with any known identifiers for non-resident and resident passkeys
         const optionsRes = await api.post(
             '/auth/biometrics/login/options',
             {
@@ -196,10 +259,8 @@ export async function loginWithBiometrics(email?: string): Promise<{
         );
         const { options, challenge_id } = optionsRes.data;
 
-        // 2. Trigger native fingerprint prompt
         const credential = await startAuthentication({ optionsJSON: options });
 
-        // 3. Verify assertion & obtain access token
         const verifyRes = await api.post(
             '/auth/biometrics/login/verify',
             {
