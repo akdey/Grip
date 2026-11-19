@@ -66,25 +66,39 @@ def get_current_date() -> date:
     return datetime.now(tz).date()
 
 
+def to_decimal(val) -> Decimal:
+    """Safely convert any numeric, string, or None value to Decimal."""
+    if val is None:
+        return Decimal("0.00")
+    if isinstance(val, Decimal):
+        return val
+    try:
+        return Decimal(str(val))
+    except Exception:
+        return Decimal("0.00")
+
+
 def calculate_frozen_funds(
     unpaid_bills: Decimal,
     projected_surety: Decimal,
-    unbilled_cc: Decimal
+    unbilled_cc: Decimal,
+    active_goals: Decimal = Decimal("0.00")
 ) -> Decimal:
     """
     Calculate total frozen funds that should not be spent.
     
-    Formula: Frozen = UnpaidBills + ProjectedSuretyBills + CurrentUnbilledCC
+    Formula: Frozen = UnpaidBills + ProjectedSuretyBills + CurrentUnbilledCC + ActiveGoals
     
     Args:
         unpaid_bills: Total amount of unpaid bills
         projected_surety: Projected recurring bills (rent, utilities, etc.)
         unbilled_cc: Current unbilled credit card spending
+        active_goals: Monthly allocation for active goals
         
     Returns:
         Total frozen funds amount
     """
-    return unpaid_bills + projected_surety + unbilled_cc
+    return to_decimal(unpaid_bills) + to_decimal(projected_surety) + to_decimal(unbilled_cc) + to_decimal(active_goals)
 
 
 def calculate_safe_to_spend(

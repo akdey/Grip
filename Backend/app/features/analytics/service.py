@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import List, Optional, Dict
 from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, case
+from sqlalchemy import select, func, case, cast, Numeric
 from app.features.transactions.models import Transaction, AccountType
 from app.features.categories.models import Category
 from app.features.goals.models import Goal
@@ -33,7 +33,8 @@ from app.utils.finance_utils import (
     get_trend_indicator,
     get_month_date_range,
     get_previous_month_date_range,
-    get_year_date_range
+    get_year_date_range,
+    to_decimal
 )
 
 from datetime import datetime, date, timedelta
@@ -184,7 +185,7 @@ class AnalyticsService:
             active_goals_total = Decimal("0")
             goals = goal_res.scalars().all()
             for g in goals:
-                amt = Decimal(str(g.monthly_contribution))
+                amt = to_decimal(getattr(g, "monthly_contribution", 0))
                 active_goals_total += amt
                 # Add goals to ledger items
                 all_obligations.append(IdentifiedObligation(
@@ -195,10 +196,10 @@ class AnalyticsService:
                     type="GOAL",
                     status="PROJECTED",
                     category="Goal",
-                    sub_category=g.category
+                    sub_category=getattr(g, "category", "Savings")
                 ))
             
-            total_frozen = calculate_frozen_funds(unpaid_bills_total, total_projected_surety, unbilled_cc) + active_goals_total
+            total_frozen = calculate_frozen_funds(unpaid_bills_total, total_projected_surety, unbilled_cc, active_goals_total)
             
             return FrozenFundsBreakdown(
                 unpaid_bills=unpaid_bills_total,
@@ -287,7 +288,7 @@ class AnalyticsService:
 
             # Subquery for Goals
             goal_sub = (
-                select(func.sum(Goal.monthly_contribution))
+                select(cast(func.coalesce(func.sum(Goal.monthly_contribution), 0), Numeric(12, 2)))
                 .where(Goal.user_id == user_id)
                 .where(Goal.is_active == True)
                 .scalar_subquery()
@@ -325,18 +326,40 @@ class AnalyticsService:
             cc_exposure_data = await self.cc_service.get_card_exposure_ledger(db, user_id)
             
             # 3. Process results
-            current_balance = mega_res.balance or Decimal("0")
+            current_balance = to_decimal(mega_res.balance)
             total_transactions = mega_res.txn_count or 0
             is_new_user = total_transactions == 0
-            total_discretionary_30d = abs(mega_res.discretionary_sum or Decimal("0"))
+            total_discretionary_30d = abs(to_decimal(mega_res.discretionary_sum))
             
             # Extract combined burden components
-            unpaid_bills = ledger_data["unpaid_total"]
-            projected_surety = ledger_data["projected_total"]
-            unbilled_cc = cc_exposure_data["total_exposure"]
-            active_goals = mega_res.goals_total or Decimal("0")
+            unpaid_bills = to_decimal(ledger_data.get("unpaid_total"))
+            projected_surety = to_decimal(ledger_data.get("projected_total"))
+            unbilled_cc = to_decimal(cc_exposure_data.get("total_exposure"))
+            active_goals = to_decimal(mega_res.goals_total)
             
             total_frozen = unpaid_bills + projected_surety + unbilled_cc + active_goals
+
+            all_obligations = list(ledger_data.get("items", []))
+            if active_goals > 0:
+                from app.features.analytics.schemas import IdentifiedObligation
+                goal_stmt = (
+                    select(Goal)
+                    .where(Goal.user_id == user_id)
+                    .where(Goal.is_active == True)
+                )
+                goal_res = await db.execute(goal_stmt)
+                for g in goal_res.scalars().all():
+                    amt = to_decimal(getattr(g, "monthly_contribution", 0))
+                    all_obligations.append(IdentifiedObligation(
+                        id=f"goal-{g.id}",
+                        title=f"Goal: {g.name}",
+                        amount=amt,
+                        due_date=today + timedelta(days=15),
+                        type="GOAL",
+                        status="PROJECTED",
+                        category="Goal",
+                        sub_category=getattr(g, "category", "Savings")
+                    ))
             
             frozen_breakdown = FrozenFundsBreakdown(
                 unpaid_bills=unpaid_bills,
@@ -344,7 +367,7 @@ class AnalyticsService:
                 unbilled_cc=unbilled_cc,
                 active_goals=active_goals,
                 total_frozen=total_frozen,
-                obligations=ledger_data["items"],
+                obligations=all_obligations,
                 card_exposure=cc_exposure_data["items"],
                 card_breakdown=cc_exposure_data["card_breakdown"]
             )
