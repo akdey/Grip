@@ -17,10 +17,18 @@ interface ToastStore {
   clear: () => void;
 }
 
+const DEFAULT_DURATIONS: Record<ToastType, number> = {
+  success: 2200,
+  info: 2600,
+  warning: 4500,
+  error: 6000,
+};
+
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
-  addToast: (message, type = 'info', duration = 3500) => {
+  addToast: (message, type = 'info', duration) => {
     const id = Math.random().toString(36).substring(2, 9);
+    const resolvedDuration = duration ?? DEFAULT_DURATIONS[type];
 
     // Physical haptic trigger
     if (type === 'success') haptics.notification('success');
@@ -29,15 +37,15 @@ export const useToastStore = create<ToastStore>((set) => ({
     else haptics.selection();
 
     set((state) => ({
-      toasts: [...state.toasts.slice(-2), { id, message, type, duration }],
+      toasts: [...state.toasts.slice(-1), { id, message, type, duration: resolvedDuration }],
     }));
 
-    if (duration > 0) {
+    if (resolvedDuration > 0) {
       setTimeout(() => {
         set((state) => ({
           toasts: state.toasts.filter((t) => t.id !== id),
         }));
-      }, duration);
+      }, resolvedDuration);
     }
   },
   removeToast: (id) =>
