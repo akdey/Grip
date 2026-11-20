@@ -5,7 +5,6 @@ import {
     Loader2,
     Check,
     AlertCircle,
-    SlidersHorizontal,
     Equal
 } from 'lucide-react';
 import { Drawer } from '../ui/Drawer';
@@ -53,7 +52,7 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
             remarks: transaction?.remarks || ''
         },
         {
-            category: '',
+            category: transaction?.category || '',
             sub_category: '',
             ratio: '',
             amount: '',
@@ -73,7 +72,7 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                     remarks: transaction.remarks || ''
                 },
                 {
-                    category: '',
+                    category: transaction.category || '',
                     sub_category: '',
                     ratio: '',
                     amount: '',
@@ -140,30 +139,51 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
         return Number((absTotal - totalAllocatedAmount).toFixed(2));
     }, [absTotal, totalAllocatedAmount]);
 
-    // Lookup category details from subcategory
-    const getSubCategoryDetails = (subCatName: string) => {
+    // Lookup category details from category and subcategory
+    const getCategoryDetails = (catName: string, subCatName: string) => {
+        const parent = categories?.find(c => c.name.toLowerCase() === (catName || '').toLowerCase());
+        if (parent) {
+            const sub = parent.sub_categories?.find(s => s.name.toLowerCase() === (subCatName || '').toLowerCase());
+            return {
+                parentCategory: parent.name,
+                icon: sub?.icon || parent.icon || 'tag',
+                color: sub?.color || parent.color || '#38bdf8'
+            };
+        }
         for (const c of categories || []) {
-            const found = c.sub_categories?.find(s => s.name === subCatName);
+            const found = c.sub_categories?.find(s => s.name.toLowerCase() === (subCatName || '').toLowerCase());
             if (found) {
                 return {
                     parentCategory: c.name,
-                    icon: found.icon || c.icon,
-                    color: found.color || c.color
+                    icon: found.icon || c.icon || 'tag',
+                    color: found.color || c.color || '#38bdf8'
                 };
             }
         }
-        return { parentCategory: 'Uncategorized', icon: 'tag', color: '#38bdf8' };
+        return { parentCategory: catName || 'Uncategorized', icon: 'tag', color: '#38bdf8' };
     };
 
-    // Handle single dropdown change (auto-sets subcategory and parent category)
-    const handleSubCategoryChange = (idx: number, subCatName: string) => {
-        const { parentCategory } = getSubCategoryDetails(subCatName);
+    // Category and Subcategory selection handlers
+    const handleCategoryChange = (idx: number, newCategory: string) => {
+        setSlices(prev => {
+            const updated = [...prev];
+            const parentCat = categories?.find(c => c.name === newCategory);
+            const firstSub = parentCat?.sub_categories?.[0]?.name || '';
+            updated[idx] = {
+                ...updated[idx],
+                category: newCategory,
+                sub_category: firstSub
+            };
+            return updated;
+        });
+    };
+
+    const handleSubCategoryChange = (idx: number, newSubCategory: string) => {
         setSlices(prev => {
             const updated = [...prev];
             updated[idx] = {
                 ...updated[idx],
-                sub_category: subCatName,
-                category: parentCategory
+                sub_category: newSubCategory
             };
             return updated;
         });
@@ -206,7 +226,7 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
         setSlices(prev => [
             ...prev,
             {
-                category: '',
+                category: prev[0]?.category || '',
                 sub_category: '',
                 ratio: '',
                 amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '',
@@ -242,8 +262,11 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
         if (slices.length < 2) return 'Split requires at least 2 parts.';
 
         for (let i = 0; i < slices.length; i++) {
-            if (!slices[i].sub_category.trim()) {
+            if (!slices[i].category.trim()) {
                 return `Please select a category for Part ${i + 1}.`;
+            }
+            if (!slices[i].sub_category.trim()) {
+                return `Please select a sub-category for Part ${i + 1}.`;
             }
         }
 
@@ -291,14 +314,14 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                 if (splitMode === 'RATIO') {
                     return {
                         category: s.category || 'Uncategorized',
-                        sub_category: s.sub_category,
+                        sub_category: s.sub_category || 'General',
                         ratio: parseFloat(s.ratio),
                         remarks: s.remarks.trim() || undefined
                     };
                 } else {
                     return {
                         category: s.category || 'Uncategorized',
-                        sub_category: s.sub_category,
+                        sub_category: s.sub_category || 'General',
                         amount: parseFloat(s.amount),
                         remarks: s.remarks.trim() || undefined
                     };
@@ -390,18 +413,18 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                     </button>
                 </div>
 
-                {/* Spacious Horizontal Carousel (No vertical scroll, larger cards) */}
-                <div className="px-6 py-4 flex-1 flex flex-col justify-center min-h-[300px]">
+                {/* Spacious Horizontal Carousel (Cards with Category & Sub-Category) */}
+                <div className="px-6 py-4 flex-1 flex flex-col justify-center min-h-[340px]">
                     <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 pt-1 no-scrollbar items-stretch">
                         {slices.map((slice, idx) => {
-                            const details = getSubCategoryDetails(slice.sub_category);
+                            const details = getCategoryDetails(slice.category, slice.sub_category);
                             const ratioCalc = ratioCalculations[idx] || { amount: 0, percentage: 0 };
                             const sliceColor = details.color;
 
                             return (
                                 <div
                                     key={idx}
-                                    className="w-[280px] sm:w-[320px] shrink-0 snap-start bg-surface-subtle/80 hover:bg-surface-subtle border border-border-subtle rounded-3xl p-4 flex flex-col justify-between space-y-4 transition-all shadow-xs relative"
+                                    className="w-[285px] sm:w-[325px] shrink-0 snap-start bg-surface-subtle/80 hover:bg-surface-subtle border border-border-subtle rounded-3xl p-4 flex flex-col justify-between space-y-3.5 transition-all shadow-xs relative"
                                 >
                                     {/* Part Header: Tag, Icon, and Delete */}
                                     <div className="flex items-center justify-between pb-2 border-b border-border-subtle/50">
@@ -432,27 +455,44 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                                         </button>
                                     </div>
 
-                                    {/* Unified Category Selector & Remarks (No redundant primary category select!) */}
-                                    <div className="space-y-3 flex-1">
+                                    {/* Category, Sub-Category & Remarks */}
+                                    <div className="space-y-2.5 flex-1">
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
                                                 Category
                                             </label>
                                             <select
-                                                value={slice.sub_category}
-                                                onChange={e => handleSubCategoryChange(idx, e.target.value)}
+                                                value={slice.category}
+                                                onChange={e => handleCategoryChange(idx, e.target.value)}
                                                 className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-medium text-text-primary focus:outline-none focus:border-border-default transition-all"
                                             >
                                                 <option value="" disabled>Select Category...</option>
                                                 {categories?.map(c => (
-                                                    <optgroup key={c.id || c.name} label={c.name}>
-                                                        {c.sub_categories?.map(s => (
-                                                            <option key={s.id || s.name} value={s.name}>
-                                                                {s.name}
-                                                            </option>
-                                                        ))}
-                                                    </optgroup>
+                                                    <option key={c.id || c.name} value={c.name}>
+                                                        {c.name}
+                                                    </option>
                                                 ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
+                                                Sub-Category
+                                            </label>
+                                            <select
+                                                value={slice.sub_category}
+                                                onChange={e => handleSubCategoryChange(idx, e.target.value)}
+                                                disabled={!slice.category}
+                                                className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-medium text-text-primary focus:outline-none focus:border-border-default transition-all disabled:opacity-40"
+                                            >
+                                                <option value="" disabled>Select Sub-category...</option>
+                                                {categories
+                                                    ?.find(c => c.name.toLowerCase() === slice.category.toLowerCase())
+                                                    ?.sub_categories?.map(s => (
+                                                        <option key={s.id || s.name} value={s.name}>
+                                                            {s.name}
+                                                        </option>
+                                                    ))}
                                             </select>
                                         </div>
 
@@ -462,7 +502,7 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                                             </label>
                                             <input
                                                 type="text"
-                                                placeholder="e.g. Personal items, Groceries"
+                                                placeholder="e.g. Groceries, Personal items"
                                                 value={slice.remarks}
                                                 onChange={e => updateSlice(idx, 'remarks', e.target.value)}
                                                 className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-border-default transition-all"
@@ -530,7 +570,7 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                         {/* Add Part Slot */}
                         <div
                             onClick={addSlice}
-                            className="w-[140px] sm:w-[160px] shrink-0 snap-start rounded-3xl border-2 border-dashed border-border-subtle hover:border-border-default flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-surface-subtle transition-all active:scale-95 text-text-muted hover:text-text-primary group select-none min-h-[260px]"
+                            className="w-[140px] sm:w-[160px] shrink-0 snap-start rounded-3xl border-2 border-dashed border-border-subtle hover:border-border-default flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-surface-subtle transition-all active:scale-95 text-text-muted hover:text-text-primary group select-none min-h-[300px]"
                             title="Add another part"
                         >
                             <div className="w-9 h-9 rounded-full bg-surface-subtle group-hover:bg-surface border border-border-subtle flex items-center justify-center text-text-muted group-hover:text-text-primary transition-all">
