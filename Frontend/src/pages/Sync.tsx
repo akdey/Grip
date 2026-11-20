@@ -18,6 +18,7 @@ import type { SyncAuditItem, SyncHistoryItem } from '../features/sync/types';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Loader } from '../components/ui/Loader';
+import { toast } from '../lib/toast';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ParsedSyncData {
@@ -330,23 +331,31 @@ const Sync: React.FC = () => {
             await connectMutation.mutateAsync();
         } catch (error: any) {
             console.error('Connection failed:', error);
+            const msg = error?.response?.data?.detail || "Connection failed. Please retry.";
+            toast.error(msg);
         }
     };
 
     const handleDisconnect = async () => {
         try {
             await disconnectMutation.mutateAsync();
+            toast.info("Gmail account disconnected");
             setShowDisconnectConfirm(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Disconnect failed:', error);
+            const msg = error?.response?.data?.detail || "Disconnect failed";
+            toast.error(msg);
         }
     };
 
     const handleSync = async () => {
         try {
             await syncMutation.mutateAsync();
-        } catch (error) {
+            toast.success("Gmail sync started. Evaluating new emails...");
+        } catch (error: any) {
             console.error('Sync failed:', error);
+            const msg = error?.response?.data?.detail || "Sync request failed";
+            toast.error(msg);
         }
     };
 

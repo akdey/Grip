@@ -19,6 +19,7 @@ import type { Category, SubCategory } from '../features/transactions/categoryHoo
 import { CategoryIcon } from '../components/ui/CategoryIcon';
 import { Loader } from '../components/ui/Loader';
 import { Button } from '../components/ui/Button';
+import { toast } from '../lib/toast';
 import { IconSelector } from '../components/ui/IconSelector';
 import { ColorSelector } from '../components/ui/ColorSelector';
 
@@ -48,8 +49,12 @@ const Categories: React.FC = () => {
         mutationFn: async (data: any) => await api.post('/categories/', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
+            toast.success('Category created');
             setEditorMode('NONE');
             resetForm();
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to create category');
         }
     });
 
@@ -57,19 +62,35 @@ const Categories: React.FC = () => {
         mutationFn: async (data: any) => await api.post('/categories/sub-categories', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
+            toast.success('Subcategory created');
             setEditorMode('NONE');
             resetForm();
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to create subcategory');
         }
     });
 
     const deleteCategoryMutation = useMutation({
         mutationFn: async (id: string) => await api.delete(`/categories/${id}`),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+            toast.success('Category deleted');
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to delete category');
+        }
     });
 
     const deleteSubCategoryMutation = useMutation({
         mutationFn: async (id: string) => await api.delete(`/categories/sub-categories/${id}`),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+            toast.success('Subcategory deleted');
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to delete subcategory');
+        }
     });
 
     const resetForm = () => {

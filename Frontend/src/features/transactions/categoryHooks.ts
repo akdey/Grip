@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from '../../lib/toast';
 
 export type TransactionType = 'EXPENSE' | 'INCOME' | 'INVESTMENT';
 
@@ -44,7 +45,11 @@ export const useUpdateCategory = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
+            toast.success('Category updated');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to update category');
+        }
     });
 };
 
@@ -57,6 +62,10 @@ export const useUpdateSubCategory = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
+            toast.success('Subcategory updated');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to update subcategory');
+        }
     });
 };
