@@ -1140,8 +1140,14 @@ const TransactionItem = ({
     return (
         <div
             onClick={() => navigate(`/transactions/${txn.id}`)}
-            className="flex items-center justify-between p-3.5 bg-surface-subtle hover:bg-surface-hover transition-all border border-border-subtle group active:scale-[0.98] rounded-2xl cursor-pointer gap-3"
+            className="relative flex items-center justify-between p-3.5 bg-surface-subtle hover:bg-surface-hover transition-all border border-border-subtle group active:scale-[0.98] rounded-2xl cursor-pointer gap-3"
         >
+            {txn.split_group_id && (
+                <span className="absolute -top-2 right-4 text-[8px] font-mono font-bold text-accent bg-surface border border-accent-border/60 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-2xs z-10 pointer-events-none">
+                    <GitFork size={8} />
+                    Split: {showSensitive ? (splitGroupTotal !== undefined ? formatCurrency(splitGroupTotal) : 'Group') : '••••'}
+                </span>
+            )}
             <div className="flex items-center gap-3.5 flex-1 min-w-0">
                 <div
                     className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-inner border border-border-subtle shrink-0"
@@ -1195,12 +1201,6 @@ const TransactionItem = ({
             </div>
 
             <div className="text-right shrink-0 flex flex-col items-end justify-center">
-                {txn.split_group_id && (
-                    <span className="text-[8px] font-mono font-bold text-accent bg-accent-subtle/60 border border-accent-border/50 px-1.5 py-0.5 rounded-md uppercase tracking-tight flex items-center gap-1 mb-1 shadow-2xs">
-                        <GitFork size={8} />
-                        Split: {showSensitive ? (splitGroupTotal !== undefined ? formatCurrency(splitGroupTotal) : 'Group') : '••••'}
-                    </span>
-                )}
                 <p className="font-black text-primary text-base leading-none tracking-tighter">
                     {showSensitive ? formatCurrency(txn.amount) : '••••'}
                 </p>
