@@ -739,31 +739,17 @@ const AddEntry: React.FC = () => {
                             <Check size={20} strokeWidth={3} />
                         </button>
                     ) : (
-                        <>
-                            {!id && (
-                                <button
-                                    onClick={handleSaveAndNew}
-                                    disabled={mutation.isPending || !amount || !category}
-                                    className={`
-                                        w-14 h-14 rounded-full bg-accent-subtle text-accent-text flex items-center justify-center border border-accent-border active:scale-95 transition-all
-                                        ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed' : 'hover:bg-accent/20'}
-                                    `}
-                                    title="Save & Add Another"
-                                >
-                                    <Plus size={24} strokeWidth={2.5} />
-                                </button>
-                            )}
-                            <button
-                                onClick={handleSave}
-                                disabled={mutation.isPending || !amount || !category}
-                                className={`
-                                    w-14 h-14 rounded-full bg-accent text-accent-contrast flex items-center justify-center shadow-2xl shadow-accent/30 active:scale-95 transition-all
-                                    ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6 hover:bg-accent-hover'}
-                                `}
-                            >
-                                {mutation.isPending ? <Loader2 size={24} className="animate-spin" /> : <Save size={24} strokeWidth={2.5} />}
-                            </button>
-                        </>
+                        <button
+                            onClick={handleSave}
+                            disabled={mutation.isPending || !amount || !category}
+                            className={`
+                                w-14 h-14 rounded-full bg-accent text-accent-contrast flex items-center justify-center shadow-2xl shadow-accent/30 active:scale-95 transition-all
+                                ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6 hover:bg-accent-hover'}
+                            `}
+                            title="Save Transaction"
+                        >
+                            {mutation.isPending ? <Loader2 size={24} className="animate-spin" /> : <Save size={24} strokeWidth={2.5} />}
+                        </button>
                     )}
                 </div>
 
