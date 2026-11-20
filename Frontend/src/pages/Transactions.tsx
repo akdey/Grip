@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 // Transactions Page
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useTransactions, usePendingTransactions, useVerifyTransaction, useDeleteTransaction } from '../features/transactions/hooks';
+import { useTransactions, usePendingTransactions, useVerifyTransaction, useDeleteTransaction, type Transaction } from '../features/transactions/hooks';
 import { useCategories } from '../features/transactions/categoryHooks';
 import {
     Receipt,
@@ -17,12 +17,14 @@ import {
     X,
     Eye,
     EyeOff,
-    Loader2
+    Loader2,
+    GitFork
 } from 'lucide-react';
 import { usePrivacyStore } from '../lib/store';
 import { haptics } from '../lib/haptics';
 import { toast } from '../lib/toast';
 import { PasswordVerifyModal } from '../components/ui/PasswordVerifyModal';
+import { SplitTransactionModal } from '../components/transactions/SplitTransactionModal';
 import {
     format,
     startOfMonth,
@@ -72,6 +74,7 @@ const Transactions: React.FC = () => {
     const [isSortOpen, setIsSortOpen] = useState(false);
     const { showSensitive, setShowSensitive } = usePrivacyStore();
     const [showAuthModal, setShowAuthModal] = useState(false);
+    const [splitTxn, setSplitTxn] = useState<Transaction | null>(null);
 
     useEffect(() => {
         const d = searchParams.get('date');
@@ -468,7 +471,13 @@ const Transactions: React.FC = () => {
                     </div>
                     <div className="space-y-3">
                         {pendingTransactions.map(txn => (
-                            <TransactionItem key={txn.id} txn={{ ...txn, status: 'PENDING' }} formatCurrency={formatCurrency} showSensitive={showSensitive} />
+                            <TransactionItem
+                                key={txn.id}
+                                txn={{ ...txn, status: 'PENDING' }}
+                                formatCurrency={formatCurrency}
+                                showSensitive={showSensitive}
+                                onOpenSplit={setSplitTxn}
+                            />
                         ))}
                     </div>
                     <div className="h-px w-full bg-border-subtle mx-2" />
@@ -622,8 +631,23 @@ const Transactions: React.FC = () => {
                                     </div>
                                     {groupBy !== 'category' && <div className="h-px w-full bg-border-subtle" />}
                                     <div className="space-y-3">
-                                        {group.items.map(txn => (
-                                            <TransactionItem key={txn.id} txn={txn} formatCurrency={formatCurrency} showSensitive={showSensitive} />
+                                        {clusterTransactions(group.items).map((cluster, cIdx) => (
+                                            cluster.type === 'split_group' ? (
+                                                <SplitGroupContainer
+                                                    key={cluster.split_group_id || cIdx}
+                                                    cluster={cluster}
+                                                    formatCurrency={formatCurrency}
+                                                    showSensitive={showSensitive}
+                                                />
+                                            ) : (
+                                                <TransactionItem
+                                                    key={cluster.txn.id}
+                                                    txn={cluster.txn}
+                                                    formatCurrency={formatCurrency}
+                                                    showSensitive={showSensitive}
+                                                    onOpenSplit={setSplitTxn}
+                                                />
+                                            )
                                         ))}
                                     </div>
                                 </div>
@@ -670,8 +694,23 @@ const Transactions: React.FC = () => {
                                     </div>
                                     {groupBy !== 'category' && <div className="h-px w-full bg-border-subtle" />}
                                     <div className="space-y-3">
-                                        {group.items.map((txn) => (
-                                            <TransactionItem key={txn.id} txn={txn} formatCurrency={formatCurrency} showSensitive={showSensitive} />
+                                        {clusterTransactions(group.items).map((cluster, cIdx) => (
+                                            cluster.type === 'split_group' ? (
+                                                <SplitGroupContainer
+                                                    key={cluster.split_group_id || cIdx}
+                                                    cluster={cluster}
+                                                    formatCurrency={formatCurrency}
+                                                    showSensitive={showSensitive}
+                                                />
+                                            ) : (
+                                                <TransactionItem
+                                                    key={cluster.txn.id}
+                                                    txn={cluster.txn}
+                                                    formatCurrency={formatCurrency}
+                                                    showSensitive={showSensitive}
+                                                    onOpenSplit={setSplitTxn}
+                                                />
+                                            )
                                         ))}
                                     </div>
                                 </div>
@@ -995,11 +1034,143 @@ const Transactions: React.FC = () => {
                     }}
                 />
             </React.Suspense>
+
+            {splitTxn && (
+                <SplitTransactionModal
+                    isOpen={Boolean(splitTxn)}
+                    onClose={() => setSplitTxn(null)}
+                    transaction={splitTxn}
+                />
+            )}
         </div>
     );
 };
 
-const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: any, formatCurrency: any, showSensitive?: boolean }) => {
+interface SplitGroupCluster {
+    type: 'split_group';
+    split_group_id: string;
+    merchant_name: string;
+    totalAmount: number;
+    items: any[];
+}
+
+interface SingleCluster {
+    type: 'single';
+    txn: any;
+}
+
+type ClusterItem = SplitGroupCluster | SingleCluster;
+
+const clusterTransactions = (txns: any[]): ClusterItem[] => {
+    const clusters: ClusterItem[] = [];
+    for (const txn of txns) {
+        if (txn.split_group_id) {
+            const last = clusters[clusters.length - 1];
+            if (last && last.type === 'split_group' && last.split_group_id === txn.split_group_id) {
+                last.items.push(txn);
+                last.totalAmount += Number(txn.amount || 0);
+            } else {
+                clusters.push({
+                    type: 'split_group',
+                    split_group_id: txn.split_group_id,
+                    merchant_name: (txn.merchant_name || txn.category || 'Order').trim(),
+                    totalAmount: Number(txn.amount || 0),
+                    items: [txn]
+                });
+            }
+        } else {
+            clusters.push({
+                type: 'single',
+                txn
+            });
+        }
+    }
+    return clusters;
+};
+
+const SplitGroupContainer = ({
+    cluster,
+    formatCurrency,
+    showSensitive = true
+}: {
+    cluster: SplitGroupCluster;
+    formatCurrency: (amt: number) => string;
+    showSensitive?: boolean;
+}) => {
+    const navigate = useNavigate();
+
+    return (
+        <div className="bg-surface-subtle/40 border border-border-subtle rounded-2xl p-3 my-1.5 space-y-2">
+            {/* Box Header */}
+            <div className="flex items-center justify-between pb-1.5 border-b border-border-subtle/50">
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <span className="w-5 h-5 rounded-md bg-surface-subtle border border-border-subtle flex items-center justify-center text-accent shrink-0">
+                        <GitFork size={12} />
+                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted truncate">
+                        SPLIT ORDER • {cluster.merchant_name}
+                    </span>
+                </div>
+                <span className="tabular-nums font-mono text-xs font-semibold text-text-muted shrink-0 pl-2">
+                    {showSensitive ? formatCurrency(cluster.totalAmount) : '••••'}
+                </span>
+            </div>
+
+            {/* Child Slices Connected */}
+            <div className="relative pl-3 space-y-1.5 border-l-2 border-border-subtle ml-2">
+                {cluster.items.map((slice) => (
+                    <div
+                        key={slice.id}
+                        onClick={() => navigate(`/transactions/${slice.id}`)}
+                        className="flex items-center justify-between p-2 rounded-xl bg-surface/60 hover:bg-surface-hover border border-border-subtle/50 cursor-pointer transition-all active:scale-[0.99] gap-3"
+                    >
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div
+                                className="w-7 h-7 rounded-xl flex items-center justify-center shadow-inner border border-border-subtle shrink-0"
+                                style={{
+                                    backgroundColor: (slice.sub_category_color || slice.category_color)
+                                        ? `${slice.sub_category_color || slice.category_color}18`
+                                        : 'var(--color-bg-surface-pill)',
+                                    color: slice.sub_category_color || slice.category_color || 'var(--color-text-primary)'
+                                }}
+                            >
+                                <CategoryIcon name={slice.sub_category_icon || slice.category_icon} size={14} />
+                            </div>
+                            <div className="flex flex-col min-w-0 flex-1">
+                                <span className="text-xs font-semibold text-text-primary truncate leading-tight">
+                                    {slice.sub_category || slice.category}
+                                </span>
+                                {slice.remarks && (
+                                    <span className="text-[10px] text-text-muted truncate leading-tight mt-0.5">
+                                        {slice.remarks}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                            <span className="tabular-nums font-mono text-sm font-semibold text-text-primary">
+                                {showSensitive ? formatCurrency(slice.amount) : '••••'}
+                            </span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const TransactionItem = ({
+    txn,
+    formatCurrency,
+    showSensitive = true,
+    onOpenSplit
+}: {
+    txn: any;
+    formatCurrency: any;
+    showSensitive?: boolean;
+    onOpenSplit?: (txn: any) => void;
+}) => {
     const navigate = useNavigate();
     const deleteMutation = useDeleteTransaction();
     const verifyMutation = useVerifyTransaction();
@@ -1141,6 +1312,16 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
                 <div className="flex items-center justify-end gap-1.5 mt-1.5">
                     {txn.status === 'PENDING' ? (
                         <div className="flex items-center gap-1.5">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenSplit?.(txn);
+                                }}
+                                className="w-7 h-7 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-hover transition-all active:scale-90 shrink-0"
+                                title="Split Transaction"
+                            >
+                                <GitFork size={13} />
+                            </button>
                             <button
                                 onClick={handleDelete}
                                 disabled={deleteMutation.isPending || verifyMutation.isPending}

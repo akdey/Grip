@@ -14,6 +14,7 @@ export interface Transaction {
     is_manual: boolean;
     is_surety: boolean;
     credit_card_id?: string;
+    split_group_id?: string;
     created_at: string;
     remarks?: string;
     tags?: string[];
@@ -22,6 +23,20 @@ export interface Transaction {
     category_color?: string;
     sub_category_color?: string;
     is_settled?: boolean;
+}
+
+export interface TransactionSplitSlice {
+    category: string;
+    sub_category: string;
+    amount?: number;
+    ratio?: number;
+    remarks?: string;
+    tags?: string[];
+}
+
+export interface TransactionSplitRequest {
+    split_mode: 'RATIO' | 'AMOUNT';
+    splits: TransactionSplitSlice[];
 }
 
 export interface TransactionFilters {
@@ -103,6 +118,25 @@ export const useVerifyTransaction = () => {
             queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
             queryClient.invalidateQueries({ queryKey: ['monthly-summary'] });
         },
+    });
+};
+
+export const useSplitTransaction = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, data }: { id: string; data: TransactionSplitRequest }) => {
+            const { data: response } = await api.post<Transaction[]>(`/transactions/${id}/split`, data);
+            return response;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+            queryClient.invalidateQueries({ queryKey: ['monthly-summary'] });
+            toast.success('Transaction split successfully');
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to split transaction');
+        }
     });
 };
 

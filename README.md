@@ -248,6 +248,25 @@ Traditional banking fraud alerts focus on unauthorized card swipes, while person
 - **Automated Morning Scan**: Runs autonomously every morning at 6:00 AM IST (00:30 UTC) across all active users.
 - **Weekly Email Digest**: Active anomalies are highlighted in the Sunday weekly recap email under **⚡ Grip Radar Flags**.
 
+### ✂️ Transaction Splitting (Ratio % or Exact Amount) with Visual Connected Ledger (NEW!)
+
+**Solve Multi-Item Orders Without Messing Up Ledger Balances**
+
+When ordering from quick-commerce apps or supermarkets (Zepto, Blinkit, DMart, Amazon), a single ₹500 debit often bundles ₹400 of Groceries with ₹100 of Personal Hygiene. Grip introduces a full-stack transaction splitting engine that reconciles multi-category purchases while strictly maintaining 1:1 double-entry accounting integrity.
+
+**Key Splitting Capabilities:**
+- **Dual Splitting Modes:**
+  - **Ratio / Percentage Mode**: Divide transactions by percentage or arbitrary weights (e.g., 80:20, 70:30, or custom m:n:o weights). Includes one-tap preset pills (`80:20`, `70:30`, `60:40`, `50:50`) and penny-perfect rounding reconciliation that automatically balances odd cent differences.
+  - **Exact Amount Mode**: Specify exact rupee amounts per slice with a real-time allocation status banner (`Remaining to allocate: ₹X.XX`, `Balanced`, or `Overallocated`) and a one-tap `+ Remainder` auto-fill button.
+- **Strict 1:1 Double-Entry Balance Preservation:**
+  - The parent transaction is atomically deleted while new child transactions inherit payment source, merchant, date, and account details.
+  - All resulting split child items share a single indexed `split_group_id` UUID in PostgreSQL.
+- **Connected Container Box in Ledger:**
+  - Consecutive split transactions are visually clustered inside a unified Connected Container Box in `Transactions.tsx`.
+  - Displays a dedicated `SPLIT ORDER • {merchant_name}` header with combined total spend badge and a visual tree indent connecting category icons, subcategory labels, and individual slice amounts.
+- **Verification Queue & Action Bar Integration:**
+  - One-tap `[GitFork] Split` button directly in the pending review action center and on the transaction review/edit page (`AddEntry.tsx`).
+
 ### 📈 Investment Intelligence Platform (NEW!)
 
 **Automated Wealth Tracking**
@@ -899,6 +918,7 @@ GET  /api/v1/transactions/pending           # Pending review
 PUT  /api/v1/transactions/{id}              # Update
 DELETE /api/v1/transactions/{id}            # Delete
 POST /api/v1/transactions/{id}/verify       # Verify
+POST /api/v1/transactions/{id}/split        # Split transaction by ratio or amount (NEW!)
 ```
 
 #### Wealth & Investments (NEW!)

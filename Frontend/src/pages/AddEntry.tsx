@@ -30,7 +30,8 @@ import {
     Store,
     Sparkles,
     AlertTriangle,
-    Loader2
+    Loader2,
+    GitFork
 } from 'lucide-react';
 import { toast } from '../lib/toast';
 import { format, parse, parseISO, startOfToday, differenceInCalendarDays } from 'date-fns';
@@ -38,6 +39,7 @@ import { Drawer } from '../components/ui/Drawer';
 import { CalculatorDrawer } from '../components/ui/CalculatorDrawer';
 import { CategoryIcon } from '../components/ui/CategoryIcon';
 import { Loader } from '../components/ui/Loader';
+import { SplitTransactionModal } from '../components/transactions/SplitTransactionModal';
 
 const AddEntry: React.FC = () => {
     const { id } = useParams();
@@ -48,6 +50,8 @@ const AddEntry: React.FC = () => {
     const { data: existingTxn, isLoading: isTxnLoading } = useTransaction(id);
     const verifyMutation = useVerifyTransaction();
     const deleteMutation = useDeleteTransaction();
+
+    const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
 
     const [type, setType] = useState<TransactionType>('EXPENSE');
 
@@ -350,25 +354,38 @@ const AddEntry: React.FC = () => {
                         </h1>
                     </div>
                     {id && (
-                        <button
-                            onClick={() => {
-                                if (window.confirm('Are you sure you want to delete this transaction?')) {
-                                    deleteMutation.mutate(id, {
-                                        onSuccess: () => navigate(-1)
-                                    });
-                                }
-                            }}
-                            disabled={deleteMutation.isPending}
-                            title="Delete transaction"
-                            aria-label="Delete transaction"
-                            className="w-8 h-8 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-status-danger-solid hover:bg-status-danger-bg hover:border-status-danger-border active:scale-90 transition-all disabled:opacity-50"
-                        >
-                            {deleteMutation.isPending ? (
-                                <Loader2 size={14} className="animate-spin text-status-danger-solid" />
-                            ) : (
-                                <Trash2 size={14} />
+                        <div className="flex items-center gap-2">
+                            {existingTxn && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsSplitModalOpen(true)}
+                                    title="Split transaction"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-subtle border border-border-subtle text-xs font-semibold text-text-primary hover:bg-surface-hover active:scale-95 transition-all"
+                                >
+                                    <GitFork size={16} className="text-accent" />
+                                    <span>Split</span>
+                                </button>
                             )}
-                        </button>
+                            <button
+                                onClick={() => {
+                                    if (window.confirm('Are you sure you want to delete this transaction?')) {
+                                        deleteMutation.mutate(id, {
+                                            onSuccess: () => navigate(-1)
+                                        });
+                                    }
+                                }}
+                                disabled={deleteMutation.isPending}
+                                title="Delete transaction"
+                                aria-label="Delete transaction"
+                                className="w-8 h-8 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-status-danger-solid hover:bg-status-danger-bg hover:border-status-danger-border active:scale-90 transition-all disabled:opacity-50"
+                            >
+                                {deleteMutation.isPending ? (
+                                    <Loader2 size={14} className="animate-spin text-status-danger-solid" />
+                                ) : (
+                                    <Trash2 size={14} />
+                                )}
+                            </button>
+                        </div>
                     )}
                 </header>
 
@@ -933,6 +950,15 @@ const AddEntry: React.FC = () => {
                     onConfirm={(val) => setAmount(val)}
                     initialValue={amount}
                 />
+
+                {existingTxn && (
+                    <SplitTransactionModal
+                        isOpen={isSplitModalOpen}
+                        onClose={() => setIsSplitModalOpen(false)}
+                        transaction={existingTxn}
+                        onSuccess={() => navigate(-1)}
+                    />
+                )}
             </div >
         </LayoutGroup >
     );
