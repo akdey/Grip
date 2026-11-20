@@ -42,11 +42,10 @@ export const useMarkBillPaid = () => {
         mutationFn: async ({ id, paid }: { id: string; paid: boolean }) => {
             await api.post(`/bills/${id}/mark-paid`, { paid });
         },
-        onSuccess: (_data, variables) => {
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['bills'] });
             queryClient.invalidateQueries({ queryKey: ['bills-upcoming'] });
             queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] }); // Updates dashboard frozen funds
-            toast.success(variables.paid ? 'Bill marked as settled' : 'Bill marked as pending');
         },
         onError: (err: any) => {
             toast.error(err?.response?.data?.detail || 'Failed to update bill status');

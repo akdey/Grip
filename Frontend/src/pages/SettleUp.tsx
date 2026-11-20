@@ -297,10 +297,7 @@ const SettleUp: React.FC = () => {
     const handleDelete = (id: string) => {
         haptics.impact('medium');
         if (confirm('Are you sure you want to delete this record?')) {
-            deleteMutation.mutate(id, {
-                onSuccess: () => haptics.notification('success'),
-                onError: () => haptics.notification('error')
-            });
+            deleteMutation.mutate(id);
         }
     };
 

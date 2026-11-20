@@ -69,7 +69,6 @@ export const useDismissAnomaly = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['anomaly-flags'] });
-            toast.success('Anomaly signal dismissed');
         },
         onError: (err: any) => {
             toast.error(err?.response?.data?.detail || 'Failed to dismiss signal');
