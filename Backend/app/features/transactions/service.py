@@ -546,6 +546,8 @@ class TransactionService:
         if not txn:
             raise HTTPException(status_code=404, detail="Transaction not found")
 
+        split_group_id = txn.split_group_id
+
         # Delete corresponding double-entry offset transaction if one exists
         offset_stmt = select(Transaction).where(
             Transaction.user_id == user_id,
@@ -564,6 +566,20 @@ class TransactionService:
             await self.db.delete(settle_entry)
             
         await self.db.delete(txn)
+        await self.db.flush()
+
+        # If transaction was part of a split group, check remaining items
+        if split_group_id:
+            remaining_stmt = select(Transaction).where(
+                Transaction.user_id == user_id,
+                Transaction.split_group_id == split_group_id
+            )
+            remaining_res = await self.db.execute(remaining_stmt)
+            remaining_txns = remaining_res.scalars().all()
+            if len(remaining_txns) == 1:
+                # If only single remaining, remove the split_group_id
+                remaining_txns[0].split_group_id = None
+
         await self.db.commit()
         self._invalidate_safe_spend_cache(user_id)
 
