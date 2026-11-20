@@ -1145,7 +1145,7 @@ const TransactionItem = ({
             {txn.split_group_id && (
                 <span className="absolute -top-2 right-4 text-[8px] font-mono font-bold text-accent bg-surface border border-accent-border/60 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-2xs z-10 pointer-events-none">
                     <GitFork size={8} />
-                    Split: {showSensitive ? (splitGroupTotal !== undefined ? formatCurrency(splitGroupTotal) : 'Group') : '••••'}
+                    {showSensitive && splitGroupTotal !== undefined ? `Split: ${formatCurrency(splitGroupTotal)}` : 'Split'}
                 </span>
             )}
             <div className="flex items-center gap-3.5 flex-1 min-w-0">
