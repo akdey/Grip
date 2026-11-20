@@ -1,3 +1,4 @@
+import uuid
 from uuid import UUID
 from typing import List, Optional
 from datetime import date
@@ -10,7 +11,7 @@ from app.features.transactions import schemas
 from app.features.categories.models import SubCategory
 from app.features.settle_up.models import SettleUpEntry
 from app.core.database import get_db
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 import logging
 logger = logging.getLogger(__name__)
 
@@ -411,6 +412,131 @@ class TransactionService:
             
         txns = await self._attach_icons([txn])
         return txns[0]
+
+    async def split_transaction(
+        self,
+        transaction_id: UUID,
+        user_id: UUID,
+        request: schemas.TransactionSplitRequest
+    ) -> List[Transaction]:
+        stmt = select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user_id)
+        result = await self.db.execute(stmt)
+        parent = result.scalar_one_or_none()
+
+        if not parent:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+
+        if not request.splits or len(request.splits) < 2:
+            raise HTTPException(status_code=400, detail="Transaction split requires at least 2 slices")
+
+        parent_amount = Decimal(str(parent.amount))
+        is_negative = parent_amount < Decimal("0")
+        abs_parent_amount = abs(parent_amount)
+        split_mode = (request.split_mode or "RATIO").upper()
+
+        if split_mode == "RATIO":
+            for idx, s in enumerate(request.splits):
+                if s.ratio is None or s.ratio <= 0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Slice {idx + 1} must have a positive ratio in RATIO mode"
+                    )
+
+            total_ratio = sum(Decimal(str(s.ratio)) for s in request.splits)
+            if total_ratio <= Decimal("0"):
+                raise HTTPException(status_code=400, detail="Total ratio must be greater than 0")
+
+            slice_abs_amounts = []
+            for s in request.splits:
+                ratio_dec = Decimal(str(s.ratio))
+                val = (abs_parent_amount * (ratio_dec / total_ratio)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                slice_abs_amounts.append(val)
+
+            # Reconcile rounding differences against parent amount
+            rounding_diff = abs_parent_amount - sum(slice_abs_amounts)
+            if rounding_diff != Decimal("0"):
+                max_idx = max(range(len(slice_abs_amounts)), key=lambda i: slice_abs_amounts[i])
+                slice_abs_amounts[max_idx] += rounding_diff
+
+            slice_amounts = [-amt if is_negative else amt for amt in slice_abs_amounts]
+
+        elif split_mode == "AMOUNT":
+            for idx, s in enumerate(request.splits):
+                if s.amount is None or s.amount <= Decimal("0"):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Slice {idx + 1} must have a positive amount in AMOUNT mode"
+                    )
+
+            total_slices_abs = sum(abs(Decimal(str(s.amount))) for s in request.splits)
+            if abs(total_slices_abs - abs_parent_amount) > Decimal("0.001"):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Sum of split amounts ({total_slices_abs}) must equal parent amount ({abs_parent_amount})"
+                )
+
+            slice_amounts = [-abs(Decimal(str(s.amount))) if is_negative else abs(Decimal(str(s.amount))) for s in request.splits]
+
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported split mode '{split_mode}'. Use 'RATIO' or 'AMOUNT'.")
+
+        group_id = uuid.uuid4()
+        created_txns = []
+
+        for idx, (s, amt) in enumerate(zip(request.splits, slice_amounts)):
+            child_hash = f"{parent.raw_content_hash or 'txn'}_split_{idx}_{uuid.uuid4().hex[:6]}"
+            is_surety = await self._resolve_surety(s.sub_category, parent.user_id)
+
+            child = Transaction(
+                user_id=parent.user_id,
+                raw_content_hash=child_hash,
+                amount=amt,
+                currency=parent.currency or "INR",
+                merchant_name=parent.merchant_name,
+                category=s.category,
+                sub_category=s.sub_category,
+                status=TransactionStatus.VERIFIED,
+                account_type=parent.account_type,
+                remarks=s.remarks if s.remarks is not None else parent.remarks,
+                tags=s.tags if s.tags is not None else (parent.tags or []),
+                is_surety=is_surety,
+                credit_card_id=parent.credit_card_id,
+                transaction_date=parent.transaction_date,
+                is_manual=True,
+                is_settled=parent.is_settled,
+                split_group_id=group_id
+            )
+            self.db.add(child)
+            created_txns.append(child)
+
+        # Remove parent offset / settle up entry if present
+        offset_stmt = select(Transaction).where(
+            Transaction.user_id == user_id,
+            Transaction.raw_content_hash == f"CC-OFFSET-{transaction_id}"
+        )
+        offset_res = await self.db.execute(offset_stmt)
+        offset_txn = offset_res.scalar_one_or_none()
+        if offset_txn:
+            await self.db.delete(offset_txn)
+
+        settle_stmt = select(SettleUpEntry).where(SettleUpEntry.transaction_id == transaction_id)
+        settle_res = await self.db.execute(settle_stmt)
+        settle_entry = settle_res.scalar_one_or_none()
+        if settle_entry:
+            await self.db.delete(settle_entry)
+
+        # Delete the original parent transaction
+        await self.db.delete(parent)
+        await self.db.flush()
+
+        # Double-entry & settle up synchronization for children
+        for child in created_txns:
+            await self._sync_double_entry_credit_card_payment(child)
+            await self._sync_settle_up_entry(child)
+
+        await self.db.commit()
+        self._invalidate_safe_spend_cache(user_id)
+        return await self._attach_icons(created_txns)
 
     async def delete_transaction(self, transaction_id: UUID, user_id: UUID):
         stmt = select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user_id)

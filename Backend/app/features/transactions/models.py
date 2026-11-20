@@ -45,6 +45,7 @@ class Transaction(Base):
     transaction_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
     is_manual: Mapped[bool] = mapped_column(Boolean, default=False)
     is_settled: Mapped[bool] = mapped_column(Boolean, default=False)
+    split_group_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True, index=True)
 
     user: Mapped["User"] = relationship("User")
     credit_card: Mapped[Optional["CreditCard"]] = relationship("CreditCard", back_populates="transactions")

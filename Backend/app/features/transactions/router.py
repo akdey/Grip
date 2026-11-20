@@ -86,6 +86,15 @@ async def verify_transaction(
 ):
     return await service.verify_transaction(transaction_id=transaction_id, user_id=current_user.id, verification=verification)
 
+@router.post("/{transaction_id}/split", response_model=List[schemas.TransactionResponse])
+async def split_transaction(
+    transaction_id: UUID,
+    split_data: schemas.TransactionSplitRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[TransactionService, Depends()]
+):
+    return await service.split_transaction(transaction_id=transaction_id, user_id=current_user.id, request=split_data)
+
 @router.get("/{transaction_id}", response_model=schemas.TransactionResponse)
 async def get_transaction(
     transaction_id: UUID,

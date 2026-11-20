@@ -69,6 +69,7 @@ class TransactionResponse(TransactionBase):
     is_surety: bool = False
     is_settled: bool = False
     credit_card_id: Optional[UUID] = None
+    split_group_id: Optional[UUID] = None
     
     category_icon: Optional[str] = None
     sub_category_icon: Optional[str] = None
@@ -93,6 +94,18 @@ class VerificationRequest(BaseModel):
     class Config:
         str_strip_whitespace = True
 
+class TransactionSplitSlice(BaseModel):
+    category: str
+    sub_category: str
+    amount: Optional[Decimal] = None
+    ratio: Optional[float] = None
+    remarks: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+class TransactionSplitRequest(BaseModel):
+    split_mode: str = "RATIO"  # "RATIO" or "AMOUNT"
+    splits: List[TransactionSplitSlice]
+
 class CategoriesResponse(BaseModel):
     categories: dict[str, list[str]]
 
@@ -101,4 +114,3 @@ class TagSummary(BaseModel):
     count: int
     amount: Decimal
     last_used: Optional[date] = None
-
