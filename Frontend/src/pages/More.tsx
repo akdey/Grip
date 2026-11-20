@@ -53,6 +53,7 @@ import { Button } from '../components/ui/Button';
 import { useTheme } from '../lib/theme';
 import { getBiometricsStatus, registerBiometricCredential, getDeviceBiometricName } from '../lib/webauthn';
 import { haptics } from '../lib/haptics';
+import { toast } from '../lib/toast';
 
 interface FeatureCardItem {
     id: string;
@@ -306,9 +307,10 @@ const More: React.FC = () => {
             document.body.appendChild(link);
             link.click();
             link.parentNode?.removeChild(link);
+            toast.success("CSV backup downloaded successfully");
         } catch (error) {
             console.error("Backup failed", error);
-            alert("Backup failed. Please try again.");
+            toast.error("Backup failed. Please try again.");
         } finally {
             setIsExporting(false);
         }
@@ -326,9 +328,10 @@ const More: React.FC = () => {
             document.body.appendChild(link);
             link.click();
             link.parentNode?.removeChild(link);
+            toast.success("Portfolio statement downloaded");
         } catch (error) {
             console.error("Statement export failed", error);
-            alert("Failed to export portfolio statement. Please try again.");
+            toast.error("Failed to export portfolio statement. Please try again.");
         } finally {
             setIsExportingStatement(false);
         }

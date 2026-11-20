@@ -29,8 +29,10 @@ import {
     Plus,
     Store,
     Sparkles,
-    AlertTriangle
+    AlertTriangle,
+    Loader2
 } from 'lucide-react';
+import { toast } from '../lib/toast';
 import { format, parse, parseISO, startOfToday, differenceInCalendarDays } from 'date-fns';
 import { Drawer } from '../components/ui/Drawer';
 import { CalculatorDrawer } from '../components/ui/CalculatorDrawer';
@@ -143,15 +145,15 @@ const AddEntry: React.FC = () => {
 
     const validateAndConfirm = (): boolean => {
         if (!amount || Number(amount) <= 0) {
-            alert('Please enter a valid magnitude / amount.');
+            toast.error('Please enter a valid magnitude / amount.');
             return false;
         }
         if (!category) {
-            alert('Please select a category for this transaction.');
+            toast.error('Please select a category for this transaction.');
             return false;
         }
         if (!isSourceSelected) {
-            alert('Validation Error: Please select a payment source (Bank, Cash, or Credit Card).');
+            toast.error('Validation Error: Please select a payment source (Bank, Cash, or Credit Card).');
             return false;
         }
         if (isDateOutside3Days) {
@@ -195,7 +197,10 @@ const AddEntry: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['monthly-summary'] });
             if (id) queryClient.invalidateQueries({ queryKey: ['transaction', id] });
-
+            toast.success(id ? 'Transaction updated successfully' : 'Transaction saved successfully');
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to save transaction');
         }
     });
 
@@ -720,7 +725,7 @@ const AddEntry: React.FC = () => {
                                     ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6 hover:bg-accent-hover'}
                                 `}
                             >
-                                <Save size={24} strokeWidth={2.5} />
+                                {mutation.isPending ? <Loader2 size={24} className="animate-spin" /> : <Save size={24} strokeWidth={2.5} />}
                             </button>
                         </>
                     )}

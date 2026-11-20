@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { toast } from '../../lib/toast';
 
 export interface Goal {
     id: string;
@@ -68,6 +69,10 @@ export const useCreateGoal = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['goals'] });
             queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+            toast.success('Goal target locked into Safe-to-Spend');
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to create goal');
         },
     });
 };
@@ -81,6 +86,10 @@ export const useDeleteGoal = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['goals'] });
             queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+            toast.success('Goal removed');
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to delete goal');
         },
     });
 };

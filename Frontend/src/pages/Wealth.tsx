@@ -14,6 +14,7 @@ import {
 
 import { api } from '../lib/api';
 import { haptics } from '../lib/haptics';
+import { toast } from '../lib/toast';
 import { useWealthVaultStore, usePrivacyStore } from '../lib/store';
 import { WealthVaultGate } from '../components/wealth/WealthVaultGate';
 
@@ -74,10 +75,11 @@ const Wealth: React.FC = () => {
             link.click();
             link.parentNode?.removeChild(link);
             haptics.notification('success');
+            toast.success("Portfolio statement downloaded");
         } catch (error) {
             console.error("Statement export failed", error);
             haptics.notification('error');
-            alert("Failed to export portfolio statement. Please try again.");
+            toast.error("Failed to export portfolio statement. Please try again.");
         } finally {
             setExportingStatement(false);
         }
@@ -125,11 +127,11 @@ const Wealth: React.FC = () => {
         setAutoDetecting(true);
         try {
             const res = await api.post('/wealth/auto-detect-portfolio');
-            alert(`Auto-detected ${res.data.holdings_created} new assets and mapped ${res.data.transactions_linked} transactions!`);
+            toast.success(`Auto-detected ${res.data.holdings_created} new assets and mapped ${res.data.transactions_linked} transactions!`);
             fetchHoldingsAndUnassigned();
         } catch (error) {
             console.error("Auto detect failed", error);
-            alert("Auto detection encountered an issue");
+            toast.error("Auto detection encountered an issue");
         } finally {
             setAutoDetecting(false);
         }
