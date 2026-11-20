@@ -31,10 +31,12 @@ const Terms = React.lazy(() => import('./pages/Terms'));
 import { AnimatePresence } from 'framer-motion';
 import { Loader } from './components/ui/Loader';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { ToastContainer } from './components/ui/Toast';
 
 function App() {
   return (
     <ErrorBoundary>
+      <ToastContainer />
       <React.Suspense fallback={<Loader fullPage text="Initializing" />}>
         <ScrollToTop />
         <AnimatePresence mode="wait">
