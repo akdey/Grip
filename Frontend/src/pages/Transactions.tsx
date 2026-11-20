@@ -173,6 +173,18 @@ const Transactions: React.FC = () => {
     const { data: transactions, isLoading } = useTransactions(queryFilters);
     const { data: pendingTransactions } = usePendingTransactions();
 
+    const splitGroupTotals = useMemo(() => {
+        const map = new Map<string, number>();
+        const all = [...(transactions || []), ...(pendingTransactions || [])];
+        for (const t of all) {
+            if (t.split_group_id) {
+                const current = map.get(t.split_group_id) || 0;
+                map.set(t.split_group_id, current + Number(t.amount || 0));
+            }
+        }
+        return map;
+    }, [transactions, pendingTransactions]);
+
     // Filter Status & Helpers
     const hasActiveFilters = Boolean(
         (view && view !== 'all') ||
@@ -477,6 +489,7 @@ const Transactions: React.FC = () => {
                                 formatCurrency={formatCurrency}
                                 showSensitive={showSensitive}
                                 onOpenSplit={setSplitTxn}
+                                splitGroupTotal={txn.split_group_id ? splitGroupTotals.get(txn.split_group_id) : undefined}
                             />
                         ))}
                     </div>
@@ -638,6 +651,7 @@ const Transactions: React.FC = () => {
                                                 formatCurrency={formatCurrency}
                                                 showSensitive={showSensitive}
                                                 onOpenSplit={setSplitTxn}
+                                                splitGroupTotal={txn.split_group_id ? splitGroupTotals.get(txn.split_group_id) : undefined}
                                             />
                                         ))}
                                     </div>
@@ -692,6 +706,7 @@ const Transactions: React.FC = () => {
                                                 formatCurrency={formatCurrency}
                                                 showSensitive={showSensitive}
                                                 onOpenSplit={setSplitTxn}
+                                                splitGroupTotal={txn.split_group_id ? splitGroupTotals.get(txn.split_group_id) : undefined}
                                             />
                                         ))}
                                     </div>
@@ -1032,12 +1047,14 @@ const TransactionItem = ({
     txn,
     formatCurrency,
     showSensitive = true,
-    onOpenSplit
+    onOpenSplit,
+    splitGroupTotal
 }: {
     txn: any;
     formatCurrency: any;
     showSensitive?: boolean;
     onOpenSplit?: (txn: any) => void;
+    splitGroupTotal?: number;
 }) => {
     const navigate = useNavigate();
     const deleteMutation = useDeleteTransaction();
@@ -1178,6 +1195,12 @@ const TransactionItem = ({
             </div>
 
             <div className="text-right shrink-0 flex flex-col items-end justify-center">
+                {txn.split_group_id && (
+                    <span className="text-[8px] font-mono font-bold text-accent bg-accent-subtle/60 border border-accent-border/50 px-1.5 py-0.5 rounded-md uppercase tracking-tight flex items-center gap-1 mb-1 shadow-2xs">
+                        <GitFork size={8} />
+                        Split: {showSensitive ? (splitGroupTotal !== undefined ? formatCurrency(splitGroupTotal) : 'Group') : '••••'}
+                    </span>
+                )}
                 <p className="font-black text-primary text-base leading-none tracking-tighter">
                     {showSensitive ? formatCurrency(txn.amount) : '••••'}
                 </p>
@@ -1222,12 +1245,6 @@ const TransactionItem = ({
                         </div>
                     ) : (
                         <>
-                            {txn.split_group_id && (
-                                <span className="text-[7px] px-1.5 py-0.5 rounded-md font-black border border-accent-border/50 text-accent bg-accent-subtle/50 uppercase tracking-tighter flex items-center gap-0.5">
-                                    <GitFork size={8} />
-                                    Split
-                                </span>
-                            )}
                             <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black border uppercase tracking-tighter ${txn.is_manual ? 'border-amber-500/30 text-amber-500 bg-amber-500/10' : 'border-border-subtle text-text-muted bg-surface-pill'
                                 }`}>
                                 {txn.is_manual ? 'Manual' : 'Sync'}
