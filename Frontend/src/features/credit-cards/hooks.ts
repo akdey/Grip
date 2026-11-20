@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { toast } from '../../lib/toast';
 
 export interface CreditCard {
     id: string;
@@ -51,7 +52,11 @@ export const useAddCreditCard = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+            toast.success('Credit card added');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to add credit card');
+        }
     });
 };
 
@@ -64,7 +69,11 @@ export const useUpdateCreditCard = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+            toast.success('Credit card updated');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to update credit card');
+        }
     });
 };
 

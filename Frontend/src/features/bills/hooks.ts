@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { toast } from '../../lib/toast';
 
 export interface Bill {
     id: string;
@@ -41,11 +42,15 @@ export const useMarkBillPaid = () => {
         mutationFn: async ({ id, paid }: { id: string; paid: boolean }) => {
             await api.post(`/bills/${id}/mark-paid`, { paid });
         },
-        onSuccess: () => {
+        onSuccess: (_data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['bills'] });
             queryClient.invalidateQueries({ queryKey: ['bills-upcoming'] });
             queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] }); // Updates dashboard frozen funds
+            toast.success(variables.paid ? 'Bill marked as settled' : 'Bill marked as pending');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to update bill status');
+        }
     });
 };
 
@@ -60,7 +65,11 @@ export const useAddBill = () => {
             queryClient.invalidateQueries({ queryKey: ['bills'] });
             queryClient.invalidateQueries({ queryKey: ['bills-upcoming'] });
             queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+            toast.success('Bill recurring schedule created');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to add bill');
+        }
     });
 };
 
@@ -75,7 +84,11 @@ export const useUpdateBill = () => {
             queryClient.invalidateQueries({ queryKey: ['bills'] });
             queryClient.invalidateQueries({ queryKey: ['bills-upcoming'] });
             queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+            toast.success('Bill updated');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to update bill');
+        }
     });
 };
 
@@ -89,9 +102,15 @@ export const useDeleteBill = () => {
             queryClient.invalidateQueries({ queryKey: ['bills'] });
             queryClient.invalidateQueries({ queryKey: ['bills-upcoming'] });
             queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+            toast.success('Bill deleted');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to delete bill');
+        }
     });
 };
+
+export const suretyQueryKey = ['sureties'];
 
 export interface Surety {
     id: string;
@@ -106,7 +125,7 @@ export interface Surety {
 
 export const useSureties = () => {
     return useQuery({
-        queryKey: ['sureties'],
+        queryKey: suretyQueryKey,
         queryFn: async () => {
             const { data } = await api.get<Surety[]>('/bills/surety/list');
             return data;
@@ -129,6 +148,10 @@ export const useCreateExclusion = () => {
             queryClient.invalidateQueries({ queryKey: ['sureties'] });
             queryClient.invalidateQueries({ queryKey: ['bills-upcoming'] });
             queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
+            toast.success('Surety allocation adjusted');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to adjust surety');
+        }
     });
 };
