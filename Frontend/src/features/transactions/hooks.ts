@@ -140,7 +140,11 @@ export const useDeleteTransaction = () => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['safe-to-spend'] });
             queryClient.invalidateQueries({ queryKey: ['monthly-summary'] });
+            toast.success('Transaction deleted');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to delete transaction');
+        }
     });
 };
 

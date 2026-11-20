@@ -350,9 +350,16 @@ const AddEntry: React.FC = () => {
                                     });
                                 }
                             }}
-                            className="w-8 h-8 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-status-danger-solid hover:bg-status-danger-bg hover:border-status-danger-border active:scale-90 transition-all"
+                            disabled={deleteMutation.isPending}
+                            title="Delete transaction"
+                            aria-label="Delete transaction"
+                            className="w-8 h-8 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-status-danger-solid hover:bg-status-danger-bg hover:border-status-danger-border active:scale-90 transition-all disabled:opacity-50"
                         >
-                            <Trash2 size={14} />
+                            {deleteMutation.isPending ? (
+                                <Loader2 size={14} className="animate-spin text-status-danger-solid" />
+                            ) : (
+                                <Trash2 size={14} />
+                            )}
                         </button>
                     )}
                 </header>
@@ -378,9 +385,13 @@ const AddEntry: React.FC = () => {
                                     }, { onSuccess: () => navigate(-1) });
                                 }
                             }}
-                            className="text-[9px] font-black text-rose-500 uppercase tracking-widest px-3 py-1.5 rounded-lg border border-rose-500/20"
+                            disabled={verifyMutation.isPending}
+                            className="text-[9px] font-black text-rose-500 uppercase tracking-widest px-3 py-1.5 rounded-lg border border-rose-500/20 disabled:opacity-50 flex items-center gap-1.5"
                         >
-                            Reject
+                            {verifyMutation.isPending && (
+                                <Loader2 size={12} className="animate-spin text-rose-500" />
+                            )}
+                            <span>{verifyMutation.isPending ? 'Rejecting...' : 'Reject'}</span>
                         </button>
                     </div>
                 )}
