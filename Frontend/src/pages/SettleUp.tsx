@@ -49,6 +49,7 @@ import { Loader } from '../components/ui/Loader';
 import { Drawer } from '../components/ui/Drawer';
 import { format, formatDistanceToNow, parseISO, isValid } from 'date-fns';
 import { haptics } from '../lib/haptics';
+import { toast } from '../lib/toast';
 
 const formatDateSafe = (dateStr?: string | null) => {
     if (!dateStr) return { full: 'No date recorded', short: 'No date', relative: '' };
@@ -97,7 +98,7 @@ export const extractContactFromPhonebook = async (): Promise<{ name?: string; ph
             return null;
         }
     } else {
-        alert("Device Phonebook extraction (Contact Picker API) is available on supported mobile browsers (such as Chrome on Android). On other devices, please enter the contact details directly.");
+        toast.info("Phonebook extraction is available on supported mobile browsers. On other devices, enter contact details directly.");
         return null;
     }
 };
@@ -1330,16 +1331,16 @@ const SettleUp: React.FC = () => {
 
     const handleOpenWhatsApp = () => {
         if (!cleanPhone) {
-                            haptics.notification('warning');
-                        alert('Please enter a valid WhatsApp phone number for this borrower.');
-                        return;
+            haptics.notification('warning');
+            toast.warning('Please enter a valid WhatsApp phone number for this borrower.');
+            return;
         }
-                        haptics.impact('medium');
-                        // Auto-save contact if changed
-                        if (phone.trim() !== (peer.phone || '') || email.trim() !== (peer.email || '')) {
-                            handleSaveContact();
+        haptics.impact('medium');
+        // Auto-save contact if changed
+        if (phone.trim() !== (peer.phone || '') || email.trim() !== (peer.email || '')) {
+            handleSaveContact();
         }
-                        window.open(waLink!, '_blank');
+        window.open(waLink!, '_blank');
     };
 
     const handleDownloadExcel = async () => {
@@ -1380,10 +1381,11 @@ const SettleUp: React.FC = () => {
             const safePeerName = peer.peer_name.replace(/[^a-zA-Z0-9_-]/g, '_');
             const dateStr = new Date().toISOString().split('T')[0];
             XLSX.writeFile(workbook, `Grip_Ledger_${safePeerName}_${dateStr}.xlsx`);
+            toast.success("Excel ledger file exported");
             haptics.notification('success');
         } catch (err) {
             console.error('Failed to export Excel ledger:', err);
-            alert('Failed to generate Excel ledger file');
+            toast.error('Failed to generate Excel ledger file');
             haptics.notification('error');
         } finally {
             setIsExportingExcel(false);
@@ -1391,33 +1393,35 @@ const SettleUp: React.FC = () => {
     };
 
     const handleCopy = () => {
-                            haptics.impact('light');
-                        navigator.clipboard.writeText(reminderText);
-                        setCopied(true);
+        haptics.impact('light');
+        navigator.clipboard.writeText(reminderText);
+        setCopied(true);
+        toast.success("Reminder message copied to clipboard");
         setTimeout(() => setCopied(false), 2000);
     };
 
     const handleSendEmail = () => {
         if (!email.trim()) {
-                            haptics.notification('warning');
-                        alert('Please enter a valid email address for this borrower first.');
-                        return;
+            haptics.notification('warning');
+            toast.warning('Please enter a valid email address for this borrower first.');
+            return;
         }
-                        haptics.impact('medium');
-                        sendEmailMutation.mutate({
-                            peerName: peer.peer_name,
-                            custom_note: customNote.trim() || undefined,
-                            include_ledger: includeLedger
+        haptics.impact('medium');
+        sendEmailMutation.mutate({
+            peerName: peer.peer_name,
+            custom_note: customNote.trim() || undefined,
+            include_ledger: includeLedger
         }, {
-                            onSuccess: () => {
-                            haptics.notification('success');
-                        setEmailSuccessMsg(`Email successfully sent to ${email.trim()}!`);
+            onSuccess: () => {
+                haptics.notification('success');
+                toast.success(`Email sent to ${email.trim()}`);
+                setEmailSuccessMsg(`Email successfully sent to ${email.trim()}!`);
                 setTimeout(() => setEmailSuccessMsg(null), 4000);
             },
             onError: (err: any) => {
-                            haptics.notification('error');
-                        const detail = err?.response?.data?.detail || 'Failed to send email';
-                        alert(detail);
+                haptics.notification('error');
+                const detail = err?.response?.data?.detail || 'Failed to send email';
+                toast.error(detail);
             }
         });
     };
@@ -1757,14 +1761,15 @@ const SettleUp: React.FC = () => {
                             email: email.trim() || undefined,
                             auto_remind_email: autoRemind
         }, {
-                                onSuccess: () => {
-                                haptics.notification('success');
-                            onClose();
+            onSuccess: () => {
+                haptics.notification('success');
+                toast.success('Contact details updated');
+                onClose();
             },
             onError: (err: any) => {
-                                haptics.notification('error');
-                            const detail = err?.response?.data?.detail || 'Failed to update contact info';
-                            alert(detail);
+                haptics.notification('error');
+                const detail = err?.response?.data?.detail || 'Failed to update contact info';
+                toast.error(detail);
             }
         });
     };

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { toast } from '../../lib/toast';
 
 export interface Transaction {
     id: string;
@@ -70,7 +71,7 @@ export const useToggleSettledStatus = () => {
         },
         onError: (error) => {
             console.error('Error toggling settled status:', error);
-            alert('Failed to update transaction status. Please check console for details.');
+            toast.error('Failed to update transaction status');
         },
     });
 };

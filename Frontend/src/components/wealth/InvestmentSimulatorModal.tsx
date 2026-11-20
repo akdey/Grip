@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Search, Calculator, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
 import { api } from '../../lib/api';
 import { haptics } from '../../lib/haptics';
+import { toast } from '../../lib/toast';
 // No recharts components are currently used in this file
 
 interface InvestmentSimulatorModalProps {
@@ -71,7 +72,7 @@ export const InvestmentSimulatorModal: React.FC<InvestmentSimulatorModalProps> =
         } catch (error) {
             console.error(error);
             setStep(1);
-            alert("Simulation failed. Check date ranges (End date must be after Start date).");
+            toast.error("Simulation failed. End date must be after Start date.");
         }
     };
 

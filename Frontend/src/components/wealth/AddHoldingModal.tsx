@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Save, Search } from 'lucide-react';
 import { api } from '../../lib/api';
 import { haptics } from '../../lib/haptics';
+import { toast } from '../../lib/toast';
 
 interface AddHoldingModalProps {
     isOpen: boolean;
@@ -80,6 +81,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
             };
 
             const res = await api.post('/wealth/holdings', submitData);
+            toast.success("Holding added to portfolio");
             onSuccess(res.data);
             onClose();
             setFormData({
@@ -101,7 +103,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({ isOpen, onClos
             });
         } catch (error) {
             console.error("Failed to create holding", error);
-            alert("Error creating holding");
+            toast.error("Error creating holding");
         } finally {
             setLoading(false);
         }

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { usePrivacyStore } from '../lib/store';
 import { haptics } from '../lib/haptics';
+import { toast } from '../lib/toast';
 import { PasswordVerifyModal } from '../components/ui/PasswordVerifyModal';
 import {
     format,
@@ -1027,10 +1028,7 @@ const TransactionItem = ({ txn, formatCurrency, showSensitive = true }: { txn: a
         e.stopPropagation();
 
         if (!hasValidSource) {
-            alert(
-                'Validation Error: Payment source (Bank, Cash, or Credit Card) is not assigned to this transaction.\n\n' +
-                'Please open and review the transaction to assign a source.'
-            );
+            toast.error('Payment source (Bank, Cash, or Credit Card) is not assigned. Opening transaction to assign...');
             navigate(`/transactions/${txn.id}`);
             return;
         }

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Search, Link as LinkIcon, Check, Layers, ListFilter, Plus } from 'lucide-react';
 import { api } from '../../lib/api';
+import { toast } from '../../lib/toast';
 import { AddHoldingModal } from './AddHoldingModal';
 
 function getOrdinalSuffix(day: number): string {
@@ -121,7 +122,7 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
     const handleBatchLink = async (group: RecurringGroup, holdingId?: string) => {
         const selectedHolding = holdingId || batchHoldingSelections[group.key] || group.suggestedHoldingId;
         if (!selectedHolding) {
-            alert("Please select an asset to map this recurring SIP to.");
+            toast.warning("Please select an asset to map this recurring SIP to.");
             return;
         }
         setLoading(true);
@@ -132,12 +133,12 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                 day_of_month: group.dayOfMonth,
                 create_rule: true
             });
-            alert(`Successfully linked ${res.data.linked_count} transactions!`);
+            toast.success(`Successfully linked ${res.data.linked_count} transactions!`);
             onLinkSuccess();
             fetchTransactions();
         } catch (error) {
             console.error("Batch link error", error);
-            alert("Failed to batch link transactions");
+            toast.error("Failed to batch link transactions");
         } finally {
             setLoading(false);
         }
@@ -153,6 +154,7 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
                 holding_id: holdingId,
                 create_rule: false
             });
+            toast.success("Transaction mapped to asset");
             onLinkSuccess();
             setTransactions(prev => prev.filter(t => t.id !== targetId));
             if (selectedTxn?.id === targetId) {
@@ -161,7 +163,7 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
             }
         } catch (error) {
             console.error("Linking failed", error);
-            alert("Failed to link transaction");
+            toast.error("Failed to link transaction");
         } finally {
             setLoading(false);
         }
@@ -171,12 +173,12 @@ export const WealthLinker: React.FC<WealthLinkerProps> = ({ isOpen, onClose, hol
         setAutoDetecting(true);
         try {
             const res = await api.post('/wealth/auto-detect-portfolio');
-            alert(`Auto-detected ${res.data.holdings_created} new assets and linked ${res.data.transactions_linked} transactions!`);
+            toast.success(`Auto-detected ${res.data.holdings_created} new assets and linked ${res.data.transactions_linked} transactions!`);
             onLinkSuccess();
             fetchTransactions();
         } catch (error) {
             console.error("Auto detect failed", error);
-            alert("Auto detection encountered an issue");
+            toast.error("Auto detection encountered an issue");
         } finally {
             setAutoDetecting(false);
         }
