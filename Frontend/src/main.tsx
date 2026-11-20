@@ -6,10 +6,27 @@ import App from './App';
 import { ThemeProvider } from './lib/theme';
 import { initNetworkMonitoring } from './lib/network';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { haptics } from './lib/haptics';
 import './index.css';
 
 // Initialize network monitoring (Capacitor Native + Web)
 initNetworkMonitoring();
+
+// Global Apple-style tactile haptic feedback for interactive touches
+if (typeof window !== 'undefined') {
+  window.addEventListener(
+    'pointerdown',
+    (e) => {
+      const target = (e.target as HTMLElement | null)?.closest(
+        'button:not(:disabled), [role="button"], a, input[type="submit"], input[type="button"], [data-haptic]'
+      );
+      if (target && !target.hasAttribute('disabled') && target.getAttribute('aria-disabled') !== 'true') {
+        haptics.selection();
+      }
+    },
+    { passive: true }
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
