@@ -34,7 +34,7 @@ export const GripFistMark: React.FC<{ size?: number }> = ({ size = 64 }) => (
             </filter>
         </defs>
 
-        <g filter="url(#ldr-glow)" fillRule="evenodd">
+        <g transform="translate(-75.4, -10.2) scale(1.26)" filter="url(#ldr-glow)" fillRule="evenodd">
             {/* Piece 1: Finger 1 (Top Chevron) */}
             <path
                 d="M 315.0 42.0 L 382.0 68.5 L 382.0 122.0 L 348.0 142.0 L 348.0 92.0 L 280.0 62.0 Z"
