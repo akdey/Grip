@@ -22,7 +22,8 @@ import {
     AlertCircle,
     RotateCcw,
     X,
-    Filter
+    Filter,
+    Loader2
 } from 'lucide-react';
 import { useBills, useMarkBillPaid, useAddBill, useUpdateBill, useDeleteBill, type Bill } from './hooks';
 import { useNavigate } from 'react-router-dom';
@@ -710,8 +711,12 @@ const BillsPage: React.FC = () => {
                                                         className="px-3 py-1.5 rounded-full bg-surface-subtle hover:bg-surface border border-border-subtle text-text-muted hover:text-text-primary text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-all touch-manipulation"
                                                         title="Mark as unpaid"
                                                     >
-                                                        <RotateCcw size={12} />
-                                                        <span>Undo</span>
+                                                        {markPaid.isPending && markPaid.variables?.id === bill.id ? (
+                                                            <Loader2 size={12} className="animate-spin text-accent-text" />
+                                                        ) : (
+                                                            <RotateCcw size={12} />
+                                                        )}
+                                                        <span>{markPaid.isPending && markPaid.variables?.id === bill.id ? 'Updating...' : 'Undo'}</span>
                                                     </button>
                                                 ) : (
                                                     <button
@@ -722,8 +727,12 @@ const BillsPage: React.FC = () => {
                                                         disabled={markPaid.isPending}
                                                         className="px-3.5 py-1.5 rounded-full bg-status-success-solid hover:bg-status-success-solid-hover text-white text-xs font-bold flex items-center gap-1 active:scale-95 transition-all shadow-xs touch-manipulation"
                                                     >
-                                                        <CheckCircle2 size={13} />
-                                                        <span>{markPaid.isPending ? 'Syncing...' : 'Mark Paid'}</span>
+                                                        {markPaid.isPending && markPaid.variables?.id === bill.id ? (
+                                                            <Loader2 size={13} className="animate-spin text-white" />
+                                                        ) : (
+                                                            <CheckCircle2 size={13} />
+                                                        )}
+                                                        <span>{markPaid.isPending && markPaid.variables?.id === bill.id ? 'Updating...' : 'Mark Paid'}</span>
                                                     </button>
                                                 )}
 
@@ -993,8 +1002,11 @@ const BillsPage: React.FC = () => {
                         <button
                             type="submit"
                             disabled={addBill.isPending || updateBill.isPending}
-                            className="flex-2 py-3.5 rounded-2xl bg-primary text-text-inverse font-bold text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md disabled:opacity-50"
+                            className="flex-2 py-3.5 rounded-2xl bg-primary text-text-inverse font-bold text-xs uppercase tracking-wider active:scale-95 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                         >
+                            {(addBill.isPending || updateBill.isPending) && (
+                                <Loader2 size={14} className="animate-spin text-text-inverse" />
+                            )}
                             {addBill.isPending || updateBill.isPending
                                 ? 'Saving...'
                                 : editingBill
@@ -1036,9 +1048,12 @@ const BillsPage: React.FC = () => {
                                 type="button"
                                 onClick={handleDeleteConfirm}
                                 disabled={deleteBill.isPending}
-                                className="flex-1 py-2.5 rounded-xl bg-status-danger-solid hover:bg-status-danger-solid-hover text-white text-xs font-bold active:scale-95 transition-all shadow-xs"
+                                className="flex-1 py-2.5 rounded-xl bg-status-danger-solid hover:bg-status-danger-solid-hover text-white text-xs font-bold active:scale-95 transition-all shadow-xs flex items-center justify-center gap-1.5"
                             >
-                                {deleteBill.isPending ? 'Deleting...' : 'Delete'}
+                                {deleteBill.isPending && (
+                                    <Loader2 size={13} className="animate-spin text-white" />
+                                )}
+                                <span>{deleteBill.isPending ? 'Deleting...' : 'Delete'}</span>
                             </button>
                         </div>
                     </div>
