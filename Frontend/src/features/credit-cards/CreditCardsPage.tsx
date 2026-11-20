@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, CreditCard as CardIcon, ArrowLeft } from 'lucide-react';
+import { Plus, CreditCard as CardIcon, ArrowLeft, Loader2 } from 'lucide-react';
 import { useCreditCards, useAddCreditCard, useUpdateCreditCard, type CreditCard } from './hooks';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '../../components/ui/Loader';
@@ -137,8 +137,15 @@ const CreditCardsPage: React.FC = () => {
                             </div>
 
                             <div className="flex gap-3 pt-4">
-                                <button type="submit" className="flex-1 py-4.5 rounded-[1.5rem] bg-primary text-text-inverse font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
-                                    {addCardMutation.isPending || updateCardMutation.isPending ? 'Syncing...' : (editingCardId ? 'Update' : 'Commit')}
+                                <button
+                                    type="submit"
+                                    disabled={addCardMutation.isPending || updateCardMutation.isPending}
+                                    className="flex-1 py-4.5 rounded-[1.5rem] bg-primary text-text-inverse font-black uppercase text-xs tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {(addCardMutation.isPending || updateCardMutation.isPending) && (
+                                        <Loader2 size={14} className="animate-spin text-text-inverse" />
+                                    )}
+                                    <span>{addCardMutation.isPending || updateCardMutation.isPending ? 'Syncing...' : (editingCardId ? 'Update' : 'Commit')}</span>
                                 </button>
                                 <button
                                     type="button"

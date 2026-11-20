@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard as CardIcon, CheckCircle2, Circle } from 'lucide-react';
+import { ArrowLeft, CreditCard as CardIcon, CheckCircle2, Circle, Loader2 } from 'lucide-react';
 import { useCreditCards } from './hooks';
 import { useTransactions, useToggleSettledStatus } from '../transactions/hooks';
 import { Loader } from '../../components/ui/Loader';
@@ -112,6 +112,7 @@ const CreditCardDetailsPage: React.FC = () => {
                                                 toggleSettledMutation.mutate(txn.id);
                                             }}
                                             disabled={toggleSettledMutation.isPending}
+                                            aria-label={txn.is_settled ? 'Mark as unsettled' : 'Mark as settled'}
                                             className={`
                                                 w-6 h-6 rounded-full flex items-center justify-center transition-all
                                                 ${txn.is_settled
@@ -121,7 +122,13 @@ const CreditCardDetailsPage: React.FC = () => {
                                                 ${toggleSettledMutation.isPending ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                                             `}
                                         >
-                                            {txn.is_settled ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                                            {toggleSettledMutation.isPending && toggleSettledMutation.variables === txn.id ? (
+                                                <Loader2 size={13} className="animate-spin" />
+                                            ) : txn.is_settled ? (
+                                                <CheckCircle2 size={14} />
+                                            ) : (
+                                                <Circle size={14} />
+                                            )}
                                         </button>
 
                                         <div>
