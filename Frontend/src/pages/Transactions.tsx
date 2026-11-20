@@ -1100,61 +1100,75 @@ const SplitGroupContainer = ({
     const navigate = useNavigate();
 
     return (
-        <div className="bg-surface-subtle/40 border border-border-subtle rounded-2xl p-3 my-1.5 space-y-2">
+        <div className="bg-surface-subtle/40 backdrop-blur-sm border border-border-subtle rounded-2xl p-3.5 my-2 space-y-2.5 shadow-xs">
             {/* Box Header */}
-            <div className="flex items-center justify-between pb-1.5 border-b border-border-subtle/50">
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <span className="w-5 h-5 rounded-md bg-surface-subtle border border-border-subtle flex items-center justify-center text-accent shrink-0">
+            <div className="flex items-center justify-between pb-2 border-b border-border-subtle/60">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="w-5 h-5 rounded-md bg-accent-subtle border border-accent-border/40 flex items-center justify-center text-accent shrink-0">
                         <GitFork size={12} />
                     </span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted truncate">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-primary truncate">
                         SPLIT ORDER • {cluster.merchant_name}
                     </span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-surface border border-border-subtle text-text-muted shrink-0">
+                        {cluster.items.length} slices
+                    </span>
                 </div>
-                <span className="tabular-nums font-mono text-xs font-semibold text-text-muted shrink-0 pl-2">
-                    {showSensitive ? formatCurrency(cluster.totalAmount) : '••••'}
-                </span>
+                <div className="text-right shrink-0 pl-2">
+                    <span className="tabular-nums font-mono text-xs font-bold text-text-primary">
+                        {showSensitive ? formatCurrency(cluster.totalAmount) : '••••'}
+                    </span>
+                </div>
             </div>
 
             {/* Child Slices Connected */}
-            <div className="relative pl-3 space-y-1.5 border-l-2 border-border-subtle ml-2">
-                {cluster.items.map((slice) => (
-                    <div
-                        key={slice.id}
-                        onClick={() => navigate(`/transactions/${slice.id}`)}
-                        className="flex items-center justify-between p-2 rounded-xl bg-surface/60 hover:bg-surface-hover border border-border-subtle/50 cursor-pointer transition-all active:scale-[0.99] gap-3"
-                    >
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div
-                                className="w-7 h-7 rounded-xl flex items-center justify-center shadow-inner border border-border-subtle shrink-0"
-                                style={{
-                                    backgroundColor: (slice.sub_category_color || slice.category_color)
-                                        ? `${slice.sub_category_color || slice.category_color}18`
-                                        : 'var(--color-bg-surface-pill)',
-                                    color: slice.sub_category_color || slice.category_color || 'var(--color-text-primary)'
-                                }}
-                            >
-                                <CategoryIcon name={slice.sub_category_icon || slice.category_icon} size={14} />
-                            </div>
-                            <div className="flex flex-col min-w-0 flex-1">
-                                <span className="text-xs font-semibold text-text-primary truncate leading-tight">
-                                    {slice.sub_category || slice.category}
-                                </span>
-                                {slice.remarks && (
-                                    <span className="text-[10px] text-text-muted truncate leading-tight mt-0.5">
-                                        {slice.remarks}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
+            <div className="relative pl-3 space-y-2 border-l-2 border-border-subtle/80 ml-2.5">
+                {cluster.items.map((slice) => {
+                    const slicePct = cluster.totalAmount !== 0
+                        ? Math.round((Math.abs(slice.amount) / Math.abs(cluster.totalAmount)) * 100)
+                        : 0;
 
-                        <div className="text-right shrink-0">
-                            <span className="tabular-nums font-mono text-sm font-semibold text-text-primary">
-                                {showSensitive ? formatCurrency(slice.amount) : '••••'}
-                            </span>
+                    return (
+                        <div
+                            key={slice.id}
+                            onClick={() => navigate(`/transactions/${slice.id}`)}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-surface/70 hover:bg-surface border border-border-subtle hover:border-border-default/80 cursor-pointer transition-all active:scale-[0.99] gap-3 group"
+                        >
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <div
+                                    className="w-7 h-7 rounded-xl flex items-center justify-center shadow-xs border border-border-subtle shrink-0"
+                                    style={{
+                                        backgroundColor: (slice.sub_category_color || slice.category_color)
+                                            ? `${slice.sub_category_color || slice.category_color}18`
+                                            : 'var(--color-bg-surface-pill)',
+                                        color: slice.sub_category_color || slice.category_color || 'var(--color-text-primary)'
+                                    }}
+                                >
+                                    <CategoryIcon name={slice.sub_category_icon || slice.category_icon} size={14} />
+                                </div>
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <span className="text-xs font-semibold text-text-primary group-hover:text-primary transition-colors truncate leading-tight">
+                                        {slice.sub_category || slice.category}
+                                    </span>
+                                    {slice.remarks && (
+                                        <span className="text-[10px] text-text-muted truncate leading-tight mt-0.5">
+                                            {slice.remarks}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="text-right shrink-0 flex items-center gap-2">
+                                <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-surface-pill border border-border-subtle text-text-muted">
+                                    {slicePct}%
+                                </span>
+                                <span className="tabular-nums font-mono text-sm font-semibold text-text-primary">
+                                    {showSensitive ? formatCurrency(slice.amount) : '••••'}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
@@ -1315,10 +1329,11 @@ const TransactionItem = ({
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    haptics.selection();
                                     onOpenSplit?.(txn);
                                 }}
-                                className="w-7 h-7 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-hover transition-all active:scale-90 shrink-0"
-                                title="Split Transaction"
+                                className="w-7 h-7 rounded-full bg-accent-subtle/80 border border-accent-border/50 flex items-center justify-center text-accent hover:bg-accent-solid hover:text-text-on-accent transition-all active:scale-90 shrink-0"
+                                title="Split Order (Ratio or Amount)"
                             >
                                 <GitFork size={13} />
                             </button>

@@ -54,6 +54,7 @@ const AddEntry: React.FC = () => {
     const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
 
     const [type, setType] = useState<TransactionType>('EXPENSE');
+    const [addAnother, setAddAnother] = useState(false);
 
     // Form State
     const [amount, setAmount] = useState('');
@@ -343,7 +344,7 @@ const AddEntry: React.FC = () => {
 
     return (
         <LayoutGroup id="add-entry">
-            <div className="min-h-screen text-primary flex flex-col pb-24 overflow-x-hidden">
+            <div className="min-h-screen text-primary flex flex-col pb-36 overflow-x-hidden">
                 <header className="px-5 py-3.5 flex items-center justify-between sticky top-0 bg-page/80 backdrop-blur-3xl z-30 border-b border-border-subtle">
                     <div className="flex items-center gap-4">
                         <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-full bg-surface-subtle border border-border-subtle flex items-center justify-center text-text-muted hover:text-primary active:scale-90 transition-all">
@@ -724,47 +725,68 @@ const AddEntry: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Action Button */}
-                <div className="fixed bottom-6 right-6 z-[60] flex items-center gap-3">
-                    {existingTxn?.status === 'PENDING' ? (
-                        <button
-                            onClick={handleApprove}
-                            disabled={verifyMutation.isPending || !amount || !category}
-                            className={`
-                                h-14 px-8 rounded-full bg-status-success-bg border border-status-success-border text-status-success-text flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all
-                                ${verifyMutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed' : 'hover:scale-105'}
-                            `}
-                        >
-                            <span className="text-xs font-black uppercase tracking-widest">Approve</span>
-                            <Check size={20} strokeWidth={3} />
-                        </button>
-                    ) : (
-                        <>
-                            {!id && (
-                                <button
-                                    onClick={handleSaveAndNew}
-                                    disabled={mutation.isPending || !amount || !category}
-                                    className={`
-                                        w-14 h-14 rounded-full bg-accent-subtle text-accent-text flex items-center justify-center border border-accent-border active:scale-95 transition-all
-                                        ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed' : 'hover:bg-accent/20'}
-                                    `}
-                                    title="Save & Add Another"
-                                >
-                                    <Plus size={24} strokeWidth={2.5} />
-                                </button>
-                            )}
+                {/* Bottom Action Bar */}
+                <div className="fixed bottom-0 inset-x-0 z-[60] p-4 bg-page/85 backdrop-blur-2xl border-t border-border-subtle pb-[max(16px,env(safe-area-inset-bottom,0px))]">
+                    <div className="max-w-md mx-auto space-y-2">
+                        {existingTxn?.status === 'PENDING' ? (
                             <button
-                                onClick={handleSave}
-                                disabled={mutation.isPending || !amount || !category}
-                                className={`
-                                    w-14 h-14 rounded-full bg-accent text-accent-contrast flex items-center justify-center shadow-2xl shadow-accent/30 active:scale-95 transition-all
-                                    ${mutation.isPending || !amount || !category ? 'opacity-20 cursor-not-allowed scale-90' : 'hover:scale-110 active:rotate-6 hover:bg-accent-hover'}
-                                `}
+                                onClick={handleApprove}
+                                disabled={verifyMutation.isPending || !amount || !category}
+                                className={`w-full py-3.5 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg ${
+                                    verifyMutation.isPending || !amount || !category
+                                        ? 'opacity-40 bg-surface-subtle border border-border-subtle text-text-muted cursor-not-allowed'
+                                        : 'bg-status-success-solid hover:bg-status-success-solid-hover text-white shadow-status-success-solid/20'
+                                }`}
                             >
-                                {mutation.isPending ? <Loader2 size={24} className="animate-spin" /> : <Save size={24} strokeWidth={2.5} />}
+                                {verifyMutation.isPending ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin text-white" />
+                                        <span>Approving Intel...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check size={16} strokeWidth={2.5} />
+                                        <span>Approve Transaction</span>
+                                    </>
+                                )}
                             </button>
-                        </>
-                    )}
+                        ) : (
+                            <>
+                                {!id && (
+                                    <label className="flex items-center justify-center gap-2 cursor-pointer select-none text-xs text-text-muted hover:text-text-primary transition-colors py-0.5">
+                                        <input
+                                            type="checkbox"
+                                            checked={addAnother}
+                                            onChange={(e) => setAddAnother(e.target.checked)}
+                                            className="w-3.5 h-3.5 rounded border-border-default text-primary focus:ring-0 accent-current cursor-pointer"
+                                        />
+                                        <span className="text-[11px] font-semibold tracking-tight">Keep open to add another</span>
+                                    </label>
+                                )}
+                                <button
+                                    onClick={addAnother ? handleSaveAndNew : handleSave}
+                                    disabled={mutation.isPending || !amount || !category}
+                                    className={`w-full py-3.5 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg ${
+                                        mutation.isPending || !amount || !category
+                                            ? 'opacity-40 bg-surface-subtle border border-border-subtle text-text-muted cursor-not-allowed'
+                                            : 'bg-primary text-text-inverse hover:opacity-95 shadow-primary/20'
+                                    }`}
+                                >
+                                    {mutation.isPending ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin text-text-inverse" />
+                                            <span>Saving Transaction...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check size={16} strokeWidth={2.5} />
+                                            <span>{id ? 'Save Changes' : (addAnother ? 'Save & Add Another' : 'Save Transaction')}</span>
+                                        </>
+                                    )}
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 <Drawer
