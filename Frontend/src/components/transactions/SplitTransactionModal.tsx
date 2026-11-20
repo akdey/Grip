@@ -5,7 +5,8 @@ import {
     Loader2,
     Check,
     AlertCircle,
-    Equal
+    Percent,
+    IndianRupee
 } from 'lucide-react';
 import { Drawer } from '../ui/Drawer';
 import { useCategories } from '../../features/transactions/categoryHooks';
@@ -42,20 +43,20 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
     const [splitMode, setSplitMode] = useState<'RATIO' | 'AMOUNT'>('RATIO');
     const absTotal = useMemo(() => Math.abs(Number(transaction?.amount || 0)), [transaction]);
 
-    // Initial state setup with empty/unpopulated ratios
+    // Initial state setup with 50/50 balance
     const [slices, setSlices] = useState<SliceState[]>([
         {
             category: transaction?.category || '',
             sub_category: transaction?.sub_category || '',
-            ratio: '',
-            amount: '',
+            ratio: '50',
+            amount: ((absTotal * 50) / 100).toFixed(2),
             remarks: transaction?.remarks || ''
         },
         {
             category: transaction?.category || '',
             sub_category: '',
-            ratio: '',
-            amount: '',
+            ratio: '50',
+            amount: (absTotal - parseFloat(((absTotal * 50) / 100).toFixed(2))).toFixed(2),
             remarks: ''
         }
     ]);
@@ -63,25 +64,30 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
     // Re-initialize when modal opens or transaction changes
     useEffect(() => {
         if (isOpen && transaction) {
+            const firstCat = transaction.category || (categories && categories[0]?.name) || '';
+            const firstSub = transaction.sub_category || '';
+            const halfAmt = Number(((absTotal * 50) / 100).toFixed(2));
+            const remainAmt = Number((absTotal - halfAmt).toFixed(2));
+
             setSlices([
                 {
-                    category: transaction.category || '',
-                    sub_category: transaction.sub_category || '',
-                    ratio: '',
-                    amount: '',
+                    category: firstCat,
+                    sub_category: firstSub,
+                    ratio: '50',
+                    amount: halfAmt.toFixed(2),
                     remarks: transaction.remarks || ''
                 },
                 {
-                    category: transaction.category || '',
+                    category: firstCat,
                     sub_category: '',
-                    ratio: '',
-                    amount: '',
+                    ratio: '50',
+                    amount: remainAmt.toFixed(2),
                     remarks: ''
                 }
             ]);
             setSplitMode('RATIO');
         }
-    }, [isOpen, transaction]);
+    }, [isOpen, transaction, absTotal]);
 
     // Format currency helper
     const formatRupees = (val: number) => {
@@ -189,26 +195,102 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
         });
     };
 
-    // Split evenly across all slices
-    const handleSplitEvenly = () => {
-        haptics.impact('light');
-        if (slices.length < 2) return;
+    // Auto-balancing Ratio handler: modifying one slice automatically balances the last/other slice to total 100%
+    const handleRatioChange = (idx: number, rawVal: string) => {
+        if (rawVal === '') {
+            updateSlice(idx, 'ratio', '');
+            return;
+        }
 
-        if (splitMode === 'RATIO') {
-            const equalWeight = Math.round(100 / slices.length);
-            setSlices(prev => prev.map(s => ({ ...s, ratio: equalWeight.toString() })));
-        } else {
-            const perSlice = (absTotal / slices.length).toFixed(2);
+        const numVal = parseFloat(rawVal);
+        if (isNaN(numVal) || numVal < 0) {
+            updateSlice(idx, 'ratio', rawVal);
+            return;
+        }
+
+        if (slices.length > 1) {
+            // Adjust the last slice, or slice 0 if the user is editing the last slice
+            const targetIdx = idx === slices.length - 1 ? 0 : slices.length - 1;
+            const otherSum = slices.reduce((sum, s, i) => {
+                if (i === targetIdx) return sum;
+                if (i === idx) return sum + numVal;
+                const v = parseFloat(s.ratio) || 0;
+                return sum + v;
+            }, 0);
+
+            const remainder = Math.max(0, Number((100 - otherSum).toFixed(1)));
             setSlices(prev => {
-                const updated = prev.map(s => ({ ...s, amount: perSlice }));
-                const currentSum = parseFloat(perSlice) * slices.length;
-                const diff = Number((absTotal - currentSum).toFixed(2));
-                if (diff !== 0 && updated.length > 0) {
-                    const lastVal = parseFloat(updated[updated.length - 1].amount);
-                    updated[updated.length - 1].amount = (lastVal + diff).toFixed(2);
-                }
+                const updated = [...prev];
+                updated[idx] = { ...updated[idx], ratio: rawVal };
+                updated[targetIdx] = {
+                    ...updated[targetIdx],
+                    ratio: remainder % 1 === 0 ? remainder.toString() : remainder.toFixed(1)
+                };
                 return updated;
             });
+        } else {
+            updateSlice(idx, 'ratio', rawVal);
+        }
+    };
+
+    // Auto-balancing Amount handler: modifying one slice automatically balances the last/other slice to total absTotal
+    const handleAmountChange = (idx: number, rawVal: string) => {
+        if (rawVal === '') {
+            updateSlice(idx, 'amount', '');
+            return;
+        }
+
+        const numVal = parseFloat(rawVal);
+        if (isNaN(numVal) || numVal < 0) {
+            updateSlice(idx, 'amount', rawVal);
+            return;
+        }
+
+        if (slices.length > 1) {
+            const targetIdx = idx === slices.length - 1 ? 0 : slices.length - 1;
+            const otherSum = slices.reduce((sum, s, i) => {
+                if (i === targetIdx) return sum;
+                if (i === idx) return sum + numVal;
+                const v = parseFloat(s.amount) || 0;
+                return sum + v;
+            }, 0);
+
+            const remainder = Math.max(0, Number((absTotal - otherSum).toFixed(2)));
+            setSlices(prev => {
+                const updated = [...prev];
+                updated[idx] = { ...updated[idx], amount: rawVal };
+                updated[targetIdx] = {
+                    ...updated[targetIdx],
+                    amount: remainder.toFixed(2)
+                };
+                return updated;
+            });
+        } else {
+            updateSlice(idx, 'amount', rawVal);
+        }
+    };
+
+    // Seamless mode switch carrying over percentages and amounts
+    const handleModeSwitch = (mode: 'RATIO' | 'AMOUNT') => {
+        haptics.selection();
+        setSplitMode(mode);
+        if (mode === 'AMOUNT') {
+            setSlices(prev => prev.map((s, idx) => {
+                const calc = ratioCalculations[idx];
+                return {
+                    ...s,
+                    amount: (calc?.amount || 0).toFixed(2)
+                };
+            }));
+        } else {
+            setSlices(prev => prev.map((s) => {
+                const amt = parseFloat(s.amount) || 0;
+                const pct = absTotal > 0 ? (amt / absTotal) * 100 : 0;
+                return {
+                    ...s,
+                    ratio: Math.round(pct).toString()
+                };
+            }));
         }
     };
 
@@ -223,37 +305,62 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
 
     const addSlice = () => {
         haptics.impact('light');
-        setSlices(prev => [
-            ...prev,
-            {
-                category: prev[0]?.category || '',
-                sub_category: '',
-                ratio: '',
-                amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '',
-                remarks: ''
-            }
-        ]);
+        const nextLen = slices.length + 1;
+        const firstCategory = slices[0]?.category || (categories && categories[0]?.name) || '';
+
+        if (splitMode === 'RATIO') {
+            const equalWeight = Math.floor(100 / nextLen);
+            const remainder = 100 - (equalWeight * (nextLen - 1));
+
+            setSlices(prev => {
+                const updated = prev.map(s => ({ ...s, ratio: equalWeight.toString() }));
+                updated.push({
+                    category: firstCategory,
+                    sub_category: '',
+                    ratio: remainder.toString(),
+                    amount: '',
+                    remarks: ''
+                });
+                return updated;
+            });
+        } else {
+            const perSlice = Number((absTotal / nextLen).toFixed(2));
+            const remainder = Number((absTotal - (perSlice * (nextLen - 1))).toFixed(2));
+
+            setSlices(prev => {
+                const updated = prev.map(s => ({ ...s, amount: perSlice.toFixed(2) }));
+                updated.push({
+                    category: firstCategory,
+                    sub_category: '',
+                    ratio: '',
+                    amount: remainder.toFixed(2),
+                    remarks: ''
+                });
+                return updated;
+            });
+        }
     };
 
     const removeSlice = (index: number) => {
         if (slices.length <= 2) return;
         haptics.impact('light');
-        setSlices(prev => prev.filter((_, i) => i !== index));
-    };
-
-    // Auto-fill remainder into the last slice
-    const fillLastRemainder = () => {
-        if (remainingAmount <= 0 || slices.length === 0) return;
-        haptics.impact('light');
-        const lastIdx = slices.length - 1;
         setSlices(prev => {
-            const updated = [...prev];
-            const currentAmt = parseFloat(updated[lastIdx].amount) || 0;
-            updated[lastIdx] = {
-                ...updated[lastIdx],
-                amount: (currentAmt + remainingAmount).toFixed(2)
-            };
-            return updated;
+            const removed = prev[index];
+            const filtered = prev.filter((_, i) => i !== index);
+            const lastIdx = filtered.length - 1;
+
+            if (splitMode === 'RATIO') {
+                const removedWeight = parseFloat(removed.ratio) || 0;
+                const currentLastWeight = parseFloat(filtered[lastIdx].ratio) || 0;
+                const newWeight = Math.round(currentLastWeight + removedWeight);
+                filtered[lastIdx] = { ...filtered[lastIdx], ratio: newWeight.toString() };
+            } else {
+                const removedAmt = parseFloat(removed.amount) || 0;
+                const currentLastAmt = parseFloat(filtered[lastIdx].amount) || 0;
+                const newAmt = Number((currentLastAmt + removedAmt).toFixed(2));
+                filtered[lastIdx] = { ...filtered[lastIdx], amount: newAmt.toFixed(2) };
+            }
+            return filtered;
         });
     };
 
@@ -285,7 +392,7 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                     return `Please enter a valid amount for Part ${i + 1}.`;
                 }
             }
-            if (Math.abs(remainingAmount) >= 0.01) {
+            if (Math.abs(remainingAmount) >= 0.02) {
                 if (remainingAmount > 0) {
                     return `Unallocated balance of ${formatRupees(remainingAmount)} remaining.`;
                 } else {
@@ -354,66 +461,61 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
             noPadding={true}
         >
             <div className="flex flex-col h-full select-text pb-2">
-                {/* Clean Sub-header: Merchant & Total amount only */}
-                <div className="px-6 pt-3.5 pb-2.5 flex items-center justify-between border-b border-border-subtle shrink-0">
-                    <span className="text-xs font-medium text-text-muted truncate max-w-[65%]">
-                        {transaction?.merchant_name || 'Transaction'} {formattedDate ? `• ${formattedDate}` : ''}
+                {/* Clean Sub-header: Merchant name & Date */}
+                <div className="px-6 pt-3 pb-2 flex items-center justify-between border-b border-border-subtle shrink-0">
+                    <span className="text-xs font-semibold text-text-primary truncate max-w-[65%]">
+                        {transaction?.merchant_name || 'Transaction'}
                     </span>
-                    <span className="text-sm font-bold font-mono tabular-nums text-text-primary shrink-0">
-                        Total {formatRupees(absTotal)}
-                    </span>
+                    {formattedDate && (
+                        <span className="text-xs font-mono text-text-muted shrink-0">
+                            {formattedDate}
+                        </span>
+                    )}
                 </div>
 
-                {/* Compact Mode Switcher & Equal Split Action */}
-                <div className="px-6 py-3 border-b border-border-subtle/60 flex items-center justify-between gap-3 shrink-0">
+                {/* Single Inline Row: Split by (Ratio & Amount with inline icons) & Total Amount */}
+                <div className="px-6 py-2.5 border-b border-border-subtle/60 flex items-center justify-between gap-3 shrink-0">
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
                             Split by:
                         </span>
                         <div className="inline-flex p-0.5 bg-surface-subtle border border-border-subtle rounded-lg gap-0.5">
                             <button
                                 type="button"
-                                onClick={() => {
-                                    haptics.selection();
-                                    setSplitMode('RATIO');
-                                }}
-                                className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
+                                onClick={() => handleModeSwitch('RATIO')}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-md transition-all ${
                                     splitMode === 'RATIO'
                                         ? 'bg-surface text-text-primary shadow-xs border border-border-subtle/50'
                                         : 'text-text-muted hover:text-text-primary'
                                 }`}
                             >
-                                Ratio (%)
+                                <Percent size={11} />
+                                <span>Ratio</span>
                             </button>
                             <button
                                 type="button"
-                                onClick={() => {
-                                    haptics.selection();
-                                    setSplitMode('AMOUNT');
-                                }}
-                                className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
+                                onClick={() => handleModeSwitch('AMOUNT')}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-md transition-all ${
                                     splitMode === 'AMOUNT'
                                         ? 'bg-surface text-text-primary shadow-xs border border-border-subtle/50'
                                         : 'text-text-muted hover:text-text-primary'
                                 }`}
                             >
-                                Amount (₹)
+                                <IndianRupee size={11} />
+                                <span>Amount</span>
                             </button>
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={handleSplitEvenly}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-semibold bg-surface-subtle hover:bg-surface-hover border border-border-subtle text-text-primary active:scale-95 transition-all"
-                        title="Split equally across all parts"
-                    >
-                        <Equal size={11} />
-                        <span>Split Evenly</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Total</span>
+                        <span className="text-sm font-bold font-mono tabular-nums text-text-primary">
+                            {formatRupees(absTotal)}
+                        </span>
+                    </div>
                 </div>
 
-                {/* Spacious Horizontal Carousel (Cards with Category & Sub-Category) */}
+                {/* Spacious Horizontal Carousel (Cards with Category, Sub-Category, and Auto-balanced Inputs) */}
                 <div className="px-6 py-4 flex-1 flex flex-col justify-center min-h-[340px]">
                     <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 pt-1 no-scrollbar items-stretch">
                         {slices.map((slice, idx) => {
@@ -510,7 +612,7 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                                         </div>
                                     </div>
 
-                                    {/* Part Value: Input & Resulting Amount */}
+                                    {/* Part Value: Input & Resulting Amount (Auto-balances other parts) */}
                                     <div className="pt-3 border-t border-border-subtle/50 space-y-1">
                                         <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
                                             {splitMode === 'RATIO' ? 'Ratio Weight (%)' : 'Amount (₹)'}
@@ -522,10 +624,11 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                                                     <input
                                                         type="number"
                                                         min="1"
+                                                        max="100"
                                                         step="any"
                                                         placeholder="e.g. 50"
                                                         value={slice.ratio}
-                                                        onChange={e => updateSlice(idx, 'ratio', e.target.value)}
+                                                        onChange={e => handleRatioChange(idx, e.target.value)}
                                                         className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-mono font-bold tabular-nums text-text-primary focus:outline-none focus:border-border-default"
                                                     />
                                                 </div>
@@ -546,10 +649,11 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                                                     <input
                                                         type="number"
                                                         min="0.01"
+                                                        max={absTotal}
                                                         step="0.01"
                                                         placeholder="0.00"
                                                         value={slice.amount}
-                                                        onChange={e => updateSlice(idx, 'amount', e.target.value)}
+                                                        onChange={e => handleAmountChange(idx, e.target.value)}
                                                         className="w-full bg-surface border border-border-subtle rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold tabular-nums text-text-primary focus:outline-none focus:border-border-default"
                                                     />
                                                 </div>
@@ -586,29 +690,21 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                 {/* Clean Sticky Bottom Bar: Status on left, "Split" on right */}
                 <div className="px-6 py-3.5 border-t border-border-subtle bg-surface flex items-center justify-between gap-3 shrink-0">
                     <div className="min-w-0">
-                        {splitMode === 'AMOUNT' && (
-                            Math.abs(remainingAmount) < 0.01 ? (
+                        {splitMode === 'AMOUNT' ? (
+                            Math.abs(remainingAmount) < 0.02 ? (
                                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-status-success uppercase tracking-wider">
                                     <Check size={13} /> Balanced
                                 </span>
-                            ) : remainingAmount > 0 ? (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-status-warning">
-                                        Remaining: {formatRupees(remainingAmount)}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={fillLastRemainder}
-                                        className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-subtle border border-border-subtle text-text-primary hover:bg-surface-hover active:scale-95 transition-all"
-                                    >
-                                        + Fill
-                                    </button>
-                                </div>
                             ) : (
-                                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-status-danger uppercase tracking-wider">
-                                    <AlertCircle size={13} /> Over by {formatRupees(Math.abs(remainingAmount))}
+                                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-status-warning uppercase tracking-wider">
+                                    <AlertCircle size={13} />
+                                    {remainingAmount > 0 ? `Remaining: ${formatRupees(remainingAmount)}` : `Over by: ${formatRupees(Math.abs(remainingAmount))}`}
                                 </span>
                             )
+                        ) : (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-status-success uppercase tracking-wider">
+                                <Check size={13} /> 100% Allocated
+                            </span>
                         )}
                     </div>
 

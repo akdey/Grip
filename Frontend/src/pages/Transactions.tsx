@@ -1153,13 +1153,17 @@ const TransactionItem = ({
                         )}
                     </div>
                     <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest truncate max-w-[100px]">
-                            {txn.sub_category}
-                        </span>
-                        <span className="text-[8px] text-text-muted/60">•</span>
                         <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest whitespace-nowrap">
                             {format(dateObj, 'MMM d')}
                         </span>
+                        {txn.remarks && (
+                            <>
+                                <span className="text-[8px] text-text-muted/60">•</span>
+                                <span className="text-[9px] text-text-muted font-medium truncate max-w-[120px]">
+                                    {txn.remarks}
+                                </span>
+                            </>
+                        )}
                     </div>
                     {txn.tags && txn.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
