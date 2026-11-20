@@ -860,9 +860,12 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
                                 type="button"
                                 onClick={handleDeleteConfirm}
                                 disabled={deleteGoalMutation.isPending}
-                                className="flex-1 py-2.5 rounded-xl bg-status-danger-solid hover:bg-status-danger-solid-hover text-white text-xs font-bold active:scale-95 transition-all shadow-xs"
+                                className="flex-1 py-2.5 rounded-xl bg-status-danger-solid hover:bg-status-danger-solid-hover text-white text-xs font-bold active:scale-95 transition-all shadow-xs flex items-center justify-center gap-1.5"
                             >
-                                {deleteGoalMutation.isPending ? 'Removing...' : 'Delete'}
+                                {deleteGoalMutation.isPending && (
+                                    <Loader2 size={13} className="animate-spin text-white" />
+                                )}
+                                <span>{deleteGoalMutation.isPending ? 'Removing...' : 'Delete'}</span>
                             </button>
                         </div>
                     </div>

@@ -262,10 +262,14 @@ const AddEntry: React.FC = () => {
         mutationFn: async (data: any) => await api.post('/categories/', data),
         onSuccess: (res) => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
+            toast.success(`Category "${res.data.name}" created`);
             setAddMode('NONE');
             setCategory(res.data.name);
             setSubCategory('Uncategorized');
             setCategoryOpen(false);
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to create category');
         }
     });
 
@@ -273,9 +277,13 @@ const AddEntry: React.FC = () => {
         mutationFn: async (data: any) => await api.post('/categories/sub-categories', data),
         onSuccess: (res) => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
+            toast.success(`Subcategory "${res.data.name}" created`);
             setAddMode('NONE');
             setSubCategory(res.data.name);
             setCategoryOpen(false);
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to create subcategory');
         }
     });
 
@@ -903,10 +911,14 @@ const AddEntry: React.FC = () => {
                                                 }
                                             }}
                                             disabled={!newName || createCategoryMutation.isPending || createSubCategoryMutation.isPending}
-                                            className="flex-[2] py-4 rounded-2xl bg-primary text-text-inverse font-black uppercase text-[10px] tracking-[2px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none"
+                                            className="flex-[2] py-4 rounded-2xl bg-primary text-text-inverse font-black uppercase text-[10px] tracking-[2px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2 border-none disabled:opacity-50"
                                         >
-                                            <Save size={16} />
-                                            {createCategoryMutation.isPending || createSubCategoryMutation.isPending ? 'Committing...' : 'Commit Node'}
+                                            {createCategoryMutation.isPending || createSubCategoryMutation.isPending ? (
+                                                <Loader2 size={16} className="animate-spin text-text-inverse" />
+                                            ) : (
+                                                <Save size={16} />
+                                            )}
+                                            <span>{createCategoryMutation.isPending || createSubCategoryMutation.isPending ? 'Committing...' : 'Commit Node'}</span>
                                         </button>
                                     </div>
                                 </div>

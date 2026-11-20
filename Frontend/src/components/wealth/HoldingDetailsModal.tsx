@@ -1,11 +1,12 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, TrendingUp, Pencil, Save, X, Check, Percent, Calendar, Lock, ShieldCheck, Landmark, FileText, UserCheck, MapPin, Loader2, History, ArrowUpRight, ArrowDownRight, CheckCircle2 } from 'lucide-react';
+import { ChevronDown, TrendingUp, Pencil, Save, X, Check, Percent, Calendar, Lock, ShieldCheck, Landmark, FileText, UserCheck, MapPin, Loader2, History, ArrowUpRight, ArrowDownRight, CheckCircle2, Trash2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { SIPDateAnalysis } from './SIPDateAnalysis';
 import { haptics } from '../../lib/haptics';
 import { api } from '../../lib/api';
+import { toast } from '../../lib/toast';
 
 interface HoldingDetailsModalProps {
     isOpen: boolean;
@@ -22,6 +23,26 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [savedSuccess, setSavedSuccess] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+
+    const handleDeleteHolding = async () => {
+        haptics.impact('medium');
+        if (!window.confirm(`Are you sure you want to remove "${currentHolding.name}" from your portfolio?`)) return;
+        setDeleting(true);
+        try {
+            await api.delete(`/wealth/holdings/${currentHolding.id}`);
+            toast.success("Holding removed from portfolio");
+            haptics.notification('success');
+            onUpdated?.();
+            onClose();
+        } catch (e: any) {
+            console.error('Failed to delete holding', e);
+            toast.error(e?.response?.data?.detail || "Failed to remove holding");
+            haptics.notification('error');
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     // Form state
     const [editCurrentValue, setEditCurrentValue] = useState<string>('');
@@ -221,6 +242,19 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                     <button
+                                        onClick={handleDeleteHolding}
+                                        disabled={deleting}
+                                        className="w-8 h-8 rounded-full bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-status-danger hover:bg-status-danger-bg hover:border-status-danger-border active:scale-90 transition-all shadow-xs disabled:opacity-50"
+                                        title="Delete holding"
+                                        aria-label="Delete holding"
+                                    >
+                                        {deleting ? (
+                                            <Loader2 size={13} className="animate-spin text-status-danger" />
+                                        ) : (
+                                            <Trash2 size={13} />
+                                        )}
+                                    </button>
+                                    <button
                                         onClick={() => {
                                             haptics.selection();
                                             setIsEditing(!isEditing);
@@ -366,13 +400,17 @@ export const HoldingDetailsModal: React.FC<HoldingDetailsModalProps> = ({ isOpen
                                                 disabled={saving}
                                                 className="px-6 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-50"
                                             >
-                                                {savedSuccess ? (
+                                                {saving ? (
+                                                    <>
+                                                        <Loader2 size={14} className="animate-spin" /> Saving...
+                                                    </>
+                                                ) : savedSuccess ? (
                                                     <>
                                                         <Check size={14} /> Saved!
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <Save size={14} /> {saving ? 'Saving...' : 'Save Changes'}
+                                                        <Save size={14} /> Save Changes
                                                     </>
                                                 )}
                                             </button>

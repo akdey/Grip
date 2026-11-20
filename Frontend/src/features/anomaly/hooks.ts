@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { toast } from '../../lib/toast';
 
 export interface AnomalyFlag {
     id: string;
@@ -47,9 +48,15 @@ export const useScanAnomalies = () => {
             const { data } = await api.post('/anomaly/scan');
             return data;
         },
-        onSuccess: () => {
+        onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['anomaly-flags'] });
+            toast.success(data?.new_anomalies_found && data.new_anomalies_found > 0 
+                ? `Scan complete: ${data.new_anomalies_found} new signal(s) found`
+                : 'Scan complete: all clear');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Anomaly scan failed');
+        }
     });
 };
 
@@ -62,7 +69,11 @@ export const useDismissAnomaly = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['anomaly-flags'] });
+            toast.success('Anomaly signal dismissed');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to dismiss signal');
+        }
     });
 };
 
@@ -75,6 +86,10 @@ export const useDismissAllAnomalies = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['anomaly-flags'] });
+            toast.success('All anomaly signals dismissed');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to dismiss signals');
+        }
     });
 };

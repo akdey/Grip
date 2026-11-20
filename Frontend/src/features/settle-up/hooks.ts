@@ -1,6 +1,7 @@
 // Settle Up (Peer Ledger) Hooks
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { toast } from '../../lib/toast';
 
 export interface PeerBalance {
     peer_name: string;
@@ -70,7 +71,11 @@ export const useAddLedgerEntry = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['settle-up-balances'] });
             queryClient.invalidateQueries({ queryKey: ['settle-up-history'] });
+            toast.success('Ledger record saved');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to save record');
+        }
     });
 };
 
@@ -85,7 +90,11 @@ export const useUpdateSettleUpEntry = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['settle-up-balances'] });
             queryClient.invalidateQueries({ queryKey: ['settle-up-history'] });
+            toast.success('Ledger record updated');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to update record');
+        }
     });
 };
 
@@ -100,7 +109,11 @@ export const useDeleteSettleUpEntry = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['settle-up-balances'] });
             queryClient.invalidateQueries({ queryKey: ['settle-up-history'] });
+            toast.success('Ledger record deleted');
         },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || 'Failed to delete record');
+        }
     });
 };
 

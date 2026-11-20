@@ -581,6 +581,7 @@ const SettleUp: React.FC = () => {
                                 formatCurrency={formatCurrency}
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
+                                isDeleting={deleteMutation.isPending}
                                 onQuickSettle={handleQuickSettle}
                                 onOpenReminder={(p) => setReminderPeer(p)}
                                 onEditContact={(p) => setEditingContactPeer(p)}
@@ -875,6 +876,7 @@ const SettleUp: React.FC = () => {
     formatCurrency: (n: number) => string;
     onEdit: (entry: LedgerEntry) => void;
     onDelete: (id: string) => void;
+    isDeleting?: boolean;
     onQuickSettle: (peerName: string, balance: number) => void;
     onOpenReminder?: (peer: PeerBalance) => void;
     onEditContact?: (peer: PeerBalance) => void;
@@ -889,6 +891,7 @@ const SettleUp: React.FC = () => {
                     formatCurrency,
                     onEdit,
                     onDelete,
+                    isDeleting,
                     onQuickSettle,
                     onOpenReminder,
                     onEditContact
@@ -1077,10 +1080,15 @@ const SettleUp: React.FC = () => {
                                                 setSelectedEntry(null);
                                                 onDelete(id);
                                             }}
-                                            className="px-4 py-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-rose-500/20 active:scale-95 transition-all"
+                                            disabled={isDeleting}
+                                            className="px-4 py-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-rose-500/20 active:scale-95 transition-all disabled:opacity-50"
                                         >
-                                            <Trash2 size={15} />
-                                            <span>Delete</span>
+                                            {isDeleting ? (
+                                                <Loader2 size={15} className="animate-spin text-rose-500" />
+                                            ) : (
+                                                <Trash2 size={15} />
+                                            )}
+                                            <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
                                         </button>
                                     </div>
                                 </div>

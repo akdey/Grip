@@ -839,9 +839,10 @@ const More: React.FC = () => {
                                     <Button
                                         type="submit"
                                         disabled={isSavingContact}
+                                        isLoading={isSavingContact}
                                         className="px-4 text-xs font-bold shrink-0"
                                     >
-                                        {isSavingContact ? 'Saving...' : 'Save'}
+                                        Save
                                     </Button>
                                 </div>
 

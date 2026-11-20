@@ -14,7 +14,8 @@ import {
     ArrowRight,
     ExternalLink,
     AlertTriangle,
-    Check
+    Check,
+    Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -419,9 +420,12 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                                                 type="button"
                                                 onClick={handleDismissAll}
                                                 disabled={dismissAllMutation.isPending}
-                                                className="px-2.5 py-1.5 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-xs font-semibold text-text-muted hover:text-text-primary active:scale-95 transition-all"
+                                                className="px-2.5 py-1.5 rounded-xl bg-surface hover:bg-surface-hover border border-border-subtle text-xs font-semibold text-text-muted hover:text-text-primary active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-50"
                                             >
-                                                Dismiss All
+                                                {dismissAllMutation.isPending && (
+                                                    <Loader2 size={12} className="animate-spin text-accent-text" />
+                                                )}
+                                                <span>{dismissAllMutation.isPending ? 'Dismissing...' : 'Dismiss All'}</span>
                                             </button>
                                         )}
 
@@ -535,11 +539,16 @@ export const GripRadar: React.FC<GripRadarProps> = memo(({ formatCurrency }) => 
                                                                 <button
                                                                     type="button"
                                                                     onClick={(e) => handleDismiss(e, flag.id)}
-                                                                    className="py-2 px-3.5 rounded-xl bg-surface-pill hover:bg-surface-hover border border-border-subtle hover:border-status-danger-border text-xs font-semibold text-text-muted hover:text-status-danger flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                                                                    disabled={dismissMutation.isPending && dismissMutation.variables === flag.id}
+                                                                    className="py-2 px-3.5 rounded-xl bg-surface-pill hover:bg-surface-hover border border-border-subtle hover:border-status-danger-border text-xs font-semibold text-text-muted hover:text-status-danger flex items-center justify-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
                                                                     title="Dismiss anomaly flag"
                                                                 >
-                                                                    <Check size={12} />
-                                                                    <span>Dismiss</span>
+                                                                    {dismissMutation.isPending && dismissMutation.variables === flag.id ? (
+                                                                        <Loader2 size={12} className="animate-spin text-accent-text" />
+                                                                    ) : (
+                                                                        <Check size={12} />
+                                                                    )}
+                                                                    <span>{dismissMutation.isPending && dismissMutation.variables === flag.id ? 'Dismissing...' : 'Dismiss'}</span>
                                                                 </button>
                                                             </div>
                                                         </motion.div>
