@@ -140,6 +140,18 @@ export const useSplitTransaction = () => {
     });
 };
 
+export const useSplitGroup = (transactionId?: string, enabled = true) => {
+    return useQuery({
+        queryKey: ['transactions', 'split-group', transactionId],
+        queryFn: async () => {
+            if (!transactionId) return [];
+            const { data } = await api.get<Transaction[]>(`/transactions/${transactionId}/split-group`);
+            return data;
+        },
+        enabled: Boolean(transactionId && enabled)
+    });
+};
+
 export const useTransaction = (id?: string) => {
     return useQuery({
         queryKey: ['transaction', id],

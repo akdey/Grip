@@ -6,7 +6,7 @@ import { toast } from '../../lib/toast';
 export type TransactionType = 'EXPENSE' | 'INCOME' | 'INVESTMENT';
 
 export type { Transaction, TransactionSplitSlice, TransactionSplitRequest } from './hooks';
-export { useSplitTransaction } from './hooks';
+export { useSplitTransaction, useSplitGroup } from './hooks';
 
 export interface SubCategory {
     id: string;

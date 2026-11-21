@@ -413,6 +413,24 @@ class TransactionService:
         txns = await self._attach_icons([txn])
         return txns[0]
 
+    async def get_split_group(self, transaction_id: UUID, user_id: UUID) -> List[Transaction]:
+        stmt = select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user_id)
+        result = await self.db.execute(stmt)
+        txn = result.scalar_one_or_none()
+        if not txn:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+
+        if not txn.split_group_id:
+            return await self._attach_icons([txn])
+
+        group_stmt = select(Transaction).where(
+            Transaction.split_group_id == txn.split_group_id,
+            Transaction.user_id == user_id
+        ).order_by(Transaction.created_at.asc())
+        group_res = await self.db.execute(group_stmt)
+        group_txns = group_res.scalars().all()
+        return await self._attach_icons(group_txns)
+
     async def split_transaction(
         self,
         transaction_id: UUID,
@@ -429,7 +447,22 @@ class TransactionService:
         if not request.splits or len(request.splits) < 2:
             raise HTTPException(status_code=400, detail="Transaction split requires at least 2 slices")
 
-        parent_amount = Decimal(str(parent.amount))
+        existing_group_id = parent.split_group_id
+        if existing_group_id:
+            # Re-split / update the entire existing group
+            group_stmt = select(Transaction).where(
+                Transaction.split_group_id == existing_group_id,
+                Transaction.user_id == user_id
+            )
+            group_res = await self.db.execute(group_stmt)
+            existing_txns_to_delete = group_res.scalars().all()
+            parent_amount = sum(Decimal(str(t.amount)) for t in existing_txns_to_delete)
+            group_id = existing_group_id
+        else:
+            existing_txns_to_delete = [parent]
+            parent_amount = Decimal(str(parent.amount))
+            group_id = uuid.uuid4()
+
         is_negative = parent_amount < Decimal("0")
         abs_parent_amount = abs(parent_amount)
         split_mode = (request.split_mode or "RATIO").upper()
@@ -480,7 +513,6 @@ class TransactionService:
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported split mode '{split_mode}'. Use 'RATIO' or 'AMOUNT'.")
 
-        group_id = uuid.uuid4()
         created_txns = []
 
         for idx, (s, amt) in enumerate(zip(request.splits, slice_amounts)):
@@ -509,24 +541,25 @@ class TransactionService:
             self.db.add(child)
             created_txns.append(child)
 
-        # Remove parent offset / settle up entry if present
-        offset_stmt = select(Transaction).where(
-            Transaction.user_id == user_id,
-            Transaction.raw_content_hash == f"CC-OFFSET-{transaction_id}"
-        )
-        offset_res = await self.db.execute(offset_stmt)
-        offset_txn = offset_res.scalar_one_or_none()
-        if offset_txn:
-            await self.db.delete(offset_txn)
+        # Remove parent / previous group entries and their offsets/settle-up
+        for old_txn in existing_txns_to_delete:
+            offset_stmt = select(Transaction).where(
+                Transaction.user_id == user_id,
+                Transaction.raw_content_hash == f"CC-OFFSET-{old_txn.id}"
+            )
+            offset_res = await self.db.execute(offset_stmt)
+            offset_txn = offset_res.scalar_one_or_none()
+            if offset_txn:
+                await self.db.delete(offset_txn)
 
-        settle_stmt = select(SettleUpEntry).where(SettleUpEntry.transaction_id == transaction_id)
-        settle_res = await self.db.execute(settle_stmt)
-        settle_entry = settle_res.scalar_one_or_none()
-        if settle_entry:
-            await self.db.delete(settle_entry)
+            settle_stmt = select(SettleUpEntry).where(SettleUpEntry.transaction_id == old_txn.id)
+            settle_res = await self.db.execute(settle_stmt)
+            settle_entry = settle_res.scalar_one_or_none()
+            if settle_entry:
+                await self.db.delete(settle_entry)
 
-        # Delete the original parent transaction
-        await self.db.delete(parent)
+            await self.db.delete(old_txn)
+
         await self.db.flush()
 
         # Double-entry & settle up synchronization for children

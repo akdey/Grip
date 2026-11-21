@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { Drawer } from '../ui/Drawer';
 import { useCategories } from '../../features/transactions/categoryHooks';
-import { useSplitTransaction, type Transaction } from '../../features/transactions/hooks';
+import { useSplitTransaction, useSplitGroup, type Transaction } from '../../features/transactions/hooks';
 import { CategoryIcon } from '../ui/CategoryIcon';
 import { haptics } from '../../lib/haptics';
 import { toast } from '../../lib/toast';
@@ -40,10 +40,24 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
     const { data: categories } = useCategories();
     const splitMutation = useSplitTransaction();
 
-    const [splitMode, setSplitMode] = useState<'RATIO' | 'AMOUNT'>('RATIO');
-    const absTotal = useMemo(() => Math.abs(Number(transaction?.amount || 0)), [transaction]);
+    const isAlreadySplit = Boolean(transaction?.split_group_id);
+    const { data: groupData, isLoading: isLoadingGroup } = useSplitGroup(
+        transaction?.id,
+        Boolean(isOpen && transaction?.id && isAlreadySplit)
+    );
 
-    // Initial state setup with 50/50 balance
+    const [splitMode, setSplitMode] = useState<'RATIO' | 'AMOUNT'>('RATIO');
+
+    // Calculate effective total amount: full group sum if already split, else single transaction amount
+    const absTotal = useMemo(() => {
+        if (isAlreadySplit && groupData && groupData.length > 0) {
+            const sum = groupData.reduce((acc, t) => acc + Math.abs(Number(t.amount || 0)), 0);
+            return Number(sum.toFixed(2));
+        }
+        return Math.abs(Number(transaction?.amount || 0));
+    }, [transaction, isAlreadySplit, groupData]);
+
+    // Initial state setup with 50/50 balance or existing group slices
     const [slices, setSlices] = useState<SliceState[]>([
         {
             category: transaction?.category || '',
@@ -61,9 +75,28 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
         }
     ]);
 
-    // Re-initialize when modal opens or transaction changes
+    // Initialize or re-populate when modal opens, transaction changes, or group data arrives
     useEffect(() => {
-        if (isOpen && transaction) {
+        if (!isOpen || !transaction) return;
+
+        if (isAlreadySplit && groupData && groupData.length > 0) {
+            // Pre-populate slices from existing split group members!
+            const totalSum = groupData.reduce((acc, t) => acc + Math.abs(Number(t.amount || 0)), 0);
+            const populated = groupData.map(t => {
+                const amt = Math.abs(Number(t.amount || 0));
+                const pct = totalSum > 0 ? (amt / totalSum) * 100 : 0;
+                return {
+                    category: t.category || '',
+                    sub_category: t.sub_category || '',
+                    amount: amt.toFixed(2),
+                    ratio: Math.round(pct).toString(),
+                    remarks: t.remarks || ''
+                };
+            });
+            setSlices(populated);
+            setSplitMode('RATIO');
+        } else if (!isAlreadySplit) {
+            // Fresh split: initialize 50/50
             const firstCat = transaction.category || (categories && categories[0]?.name) || '';
             const firstSub = transaction.sub_category || '';
             const halfAmt = Number(((absTotal * 50) / 100).toFixed(2));
@@ -87,7 +120,7 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
             ]);
             setSplitMode('RATIO');
         }
-    }, [isOpen, transaction, absTotal]);
+    }, [isOpen, transaction, isAlreadySplit, groupData, absTotal, categories]);
 
     // Format currency helper
     const formatRupees = (val: number) => {
@@ -209,7 +242,6 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
         }
 
         if (slices.length > 1) {
-            // Adjust the last slice, or slice 0 if the user is editing the last slice
             const targetIdx = idx === slices.length - 1 ? 0 : slices.length - 1;
             const otherSum = slices.reduce((sum, s, i) => {
                 if (i === targetIdx) return sum;
@@ -456,7 +488,7 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
         <Drawer
             isOpen={isOpen}
             onClose={onClose}
-            title="Split Transaction"
+            title={isAlreadySplit ? "Edit Split Group" : "Split Transaction"}
             height="max-h-[92vh] h-auto"
             noPadding={true}
         >
@@ -517,174 +549,181 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
 
                 {/* Spacious Horizontal Carousel (Cards with Category, Sub-Category, and Auto-balanced Inputs) */}
                 <div className="px-6 py-4 flex-1 flex flex-col justify-center min-h-[340px]">
-                    <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 pt-1 no-scrollbar items-stretch">
-                        {slices.map((slice, idx) => {
-                            const details = getCategoryDetails(slice.category, slice.sub_category);
-                            const ratioCalc = ratioCalculations[idx] || { amount: 0, percentage: 0 };
-                            const sliceColor = details.color;
+                    {isLoadingGroup ? (
+                        <div className="flex flex-col items-center justify-center py-16 gap-2">
+                            <Loader2 size={24} className="animate-spin text-accent" />
+                            <span className="text-xs text-text-muted font-medium">Loading split group...</span>
+                        </div>
+                    ) : (
+                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 pt-1 no-scrollbar items-stretch">
+                            {slices.map((slice, idx) => {
+                                const details = getCategoryDetails(slice.category, slice.sub_category);
+                                const ratioCalc = ratioCalculations[idx] || { amount: 0, percentage: 0 };
+                                const sliceColor = details.color;
 
-                            return (
-                                <div
-                                    key={idx}
-                                    className="w-[285px] sm:w-[325px] shrink-0 snap-start bg-surface-subtle/80 hover:bg-surface-subtle border border-border-subtle rounded-3xl p-4 flex flex-col justify-between space-y-3.5 transition-all shadow-xs relative"
-                                >
-                                    {/* Part Header: Tag, Icon, and Delete */}
-                                    <div className="flex items-center justify-between pb-2 border-b border-border-subtle/50">
-                                        <div className="flex items-center gap-2">
-                                            <div
-                                                className="w-6 h-6 rounded-lg flex items-center justify-center border shadow-2xs shrink-0"
-                                                style={{
-                                                    backgroundColor: `${sliceColor}18`,
-                                                    borderColor: `${sliceColor}30`,
-                                                    color: sliceColor
-                                                }}
-                                            >
-                                                <CategoryIcon name={details.icon} size={13} />
+                                return (
+                                    <div
+                                        key={idx}
+                                        className="w-[285px] sm:w-[325px] shrink-0 snap-start bg-surface-subtle/80 hover:bg-surface-subtle border border-border-subtle rounded-3xl p-4 flex flex-col justify-between space-y-3.5 transition-all shadow-xs relative"
+                                    >
+                                        {/* Part Header: Tag, Icon, and Delete */}
+                                        <div className="flex items-center justify-between pb-2 border-b border-border-subtle/50">
+                                            <div className="flex items-center gap-2">
+                                                <div
+                                                    className="w-6 h-6 rounded-lg flex items-center justify-center border shadow-2xs shrink-0"
+                                                    style={{
+                                                        backgroundColor: `${sliceColor}18`,
+                                                        borderColor: `${sliceColor}30`,
+                                                        color: sliceColor
+                                                    }}
+                                                >
+                                                    <CategoryIcon name={details.icon} size={13} />
+                                                </div>
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                                                    Part #{idx + 1}
+                                                </span>
                                             </div>
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                                                Part #{idx + 1}
-                                            </span>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => removeSlice(idx)}
+                                                disabled={slices.length <= 2}
+                                                className="w-7 h-7 rounded-lg bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-status-danger-text hover:bg-status-danger-bg hover:border-status-danger-border active:scale-90 transition-all disabled:opacity-20 disabled:pointer-events-none"
+                                                title="Remove part"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
                                         </div>
 
-                                        <button
-                                            type="button"
-                                            onClick={() => removeSlice(idx)}
-                                            disabled={slices.length <= 2}
-                                            className="w-7 h-7 rounded-lg bg-surface border border-border-subtle flex items-center justify-center text-text-muted hover:text-status-danger-text hover:bg-status-danger-bg hover:border-status-danger-border active:scale-90 transition-all disabled:opacity-20 disabled:pointer-events-none"
-                                            title="Remove part"
-                                        >
-                                            <Trash2 size={12} />
-                                        </button>
-                                    </div>
-
-                                    {/* Category, Sub-Category & Remarks */}
-                                    <div className="space-y-2.5 flex-1">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
-                                                Category
-                                            </label>
-                                            <select
-                                                value={slice.category}
-                                                onChange={e => handleCategoryChange(idx, e.target.value)}
-                                                className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-medium text-text-primary focus:outline-none focus:border-border-default transition-all"
-                                            >
-                                                <option value="" disabled>Select Category...</option>
-                                                {categories?.map(c => (
-                                                    <option key={c.id || c.name} value={c.name}>
-                                                        {c.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
-                                                Sub-Category
-                                            </label>
-                                            <select
-                                                value={slice.sub_category}
-                                                onChange={e => handleSubCategoryChange(idx, e.target.value)}
-                                                disabled={!slice.category}
-                                                className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-medium text-text-primary focus:outline-none focus:border-border-default transition-all disabled:opacity-40"
-                                            >
-                                                <option value="" disabled>Select Sub-category...</option>
-                                                {categories
-                                                    ?.find(c => c.name.toLowerCase() === slice.category.toLowerCase())
-                                                    ?.sub_categories?.map(s => (
-                                                        <option key={s.id || s.name} value={s.name}>
-                                                            {s.name}
+                                        {/* Category, Sub-Category & Remarks */}
+                                        <div className="space-y-2.5 flex-1">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
+                                                    Category
+                                                </label>
+                                                <select
+                                                    value={slice.category}
+                                                    onChange={e => handleCategoryChange(idx, e.target.value)}
+                                                    className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-medium text-text-primary focus:outline-none focus:border-border-default transition-all"
+                                                >
+                                                    <option value="" disabled>Select Category...</option>
+                                                    {categories?.map(c => (
+                                                        <option key={c.id || c.name} value={c.name}>
+                                                            {c.name}
                                                         </option>
                                                     ))}
-                                            </select>
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
+                                                    Sub-Category
+                                                </label>
+                                                <select
+                                                    value={slice.sub_category}
+                                                    onChange={e => handleSubCategoryChange(idx, e.target.value)}
+                                                    disabled={!slice.category}
+                                                    className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-medium text-text-primary focus:outline-none focus:border-border-default transition-all disabled:opacity-40"
+                                                >
+                                                    <option value="" disabled>Select Sub-category...</option>
+                                                    {categories
+                                                        ?.find(c => c.name.toLowerCase() === slice.category.toLowerCase())
+                                                        ?.sub_categories?.map(s => (
+                                                            <option key={s.id || s.name} value={s.name}>
+                                                                {s.name}
+                                                            </option>
+                                                        ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
+                                                    Remarks (Optional)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. Groceries, Personal items"
+                                                    value={slice.remarks}
+                                                    onChange={e => updateSlice(idx, 'remarks', e.target.value)}
+                                                    className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-border-default transition-all"
+                                                />
+                                            </div>
                                         </div>
 
-                                        <div className="space-y-1">
+                                        {/* Part Value: Input & Resulting Amount (Auto-balances other parts) */}
+                                        <div className="pt-3 border-t border-border-subtle/50 space-y-1">
                                             <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
-                                                Remarks (Optional)
+                                                {splitMode === 'RATIO' ? 'Ratio Weight (%)' : 'Amount (₹)'}
                                             </label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. Groceries, Personal items"
-                                                value={slice.remarks}
-                                                onChange={e => updateSlice(idx, 'remarks', e.target.value)}
-                                                className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-border-default transition-all"
-                                            />
+
+                                            {splitMode === 'RATIO' ? (
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="relative flex-1">
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            max="100"
+                                                            step="any"
+                                                            placeholder="e.g. 50"
+                                                            value={slice.ratio}
+                                                            onChange={e => handleRatioChange(idx, e.target.value)}
+                                                            className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-mono font-bold tabular-nums text-text-primary focus:outline-none focus:border-border-default"
+                                                        />
+                                                    </div>
+
+                                                    <div className="text-right shrink-0">
+                                                        <span className="text-sm font-bold font-mono tabular-nums text-text-primary block leading-tight">
+                                                            {formatRupees(ratioCalc.amount)}
+                                                        </span>
+                                                        <span className="text-[10px] font-mono text-text-muted block leading-tight">
+                                                            {ratioCalc.percentage > 0 ? `${ratioCalc.percentage.toFixed(1)}%` : '—'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="relative flex-1">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-text-muted font-mono">₹</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0.01"
+                                                            max={absTotal}
+                                                            step="0.01"
+                                                            placeholder="0.00"
+                                                            value={slice.amount}
+                                                            onChange={e => handleAmountChange(idx, e.target.value)}
+                                                            className="w-full bg-surface border border-border-subtle rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold tabular-nums text-text-primary focus:outline-none focus:border-border-default"
+                                                        />
+                                                    </div>
+                                                    <div className="text-right shrink-0">
+                                                        <span className="text-[10px] font-mono text-text-muted tabular-nums block">
+                                                            {absTotal > 0 && parseFloat(slice.amount) > 0
+                                                                ? `${(((parseFloat(slice.amount) || 0) / absTotal) * 100).toFixed(1)}%`
+                                                                : '—'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
+                                );
+                            })}
 
-                                    {/* Part Value: Input & Resulting Amount (Auto-balances other parts) */}
-                                    <div className="pt-3 border-t border-border-subtle/50 space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
-                                            {splitMode === 'RATIO' ? 'Ratio Weight (%)' : 'Amount (₹)'}
-                                        </label>
-
-                                        {splitMode === 'RATIO' ? (
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div className="relative flex-1">
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        max="100"
-                                                        step="any"
-                                                        placeholder="e.g. 50"
-                                                        value={slice.ratio}
-                                                        onChange={e => handleRatioChange(idx, e.target.value)}
-                                                        className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-xs font-mono font-bold tabular-nums text-text-primary focus:outline-none focus:border-border-default"
-                                                    />
-                                                </div>
-
-                                                <div className="text-right shrink-0">
-                                                    <span className="text-sm font-bold font-mono tabular-nums text-text-primary block leading-tight">
-                                                        {formatRupees(ratioCalc.amount)}
-                                                    </span>
-                                                    <span className="text-[10px] font-mono text-text-muted block leading-tight">
-                                                        {ratioCalc.percentage > 0 ? `${ratioCalc.percentage.toFixed(1)}%` : '—'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div className="relative flex-1">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-text-muted font-mono">₹</span>
-                                                    <input
-                                                        type="number"
-                                                        min="0.01"
-                                                        max={absTotal}
-                                                        step="0.01"
-                                                        placeholder="0.00"
-                                                        value={slice.amount}
-                                                        onChange={e => handleAmountChange(idx, e.target.value)}
-                                                        className="w-full bg-surface border border-border-subtle rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold tabular-nums text-text-primary focus:outline-none focus:border-border-default"
-                                                    />
-                                                </div>
-                                                <div className="text-right shrink-0">
-                                                    <span className="text-[10px] font-mono text-text-muted tabular-nums block">
-                                                        {absTotal > 0 && parseFloat(slice.amount) > 0
-                                                            ? `${(((parseFloat(slice.amount) || 0) / absTotal) * 100).toFixed(1)}%`
-                                                            : '—'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
+                            {/* Add Part Slot */}
+                            <div
+                                onClick={addSlice}
+                                className="w-[140px] sm:w-[160px] shrink-0 snap-start rounded-3xl border-2 border-dashed border-border-subtle hover:border-border-default flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-surface-subtle transition-all active:scale-95 text-text-muted hover:text-text-primary group select-none min-h-[300px]"
+                                title="Add another part"
+                            >
+                                <div className="w-9 h-9 rounded-full bg-surface-subtle group-hover:bg-surface border border-border-subtle flex items-center justify-center text-text-muted group-hover:text-text-primary transition-all">
+                                    <Plus size={16} />
                                 </div>
-                            );
-                        })}
-
-                        {/* Add Part Slot */}
-                        <div
-                            onClick={addSlice}
-                            className="w-[140px] sm:w-[160px] shrink-0 snap-start rounded-3xl border-2 border-dashed border-border-subtle hover:border-border-default flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-surface-subtle transition-all active:scale-95 text-text-muted hover:text-text-primary group select-none min-h-[300px]"
-                            title="Add another part"
-                        >
-                            <div className="w-9 h-9 rounded-full bg-surface-subtle group-hover:bg-surface border border-border-subtle flex items-center justify-center text-text-muted group-hover:text-text-primary transition-all">
-                                <Plus size={16} />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">
+                                    Add Part
+                                </span>
                             </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider">
-                                Add Part
-                            </span>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Clean Sticky Bottom Bar: Status on left, "Split" on right */}
@@ -727,10 +766,10 @@ export const SplitTransactionModal: React.FC<SplitTransactionModalProps> = ({
                             {splitMutation.isPending ? (
                                 <>
                                     <Loader2 size={13} className="animate-spin" />
-                                    <span>Splitting...</span>
+                                    <span>Updating...</span>
                                 </>
                             ) : (
-                                <span>Split</span>
+                                <span>{isAlreadySplit ? "Update Split" : "Split"}</span>
                             )}
                         </button>
                     </div>

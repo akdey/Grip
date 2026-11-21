@@ -95,6 +95,14 @@ async def split_transaction(
 ):
     return await service.split_transaction(transaction_id=transaction_id, user_id=current_user.id, request=split_data)
 
+@router.get("/{transaction_id}/split-group", response_model=List[schemas.TransactionResponse])
+async def get_split_group(
+    transaction_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[TransactionService, Depends()]
+):
+    return await service.get_split_group(transaction_id=transaction_id, user_id=current_user.id)
+
 @router.get("/{transaction_id}", response_model=schemas.TransactionResponse)
 async def get_transaction(
     transaction_id: UUID,

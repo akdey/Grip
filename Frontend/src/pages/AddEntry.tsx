@@ -359,11 +359,11 @@ const AddEntry: React.FC = () => {
                                 <button
                                     type="button"
                                     onClick={() => setIsSplitModalOpen(true)}
-                                    title="Split transaction"
+                                    title={existingTxn.split_group_id ? "Edit split group" : "Split transaction"}
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-subtle border border-border-subtle text-xs font-semibold text-text-primary hover:bg-surface-hover active:scale-95 transition-all"
                                 >
                                     <GitFork size={16} className="text-accent" />
-                                    <span>Split</span>
+                                    <span>{existingTxn.split_group_id ? 'Edit Split' : 'Split'}</span>
                                 </button>
                             )}
                             <button
