@@ -1,0 +1,3 @@
+# Ignore CI/CD workflow YAMLs so they don't pollute code architecture graph with env blocks
+.github/workflows/
+.github/

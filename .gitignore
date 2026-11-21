@@ -23,6 +23,9 @@ Backend/logs/
 alembic/*
 Backend/scripts/
 scripts/
-UnusedDocs
+# Graphify
+graphify-out/*
+!graphify-out/GRAPH_REPORT.md
+
 
 
