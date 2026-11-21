@@ -7,6 +7,7 @@ import os
 import threading
 from typing import Optional, Dict, Any, List
 from app.core.config import get_settings
+from app.core.llm_cache_adapter import get_task_cache_adapter
 
 print(">>> LLM MODULE IMPORTED", flush=True)
 
@@ -33,6 +34,8 @@ class LocalLLMEngine:
         self._inference_lock = threading.Lock()
         self.repo_id = settings.LOCAL_MODEL_REPO
         self.filename = settings.LOCAL_MODEL_FILE
+        # Adaptive Infrastructure Layer: Pluggable Task-Prefix Cache Strategy
+        self.cache_adapter = get_task_cache_adapter()
         # Anchor models_dir reliably to Backend/models or settings.LOCAL_MODEL_DIR
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         if os.path.isabs(settings.LOCAL_MODEL_DIR):
@@ -111,13 +114,11 @@ class LocalLLMEngine:
                         verbose=False
                     )
 
-                # Attach KV RAM Cache for instant prompt prefix reuse across emails in a sync
+                # Attach Adaptive Infrastructure Cache Adapter
                 try:
-                    from llama_cpp import LlamaRAMCache
-                    self._model.set_cache(LlamaRAMCache(capacity_bytes=256 * 1024 * 1024))
-                    logger.info("LocalLLMEngine: Attached LlamaRAMCache for KV prefix caching.")
+                    self.cache_adapter.attach_to_model(self._model)
                 except Exception as cache_err:
-                    logger.debug(f"LocalLLMEngine: KV cache setup skipped: {cache_err}")
+                    logger.debug(f"LocalLLMEngine: Adaptive cache setup skipped: {cache_err}")
 
                 logger.info(f"Local LLM engine initialized (ctx: {settings.LOCAL_LLM_CONTEXT}, threads: {threads}, gpu_layers: {gpu_layers}).")
                 return self._model
@@ -133,8 +134,8 @@ class LocalLLMEngine:
         text = re.sub(r'<\|channel>thought.*?<channel\|>', '', text, flags=re.DOTALL)
         return text.strip()
 
-    def generate(self, prompt: str, system_prompt: str, temperature: float) -> Optional[str]:
-        """Generate response using the local model."""
+    def generate(self, prompt: str, system_prompt: str, temperature: float, task: Optional[str] = None) -> Optional[str]:
+        """Generate response using the local model with Adaptive Task-Prefix Caching."""
         model = self._ensure_model()
         if not model:
             return None
@@ -145,7 +146,7 @@ class LocalLLMEngine:
             return None
 
         try:
-            logger.debug(f"LocalLLMEngine: Starting inference with Gemma 4...")
+            logger.debug(f"LocalLLMEngine: Starting inference with Gemma 4 (task: {task or 'general'})...")
             import time
             start_t = time.perf_counter()
             
@@ -176,6 +177,16 @@ class LocalLLMEngine:
             inf_time = (time.perf_counter() - start_t) * 1000
             text = self._strip_thoughts(raw_text)
             logger.info(f"⚡ [Gemma 4] Inference complete in {inf_time:.0f}ms (generated {len(text)} chars)")
+
+            # Pin prefix state for this task if not already pinned
+            if task and system_prompt and not self.cache_adapter.is_task_pinned(task):
+                try:
+                    sys_tokens = model.tokenize(system_prompt.encode('utf-8'))
+                    if sys_tokens:
+                        self.cache_adapter.pin_task_prefix(task, sys_tokens, model.save_state())
+                except Exception as pin_err:
+                    logger.debug(f"[TaskCacheAdapter] Could not auto-pin task prefix for {task}: {pin_err}")
+
             return text
         except Exception as e:
             logger.error(f"Error during local LLM inference: {e}")
@@ -223,7 +234,8 @@ class LLMService:
         system_prompt: Optional[str] = "You are a helpful financial assistant.",
         temperature: float = 0.5,
         response_format: Optional[str] = None,
-        timeout: float = 120.0 # Increased timeout for local inference
+        timeout: float = 120.0, # Increased timeout for local inference
+        task: Optional[str] = None
     ) -> Optional[str]:
         """Generic method to generate a response, prioritizing local execution."""
         global HAS_LLAMA_CPP
@@ -238,7 +250,8 @@ class LLMService:
                         self.local_engine.generate, 
                         prompt, 
                         system_prompt, 
-                        temperature
+                        temperature,
+                        task
                     ),
                     timeout=timeout
                 )
@@ -316,7 +329,8 @@ class LLMService:
         prompt: str, 
         system_prompt: Optional[str] = "You are a financial intelligence engine. Always output valid JSON objects.",
         temperature: float = 0.2,
-        timeout: float = 150.0
+        timeout: float = 150.0,
+        task: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """Method specifically for JSON responses with robust parsing."""
         content = await self.generate_response(
@@ -324,7 +338,8 @@ class LLMService:
             system_prompt=system_prompt,
             temperature=temperature,
             response_format="json_object",
-            timeout=timeout
+            timeout=timeout,
+            task=task
         )
         
         if not content:

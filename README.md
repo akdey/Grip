@@ -57,6 +57,7 @@ While others make you wait for "syncs" or manual entries, Grip is built to get y
 
 ### 🤖 Hybrid Intelligence — Fast, Private, Reliable
 - **Local LLM Engine (Primary)**: Google's Gemma 4 E4B Instruct model (`bartowski/google_gemma-4-E4B-it-GGUF` via `llama-cpp-python`) runs natively on your server for transaction classification and entity extraction. Its 4096-token context window comfortably ingests full notifications with complete contextual disclaimers.
+- **Adaptive Task-Prefix Cache Layer**: Pluggable infrastructure adapter (`TransientTaskPrefixAdapter`) that pins compiled KV attention state snapshots per task in memory and persists them to disk (`models/kv_cache/{task}.state`), bypassing the 60–120s CPU prompt ingestion latency across email batches while isolating background jobs (forecasting, digests).
 - **Rule Engine (Fallback)**: A deterministic pattern-matching engine handles edge-case formats if local inference is unavailable.
 - **Automatic Transaction Extraction**: Connect Gmail once; transactions are extracted from bank alerts automatically.
 - **Webhook Sync Optimization**: Intelligent 5-second debouncing and concurrency guards prevent redundant syncs from batch emails.
