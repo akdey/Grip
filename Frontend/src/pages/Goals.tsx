@@ -48,6 +48,38 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
     const [feasibilityError, setFeasibilityError] = useState<string | null>(null);
     const [customIncome, setCustomIncome] = useState<string>('');
     const [isEditingIncome, setIsEditingIncome] = useState(false);
+    const [freezePercentage, setFreezePercentage] = useState<number>(50);
+
+    // Live computed allocation preview based on user's slider
+    const allocationPreview = useMemo(() => {
+        if (!feasibility) return null;
+        const currentSafe = feasibility.available_monthly_liquidity || 0;
+        const fraction = Math.min(1.0, Math.max(0.05, freezePercentage / 100));
+        const safeCap = currentSafe * fraction;
+        const salaryCycles = feasibility.salary_cycles_count || 0;
+        const targetAmt = parseFloat(formAmount || '0');
+        
+        let freezeNow = 0;
+        if (salaryCycles === 0) {
+            freezeNow = Math.min(targetAmt, safeCap);
+        } else {
+            freezeNow = Math.min(feasibility.required_monthly_savings, safeCap);
+        }
+        freezeNow = Math.round(freezeNow);
+        const cushionLeft = Math.max(0, currentSafe - freezeNow);
+        const daysInCycle = feasibility.days_left_in_cycle || 15;
+        const dailyCushion = Math.round(cushionLeft / Math.max(1, daysInCycle));
+        const nextCycleNeed = salaryCycles > 0 ? Math.max(0, Math.round((targetAmt - freezeNow) / salaryCycles)) : 0;
+
+        return {
+            freezeNow,
+            cushionLeft,
+            dailyCushion,
+            nextCycleNeed,
+            salaryCycles,
+            daysInCycle
+        };
+    }, [feasibility, freezePercentage, formAmount]);
 
     // Metrics Overview
     const stats = useMemo(() => {
@@ -88,13 +120,20 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
         setFeasibilityError(null);
         setCustomIncome('');
         setIsEditingIncome(false);
+        setFreezePercentage(50);
         setIsDrawerOpen(true);
     };
 
-    const handleCheckFeasibility = async (overrideIncome?: number, overrideAmount?: number, overrideDate?: string) => {
+    const handleCheckFeasibility = async (
+        overrideIncome?: number, 
+        overrideAmount?: number, 
+        overrideDate?: string,
+        overrideFreezePct?: number
+    ) => {
         const amtToUse = overrideAmount !== undefined ? overrideAmount : parseFloat(formAmount);
         const dateToUse = overrideDate !== undefined ? overrideDate : formDate;
         const nameToUse = formName.trim() || 'New Target';
+        const freezePctToUse = overrideFreezePct !== undefined ? overrideFreezePct : freezePercentage;
 
         if (!amtToUse || !dateToUse) {
             setFeasibilityError('Please provide both target amount and deadline to check feasibility.');
@@ -111,8 +150,12 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
                 target_amount: amtToUse,
                 target_date: dateToUse,
                 custom_expected_income: incomeToUse,
+                freeze_percentage: freezePctToUse,
             });
             setFeasibility(result);
+            if (result.current_freeze_percentage !== undefined && overrideFreezePct === undefined) {
+                setFreezePercentage(result.current_freeze_percentage);
+            }
             if (result.detected_income && !customIncome && overrideIncome === undefined) {
                 setCustomIncome(result.detected_income.toString());
             }
@@ -159,6 +202,7 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
                 target_amount: parseFloat(formAmount),
                 target_date: formDate,
                 custom_expected_income: customIncome ? parseFloat(customIncome) : undefined,
+                freeze_percentage: freezePercentage,
             });
 
             setIsDrawerOpen(false);
@@ -166,6 +210,7 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
             setFormAmount('');
             setFormDate('');
             setFeasibility(null);
+            setFreezePercentage(50);
         } catch (err: any) {
             console.error('Failed to create goal:', err);
         }
@@ -616,6 +661,82 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
                                     <p className="text-xs text-text-primary mb-3 leading-relaxed font-medium">
                                         {feasibility.message}
                                     </p>
+
+                                    {/* Interactive Safe-to-Spend Allocation Slider */}
+                                    {allocationPreview && feasibility.available_monthly_liquidity > 0 && (
+                                        <div className="bg-surface/90 rounded-2xl p-3.5 border border-border-subtle space-y-2.5 mb-3 shadow-xs">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1.5">
+                                                    <ShieldCheck size={14} className="text-primary shrink-0" />
+                                                    <span className="text-xs font-bold text-text-primary">Surplus Allocation (Safe-to-Spend)</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-xs font-mono font-black text-primary px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">
+                                                        {freezePercentage}%
+                                                    </span>
+                                                    <span className="text-[10px] font-mono font-bold text-text-muted">
+                                                        (≈ {formatCurrency(allocationPreview.freezeNow)})
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <p className="text-[10px] text-text-muted leading-relaxed">
+                                                Essential bills & living buffer are already secured. Choose what % of your remaining pure surplus to commit today vs. future salary paydays.
+                                            </p>
+
+                                            {/* Range Slider */}
+                                            <div className="space-y-1 pt-0.5">
+                                                <input
+                                                    type="range"
+                                                    min={10}
+                                                    max={100}
+                                                    step={5}
+                                                    value={freezePercentage}
+                                                    onChange={(e) => {
+                                                        const val = Number(e.target.value);
+                                                        setFreezePercentage(val);
+                                                        haptics.selection();
+                                                    }}
+                                                    onMouseUp={() => handleCheckFeasibility(undefined, undefined, undefined, freezePercentage)}
+                                                    onTouchEnd={() => handleCheckFeasibility(undefined, undefined, undefined, freezePercentage)}
+                                                    className="w-full accent-primary h-2 bg-surface-pill rounded-lg cursor-pointer"
+                                                />
+                                                <div className="flex justify-between text-[9px] font-mono text-text-muted">
+                                                    <span>10% (Flexible)</span>
+                                                    {feasibility.default_freeze_percentage !== undefined && (
+                                                        <span className="text-primary font-bold">
+                                                            {feasibility.default_freeze_percentage}% (Smart Match • {allocationPreview.daysInCycle}d left)
+                                                        </span>
+                                                    )}
+                                                    <span>100% (Full Surplus)</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Quick Preset Chips */}
+                                            <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
+                                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider mr-0.5">Presets:</span>
+                                                {[25, 50, 75, 100].map((pct) => (
+                                                    <button
+                                                        key={pct}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setFreezePercentage(pct);
+                                                            haptics.selection();
+                                                            handleCheckFeasibility(undefined, undefined, undefined, pct);
+                                                        }}
+                                                        className={`px-2 py-0.5 rounded-md text-[9px] font-bold font-mono transition-all active:scale-95 border ${
+                                                            freezePercentage === pct
+                                                                ? 'bg-primary text-text-inverse border-primary shadow-xs'
+                                                                : 'bg-surface border-border-subtle text-text-muted hover:text-text-primary hover:bg-surface-hover'
+                                                        }`}
+                                                    >
+                                                        {pct}%
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] mb-3">
                                         <div className="bg-surface/80 rounded-xl p-2.5 border border-border-subtle">
                                             <span className="text-text-muted block font-semibold">Cash in Hand</span>
@@ -626,7 +747,7 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
                                         <div className="bg-surface/80 rounded-xl p-2.5 border border-border-subtle">
                                             <span className="text-text-muted block font-semibold">Freeze Now</span>
                                             <span className="text-text-primary font-black text-xs tabular-nums">
-                                                {formatCurrency(feasibility.current_cycle_freeze ?? feasibility.required_monthly_savings)}
+                                                {formatCurrency(allocationPreview?.freezeNow ?? (feasibility.current_cycle_freeze ?? feasibility.required_monthly_savings))}
                                             </span>
                                         </div>
                                         <div className="bg-surface/80 rounded-xl p-2.5 border border-border-subtle">
@@ -638,8 +759,13 @@ const Goals: React.FC<GoalsProps> = ({ embedded = false }) => {
                                         <div className="bg-surface/80 rounded-xl p-2.5 border border-border-subtle">
                                             <span className="text-text-muted block font-semibold">Cushion Left</span>
                                             <span className="text-text-primary font-black text-xs tabular-nums">
-                                                {formatCurrency(Math.max(0, feasibility.available_monthly_liquidity - (feasibility.current_cycle_freeze ?? 0)))}
+                                                {formatCurrency(allocationPreview?.cushionLeft ?? Math.max(0, feasibility.available_monthly_liquidity - (feasibility.current_cycle_freeze ?? 0)))}
                                             </span>
+                                            {allocationPreview && (
+                                                <span className="text-[8px] text-text-muted block mt-0.5">
+                                                    ≈ {formatCurrency(allocationPreview.dailyCushion)}/day ({allocationPreview.daysInCycle}d)
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 

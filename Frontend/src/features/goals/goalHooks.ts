@@ -18,6 +18,7 @@ export interface GoalCreate {
     target_amount: number;
     target_date: string;
     custom_expected_income?: number;
+    freeze_percentage?: number;
 }
 
 export interface FeasibilityCheck {
@@ -34,6 +35,10 @@ export interface FeasibilityCheck {
     detected_payday_day?: number;
     salary_cycles_count?: number;
     monthly_obligations_burn?: number;
+    default_freeze_percentage?: number;
+    current_freeze_percentage?: number;
+    days_left_in_cycle?: number;
+    cushion_after_freeze?: number;
     message: string;
     suggested_target_date?: string;
     suggested_target_amount?: number;

@@ -172,7 +172,20 @@ class GoalService:
         total_monthly_burn = upcoming_fixed_obligations + monthly_discretionary
         net_monthly_surplus = max(0.0, avg_monthly_income - total_monthly_burn)
 
-        return (avg_monthly_income, total_monthly_burn, net_monthly_surplus, current_safe, detected_payday_day, upcoming_fixed_obligations, monthly_discretionary)
+        # Days remaining until next salary payday
+        _, max_days = calendar.monthrange(today.year, today.month)
+        actual_payday = min(detected_payday_day, max_days)
+        if today.day < actual_payday:
+            next_payday = date(today.year, today.month, actual_payday)
+        else:
+            if today.month == 12:
+                next_payday = date(today.year + 1, 1, min(detected_payday_day, 31))
+            else:
+                _, next_max = calendar.monthrange(today.year, today.month + 1)
+                next_payday = date(today.year, today.month + 1, min(detected_payday_day, next_max))
+        days_left_in_cycle = max(1, (next_payday - today).days)
+
+        return (avg_monthly_income, total_monthly_burn, net_monthly_surplus, current_safe, detected_payday_day, upcoming_fixed_obligations, monthly_discretionary, days_left_in_cycle)
 
     def _calculate_monthly_contribution(self, target_amount: float, target_date: date) -> float:
         _, months_remaining, required_monthly, _ = self._calculate_timeline(target_amount, target_date)
@@ -183,7 +196,23 @@ class GoalService:
             goal.target_amount, goal.target_date
         )
         
-        avg_income, total_monthly_burn, net_monthly_surplus, current_safe, payday_day, upcoming_obligations, monthly_living = await self._get_historical_surplus(db, user_id)
+        avg_income, total_monthly_burn, net_monthly_surplus, current_safe, payday_day, upcoming_obligations, monthly_living, days_left_in_cycle = await self._get_historical_surplus(db, user_id)
+
+        # Determine smart default freeze percentage based on days left in salary cycle
+        # Since Safe-to-Spend already covers all bills, sureties, and living buffer:
+        # - Late in cycle (<=5 days to payday): high surplus allocation (75%) is painless
+        # - Mid-cycle (6-15 days): balanced allocation (50%)
+        # - Early in cycle (>15 days): conservative allocation (30%) preserves discretionary liquidity
+        if days_left_in_cycle <= 5:
+            default_freeze_pct = 75.0
+        elif days_left_in_cycle <= 15:
+            default_freeze_pct = 50.0
+        else:
+            default_freeze_pct = 30.0
+
+        # User's slider override (0 to 100) takes precedence over default
+        current_freeze_pct = goal.freeze_percentage if (goal.freeze_percentage is not None and goal.freeze_percentage >= 0) else default_freeze_pct
+        effective_cap_fraction = min(1.0, max(0.0, current_freeze_pct / 100.0))
 
         # Determine effective income and surplus (custom user override takes precedence)
         has_custom_income = goal.custom_expected_income is not None and goal.custom_expected_income > 0
@@ -193,17 +222,18 @@ class GoalService:
         # Count actual salary cycles arriving before target date
         salary_cycles = self._count_salary_cycles(date.today(), goal.target_date, payday_day)
 
+        safe_cap = max(0.0, current_safe * effective_cap_fraction)
+
         if salary_cycles == 0:
             # Short-term (target date is before next salary payday)
-            current_freeze = min(goal.target_amount, current_safe)
+            current_freeze = min(goal.target_amount, safe_cap)
             next_cycle_contrib = max(0.0, goal.target_amount - current_freeze)
             projected_total = current_safe
             is_feasible = current_safe >= goal.target_amount
         else:
             # One or more salary cycles arrive before target deadline!
-            safe_cap = max(0.0, current_safe * 0.5)
             current_freeze = min(required_monthly, safe_cap)
-            next_cycle_contrib = max(0.0, goal.target_amount - current_freeze)
+            next_cycle_contrib = max(0.0, (goal.target_amount - current_freeze) / max(1, salary_cycles))
             
             projected_future_savings = salary_cycles * effective_surplus
             projected_total = current_safe + projected_future_savings
@@ -212,18 +242,17 @@ class GoalService:
         current_freeze = round(current_freeze, 2)
         next_cycle_contrib = round(next_cycle_contrib, 2)
         projected_total = round(projected_total, 2)
+        cushion_after_freeze = round(max(0.0, current_safe - current_freeze), 2)
 
         # Diagnostic explanation message
         if is_feasible:
-            cushion = max(0.0, current_safe - current_freeze)
+            cushion = cushion_after_freeze
             if salary_cycles > 0:
                 surplus_buffer = projected_total - goal.target_amount
                 msg = (
                     f"✅ Plan looks solid! Target ₹{goal.target_amount:,.0f} across {days_remaining} days. "
-                    f"With {salary_cycles} upcoming salary cycle(s) adding ~₹{effective_surplus:,.0f} net surplus each "
-                    f"(after ₹{upcoming_obligations:,.0f} obligations & ~₹{monthly_living:,.0f}/mo living burn), "
-                    f"your projected savings capacity is ₹{projected_total:,.0f} (buffer of ₹{surplus_buffer:,.0f}). "
-                    f"Freezing ₹{current_freeze:,.0f} now leaves ₹{cushion:,.0f} cushion."
+                    f"Freezing {current_freeze_pct:.0f}% of Safe-to-Spend (₹{current_freeze:,.0f}) leaves ₹{cushion:,.0f} pure cushion for the remaining {days_left_in_cycle} days before payday. "
+                    f"The remaining target will be covered by {salary_cycles} upcoming salary cycle(s) (~₹{next_cycle_contrib:,.0f}/cycle) from your projected monthly surplus."
                 )
             else:
                 msg = f"✅ Plan looks solid! ₹{goal.target_amount:,.0f} is fully covered by your current safe buffer (₹{current_safe:,.0f})."
@@ -275,6 +304,10 @@ class GoalService:
             detected_payday_day=payday_day,
             salary_cycles_count=salary_cycles,
             monthly_obligations_burn=round(total_monthly_burn, 2),
+            default_freeze_percentage=default_freeze_pct,
+            current_freeze_percentage=current_freeze_pct,
+            days_left_in_cycle=days_left_in_cycle,
+            cushion_after_freeze=cushion_after_freeze,
             message=msg,
             suggested_target_date=suggested_target_date,
             suggested_target_amount=suggested_target_amount,
@@ -285,14 +318,24 @@ class GoalService:
         days_remaining, months_remaining, required_monthly, _ = self._calculate_timeline(
             goal_data.target_amount, goal_data.target_date
         )
-        _, _, _, current_safe, payday_day, *_ = await self._get_historical_surplus(db, user_id)
+        _, _, _, current_safe, payday_day, _, _, days_left_in_cycle = await self._get_historical_surplus(db, user_id)
         salary_cycles = self._count_salary_cycles(date.today(), goal_data.target_date, payday_day)
         
-        # Calculate safe current freeze so we don't starve the current cycle
-        if salary_cycles == 0:
-            monthly_contrib = min(goal_data.target_amount, current_safe)
+        # Calculate smart default freeze percentage based on days left in cycle
+        if days_left_in_cycle <= 5:
+            default_pct = 75.0
+        elif days_left_in_cycle <= 15:
+            default_pct = 50.0
         else:
-            safe_cap = max(0.0, current_safe * 0.5)
+            default_pct = 30.0
+
+        current_freeze_pct = goal_data.freeze_percentage if (goal_data.freeze_percentage is not None and goal_data.freeze_percentage >= 0) else default_pct
+        effective_cap_fraction = min(1.0, max(0.0, current_freeze_pct / 100.0))
+        safe_cap = max(0.0, current_safe * effective_cap_fraction)
+
+        if salary_cycles == 0:
+            monthly_contrib = min(goal_data.target_amount, safe_cap)
+        else:
             monthly_contrib = min(required_monthly, safe_cap)
             
         # Ensure at least 0.0, and if safe_cap is 0, default to required so goal is actively tracked

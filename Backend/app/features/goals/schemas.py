@@ -8,6 +8,7 @@ class GoalBase(BaseModel):
     target_amount: float
     target_date: date
     custom_expected_income: Optional[float] = None
+    freeze_percentage: Optional[float] = None # User-chosen % of Safe-to-Spend surplus to allocate now (0-100)
 
 class GoalCreate(GoalBase):
     pass
@@ -42,6 +43,10 @@ class FeasibilityCheck(BaseModel):
     detected_payday_day: int = 1
     salary_cycles_count: int = 0
     monthly_obligations_burn: float = 0.0
+    default_freeze_percentage: float = 50.0
+    current_freeze_percentage: float = 50.0
+    days_left_in_cycle: int = 15
+    cushion_after_freeze: float = 0.0
     message: str
     suggested_target_date: Optional[date] = None
     suggested_target_amount: Optional[float] = None
