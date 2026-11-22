@@ -52,14 +52,78 @@ Columns:
 
 RULES:
 1. Output ONLY the raw SQL query. Do NOT include markdown blocks (no ```sql), explanations, or notes.
-2. Only output SELECT queries. Never use INSERT, UPDATE, DELETE, or DROP.
-3. For "gas", "fuel", "petrol", or "diesel", search across merchant_name, sub_category, and remarks:
+2. CRITICAL: Start your output immediately with the SELECT keyword. Do NOT output thoughts or step-by-step reasoning.
+3. Only output SELECT queries. Never use INSERT, UPDATE, DELETE, or DROP.
+4. For "gas", "fuel", "petrol", or "diesel", search across merchant_name, sub_category, and remarks:
    (merchant_name ILIKE '%gas%' OR merchant_name ILIKE '%petrol%' OR merchant_name ILIKE '%fuel%' OR sub_category ILIKE '%fuel%' OR remarks ILIKE '%gas%' OR remarks ILIKE '%petrol%' OR remarks ILIKE '%fuel%' OR category = 'Transport')
-4. For keyword or item searches, always include remarks in the search (e.g. merchant_name ILIKE '%keyword%' OR remarks ILIKE '%keyword%').
-5. Order by transaction_date DESC for 'last', 'latest', or 'recent' questions, with LIMIT 1.
-6. For spend totals or averages, use SUM(ABS(amount)) or AVG(ABS(amount)) where amount < 0.
-7. Assume today's date is: {today_str}.
+5. For keyword or item searches, always include remarks in the search (e.g. merchant_name ILIKE '%keyword%' OR remarks ILIKE '%keyword%').
+6. Order by transaction_date DESC for 'last', 'latest', or 'recent' questions, with LIMIT 1.
+7. For spend totals or averages, use SUM(ABS(amount)) or AVG(ABS(amount)) where amount < 0.
+8. Assume today's date is: {today_str}.
 """
+
+    def _match_fast_sql(self, question: str) -> Optional[str]:
+        """
+        Deterministic Fast-Path:
+        Instantly translates common financial questions to precise SQL in 0.1ms,
+        completely avoiding LLM inference latency and lock contention.
+        """
+        q = question.strip().lower()
+
+        # Pattern 1: When did I last buy / spend on / pay for <item>
+        m1 = re.search(r'\b(?:when did i (?:last|recently)|latest|last time i) (?:buy|bought|spend on|pay for|get|order|fill)\s+(.+?)(?:\?|$)', q)
+        if not m1:
+            m1 = re.search(r'\b(?:last|latest)\s+(.+?)\s+(?:transaction|order|payment|purchase|spend)(?:\?|$)', q)
+        if m1:
+            item = m1.group(1).strip()
+            item = re.sub(r'^(some|my|a|an|the)\s+', '', item).strip()
+            if item:
+                if item in ["gas", "fuel", "petrol", "diesel", "cng"]:
+                    return """SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+FROM transactions
+WHERE (merchant_name ILIKE '%gas%' OR merchant_name ILIKE '%petrol%' OR merchant_name ILIKE '%fuel%' OR sub_category ILIKE '%fuel%' OR remarks ILIKE '%gas%' OR remarks ILIKE '%petrol%' OR remarks ILIKE '%fuel%' OR category = 'Transport')
+ORDER BY transaction_date DESC
+LIMIT 1"""
+                else:
+                    clean_item = re.sub(r'[^a-zA-Z0-9\s]', '', item)
+                    return f"""SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+FROM transactions
+WHERE (merchant_name ILIKE '%{clean_item}%' OR remarks ILIKE '%{clean_item}%' OR category ILIKE '%{clean_item}%' OR sub_category ILIKE '%{clean_item}%')
+ORDER BY transaction_date DESC
+LIMIT 1"""
+
+        # Pattern 2: How much did I spend on <target> this month
+        m2 = re.search(r'\bhow much (?:did i spend|spent) on\s+(.+?)(?:\s+this month|\s+in current month|\?|$)', q)
+        if m2:
+            target = m2.group(1).strip()
+            target = re.sub(r'^(some|my|a|an|the)\s+', '', target).strip()
+            first_of_month = datetime.now().strftime("%Y-%m-01")
+            if target:
+                clean_target = re.sub(r'[^a-zA-Z0-9\s]', '', target)
+                return f"""SELECT SUM(ABS(amount)) as total_spent, COUNT(*) as transaction_count
+FROM transactions
+WHERE amount < 0
+  AND transaction_date >= '{first_of_month}'
+  AND (category ILIKE '%{clean_target}%' OR sub_category ILIKE '%{clean_target}%' OR merchant_name ILIKE '%{clean_target}%' OR remarks ILIKE '%{clean_target}%')"""
+
+        # Pattern 3: Biggest / highest / largest expense this month
+        if re.search(r'\b(?:biggest|highest|largest|maximum)\s+expense\b', q):
+            first_of_month = datetime.now().strftime("%Y-%m-01")
+            return f"""SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+FROM transactions
+WHERE amount < 0
+  AND transaction_date >= '{first_of_month}'
+ORDER BY ABS(amount) DESC
+LIMIT 1"""
+
+        # Pattern 4: Latest / recent transactions
+        if re.search(r'\b(?:show|list|recent|latest)\s+(?:transactions|spends|orders)\b', q):
+            return """SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+FROM transactions
+ORDER BY transaction_date DESC
+LIMIT 5"""
+
+        return None
 
     def _clean_sql(self, raw_text: str) -> str:
         """Strip markdown fences, thought tags, and extraneous whitespace."""
@@ -165,14 +229,21 @@ RULES:
     async def execute_query(self, question: str, user_id: UUID) -> AssistantQueryResponse:
         start_t = time.perf_counter()
 
-        # Step 1: Generate SQL query using Gemma 4
-        system_prompt = self._get_system_prompt()
-        raw_sql = await self.llm.generate_response(
-            prompt=f"QUESTION: {question}\nSQL:",
-            system_prompt=system_prompt,
-            temperature=0.1,
-            timeout=45.0
-        )
+        # Step 1: Check Deterministic Fast-Path first (0.1ms execution)
+        fast_sql = self._match_fast_sql(question)
+        if fast_sql:
+            logger.info(f"⚡ [Assistant] Fast-path SQL matched for: '{question}'")
+            raw_sql = fast_sql
+        else:
+            # Step 2: Fallback to Gemma 4 Text-to-SQL (generous 150s timeout)
+            logger.info(f"🤖 [Assistant] Routing to Gemma 4 Text-to-SQL: '{question}'")
+            system_prompt = self._get_system_prompt()
+            raw_sql = await self.llm.generate_response(
+                prompt=f"QUESTION: {question}\nSQL:",
+                system_prompt=system_prompt,
+                temperature=0.1,
+                timeout=150.0
+            )
 
         if not raw_sql:
             raise HTTPException(status_code=500, detail="The assistant engine was unable to formulate a SQL query. Please try rephrasing.")
