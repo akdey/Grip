@@ -81,6 +81,7 @@ const FEATURE_CARDS: FeatureCardItem[] = [
 ];
 
 const EXPERIMENTAL_CARDS: FeatureCardItem[] = [
+    { id: 'assistant', label: 'Ask Grip (AI)', icon: Sparkles, path: '/assistant', color: 'text-primary', bgColor: 'bg-surface-subtle', badge: 'AI', description: 'Gemma 4 Text-to-SQL Assistant' },
     { id: 'goals', label: 'Goals', icon: Wallet, path: '/goals', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'card-optimizer', label: 'Swipe Optimizer', icon: CreditCard, path: '/credit-cards/optimizer', color: 'text-primary', bgColor: 'bg-surface-subtle' },
     { id: 'anomaly', label: 'Anomaly Radar', icon: ShieldAlert, path: '/anomalies', color: 'text-primary', bgColor: 'bg-surface-subtle' },

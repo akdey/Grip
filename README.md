@@ -513,6 +513,12 @@ Accessible directly from the **Experimental** section in Explorer (**More**):
 4. **Wealth Lab (`/wealth/lab`)**:
    - Direct gateway to Facebook Prophet multi-decade portfolio projections and historical SIP timing optimization.
 
+5. **Ask Grip AI Assistant (`/assistant`)**:
+   - Natural language financial Q&A in the Experimental Zone powered by Gemma 4 Text-to-SQL.
+   - Translates questions like *"When did I last buy gas?"*, *"How much did I spend on Swiggy this month?"*, or *"What was my biggest expense?"* into secure, read-only PostgreSQL queries.
+   - **Multi-layer security & isolation**: Strictly blocks non-`SELECT` statements (no `INSERT`, `UPDATE`, `DELETE`, `DROP`), prohibits foreign table queries, and enforces tenant isolation via CTE shadowing (`WITH transactions AS (...)`) with an automatic 25-row ceiling.
+   - **Interactive UI**: Fluid Apple-styled conversational feed with 1-click suggestion chips, rich transaction cards, and an expandable `View Executed SQL` inspector.
+
 
 ### 🤝 Settle Up (Peer-to-Peer Balances)
 

@@ -7,7 +7,6 @@ import os
 import threading
 from typing import Optional, Dict, Any, List
 from app.core.config import get_settings
-from app.core.llm_cache_adapter import get_task_cache_adapter
 
 print(">>> LLM MODULE IMPORTED", flush=True)
 
@@ -34,8 +33,6 @@ class LocalLLMEngine:
         self._inference_lock = threading.Lock()
         self.repo_id = settings.LOCAL_MODEL_REPO
         self.filename = settings.LOCAL_MODEL_FILE
-        # Adaptive Infrastructure Layer: Pluggable Task-Prefix Cache Strategy
-        self.cache_adapter = get_task_cache_adapter()
         # Anchor models_dir reliably to Backend/models or settings.LOCAL_MODEL_DIR
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         if os.path.isabs(settings.LOCAL_MODEL_DIR):
@@ -114,12 +111,6 @@ class LocalLLMEngine:
                         verbose=False
                     )
 
-                # Attach Adaptive Infrastructure Cache Adapter
-                try:
-                    self.cache_adapter.attach_to_model(self._model)
-                except Exception as cache_err:
-                    logger.debug(f"LocalLLMEngine: Adaptive cache setup skipped: {cache_err}")
-
                 logger.info(f"Local LLM engine initialized (ctx: {settings.LOCAL_LLM_CONTEXT}, threads: {threads}, gpu_layers: {gpu_layers}).")
                 return self._model
             except Exception as e:
@@ -177,16 +168,6 @@ class LocalLLMEngine:
             inf_time = (time.perf_counter() - start_t) * 1000
             text = self._strip_thoughts(raw_text)
             logger.info(f"⚡ [Gemma 4] Inference complete in {inf_time:.0f}ms (generated {len(text)} chars)")
-
-            # Pin prefix state for this task if not already pinned for these specific tokens
-            if task and system_prompt:
-                try:
-                    sys_tokens = model.tokenize(system_prompt.encode('utf-8'))
-                    if sys_tokens and not self.cache_adapter.is_task_pinned(task, sys_tokens):
-                        self.cache_adapter.pin_task_prefix(task, sys_tokens, model.save_state())
-                except Exception as pin_err:
-                    logger.debug(f"[TaskCacheAdapter] Could not auto-pin task prefix for {task}: {pin_err}")
-
             return text
         except Exception as e:
             logger.error(f"Error during local LLM inference: {e}")

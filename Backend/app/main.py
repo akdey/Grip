@@ -32,6 +32,7 @@ from app.features.wealth.router import router as wealth_router
 from app.features.settle_up.router import router as settle_up_router
 from app.features.internal.router import router as internal_router
 from app.features.anomaly.router import router as anomaly_router
+from app.features.assistant.router import router as assistant_router
 from app.features.sync.models import SyncLog 
 from app.features.settle_up.models import SettleUpEntry, SettleUpPeerContact  # Ensure table creation
 from app.features.anomaly.models import AnomalyFlag  # Ensure table creation
@@ -60,31 +61,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to start scheduler: {e}")
 
-    # Warm up Local LLM and task prefix cache in the background so the first request doesn't spend time loading or cold prefilling
+    # Warm up Local LLM in the background so the first request doesn't spend loading time from disk
     async def _warmup_llm():
         try:
             from app.core.llm import get_llm_service
-            from app.features.sync.service import SyncService
             llm = get_llm_service()
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, llm.local_engine._ensure_model)
             logger.info("Local LLM model pre-warmed and resident in memory.")
-
-            def _prefill_task_prefix():
-                try:
-                    static_prompt = SyncService.get_static_system_prompt()
-                    logger.info("Pre-warming TRANSACTION_EXTRACTION task prefix in background...")
-                    llm.local_engine.generate(
-                        prompt="NOTIFICATION CONTENT:\nSUBJECT: Warmup\nSENDER: noreply@bank.com\nBODY:\n\"\"\"Ping\"\"\"",
-                        system_prompt=static_prompt,
-                        temperature=0.0,
-                        task="TRANSACTION_EXTRACTION"
-                    )
-                    logger.info("TRANSACTION_EXTRACTION task prefix successfully pre-warmed and pinned.")
-                except Exception as p_err:
-                    logger.warning(f"Failed to pre-warm TRANSACTION_EXTRACTION task prefix: {p_err}")
-
-            await loop.run_in_executor(None, _prefill_task_prefix)
         except Exception as ex:
             logger.warning(f"LLM pre-warm skipped: {ex}")
 
@@ -141,6 +125,7 @@ app.include_router(wealth_router, prefix=f"{settings.API_V1_STR}/wealth", tags=[
 app.include_router(export_router, prefix=f"{settings.API_V1_STR}/export", tags=["export"])
 app.include_router(settle_up_router, prefix=f"{settings.API_V1_STR}/settle-up", tags=["settle-up"])
 app.include_router(anomaly_router, prefix=f"{settings.API_V1_STR}/anomaly", tags=["anomaly"])
+app.include_router(assistant_router, prefix=f"{settings.API_V1_STR}/assistant", tags=["assistant"])
 app.include_router(internal_router, prefix=f"{settings.API_V1_STR}/internal", tags=["internal"])
 
 from fastapi.responses import HTMLResponse, FileResponse

@@ -18,6 +18,7 @@ const Categories = React.lazy(() => import('./pages/Categories'));
 const More = React.lazy(() => import('./pages/More'));
 const Wealth = React.lazy(() => import('./pages/Wealth'));
 const WealthLab = React.lazy(() => import('./pages/WealthLab'));
+const Assistant = React.lazy(() => import('./pages/Assistant'));
 const Tags = React.lazy(() => import('./pages/Tags'));
 const Goals = React.lazy(() => import('./pages/Goals'));
 const CardOptimizer = React.lazy(() => import('./pages/CardOptimizer'));
@@ -63,6 +64,7 @@ function App() {
               <Route path="/settings/categories" element={<Categories />} />
               <Route path="/wealth" element={<Wealth />} />
               <Route path="/wealth/lab" element={<WealthLab />} />
+              <Route path="/assistant" element={<Assistant />} />
               <Route path="/more" element={<More />} />
               <Route path="/tags" element={<Tags />} />
               <Route path="/goals" element={<Goals />} />
