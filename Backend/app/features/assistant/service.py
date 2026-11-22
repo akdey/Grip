@@ -54,8 +54,9 @@ RULES:
 1. Output ONLY the raw SQL query. Do NOT include markdown blocks (no ```sql), explanations, or notes.
 2. CRITICAL: Start your output immediately with the SELECT keyword. Do NOT output thoughts or step-by-step reasoning.
 3. Only output SELECT queries. Never use INSERT, UPDATE, DELETE, or DROP.
-4. For "gas", "fuel", "petrol", or "diesel", search across merchant_name, sub_category, and remarks:
-   (merchant_name ILIKE '%gas%' OR merchant_name ILIKE '%petrol%' OR merchant_name ILIKE '%fuel%' OR sub_category ILIKE '%fuel%' OR remarks ILIKE '%gas%' OR remarks ILIKE '%petrol%' OR remarks ILIKE '%fuel%' OR category = 'Transport')
+4. For "gas", "fuel", "petrol", "diesel", or "LPG", NEVER match the broad 'Transport' category alone (because Transport includes buses, cabs, and metro rides).
+   Search specifically across sub_category, merchant_name, and remarks:
+   (sub_category ILIKE '%fuel%' OR sub_category ILIKE '%gas%' OR sub_category ILIKE '%petrol%' OR sub_category ILIKE '%lpg%' OR merchant_name ILIKE '%gas%' OR merchant_name ILIKE '%petrol%' OR merchant_name ILIKE '%fuel%' OR merchant_name ILIKE '%hpcl%' OR merchant_name ILIKE '%bpcl%' OR merchant_name ILIKE '%iocl%' OR merchant_name ILIKE '%shell%' OR remarks ILIKE '%gas%' OR remarks ILIKE '%petrol%' OR remarks ILIKE '%fuel%' OR remarks ILIKE '%tel%')
 5. For keyword or item searches, always include remarks in the search (e.g. merchant_name ILIKE '%keyword%' OR remarks ILIKE '%keyword%').
 6. Order by transaction_date DESC for 'last', 'latest', or 'recent' questions, with LIMIT 1.
 7. For spend totals or averages, use SUM(ABS(amount)) or AVG(ABS(amount)) where amount < 0.
@@ -78,10 +79,26 @@ RULES:
             item = m1.group(1).strip()
             item = re.sub(r'^(some|my|a|an|the)\s+', '', item).strip()
             if item:
-                if item in ["gas", "fuel", "petrol", "diesel", "cng"]:
+                if item in ["gas", "fuel", "petrol", "diesel", "cng", "lpg"]:
                     return """SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
 FROM transactions
-WHERE (merchant_name ILIKE '%gas%' OR merchant_name ILIKE '%petrol%' OR merchant_name ILIKE '%fuel%' OR sub_category ILIKE '%fuel%' OR remarks ILIKE '%gas%' OR remarks ILIKE '%petrol%' OR remarks ILIKE '%fuel%' OR category = 'Transport')
+WHERE (
+    sub_category ILIKE '%fuel%' 
+    OR sub_category ILIKE '%gas%' 
+    OR sub_category ILIKE '%petrol%'
+    OR sub_category ILIKE '%lpg%'
+    OR merchant_name ILIKE '%gas%'
+    OR merchant_name ILIKE '%petrol%'
+    OR merchant_name ILIKE '%fuel%'
+    OR merchant_name ILIKE '%hpcl%'
+    OR merchant_name ILIKE '%bpcl%'
+    OR merchant_name ILIKE '%iocl%'
+    OR merchant_name ILIKE '%shell%'
+    OR remarks ILIKE '%gas%'
+    OR remarks ILIKE '%petrol%'
+    OR remarks ILIKE '%fuel%'
+    OR remarks ILIKE '%tel%'
+)
 ORDER BY transaction_date DESC
 LIMIT 1"""
                 else:
