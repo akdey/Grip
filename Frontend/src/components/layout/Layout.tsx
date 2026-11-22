@@ -15,7 +15,8 @@ export const Layout: React.FC = () => {
     const isEntryPage = location.pathname === '/add' ||
         location.pathname.startsWith('/transactions/') ||
         location.pathname === '/settings/categories' ||
-        location.pathname === '/tags';
+        location.pathname === '/tags' ||
+        location.pathname === '/assistant';
 
     return (
         <div className="min-h-screen text-primary flex flex-col">

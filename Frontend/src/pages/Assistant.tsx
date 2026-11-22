@@ -166,35 +166,36 @@ export const Assistant: React.FC = () => {
             </header>
 
             {/* Chat Body */}
-            <main className="flex-1 px-4 sm:px-6 py-6 max-w-3xl mx-auto w-full space-y-6 pb-32">
+            <main className="flex-1 px-4 sm:px-6 py-4 max-w-3xl mx-auto w-full space-y-4 pb-28">
                 {/* Hero / Empty State */}
                 {messages.length === 0 && (
-                    <div className="py-8 text-center space-y-6 animate-enter">
-                        <div className="w-16 h-16 mx-auto rounded-3xl bg-surface-pill border border-border-subtle flex items-center justify-center shadow-lg">
-                            <Bot size={32} className="text-accent" />
+                    <div className="py-4 text-center space-y-4 animate-enter">
+                        <div className="w-12 h-12 mx-auto rounded-2xl bg-surface-pill border border-border-subtle flex items-center justify-center shadow-sm">
+                            <Bot size={24} className="text-accent" />
                         </div>
 
-                        <div className="space-y-2 max-w-md mx-auto">
-                            <h2 className="text-xl font-black text-text-primary tracking-tight">
+                        <div className="space-y-1 max-w-md mx-auto">
+                            <h2 className="text-lg font-black text-text-primary tracking-tight">
                                 Natural Financial Intelligence
                             </h2>
-                            <p className="text-xs text-text-muted leading-relaxed">
-                                Ask any question about your transactions, merchants, or spending in plain English.
-                                Gemma 4 translates it into an exact, read-only SQL query executed directly on your database.
+                            <p className="text-[11px] text-text-muted leading-relaxed">
+                                Ask any question about your spending, merchants, or notes.
+                                Gemma 4 translates it into an exact, read-only SQL query executed on your database.
                             </p>
                         </div>
 
-                        {/* Suggestions */}
-                        <div className="space-y-2 pt-2">
-                            <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+                        {/* Suggestions Grid (2-column compact for mobile) */}
+                        <div className="space-y-1.5 pt-1">
+                            <p className="text-[9px] font-bold text-text-muted uppercase tracking-widest">
                                 Try asking:
                             </p>
-                            <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
+                            <div className="grid grid-cols-2 gap-2 max-w-md mx-auto text-left">
                                 {SUGGESTIONS.map((s, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => handleSend(s.query)}
-                                        className="text-xs px-3.5 py-2 rounded-2xl bg-surface border border-border-subtle hover:border-accent-border hover:bg-surface-hover text-text-secondary hover:text-text-primary transition-all active:scale-95 text-left"
+                                        className="text-[11px] font-medium p-2.5 rounded-xl bg-surface border border-border-subtle hover:border-accent-border hover:bg-surface-hover text-text-secondary hover:text-text-primary transition-all active:scale-95 leading-snug truncate"
+                                        title={s.label}
                                     >
                                         {s.label}
                                     </button>
@@ -203,8 +204,8 @@ export const Assistant: React.FC = () => {
                         </div>
 
                         {/* Safety Note */}
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-subtle border border-border-subtle text-[10px] text-text-muted">
-                            <ShieldCheck size={12} className="text-status-success-text" />
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-subtle border border-border-subtle text-[9px] text-text-muted">
+                            <ShieldCheck size={11} className="text-status-success-text shrink-0" />
                             <span>Strictly read-only: INSERT, UPDATE, and DELETE are cryptographically isolated.</span>
                         </div>
                     </div>
