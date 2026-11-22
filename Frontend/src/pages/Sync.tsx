@@ -91,6 +91,20 @@ function parseSyncSummary(rawSummary: string | null, recordsProcessed: number): 
     };
 }
 
+function formatExecutionTime(ms: number): string {
+    if (!ms || ms <= 0) return '0ms';
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    const remainingMs = ms % 1000;
+
+    const parts: string[] = [];
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0 || minutes > 0) parts.push(`${seconds}s`);
+    if (remainingMs > 0 || parts.length === 0) parts.push(`${remainingMs}ms`);
+
+    return parts.join(' ');
+}
+
 interface SyncLogCardProps {
     sync: SyncHistoryItem;
     isExpanded: boolean;
@@ -255,9 +269,12 @@ const SyncLogCard: React.FC<SyncLogCardProps> = ({ sync, isExpanded, onToggle })
                                             )}
 
                                             {item.time_taken_ms > 0 && (
-                                                <span className="inline-flex items-center gap-0.5 text-[10px] font-mono tabular-nums text-text-muted ml-1">
+                                                <span
+                                                    title={`${item.time_taken_ms.toLocaleString()}ms`}
+                                                    className="inline-flex items-center gap-0.5 text-[10px] font-mono tabular-nums text-text-muted ml-1"
+                                                >
                                                     <Zap size={10} className="text-accent" />
-                                                    {item.time_taken_ms}ms
+                                                    {formatExecutionTime(item.time_taken_ms)}
                                                 </span>
                                             )}
                                         </div>
