@@ -4,7 +4,7 @@ import logging
 from decimal import Decimal
 from datetime import date, datetime
 from uuid import UUID
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
