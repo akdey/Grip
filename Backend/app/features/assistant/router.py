@@ -20,6 +20,7 @@ async def query_assistant(
     Experimental Natural Language Financial Assistant.
     Translates user questions into secure, read-only PostgreSQL queries
     and returns exact matching transactions and summaries.
+    Supports mode='llm' (default, pure Gemma 4) or mode='preset' (deterministic local fast path).
     """
     service = AssistantService(db)
-    return await service.execute_query(payload.question, current_user.id)
+    return await service.execute_query(payload.question, current_user.id, mode=payload.mode or "llm")

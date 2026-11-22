@@ -26,11 +26,11 @@ import { Card } from '../components/ui/Card';
 import { haptics } from '../lib/haptics';
 
 const SUGGESTIONS = [
-    { label: '⛽ When did I last buy gas?', query: 'When did I last buy gas?' },
+    { label: '🔥 Last cooking gas / LPG', query: 'When did I last buy cooking gas?' },
+    { label: '⛽ Last vehicle fuel / petrol', query: 'When did I last buy petrol?' },
     { label: '🍔 Food spend this month', query: 'How much did I spend on food this month?' },
     { label: '📈 Highest expense', query: 'What was my highest expense this month?' },
     { label: '🛒 Recent Swiggy orders', query: 'Show my latest Swiggy orders' },
-    { label: '🚕 Last cab or Uber trip', query: 'When did I last take a cab or Uber?' },
     { label: '💡 Utility & bills spend', query: 'How much did I spend on bills and utilities?' }
 ];
 
@@ -47,6 +47,7 @@ function formatTime(ms: number): string {
 export const Assistant: React.FC = () => {
     const navigate = useNavigate();
     const [input, setInput] = useState('');
+    const [mode, setMode] = useState<'llm' | 'preset'>('llm');
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [expandedSqlIds, setExpandedSqlIds] = useState<Record<string, boolean>>({});
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -82,7 +83,7 @@ export const Assistant: React.FC = () => {
         setMessages(newMessages);
 
         queryAssistant(
-            { question },
+            { question, mode },
             {
                 onSuccess: (data) => {
                     haptics.notification('success');
@@ -146,7 +147,7 @@ export const Assistant: React.FC = () => {
                             </span>
                         </div>
                         <p className="text-[10px] text-text-muted font-medium">
-                            Gemma 4 Text-to-SQL · Read-Only Sandbox
+                            {mode === 'llm' ? '🤖 Gemma 4 AI Text-to-SQL' : '⚡ Local Preset Mode'} · Read-Only Sandbox
                         </p>
                     </div>
                 </div>
@@ -166,7 +167,7 @@ export const Assistant: React.FC = () => {
             </header>
 
             {/* Chat Body */}
-            <main className="flex-1 px-4 sm:px-6 py-4 max-w-3xl mx-auto w-full space-y-4 pb-28">
+            <main className="flex-1 px-4 sm:px-6 py-4 max-w-3xl mx-auto w-full space-y-4 pb-36">
                 {/* Hero / Empty State */}
                 {messages.length === 0 && (
                     <div className="py-4 text-center space-y-4 animate-enter">
@@ -180,7 +181,7 @@ export const Assistant: React.FC = () => {
                             </h2>
                             <p className="text-[11px] text-text-muted leading-relaxed">
                                 Ask any question about your spending, merchants, or notes.
-                                Gemma 4 translates it into an exact, read-only SQL query executed on your database.
+                                Choose between deep AI translation or instant local presets.
                             </p>
                         </div>
 
@@ -240,7 +241,7 @@ export const Assistant: React.FC = () => {
                                                 )}
                                             </div>
                                             <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                                                {msg.response?.engine_used === 'PRESET_FAST_PATH' ? 'Preset Query' : 'Gemma 4 AI'}
+                                                {msg.response?.engine_used === 'PRESET_FAST_PATH' ? 'Local Preset' : 'Gemma 4 AI'}
                                             </span>
                                             {msg.response?.engine_used === 'PRESET_FAST_PATH' ? (
                                                 <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -335,11 +336,13 @@ export const Assistant: React.FC = () => {
                                 <div className="flex items-center gap-2">
                                     <Sparkles size={14} className="text-accent animate-spin" />
                                     <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                                        Gemma 4 Formulating Query...
+                                        {mode === 'llm' ? 'Gemma 4 Formulating Query...' : 'Matching Local Preset...'}
                                     </span>
                                 </div>
                                 <p className="text-xs text-text-secondary">
-                                    Translating question to SQL and running against transactions...
+                                    {mode === 'llm'
+                                        ? 'Translating natural language to SQL and querying transactions...'
+                                        : 'Evaluating deterministic local SQL patterns...'}
                                 </p>
                             </div>
                         </div>
@@ -349,37 +352,83 @@ export const Assistant: React.FC = () => {
                 </div>
             </main>
 
-            {/* Input Footer */}
+            {/* Input Footer with Mode Switcher */}
             <footer className="fixed bottom-0 inset-x-0 bg-surface/90 backdrop-blur-2xl border-t border-border-subtle p-3 sm:p-4 z-40 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        handleSend();
-                    }}
-                    className="max-w-3xl mx-auto flex items-center gap-2"
-                >
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ask anything... e.g. 'When did I last buy gas?'"
-                        disabled={isPending}
-                        className="flex-1 bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-3 text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-border transition-colors"
-                    />
-                    <button
-                        type="submit"
-                        disabled={!input.trim() || isPending}
-                        className={`p-3 rounded-2xl flex items-center justify-center transition-all ${
-                            input.trim() && !isPending
-                                ? 'bg-text-primary text-text-inverse hover:brightness-110 active:scale-95 shadow-sm'
-                                : 'bg-surface-subtle text-text-muted cursor-not-allowed opacity-50'
-                        }`}
-                        aria-label="Send"
+                <div className="max-w-3xl mx-auto space-y-2">
+                    {/* Transparent Mode Toggle */}
+                    <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center gap-1 p-0.5 rounded-xl bg-surface-subtle border border-border-subtle">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    haptics.selection();
+                                    setMode('llm');
+                                }}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                                    mode === 'llm'
+                                        ? 'bg-accent text-accent-inverse shadow-xs'
+                                        : 'text-text-muted hover:text-text-primary'
+                                }`}
+                            >
+                                <Sparkles size={11} />
+                                <span>Gemma 4 AI</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    haptics.selection();
+                                    setMode('preset');
+                                }}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                                    mode === 'preset'
+                                        ? 'bg-amber-500 text-black shadow-xs'
+                                        : 'text-text-muted hover:text-text-primary'
+                                }`}
+                            >
+                                <Zap size={11} />
+                                <span>Fast Preset</span>
+                            </button>
+                        </div>
+                        <span className="text-[9px] text-text-muted font-medium">
+                            {mode === 'llm' ? 'Open-ended reasoning' : 'Instant 0.1ms matching'}
+                        </span>
+                    </div>
+
+                    {/* Input Field Form */}
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            handleSend();
+                        }}
+                        className="flex items-center gap-2"
                     >
-                        <Send size={16} />
-                    </button>
-                </form>
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder={
+                                mode === 'llm'
+                                    ? "Ask Gemma 4 anything... e.g. 'When did I last buy cooking gas?'"
+                                    : "Ask preset pattern... e.g. 'When did I last buy cooking gas?'"
+                            }
+                            disabled={isPending}
+                            className="flex-1 bg-surface-subtle border border-border-subtle rounded-2xl px-4 py-3 text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-border transition-colors"
+                        />
+                        <button
+                            type="submit"
+                            disabled={!input.trim() || isPending}
+                            className={`p-3 rounded-2xl flex items-center justify-center transition-all ${
+                                input.trim() && !isPending
+                                    ? 'bg-text-primary text-text-inverse hover:brightness-110 active:scale-95 shadow-sm'
+                                    : 'bg-surface-subtle text-text-muted cursor-not-allowed opacity-50'
+                            }`}
+                            aria-label="Send"
+                        >
+                            <Send size={16} />
+                        </button>
+                    </form>
+                </div>
             </footer>
         </div>
     );
@@ -438,4 +487,3 @@ const TransactionCard: React.FC<{ row: AssistantQueryResultItem }> = ({ row }) =
 };
 
 export default Assistant;
-

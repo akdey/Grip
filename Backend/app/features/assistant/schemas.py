@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 
 class AssistantQueryRequest(BaseModel):
     question: str = Field(..., min_length=2, max_length=500, description="Natural language question about transactions")
+    mode: Optional[str] = Field("llm", description="Execution mode: 'llm' (pure Gemma 4 AI) or 'preset' (deterministic local fast path)")
 
 class AssistantQueryResponse(BaseModel):
     question: str

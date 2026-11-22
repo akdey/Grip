@@ -1,5 +1,6 @@
 export interface AssistantQueryRequest {
     question: string;
+    mode?: 'llm' | 'preset';
 }
 
 export interface AssistantQueryResultItem {

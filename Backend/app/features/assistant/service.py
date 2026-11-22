@@ -43,7 +43,7 @@ Columns:
 - currency (varchar): 'INR'
 - merchant_name (varchar): Brand, entity, or person paid (e.g. 'Starbucks', 'HPCL', 'Swiggy', 'Uber', 'Airtel')
 - category (varchar): e.g. 'Food', 'Transport', 'Shopping', 'Bills & Utilities', 'Income', 'Entertainment', 'Medical', 'Personal Care'
-- sub_category (varchar): e.g. 'Fuel', 'Groceries', 'Restaurants', 'Salary', 'Electricity', 'Dining', 'Cabs'
+- sub_category (varchar): e.g. 'Fuel & Vehicle', 'Gas / LPG', 'Groceries', 'Restaurants', 'Salary', 'Electricity', 'Dining', 'Cabs'
 - transaction_date (date): Date of transaction (YYYY-MM-DD)
 - account_type (varchar): 'SAVINGS', 'CREDIT_CARD', 'CASH'
 - status (varchar): 'PENDING', 'SETTLED'
@@ -52,11 +52,15 @@ Columns:
 
 RULES:
 1. Output ONLY the raw SQL query. Do NOT include markdown blocks (no ```sql), explanations, or notes.
-2. CRITICAL: Start your output immediately with the SELECT keyword. Do NOT output thoughts or step-by-step reasoning.
+2. CRITICAL: Start your output immediately with the SELECT or WITH keyword. Do NOT output thoughts or step-by-step reasoning.
 3. Only output SELECT queries. Never use INSERT, UPDATE, DELETE, or DROP.
-4. For "gas", "fuel", "petrol", "diesel", or "LPG", NEVER match the broad 'Transport' category alone (because Transport includes buses, cabs, and metro rides).
-   Search specifically across sub_category, merchant_name, and remarks:
-   (sub_category ILIKE '%fuel%' OR sub_category ILIKE '%gas%' OR sub_category ILIKE '%petrol%' OR sub_category ILIKE '%lpg%' OR merchant_name ILIKE '%gas%' OR merchant_name ILIKE '%petrol%' OR merchant_name ILIKE '%fuel%' OR merchant_name ILIKE '%hpcl%' OR merchant_name ILIKE '%bpcl%' OR merchant_name ILIKE '%iocl%' OR merchant_name ILIKE '%shell%' OR remarks ILIKE '%gas%' OR remarks ILIKE '%petrol%' OR remarks ILIKE '%fuel%' OR remarks ILIKE '%tel%')
+4. CRITICAL DISTINCTION - COOKING GAS (LPG) vs VEHICLE FUEL (PETROL/DIESEL):
+   - For "cooking gas", "LPG", "gas cylinder", or "gas" (utility/cooking):
+     Search: (sub_category ILIKE '%gas%' OR sub_category ILIKE '%lpg%' OR remarks ILIKE '%gas%' OR remarks ILIKE '%lpg%' OR remarks ILIKE '%cylinder%' OR merchant_name ILIKE '%lpg%') AND category != 'Transport'
+     NEVER match vehicle petrol, scooty tel, or 'Transport'.
+   - For "fuel", "petrol", "diesel", "vehicle fuel", "scooty fuel", or "scooty tel":
+     Search: (sub_category ILIKE '%fuel%' OR sub_category ILIKE '%petrol%' OR sub_category ILIKE '%diesel%' OR remarks ILIKE '%fuel%' OR remarks ILIKE '%petrol%' OR remarks ILIKE '%tel%' OR merchant_name ILIKE '%petrol%' OR merchant_name ILIKE '%fuel%' OR merchant_name ILIKE '%hpcl%' OR merchant_name ILIKE '%bpcl%' OR merchant_name ILIKE '%iocl%')
+     NEVER match cooking gas or 'Bills & Utilities'.
 5. For keyword or item searches, always include remarks in the search (e.g. merchant_name ILIKE '%keyword%' OR remarks ILIKE '%keyword%').
 6. Order by transaction_date DESC for 'last', 'latest', or 'recent' questions, with LIMIT 1.
 7. For spend totals or averages, use SUM(ABS(amount)) or AVG(ABS(amount)) where amount < 0.
@@ -71,6 +75,48 @@ RULES:
         """
         q = question.strip().lower()
 
+        # Check for cooking gas / LPG / cylinder specifically
+        if re.search(r'\b(lpg|cooking gas|gas cylinder|cylinder|indane|hp gas|bharat gas)\b', q) or (
+            re.search(r'\b(?:when did i (?:last|recently)|latest|last time i) (?:buy|bought|order|get|pay for)\s+gas\b', q)
+        ):
+            return """SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+FROM transactions
+WHERE (
+    sub_category ILIKE '%gas%' 
+    OR sub_category ILIKE '%lpg%' 
+    OR remarks ILIKE '%gas%' 
+    OR remarks ILIKE '%lpg%' 
+    OR remarks ILIKE '%cylinder%'
+    OR merchant_name ILIKE '%lpg%'
+    OR merchant_name ILIKE '%indane%'
+    OR merchant_name ILIKE '%bharat gas%'
+    OR merchant_name ILIKE '%hp gas%'
+)
+AND category != 'Transport'
+ORDER BY transaction_date DESC
+LIMIT 1"""
+
+        # Check for vehicle fuel / petrol / diesel / scooty
+        if re.search(r'\b(petrol|diesel|fuel|scooty|cng)\b', q):
+            return """SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+FROM transactions
+WHERE (
+    sub_category ILIKE '%fuel%' 
+    OR sub_category ILIKE '%petrol%' 
+    OR sub_category ILIKE '%diesel%'
+    OR remarks ILIKE '%fuel%' 
+    OR remarks ILIKE '%petrol%' 
+    OR remarks ILIKE '%tel%'
+    OR merchant_name ILIKE '%petrol%'
+    OR merchant_name ILIKE '%fuel%'
+    OR merchant_name ILIKE '%hpcl%'
+    OR merchant_name ILIKE '%bpcl%'
+    OR merchant_name ILIKE '%iocl%'
+    OR merchant_name ILIKE '%shell%'
+)
+ORDER BY transaction_date DESC
+LIMIT 1"""
+
         # Pattern 1: When did I last buy / spend on / pay for <item>
         m1 = re.search(r'\b(?:when did i (?:last|recently)|latest|last time i) (?:buy|bought|spend on|pay for|get|order|fill)\s+(.+?)(?:\?|$)', q)
         if not m1:
@@ -79,31 +125,8 @@ RULES:
             item = m1.group(1).strip()
             item = re.sub(r'^(some|my|a|an|the)\s+', '', item).strip()
             if item:
-                if item in ["gas", "fuel", "petrol", "diesel", "cng", "lpg"]:
-                    return """SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
-FROM transactions
-WHERE (
-    sub_category ILIKE '%fuel%' 
-    OR sub_category ILIKE '%gas%' 
-    OR sub_category ILIKE '%petrol%'
-    OR sub_category ILIKE '%lpg%'
-    OR merchant_name ILIKE '%gas%'
-    OR merchant_name ILIKE '%petrol%'
-    OR merchant_name ILIKE '%fuel%'
-    OR merchant_name ILIKE '%hpcl%'
-    OR merchant_name ILIKE '%bpcl%'
-    OR merchant_name ILIKE '%iocl%'
-    OR merchant_name ILIKE '%shell%'
-    OR remarks ILIKE '%gas%'
-    OR remarks ILIKE '%petrol%'
-    OR remarks ILIKE '%fuel%'
-    OR remarks ILIKE '%tel%'
-)
-ORDER BY transaction_date DESC
-LIMIT 1"""
-                else:
-                    clean_item = re.sub(r'[^a-zA-Z0-9\s]', '', item)
-                    return f"""SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+                clean_item = re.sub(r'[^a-zA-Z0-9\s]', '', item)
+                return f"""SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
 FROM transactions
 WHERE (merchant_name ILIKE '%{clean_item}%' OR remarks ILIKE '%{clean_item}%' OR category ILIKE '%{clean_item}%' OR sub_category ILIKE '%{clean_item}%')
 ORDER BY transaction_date DESC
@@ -130,7 +153,7 @@ WHERE amount < 0
 FROM transactions
 WHERE amount < 0
   AND transaction_date >= '{first_of_month}'
-ORDER BY ABS(amount) DESC
+  ORDER BY ABS(amount) DESC
 LIMIT 1"""
 
         # Pattern 4: Latest / recent transactions
@@ -243,18 +266,22 @@ LIMIT 5"""
         # Case 2: Aggregate count / sum with multiple breakdown rows
         return f"Found {len(rows)} matching transaction{'s' if len(rows) > 1 else ''} for your query."
 
-    async def execute_query(self, question: str, user_id: UUID) -> AssistantQueryResponse:
+    async def execute_query(self, question: str, user_id: UUID, mode: str = "llm") -> AssistantQueryResponse:
         start_t = time.perf_counter()
 
-        # Step 1: Check Deterministic Fast-Path first (0.1ms execution)
-        fast_sql = self._match_fast_sql(question)
-        if fast_sql:
-            logger.info(f"⚡ [Assistant] Fast-path SQL matched for: '{question}'")
+        if mode == "preset":
+            fast_sql = self._match_fast_sql(question)
+            if not fast_sql:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No preset pattern matched this question. Switch to 'Gemma 4 AI' mode for open-ended queries or try a suggested query."
+                )
+            logger.info(f"⚡ [Assistant] Preset Fast-Path matched for: '{question}'")
             raw_sql = fast_sql
             engine_used = "PRESET_FAST_PATH"
         else:
-            # Step 2: Fallback to Gemma 4 Text-to-SQL (generous 150s timeout)
-            logger.info(f"🤖 [Assistant] Routing to Gemma 4 Text-to-SQL: '{question}'")
+            # Mode is "llm": completely bypass regex!
+            logger.info(f"🤖 [Assistant] Routing directly to Gemma 4 AI Text-to-SQL: '{question}'")
             system_prompt = self._get_system_prompt()
             raw_sql = await self.llm.generate_response(
                 prompt=f"QUESTION: {question}\nSQL:",
