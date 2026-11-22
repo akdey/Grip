@@ -125,7 +125,15 @@ class LocalLLMEngine:
         text = re.sub(r'<\|channel>thought.*?<channel\|>', '', text, flags=re.DOTALL)
         return text.strip()
 
-    def generate(self, prompt: str, system_prompt: str, temperature: float, task: Optional[str] = None) -> Optional[str]:
+    def generate(
+        self, 
+        prompt: str, 
+        system_prompt: str, 
+        temperature: float, 
+        task: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        stop: Optional[List[str]] = None
+    ) -> Optional[str]:
         """Generate response using the local model with Adaptive Task-Prefix Caching."""
         model = self._ensure_model()
         if not model:
@@ -136,8 +144,10 @@ class LocalLLMEngine:
             logger.error("LocalLLMEngine: Engine is busy with another evaluation. Skipping concurrent collision.")
             return None
 
+        token_limit = max_tokens or 140
+
         try:
-            logger.debug(f"LocalLLMEngine: Starting inference with Gemma 4 (task: {task or 'general'})...")
+            logger.debug(f"LocalLLMEngine: Starting inference with Gemma 4 (task: {task or 'general'}, limit: {token_limit})...")
             import time
             start_t = time.perf_counter()
             
@@ -150,8 +160,9 @@ class LocalLLMEngine:
 
                 output = model.create_chat_completion(
                     messages=messages,
-                    max_tokens=140, # 140 tokens is plenty for financial JSON extraction
-                    temperature=temperature
+                    max_tokens=token_limit,
+                    temperature=temperature,
+                    stop=stop
                 )
                 raw_text = output['choices'][0]['message']['content'].strip()
             except Exception as chat_err:
@@ -159,8 +170,9 @@ class LocalLLMEngine:
                 formatted_prompt = f"System: {system_prompt}\nUser: {prompt}\nAssistant:"
                 output = model(
                     formatted_prompt,
-                    max_tokens=140,
+                    max_tokens=token_limit,
                     temperature=temperature,
+                    stop=stop,
                     echo=False
                 )
                 raw_text = output['choices'][0]['text'].strip()
@@ -186,7 +198,6 @@ class LLMService:
         
         # PII patterns for sanitizing content before sending to external APIs
         self._pii_patterns = [
-            # (re.compile(r'[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}'), '<UPI>'),  # Allow LLM to read UPI based merchants
             (re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'), '<EMAIL>'),
             (re.compile(r'(?:\+?91|0)?[6-9]\d{9}'), '<PHONE>'),
             (re.compile(r'(?:\d[ -]*?){12,19}'), '<CARD>'),
@@ -198,7 +209,7 @@ class LLMService:
     @property
     def is_enabled(self) -> bool:
         """Check if any LLM service is available."""
-        return HAS_LLAMA_CPP # or bool(self.groq_api_key)
+        return HAS_LLAMA_CPP or bool(self.groq_api_key)
 
     def _sanitize_for_external(self, text: str) -> str:
         """Extra PII scrub before sending to any external/third-party LLM API."""
@@ -215,8 +226,10 @@ class LLMService:
         system_prompt: Optional[str] = "You are a helpful financial assistant.",
         temperature: float = 0.5,
         response_format: Optional[str] = None,
-        timeout: float = 240.0, # Increased timeout for local inference
-        task: Optional[str] = None
+        timeout: float = 240.0,
+        task: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        stop: Optional[List[str]] = None
     ) -> Optional[str]:
         """Generic method to generate a response, prioritizing local execution."""
         global HAS_LLAMA_CPP
@@ -232,7 +245,9 @@ class LLMService:
                         prompt, 
                         system_prompt, 
                         temperature,
-                        task
+                        task,
+                        max_tokens,
+                        stop
                     ),
                     timeout=timeout
                 )
@@ -242,22 +257,20 @@ class LLMService:
             except asyncio.TimeoutError:
                 logger.warning(f">>> LLM_ENGINE: Local engine timed out after {timeout}s.")
             except Exception as e:
-                # If it fails once with a severe error (like shared lib missing), we can disable it 
-                # for the rest of this worker's lifecycle to stop log spam.
                 if "shared object file" in str(e) or "libc" in str(e).lower():
                     HAS_LLAMA_CPP = False
                     logger.error(f">>> LLM_ENGINE: Fatal library error. Disabling local LLM: {e}")
                 else:
                     logger.warning(f">>> LLM_ENGINE: Local engine runtime error: {e}")
 
-        # 2. Try Groq (Fallback — external API, sanitize content)
-        # if self.groq_api_key:
-        #     logger.info(f">>> LLM_ENGINE: Falling back to Groq ({self.groq_model})...")
-        #     sanitized_prompt = self._sanitize_for_external(prompt)
-        #     result = await self._call_groq(sanitized_prompt, system_prompt, temperature, response_format, timeout)
-        #     if result:
-        #         logger.info(">>> LLM_ENGINE: Groq success.")
-        #     return result
+        # 2. Try Groq (Fallback if key provided)
+        if self.groq_api_key:
+            logger.info(f">>> LLM_ENGINE: Falling back to Groq ({self.groq_model})...")
+            sanitized_prompt = self._sanitize_for_external(prompt)
+            result = await self._call_groq(sanitized_prompt, system_prompt, temperature, response_format, timeout)
+            if result:
+                logger.info(">>> LLM_ENGINE: Groq success.")
+            return result
             
         logger.warning("Local LLM engine is unavailable. Groq fallback is disabled.")
         return None
@@ -325,28 +338,25 @@ class LLMService:
         
         if not content:
             return None
-            
-        try:
-            json_match = re.search(r'(\{.*\})', content, re.DOTALL)
-            if json_match:
-                content = json_match.group(1)
-            
-            content = content.strip().replace('```json', '').replace('```', '').strip()
-            return json.loads(content)
-        except (json.JSONDecodeError, IndexError) as e:
-            logger.error(f"LLM JSON Decode Error: {e}")
-            try:
-                # Last resort cleanup
-                cleaned = re.sub(r',\s*([\]\}])', r'\1', content)
-                return json.loads(cleaned)
-            except Exception:
-                return None
 
-# Singleton-like instance
-_llm_service = None
+        # Clean markdown code blocks if the model wrapped the JSON
+        cleaned_content = re.sub(r'```(?:json)?\s*(.*?)\s*```', r'\1', content, flags=re.DOTALL).strip()
+        
+        # Look for the outermost JSON brackets if there's conversational filler
+        json_match = re.search(r'(\{.*\})', cleaned_content, re.DOTALL)
+        if json_match:
+            cleaned_content = json_match.group(1)
+
+        try:
+            return json.loads(cleaned_content)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse LLM response as JSON: {e} | Raw content: {content[:100]}...")
+            return None
+
+_llm_service_instance = None
 
 def get_llm_service() -> LLMService:
-    global _llm_service
-    if _llm_service is None:
-        _llm_service = LLMService()
-    return _llm_service
+    global _llm_service_instance
+    if _llm_service_instance is None:
+        _llm_service_instance = LLMService()
+    return _llm_service_instance

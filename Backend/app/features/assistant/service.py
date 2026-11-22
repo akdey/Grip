@@ -33,41 +33,15 @@ class AssistantService:
 
     def _get_system_prompt(self) -> str:
         today_str = datetime.now().strftime("%Y-%m-%d")
-        return f"""You are a PostgreSQL expert for Grip, a personal finance tracker.
-Translate the user's natural language question into a single, valid PostgreSQL SELECT query.
-
-DATABASE SCHEMA:
-Table: transactions
-Columns:
-- id (uuid): Unique transaction identifier. ALWAYS include 'id' in SELECT when retrieving transaction records.
-- amount (numeric): Negative for expenses/debits (e.g. -450.0), positive for income/credits (e.g. +50000.0)
-- currency (varchar): 'INR'
-- merchant_name (varchar): Brand, entity, or person paid (e.g. 'Starbucks', 'HPCL', 'Swiggy', 'Uber', 'Airtel')
-- category (varchar): e.g. 'Food', 'Transport', 'Shopping', 'Bills & Utilities', 'Income', 'Entertainment', 'Medical', 'Personal Care'
-- sub_category (varchar): e.g. 'Fuel & Vehicle', 'Gas / LPG', 'Groceries', 'Restaurants', 'Salary', 'Electricity', 'Dining', 'Cabs'
-- transaction_date (date): Date of transaction (YYYY-MM-DD)
-- account_type (varchar): 'SAVINGS', 'CREDIT_CARD', 'CASH'
-- status (varchar): 'PENDING', 'SETTLED'
-- remarks (varchar): User notes, descriptions, memos, and email subjects
-- is_surety (boolean): true for fixed recurring bills/commitments
-
-RULES:
-1. Output ONLY the raw SQL query. Do NOT include markdown blocks (no ```sql), explanations, or notes.
-2. CRITICAL: Start your output immediately with the SELECT or WITH keyword. Do NOT output thoughts or step-by-step reasoning.
-3. Only output SELECT queries. Never use INSERT, UPDATE, DELETE, or DROP.
-4. For individual transaction lookups (records), ALWAYS include 'id' in the SELECT columns (e.g. SELECT id, transaction_date, amount, merchant_name, category, sub_category, remarks FROM transactions ...).
-5. CRITICAL DISTINCTION - COOKING GAS (LPG) vs VEHICLE FUEL (PETROL/DIESEL):
-   - For "cooking gas", "LPG", "gas cylinder", or "gas" (utility/cooking):
-     Search: (sub_category ILIKE '%gas%' OR sub_category ILIKE '%lpg%' OR remarks ILIKE '%gas%' OR remarks ILIKE '%lpg%' OR remarks ILIKE '%cylinder%' OR merchant_name ILIKE '%lpg%') AND category != 'Transport'
-     NEVER match vehicle petrol, scooty tel, or 'Transport'.
-   - For "fuel", "petrol", "diesel", "vehicle fuel", "scooty fuel", or "scooty tel":
-     Search: (sub_category ILIKE '%fuel%' OR sub_category ILIKE '%petrol%' OR sub_category ILIKE '%diesel%' OR remarks ILIKE '%fuel%' OR remarks ILIKE '%petrol%' OR remarks ILIKE '%tel%' OR merchant_name ILIKE '%petrol%' OR merchant_name ILIKE '%fuel%' OR merchant_name ILIKE '%hpcl%' OR merchant_name ILIKE '%bpcl%' OR merchant_name ILIKE '%iocl%')
-     NEVER match cooking gas or 'Bills & Utilities'.
-6. For keyword or item searches, always include remarks in the search (e.g. merchant_name ILIKE '%keyword%' OR remarks ILIKE '%keyword%').
-7. Order by transaction_date DESC for 'last', 'latest', or 'recent' questions, with LIMIT 1.
-8. For spend totals or averages, use SUM(ABS(amount)) or AVG(ABS(amount)) where amount < 0.
-9. Assume today's date is: {today_str}.
-"""
+        return f"""PostgreSQL Text-to-SQL translator for Grip personal finance.
+Table: transactions(id uuid, amount numeric, currency varchar, merchant_name varchar, category varchar, sub_category varchar, transaction_date date, status varchar, remarks varchar).
+Rules:
+1. Output ONLY a single SQL query starting with SELECT. No explanations, no markdown fences, no thinking.
+2. For specific transactions, ALWAYS include 'id' in SELECT: SELECT id, transaction_date, amount, merchant_name, category, sub_category, remarks FROM transactions...
+3. Cooking gas / LPG: (sub_category ILIKE '%gas%' OR sub_category ILIKE '%lpg%' OR remarks ILIKE '%gas%' OR remarks ILIKE '%lpg%' OR remarks ILIKE '%cylinder%') AND category != 'Transport'.
+4. Vehicle fuel: (sub_category ILIKE '%fuel%' OR sub_category ILIKE '%petrol%' OR remarks ILIKE '%fuel%' OR remarks ILIKE '%tel%').
+5. Order by transaction_date DESC for last/latest with LIMIT 1.
+6. Assume today's date: {today_str}."""
 
     def _match_fast_sql(self, question: str) -> Optional[str]:
         """
@@ -286,12 +260,27 @@ LIMIT 5"""
             logger.info(f"🤖 [Assistant] Routing directly to Gemma 4 AI Text-to-SQL: '{question}'")
             system_prompt = self._get_system_prompt()
             raw_sql = await self.llm.generate_response(
-                prompt=f"QUESTION: {question}\nSQL:",
+                prompt=f"QUESTION: {question}\nSQL: SELECT",
                 system_prompt=system_prompt,
                 temperature=0.1,
-                timeout=150.0
+                timeout=240.0,
+                max_tokens=70,
+                stop=[";", "\n\n", "<end_of_turn>"],
+                task="TEXT_TO_SQL"
             )
+            
+            if raw_sql and not raw_sql.strip().upper().startswith("SELECT") and not raw_sql.strip().upper().startswith("WITH"):
+                raw_sql = f"SELECT {raw_sql.strip()}"
+                
             engine_used = "GEMMA_4"
+
+            # Graceful Fallback if Gemma 4 was unable to respond on CPU
+            if not raw_sql:
+                fallback_sql = self._match_fast_sql(question)
+                if fallback_sql:
+                    logger.warning(f"⚠️ Gemma 4 timed out. Engaging Fast-Path fallback for: '{question}'")
+                    raw_sql = fallback_sql
+                    engine_used = "PRESET_FAST_PATH"
 
         if not raw_sql:
             raise HTTPException(status_code=500, detail="The assistant engine was unable to formulate a SQL query. Please try rephrasing.")
