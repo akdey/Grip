@@ -234,6 +234,7 @@ LIMIT 5"""
         if fast_sql:
             logger.info(f"⚡ [Assistant] Fast-path SQL matched for: '{question}'")
             raw_sql = fast_sql
+            engine_used = "PRESET_FAST_PATH"
         else:
             # Step 2: Fallback to Gemma 4 Text-to-SQL (generous 150s timeout)
             logger.info(f"🤖 [Assistant] Routing to Gemma 4 Text-to-SQL: '{question}'")
@@ -244,6 +245,7 @@ LIMIT 5"""
                 temperature=0.1,
                 timeout=150.0
             )
+            engine_used = "GEMMA_4"
 
         if not raw_sql:
             raise HTTPException(status_code=500, detail="The assistant engine was unable to formulate a SQL query. Please try rephrasing.")
@@ -291,5 +293,6 @@ LIMIT 5"""
             sql_query=validated_sql,
             row_count=len(results),
             results=results,
-            execution_time_ms=round(execution_time_ms, 2)
+            execution_time_ms=round(execution_time_ms, 2),
+            engine_used=engine_used
         )

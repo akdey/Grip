@@ -228,15 +228,32 @@ export const Assistant: React.FC = () => {
                                 <div className="max-w-[95%] sm:max-w-[85%] space-y-3">
                                     <div className="p-4 rounded-3xl bg-surface border border-border-subtle shadow-xs space-y-3">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-5 h-5 rounded-full bg-accent-subtle border border-accent-border flex items-center justify-center">
-                                                <Sparkles size={11} className="text-accent-text" />
+                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                                                msg.response?.engine_used === 'PRESET_FAST_PATH'
+                                                    ? 'bg-amber-500/10 border border-amber-500/20'
+                                                    : 'bg-accent-subtle border border-accent-border'
+                                            }`}>
+                                                {msg.response?.engine_used === 'PRESET_FAST_PATH' ? (
+                                                    <Zap size={11} className="text-amber-400" />
+                                                ) : (
+                                                    <Sparkles size={11} className="text-accent-text" />
+                                                )}
                                             </div>
                                             <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                                                Gemma 4 Intelligence
+                                                {msg.response?.engine_used === 'PRESET_FAST_PATH' ? 'Preset Query' : 'Gemma 4 AI'}
                                             </span>
+                                            {msg.response?.engine_used === 'PRESET_FAST_PATH' ? (
+                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                    Instant Match
+                                                </span>
+                                            ) : (
+                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-accent-subtle text-accent-text border border-accent-border">
+                                                    Text-to-SQL
+                                                </span>
+                                            )}
                                             {msg.response && (
                                                 <span className="text-[10px] font-mono text-text-muted ml-auto flex items-center gap-1">
-                                                    <Zap size={10} className="text-accent" />
+                                                    <Clock size={10} className="text-text-muted" />
                                                     {formatTime(msg.response.execution_time_ms)}
                                                 </span>
                                             )}
@@ -294,7 +311,9 @@ export const Assistant: React.FC = () => {
                                                             <div className="mt-2 p-3 rounded-xl bg-black/40 border border-border-subtle font-mono text-[11px] text-text-secondary leading-relaxed overflow-x-auto">
                                                                 <code className="text-accent-text">{msg.response.sql_query}</code>
                                                                 <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[9px] text-text-muted">
-                                                                    <span>Read-only SELECT query</span>
+                                                                    <span>
+                                                                        {msg.response.engine_used === 'PRESET_FAST_PATH' ? '⚡ Source: Preset Query Match' : '🤖 Source: Gemma 4 Generated SQL'}
+                                                                    </span>
                                                                     <span>{msg.response.row_count} row(s) returned</span>
                                                                 </div>
                                                             </div>

@@ -11,3 +11,4 @@ class AssistantQueryResponse(BaseModel):
     row_count: int
     results: List[Dict[str, Any]]
     execution_time_ms: float
+    engine_used: str = "GEMMA_4"  # 'PRESET_FAST_PATH' or 'GEMMA_4'

@@ -22,6 +22,7 @@ export interface AssistantQueryResponse {
     row_count: number;
     results: AssistantQueryResultItem[];
     execution_time_ms: number;
+    engine_used?: 'PRESET_FAST_PATH' | 'GEMMA_4' | string;
 }
 
 export interface ChatMessage {
