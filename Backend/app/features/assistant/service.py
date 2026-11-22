@@ -39,6 +39,7 @@ Translate the user's natural language question into a single, valid PostgreSQL S
 DATABASE SCHEMA:
 Table: transactions
 Columns:
+- id (uuid): Unique transaction identifier. ALWAYS include 'id' in SELECT when retrieving transaction records.
 - amount (numeric): Negative for expenses/debits (e.g. -450.0), positive for income/credits (e.g. +50000.0)
 - currency (varchar): 'INR'
 - merchant_name (varchar): Brand, entity, or person paid (e.g. 'Starbucks', 'HPCL', 'Swiggy', 'Uber', 'Airtel')
@@ -54,17 +55,18 @@ RULES:
 1. Output ONLY the raw SQL query. Do NOT include markdown blocks (no ```sql), explanations, or notes.
 2. CRITICAL: Start your output immediately with the SELECT or WITH keyword. Do NOT output thoughts or step-by-step reasoning.
 3. Only output SELECT queries. Never use INSERT, UPDATE, DELETE, or DROP.
-4. CRITICAL DISTINCTION - COOKING GAS (LPG) vs VEHICLE FUEL (PETROL/DIESEL):
+4. For individual transaction lookups (records), ALWAYS include 'id' in the SELECT columns (e.g. SELECT id, transaction_date, amount, merchant_name, category, sub_category, remarks FROM transactions ...).
+5. CRITICAL DISTINCTION - COOKING GAS (LPG) vs VEHICLE FUEL (PETROL/DIESEL):
    - For "cooking gas", "LPG", "gas cylinder", or "gas" (utility/cooking):
      Search: (sub_category ILIKE '%gas%' OR sub_category ILIKE '%lpg%' OR remarks ILIKE '%gas%' OR remarks ILIKE '%lpg%' OR remarks ILIKE '%cylinder%' OR merchant_name ILIKE '%lpg%') AND category != 'Transport'
      NEVER match vehicle petrol, scooty tel, or 'Transport'.
    - For "fuel", "petrol", "diesel", "vehicle fuel", "scooty fuel", or "scooty tel":
      Search: (sub_category ILIKE '%fuel%' OR sub_category ILIKE '%petrol%' OR sub_category ILIKE '%diesel%' OR remarks ILIKE '%fuel%' OR remarks ILIKE '%petrol%' OR remarks ILIKE '%tel%' OR merchant_name ILIKE '%petrol%' OR merchant_name ILIKE '%fuel%' OR merchant_name ILIKE '%hpcl%' OR merchant_name ILIKE '%bpcl%' OR merchant_name ILIKE '%iocl%')
      NEVER match cooking gas or 'Bills & Utilities'.
-5. For keyword or item searches, always include remarks in the search (e.g. merchant_name ILIKE '%keyword%' OR remarks ILIKE '%keyword%').
-6. Order by transaction_date DESC for 'last', 'latest', or 'recent' questions, with LIMIT 1.
-7. For spend totals or averages, use SUM(ABS(amount)) or AVG(ABS(amount)) where amount < 0.
-8. Assume today's date is: {today_str}.
+6. For keyword or item searches, always include remarks in the search (e.g. merchant_name ILIKE '%keyword%' OR remarks ILIKE '%keyword%').
+7. Order by transaction_date DESC for 'last', 'latest', or 'recent' questions, with LIMIT 1.
+8. For spend totals or averages, use SUM(ABS(amount)) or AVG(ABS(amount)) where amount < 0.
+9. Assume today's date is: {today_str}.
 """
 
     def _match_fast_sql(self, question: str) -> Optional[str]:
@@ -79,7 +81,7 @@ RULES:
         if re.search(r'\b(lpg|cooking gas|gas cylinder|cylinder|indane|hp gas|bharat gas)\b', q) or (
             re.search(r'\b(?:when did i (?:last|recently)|latest|last time i) (?:buy|bought|order|get|pay for)\s+gas\b', q)
         ):
-            return """SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+            return """SELECT id, transaction_date, amount, merchant_name, category, sub_category, remarks
 FROM transactions
 WHERE (
     sub_category ILIKE '%gas%' 
@@ -98,7 +100,7 @@ LIMIT 1"""
 
         # Check for vehicle fuel / petrol / diesel / scooty
         if re.search(r'\b(petrol|diesel|fuel|scooty|cng)\b', q):
-            return """SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+            return """SELECT id, transaction_date, amount, merchant_name, category, sub_category, remarks
 FROM transactions
 WHERE (
     sub_category ILIKE '%fuel%' 
@@ -126,7 +128,7 @@ LIMIT 1"""
             item = re.sub(r'^(some|my|a|an|the)\s+', '', item).strip()
             if item:
                 clean_item = re.sub(r'[^a-zA-Z0-9\s]', '', item)
-                return f"""SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+                return f"""SELECT id, transaction_date, amount, merchant_name, category, sub_category, remarks
 FROM transactions
 WHERE (merchant_name ILIKE '%{clean_item}%' OR remarks ILIKE '%{clean_item}%' OR category ILIKE '%{clean_item}%' OR sub_category ILIKE '%{clean_item}%')
 ORDER BY transaction_date DESC
@@ -149,16 +151,16 @@ WHERE amount < 0
         # Pattern 3: Biggest / highest / largest expense this month
         if re.search(r'\b(?:biggest|highest|largest|maximum)\s+expense\b', q):
             first_of_month = datetime.now().strftime("%Y-%m-01")
-            return f"""SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+            return f"""SELECT id, transaction_date, amount, merchant_name, category, sub_category, remarks
 FROM transactions
 WHERE amount < 0
   AND transaction_date >= '{first_of_month}'
-  ORDER BY ABS(amount) DESC
+ORDER BY ABS(amount) DESC
 LIMIT 1"""
 
         # Pattern 4: Latest / recent transactions
         if re.search(r'\b(?:show|list|recent|latest)\s+(?:transactions|spends|orders)\b', q):
-            return """SELECT transaction_date, amount, merchant_name, category, sub_category, remarks
+            return """SELECT id, transaction_date, amount, merchant_name, category, sub_category, remarks
 FROM transactions
 ORDER BY transaction_date DESC
 LIMIT 5"""

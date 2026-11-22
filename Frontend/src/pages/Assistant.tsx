@@ -6,18 +6,18 @@ import {
     Sparkles,
     Send,
     Bot,
-    User as UserIcon,
     Terminal,
     ChevronDown,
     ChevronUp,
     ShieldCheck,
     Zap,
     RotateCcw,
-    Receipt,
     Calendar,
-    Tag,
     Clock,
-    AlertCircle
+    AlertCircle,
+    ExternalLink,
+    ChevronRight,
+    ShieldAlert
 } from 'lucide-react';
 
 import { useAssistantQuery } from '../features/assistant/hooks';
@@ -181,7 +181,7 @@ export const Assistant: React.FC = () => {
                             </h2>
                             <p className="text-[11px] text-text-muted leading-relaxed">
                                 Ask any question about your spending, merchants, or notes.
-                                Choose between deep AI translation or instant local presets.
+                                Tap on any matched transaction card to view full transaction details.
                             </p>
                         </div>
 
@@ -276,9 +276,10 @@ export const Assistant: React.FC = () => {
                                         {/* Rendered Transaction Cards */}
                                         {msg.response && msg.response.results && msg.response.results.length > 0 && (
                                             <div className="space-y-2 pt-1 border-t border-border-subtle">
-                                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                                                    {msg.response.results.length === 1 ? 'Matched Record:' : `Results (${msg.response.results.length}):`}
-                                                </p>
+                                                <div className="flex items-center justify-between text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                                                    <span>{msg.response.results.length === 1 ? 'Matched Record:' : `Results (${msg.response.results.length}):`}</span>
+                                                    <span className="text-[9px] lowercase font-normal text-text-muted">tap card to view</span>
+                                                </div>
                                                 <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                                                     {msg.response.results.map((row, rIdx) => (
                                                         <TransactionCard key={rIdx} row={row} />
@@ -434,18 +435,43 @@ export const Assistant: React.FC = () => {
     );
 };
 
-/** Compact Card for Single or Multiple Transaction Results */
+/** Interactive Card for Single or Multiple Transaction Results */
 const TransactionCard: React.FC<{ row: AssistantQueryResultItem }> = ({ row }) => {
+    const navigate = useNavigate();
     const amount = typeof row.amount === 'number' ? row.amount : null;
     const isDebit = amount !== null && amount < 0;
+    const hasId = Boolean(row.id);
+
+    const handleClick = () => {
+        if (hasId) {
+            haptics.impact('light');
+            navigate(`/transactions/${row.id}`);
+        }
+    };
 
     return (
-        <div className="p-3 rounded-2xl bg-surface-subtle border border-border-subtle flex items-start justify-between gap-3">
-            <div className="space-y-1 min-w-0">
-                <p className="text-xs font-bold text-text-primary truncate">
-                    {row.merchant_name || 'Transaction'}
-                </p>
-                <div className="flex flex-wrap items-center gap-2 text-[10px] text-text-muted">
+        <div
+            onClick={handleClick}
+            className={`p-3.5 rounded-2xl bg-surface-subtle border border-border-subtle flex items-start justify-between gap-3 transition-all ${
+                hasId
+                    ? 'hover:bg-surface-hover hover:border-accent-border/50 cursor-pointer active:scale-[0.99] group shadow-2xs'
+                    : ''
+            }`}
+            title={hasId ? "Click to view full transaction details" : undefined}
+        >
+            <div className="space-y-1.5 min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                    <p className={`text-xs font-bold text-text-primary truncate ${hasId ? 'group-hover:text-accent transition-colors' : ''}`}>
+                        {row.merchant_name || 'Transaction'}
+                    </p>
+                    {hasId && (
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-accent opacity-75 group-hover:opacity-100 transition-opacity">
+                            <ExternalLink size={10} />
+                        </span>
+                    )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-text-muted">
                     {row.transaction_date && (
                         <span className="flex items-center gap-1">
                             <Calendar size={10} />
@@ -462,7 +488,17 @@ const TransactionCard: React.FC<{ row: AssistantQueryResultItem }> = ({ row }) =
                             {row.sub_category}
                         </span>
                     )}
+                    {row.status && (
+                        <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider ${
+                            row.status === 'SETTLED'
+                                ? 'bg-status-success-subtle text-status-success-text'
+                                : 'bg-status-warning-subtle text-status-warning-text'
+                        }`}>
+                            {row.status}
+                        </span>
+                    )}
                 </div>
+
                 {row.remarks && row.remarks.trim() && (
                     <p className="text-[10px] text-text-muted italic truncate">
                         "{row.remarks}"
@@ -470,18 +506,25 @@ const TransactionCard: React.FC<{ row: AssistantQueryResultItem }> = ({ row }) =
                 )}
             </div>
 
-            {amount !== null && (
-                <div className="text-right shrink-0">
+            <div className="text-right shrink-0 flex flex-col items-end justify-between min-h-[38px]">
+                {amount !== null && (
                     <p className={`text-xs font-extrabold tabular-nums ${isDebit ? 'text-text-primary' : 'text-status-success-text'}`}>
                         {isDebit ? '-' : '+'}₹{Math.abs(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </p>
+                )}
+                <div className="flex items-center gap-1 mt-1">
                     {row.account_type && (
                         <p className="text-[9px] font-mono text-text-muted uppercase">
                             {row.account_type}
                         </p>
                     )}
+                    {hasId && (
+                        <span className="p-0.5 rounded-md bg-surface text-text-muted group-hover:text-accent group-hover:bg-accent-subtle transition-colors ml-0.5">
+                            <ChevronRight size={12} />
+                        </span>
+                    )}
                 </div>
-            )}
+            </div>
         </div>
     );
 };
