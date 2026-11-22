@@ -60,14 +60,31 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to start scheduler: {e}")
 
-    # Warm up Local LLM in the background so the first request doesn't spend 16s loading from disk
+    # Warm up Local LLM and task prefix cache in the background so the first request doesn't spend time loading or cold prefilling
     async def _warmup_llm():
         try:
             from app.core.llm import get_llm_service
+            from app.features.sync.service import SyncService
             llm = get_llm_service()
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, llm.local_engine._ensure_model)
             logger.info("Local LLM model pre-warmed and resident in memory.")
+
+            def _prefill_task_prefix():
+                try:
+                    static_prompt = SyncService.get_static_system_prompt()
+                    logger.info("Pre-warming TRANSACTION_EXTRACTION task prefix in background...")
+                    llm.local_engine.generate(
+                        prompt="NOTIFICATION CONTENT:\nSUBJECT: Warmup\nSENDER: noreply@bank.com\nBODY:\n\"\"\"Ping\"\"\"",
+                        system_prompt=static_prompt,
+                        temperature=0.0,
+                        task="TRANSACTION_EXTRACTION"
+                    )
+                    logger.info("TRANSACTION_EXTRACTION task prefix successfully pre-warmed and pinned.")
+                except Exception as p_err:
+                    logger.warning(f"Failed to pre-warm TRANSACTION_EXTRACTION task prefix: {p_err}")
+
+            await loop.run_in_executor(None, _prefill_task_prefix)
         except Exception as ex:
             logger.warning(f"LLM pre-warm skipped: {ex}")
 

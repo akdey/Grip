@@ -141,7 +141,7 @@ class LocalLLMEngine:
             return None
             
         # Strictly serialize inference — never allow concurrent forward passes in llama.cpp
-        if not self._inference_lock.acquire(blocking=True, timeout=120):
+        if not self._inference_lock.acquire(blocking=True, timeout=240):
             logger.error("LocalLLMEngine: Engine is busy with another evaluation. Skipping concurrent collision.")
             return None
 
@@ -178,11 +178,11 @@ class LocalLLMEngine:
             text = self._strip_thoughts(raw_text)
             logger.info(f"⚡ [Gemma 4] Inference complete in {inf_time:.0f}ms (generated {len(text)} chars)")
 
-            # Pin prefix state for this task if not already pinned
-            if task and system_prompt and not self.cache_adapter.is_task_pinned(task):
+            # Pin prefix state for this task if not already pinned for these specific tokens
+            if task and system_prompt:
                 try:
                     sys_tokens = model.tokenize(system_prompt.encode('utf-8'))
-                    if sys_tokens:
+                    if sys_tokens and not self.cache_adapter.is_task_pinned(task, sys_tokens):
                         self.cache_adapter.pin_task_prefix(task, sys_tokens, model.save_state())
                 except Exception as pin_err:
                     logger.debug(f"[TaskCacheAdapter] Could not auto-pin task prefix for {task}: {pin_err}")
@@ -234,7 +234,7 @@ class LLMService:
         system_prompt: Optional[str] = "You are a helpful financial assistant.",
         temperature: float = 0.5,
         response_format: Optional[str] = None,
-        timeout: float = 120.0, # Increased timeout for local inference
+        timeout: float = 240.0, # Increased timeout for local inference
         task: Optional[str] = None
     ) -> Optional[str]:
         """Generic method to generate a response, prioritizing local execution."""
@@ -329,7 +329,7 @@ class LLMService:
         prompt: str, 
         system_prompt: Optional[str] = "You are a financial intelligence engine. Always output valid JSON objects.",
         temperature: float = 0.2,
-        timeout: float = 150.0,
+        timeout: float = 240.0,
         task: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """Method specifically for JSON responses with robust parsing."""

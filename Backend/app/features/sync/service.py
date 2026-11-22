@@ -194,6 +194,45 @@ class SyncService:
             
         return ""
 
+    @staticmethod
+    def get_static_system_prompt() -> str:
+        """
+        Static, compact financial extraction prompt (~420 tokens).
+        Completely invariant across users and sync cycles to maximize
+        KV cache prefix reuse in llama.cpp on CPU.
+        """
+        return """You are a high-precision financial intelligence engine.
+TASK: Determine if an actual completed financial transaction occurred and extract its details.
+
+RULES:
+- is_transaction: true ONLY if real money was actually debited, credited, spent, or transferred.
+- is_transaction: false for promotional offers/deals/discounts, pre-approved loan/card upgrade ads, bill payment due reminders, unpaid invoices/UPI requests, OTP codes, declined/failed transactions, or account security notices.
+
+FIELDS:
+1. is_transaction: boolean (true only if money transferred)
+2. amount: float (0.0 if is_transaction is false)
+3. currency: string (e.g. "INR")
+4. merchant_name: string (Brand or person paid; NEVER a bank name like HDFC, ICICI, SBI, Axis; "NONE" if false)
+5. category: One of [Food, Transport, Shopping, Housing, Bills & Utilities, Investment, Income, Entertainment, Medical, Personal Care, Uncategorized]
+6. sub_category: string or "Uncategorized"
+7. account_type: "SAVINGS", "CREDIT_CARD", or "CASH"
+8. transaction_type: "DEBIT" or "CREDIT"
+9. extracted_date: YYYY-MM-DD or null
+10. reason: short 3-5 word summary
+
+FEW-SHOT EXAMPLES:
+Example 1 (Debit): "Your A/c 1234 debited for INR 450.00 on 12-Nov-2026 at Starbucks. Avail Bal: INR 12,450.00"
+-> {"is_transaction": true, "amount": 450.0, "currency": "INR", "merchant_name": "Starbucks", "category": "Food", "sub_category": "Restaurants", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": "2026-11-12", "reason": "Debit at Starbucks"}
+
+Example 2 (Non-Transaction Offer/Reminder): "Mega Deal! Flat Rs. 200 off on Swiggy / Airtel bill Rs 825 due on 22-Nov."
+-> {"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Promotional offer or bill reminder"}
+
+Example 3 (Credit/Salary): "INR 65,000.00 credited to A/c 3456 on 01-Nov-2026 by Tech Corp towards Salary."
+-> {"is_transaction": true, "amount": 65000.0, "currency": "INR", "merchant_name": "Tech Corp", "category": "Income", "sub_category": "Salary", "account_type": "SAVINGS", "transaction_type": "CREDIT", "extracted_date": "2026-11-01", "reason": "Salary credited"}
+
+OUTPUT ONLY VALID JSON:
+{"is_transaction": bool, "amount": float, "currency": str, "merchant_name": str, "category": str, "sub_category": str, "account_type": str, "transaction_type": str, "extracted_date": str, "reason": str}"""
+
     async def call_brain_api(
         self,
         text: str,
@@ -206,84 +245,12 @@ class SyncService:
         Unified LLM-based Transaction Identification & Extraction.
         Accuracy over Latency.
         """
-        # Compacting Category Context for token efficiency
-        cat_str = "Categories: Food, Transport, Shopping, Housing, Bills & Utilities, Investment, Income, Entertainment, Medical, Personal Care"
-        if categories_context:
-            cat_str = "Available Categories and Sub-categories:\n" + "\n".join([f"- {c}" for c in categories_context]) #[:30]
-
         # Clean whitespace without stripping meaningful sentences or context
         cleaned_text = self._clean_email_body(text)
         
-        # Static prompt prefix: Contains all rules, few-shots, categories and schema.
-        # This prefix is 100% identical for all emails in the sync, allowing LlamaRAMCache
-        # to reuse cached KV states instantly across the batch.
-        system_prompt = f"""You are a high-precision financial intelligence engine.
-TASK: Determine if an actual completed financial transaction took place and extract its details.
-
-CRITICAL EVALUATION RULES:
-- Set "is_transaction" to TRUE ONLY if an actual transaction has already happened: real money was successfully debited, credited, spent, deposited, or transferred, changing an account, card, or wallet balance.
-- Set "is_transaction" to FALSE for ANY of the following non-transaction or promotional content:
-  * PROMOTIONAL EMAILS, OFFERS, DEALS & DISCOUNTS:
-    - Emails advertising discounts, coupons, sales, or promo codes (e.g., "Flat Rs. 200 off on Swiggy", "Save up to Rs. 1,000 on flights", "Cashback offer on your next purchase").
-    - Even if a rupee amount or merchant brand is prominently mentioned, if it is an advertisement, deal, or offer, it is NOT a transaction!
-  * PRE-APPROVED LOANS, CREDIT CARD UPGRADES & EMI OFFERS:
-    - Loan invitations (e.g., "You are eligible for an instant personal loan of Rs 5,00,000", "Pre-approved loan disbursed in 2 mins").
-    - Credit limit enhancement notices or credit card upgrade advertisements (e.g., "Your card limit enhanced to Rs 2,00,000").
-  * BILL DUE ALERTS, PAYMENT REMINDERS & DUE DATE NOTICES:
-    - Reminders where no payment has been made yet (e.g., "Electricity bill of Rs. 1,250 is due on 25-Nov", "Minimum amount due on card is Rs. 2,100").
-  * UPI PAYMENT REQUESTS & UNPAID INVOICES:
-    - Inbound payment requests (e.g., "xyz@upi has requested Rs. 400 from you"). A request is NOT a completed debit.
-  * REWARD POINTS, CASHBACK COINS & VOUCHER PROMOTIONS:
-    - Reward balance alerts or marketing vouchers (e.g., "You have 450 reward points expiring soon", "Claim your Rs 100 voucher inside").
-  * ONE-TIME PASSWORDS (OTPs) & VERIFICATION CODES:
-    - OTPs or 2FA approval alerts (e.g., "Use OTP 482910 to approve your purchase of Rs. 850").
-  * FAILED, DECLINED, OR CANCELLED ATTEMPTS:
-    - Declined transactions (e.g., "Transaction of Rs. 450 declined due to insufficient balance", "Payment failed").
-  * SECURITY ALERTS & ACCOUNT NOTIFICATIONS:
-    - Login alerts, password reset notices, e-statement dispatch notices, or mutual fund NAV summaries.
-  * CASH ON DELIVERY (COD) ORDERS:
-    - E-commerce order confirmations where payment is Cash on Delivery and no digital account was debited.
-
-EXTRACTION FIELDS:
-1. is_transaction: (boolean) True ONLY if real money was actually debited, credited, or transferred. Otherwise false.
-2. amount: (float) Exact value transferred. Set to 0.0 if is_transaction is false.
-3. merchant_name: (string) The specific brand, person, or clearing descriptor paid to.
-   - Rule: NEVER use a bank name (HDFC, ICICI, SBI, Axis, Kotak, PNB) as the merchant.
-   - Clean reference numbers and UPI handles from the name.
-   - Set to "NONE" if is_transaction is false.
-4. category/sub_category: Matched from available categories below, or "Uncategorized".
-5. account_type: "SAVINGS", "CREDIT_CARD", or "CASH".
-6. transaction_type: "DEBIT" or "CREDIT".
-7. extracted_date: ISO format (YYYY-MM-DD), or null.
-8. reason: (string) Short 3-6 word summary (e.g., "Card spend at Starbucks", "Promotional discount offer", "Pre-approved loan advertisement", "Bill due reminder", "OTP verification code").
-
-FEW-SHOT EXAMPLES:
-Example 1 (Real Debit): "Your A/c ending 1234 debited for INR 450.00 on 12-Nov-2026 at Starbucks. Avail Bal: INR 12,450.00"
--> {{"is_transaction": true, "amount": 450.0, "currency": "INR", "merchant_name": "Starbucks", "category": "Food", "sub_category": "Restaurants", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": "2026-11-12", "reason": "Debit at Starbucks"}}
-
-Example 2 (Promotional Offer - Discard): "Mega Food Festival! Get flat Rs. 150 off on orders above Rs. 499 with your HDFC Bank Card on Zomato. Use code FEST150."
--> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Promotional discount offer"}}
-
-Example 3 (Pre-approved Loan - Discard): "Congratulations! You are eligible for an instant pre-approved personal loan of Rs 3,50,000 at 10.5% interest. Disburse now."
--> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Pre-approved loan promotion"}}
-
-Example 4 (Bill Due Reminder - Discard): "Dear Customer, your Airtel Broadband bill of Rs 825 is due on 22-Nov-2026. Pay now to avoid late fee."
--> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "Bill payment due reminder"}}
-
-Example 5 (OTP Code - Discard): "Use OTP 839201 to authorize transaction of INR 1,299 at Amazon. Do not share this OTP with anyone."
--> {{"is_transaction": false, "amount": 0.0, "currency": "INR", "merchant_name": "NONE", "category": "Uncategorized", "sub_category": "Uncategorized", "account_type": "SAVINGS", "transaction_type": "DEBIT", "extracted_date": null, "reason": "OTP authorization code"}}
-
-Example 6 (Real Credit Card Spend): "Thank you for using HDFC Bank Credit Card ending 9876 for Rs 2,340.00 at RELIANCE RETAIL on 14-Nov-26 at 18:32:10."
--> {{"is_transaction": true, "amount": 2340.0, "currency": "INR", "merchant_name": "Reliance Retail", "category": "Shopping", "sub_category": "Groceries", "account_type": "CREDIT_CARD", "transaction_type": "DEBIT", "extracted_date": "2026-11-14", "reason": "Credit card spend at Reliance Retail"}}
-
-Example 7 (Real Money Credited): "INR 65,000.00 credited to your account 3456 on 01-Nov-2026 by TECH CORP towards Salary. Avail Bal: INR 98,000.00"
--> {{"is_transaction": true, "amount": 65000.0, "currency": "INR", "merchant_name": "Tech Corp", "category": "Income", "sub_category": "Salary", "account_type": "SAVINGS", "transaction_type": "CREDIT", "extracted_date": "2026-11-01", "reason": "Salary credited"}}
-
-{cat_str}
-
-RETURN ONLY RAW JSON with keys:
-"is_transaction", "amount", "currency", "merchant_name", "category", "sub_category", "account_type", "transaction_type", "extracted_date", "reason"
-"""
+        # Static prompt prefix: 100% invariant across all sync runs and users,
+        # ensuring instant KV cache hits in the TaskAwarePrefixCache.
+        system_prompt = self.get_static_system_prompt()
 
         # Dynamic user message: Contains ONLY the email being evaluated
         user_prompt = f"""NOTIFICATION CONTENT:
@@ -298,7 +265,7 @@ BODY:
             prompt=user_prompt, 
             system_prompt=system_prompt, 
             temperature=0.1, 
-            timeout=150.0,
+            timeout=240.0,
             task="TRANSACTION_EXTRACTION"
         )
         
@@ -309,7 +276,7 @@ BODY:
                 prompt=user_prompt, 
                 system_prompt=system_prompt, 
                 temperature=0.3, 
-                timeout=150.0,
+                timeout=240.0,
                 task="TRANSACTION_EXTRACTION"
             )
 

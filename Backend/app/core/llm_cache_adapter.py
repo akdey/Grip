@@ -62,7 +62,7 @@ class BaseLLMCacheAdapter(ABC):
         pass
 
     @abstractmethod
-    def is_task_pinned(self, task_name: str) -> bool:
+    def is_task_pinned(self, task_name: str, tokens: Optional[Sequence[int]] = None) -> bool:
         """Check if a task's prefix state is currently pinned and warm."""
         pass
 
@@ -79,7 +79,7 @@ class PassthroughCacheAdapter(BaseLLMCacheAdapter):
     def pin_task_prefix(self, task_name: str, token_ids: Sequence[int], state: Any) -> None:
         pass
 
-    def is_task_pinned(self, task_name: str) -> bool:
+    def is_task_pinned(self, task_name: str, tokens: Optional[Sequence[int]] = None) -> bool:
         return False
 
 
@@ -134,6 +134,11 @@ if HAS_LLAMA_CPP:
         def pin_task(self, task_name: str, tokens: Sequence[int], state: Any) -> None:
             """Pin a compiled KV state in memory and persist it to disk."""
             token_tuple = tuple(tokens)
+            # Evict any previous mapping for this task name
+            if task_name in self._pinned_by_task:
+                old_tokens = self._pinned_by_task[task_name][0]
+                self._pinned_by_tokens.pop(old_tokens, None)
+
             self._pinned_by_task[task_name] = (token_tuple, state)
             self._pinned_by_tokens[token_tuple] = state
             logger.info(f"🔒 [TaskCacheAdapter] Pinned KV prefix for task '{task_name}' ({len(token_tuple)} tokens) in memory.")
@@ -147,8 +152,13 @@ if HAS_LLAMA_CPP:
             except Exception as e:
                 logger.warning(f"[TaskCacheAdapter] Could not persist state to {fpath}: {e}")
 
-        def is_pinned(self, task_name: str) -> bool:
-            return task_name in self._pinned_by_task
+        def is_pinned(self, task_name: str, tokens: Optional[Sequence[int]] = None) -> bool:
+            if task_name not in self._pinned_by_task:
+                return False
+            if tokens is not None:
+                pinned_tokens = self._pinned_by_task[task_name][0]
+                return tuple(tokens) == pinned_tokens
+            return True
 
         def _find_longest_prefix_key(self, key: Tuple[int, ...]) -> Optional[Tuple[int, ...]]:
             """
@@ -239,9 +249,9 @@ class TransientTaskPrefixAdapter(BaseLLMCacheAdapter):
         if self._cache_instance and hasattr(self._cache_instance, 'pin_task'):
             self._cache_instance.pin_task(task_name, token_ids, state)
 
-    def is_task_pinned(self, task_name: str) -> bool:
+    def is_task_pinned(self, task_name: str, tokens: Optional[Sequence[int]] = None) -> bool:
         if self._cache_instance and hasattr(self._cache_instance, 'is_pinned'):
-            return self._cache_instance.is_pinned(task_name)
+            return self._cache_instance.is_pinned(task_name, tokens)
         return False
 
 
