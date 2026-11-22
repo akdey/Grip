@@ -1,23 +1,23 @@
 # Graph Report - Grip  (2026-11-22)
 
 ## Corpus Check
-- 208 files · ~169,102 words
+- 208 files · ~169,169 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 30 file(s) not represented in the graph (top: .xml 10, (none) 9, .example 3)
 
 ## Summary
-- 1973 nodes · 5411 edges · 128 communities (83 shown, 45 thin omitted)
+- 1974 nodes · 5413 edges · 119 communities (80 shown, 39 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 388 edges (avg confidence: 0.93)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `bd64450a`
+- Built from commit: `4e767275`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - analytics/service.py
-- AnomalyService
+- portfolio_statement.py
 - CreditCardService
 - Dashboard.tsx
 - typing
@@ -35,18 +35,16 @@
 - bills/service.py
 - BillService
 - SyncService
-- generate_portfolio_statement_excel
+- sqlalchemy_ext_asyncio
 - BillsPage.tsx
-- email.py
+- dashboard/router.py
 - Transaction
-- update_credit_card
 - mark_bill_paid
 - generate_portfolio_statement_excel
 - dismiss_flag
 - WealthService
 - Loader
 - .simulate_historical_investment
-- scheduler.py
 - webauthn_service.py
 - get_current_user
 - SettleUp.tsx
@@ -60,18 +58,14 @@
 - get_sync_history
 - wealth/router.py
 - .get_asset_price
-- credit_cards/router.py
 - get_financial_forecast
-- toast.ts
 - CategoryService
 - .train_and_forecast_next_month
-- get_billing_cycle_dates
 - ✨ Key Features
 - devDependencies
 - llm_cache_adapter.py
 - TaskAwarePrefixCache
 - User
-- .__init__
 - GripRadar.tsx
 - Colors
 - eslint.config.js
@@ -79,9 +73,8 @@
 - Key Endpoints
 - ExampleInstrumentedTest.java
 - Any
-- get_llm_service
+- internal/router.py
 - auth/schemas.py
-- anomaly/router.py
 - GRIP
 - Improve UI
 - package.json
@@ -92,7 +85,6 @@
 - LocalLLMEngine
 - .import_cams_statement
 - interface
-- AuthenticationMiddleware
 - Color usage
 - Palette generation
 - .sync_all_holdings_prices
@@ -140,29 +132,37 @@
   README.md → Backend/app/core/llm_cache_adapter.py
 - `🔐 Security Measures` --references--> `PIISanitizingFormatter`  [INFERRED]
   README.md → Backend/app/core/logging_config.py
-- `ForecastingService` --uses--> `LLMService`  [INFERRED]
-  Backend/app/features/forecasting/service.py → Backend/app/core/llm.py
-- `NotificationService` --uses--> `LLMService`  [INFERRED]
-  Backend/app/features/notifications/service.py → Backend/app/core/llm.py
-- `SyncService` --uses--> `LLMService`  [INFERRED]
-  Backend/app/features/sync/service.py → Backend/app/core/llm.py
+- `CreditCardService` --uses--> `CardExposureItem`  [INFERRED]
+  Backend/app/features/credit_cards/service.py → Backend/app/features/analytics/schemas.py
+- `CreditCardService` --uses--> `CardExposureSummary`  [INFERRED]
+  Backend/app/features/credit_cards/service.py → Backend/app/features/analytics/schemas.py
+- `BillService` --uses--> `IdentifiedObligation`  [INFERRED]
+  Backend/app/features/bills/service.py → Backend/app/features/analytics/schemas.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (128 total, 45 thin omitted)
+## Communities (119 total, 39 thin omitted)
 
 ### Community 0 - "analytics/service.py"
 Cohesion: 0.06
 Nodes (35): get_burden_calculation(), get_category_trends(), get_monthly_summary(), get_safe_to_spend(), get_spend_trends(), get_variance_analysis(), AccrualBurnSummary, AssetMovement (+27 more)
 
+### Community 1 - "portfolio_statement.py"
+Cohesion: 0.15
+Nodes (5): auto_fit_columns(), build_banner(), generate_portfolio_statement_workbook(), get_type_str(), AssetType
+
+### Community 2 - "CreditCardService"
+Cohesion: 0.07
+Nodes (24): run_surety_reminders(), CreditCard, create_credit_card(), deactivate_credit_card(), get_billing_cycle_info(), get_card_exposure(), get_credit_card(), get_grace_period_optimizer() (+16 more)
+
 ### Community 3 - "Dashboard.tsx"
 Cohesion: 0.07
-Nodes (53): CategoryTrendEvolution(), CategoryTrendEvolutionProps, PALETTE, MonthlyExpenseCalendar(), MonthlyExpenseCalendarProps, SpendTrendChart(), SpendTrendChartProps, AIForecast (+45 more)
+Nodes (55): CategoryTrendEvolution(), CategoryTrendEvolutionProps, PALETTE, MonthlyExpenseCalendar(), SpendTrendChart(), SpendTrendChartProps, AIForecast, AIForecastProps (+47 more)
 
 ### Community 4 - "typing"
-Cohesion: 0.16
-Nodes (9): Base, AnomalyFlag, SubCategory, SettleUpEntry, SettleUpPeerContact, MerchantMapping, TransactionStatus, AssetType (+1 more)
+Cohesion: 0.15
+Nodes (11): Base, AnomalyFlag, AnomalyService, PasskeyCredential, SubCategory, SettleUpEntry, SettleUpPeerContact, AccountType (+3 more)
 
 ### Community 5 - "User"
 Cohesion: 0.12
@@ -173,68 +173,68 @@ Cohesion: 0.06
 Nodes (15): PeerBalance, Config, PeerContactOut, Config, PeerContactUpdate, Config, SendEmailReminderRequest, SendEmailReminderResponse (+7 more)
 
 ### Community 7 - "lucide-react"
-Cohesion: 0.07
-Nodes (53): SyncTrendChart(), PasswordVerifyModal(), PasswordVerifyModalProps, AddHoldingModal(), AddHoldingModalProps, HoldingDetailsModal(), HoldingDetailsModalProps, InvestmentSimulatorModal() (+45 more)
+Cohesion: 0.08
+Nodes (47): PasswordVerifyModal(), PasswordVerifyModalProps, AddHoldingModal(), AddHoldingModalProps, HoldingDetailsModal(), HoldingDetailsModalProps, InvestmentSimulatorModal(), InvestmentSimulatorModalProps (+39 more)
 
 ### Community 8 - "Transactions.tsx"
 Cohesion: 0.11
-Nodes (42): SliceState, SplitTransactionModal(), SplitTransactionModalProps, CalculatorDrawer(), CalculatorDrawerProps, evaluateExpression(), CATEGORIZED_LUCIDE_ICONS, CategoryIcon() (+34 more)
+Nodes (43): MonthlyExpenseCalendarProps, SliceState, SplitTransactionModal(), SplitTransactionModalProps, CalculatorDrawer(), CalculatorDrawerProps, evaluateExpression(), CATEGORIZED_LUCIDE_ICONS (+35 more)
 
 ### Community 9 - "react"
-Cohesion: 0.07
-Nodes (29): Footer(), FooterProps, Layout(), DockItem(), NAV_ITEMS, Navbar(), NavItem, ErrorBoundary (+21 more)
+Cohesion: 0.09
+Nodes (21): Footer(), FooterProps, Layout(), DockItem(), NAV_ITEMS, Navbar(), NavItem, ErrorBoundary (+13 more)
 
 ### Community 10 - "sync/service.py"
-Cohesion: 0.08
-Nodes (4): get_settings(), Settings, PIISanitizingFormatter, setup_logging()
+Cohesion: 0.05
+Nodes (9): get_settings(), Settings, get_llm_service(), LLMService, PIISanitizingFormatter, setup_logging(), ForecastingService, get_sanitizer_service() (+1 more)
 
 ### Community 11 - "App.tsx"
-Cohesion: 0.10
-Nodes (31): AddEntry, Analytics, AnomalyRadar, App(), Bills, CardOptimizer, Categories, CreditCardDetails (+23 more)
+Cohesion: 0.08
+Nodes (37): AddEntry, Analytics, AnomalyRadar, App(), Bills, CardOptimizer, Categories, CreditCardDetails (+29 more)
 
 ### Community 12 - "More.tsx"
-Cohesion: 0.15
-Nodes (21): Sidebar(), Button(), ButtonProps, Card(), CardProps, ColorSelectorProps, PRESET_COLORS, Input (+13 more)
+Cohesion: 0.10
+Nodes (35): Sidebar(), SyncTrendChart(), Button(), ButtonProps, Card(), CardProps, ColorSelectorProps, PRESET_COLORS (+27 more)
 
 ### Community 13 - "wealth/schemas.py"
 Cohesion: 0.08
 Nodes (29): batch_map_recurring(), get_forecast(), map_transaction(), simulate_investment(), unmap_transaction(), AssetType, AutoDetectResponse, BatchMapRecurringRequest (+21 more)
 
 ### Community 14 - "NotificationService"
-Cohesion: 0.12
-Nodes (4): send_email(), run_lifestyle_insights(), run_monthly_report(), NotificationService
+Cohesion: 0.08
+Nodes (9): send_email(), run_lifestyle_insights(), run_monthly_report(), run_weekly_insights(), NotificationService, EmailAttachment, EmailRequest, read_root() (+1 more)
 
 ### Community 15 - "check_goal_feasibility"
 Cohesion: 0.29
 Nodes (4): check_goal_feasibility(), create_goal(), delete_goal(), get_my_goals()
 
 ### Community 16 - "bills/service.py"
-Cohesion: 0.16
-Nodes (14): BillBase, BillCreate, BillResponse, Config, BillUpdate, MarkPaidRequest, SuretyExclusionCreate, UpcomingBillsResponse (+6 more)
+Cohesion: 0.41
+Nodes (8): BillBase, BillCreate, BillResponse, Config, BillUpdate, MarkPaidRequest, SuretyExclusionCreate, UpcomingBillsResponse
 
 ### Community 17 - "BillService"
 Cohesion: 0.09
 Nodes (6): Bill, BillExclusion, BillService, Goal, GoalCreate, GoalService
 
-### Community 19 - "generate_portfolio_statement_excel"
-Cohesion: 0.11
-Nodes (7): auto_fit_columns(), build_banner(), generate_portfolio_statement_workbook(), get_type_str(), generate_csv_export(), generate_portfolio_statement_excel(), generate_transactions_excel()
+### Community 18 - "SyncService"
+Cohesion: 0.08
+Nodes (6): run_db_maintenance(), run_gmail_sync(), SyncLog, SyncService, _warmup_llm(), _prefill_task_prefix()
+
+### Community 19 - "sqlalchemy_ext_asyncio"
+Cohesion: 0.14
+Nodes (8): generate_csv_export(), generate_portfolio_statement_excel(), generate_transactions_excel(), FeasibilityCheck, GoalBase, GoalResponse, Config, GoalUpdate
 
 ### Community 20 - "BillsPage.tsx"
 Cohesion: 0.20
 Nodes (15): BILL_CATEGORIES, BillsPage(), getCategoryMeta(), TabFilter, Bill, Surety, suretyQueryKey, useAddBill() (+7 more)
 
-### Community 21 - "email.py"
-Cohesion: 0.13
-Nodes (5): clean_pycache(), EmailAttachment, EmailRequest, read_root(), send_email()
+### Community 21 - "dashboard/router.py"
+Cohesion: 0.23
+Nodes (6): get_category_daily_expenses(), get_category_expenses_history(), get_daily_expenses(), get_discretionary_daily_expenses(), get_monthly_category_breakdown(), get_raw_transactions_for_forecasting()
 
 ### Community 22 - "Transaction"
-Cohesion: 0.07
-Nodes (23): get_category_daily_expenses(), get_category_expenses_history(), get_daily_expenses(), get_discretionary_daily_expenses(), get_monthly_category_breakdown(), get_raw_transactions_for_forecasting(), Transaction, CategoriesResponse (+15 more)
-
-### Community 23 - "update_credit_card"
-Cohesion: 0.13
-Nodes (8): create_credit_card(), deactivate_credit_card(), get_billing_cycle_info(), get_card_exposure(), get_credit_card(), get_grace_period_optimizer(), list_credit_cards(), update_credit_card()
+Cohesion: 0.06
+Nodes (17): Transaction, CategoriesResponse, ManualTransactionCreate, Config, TagSummary, TransactionBase, Config, TransactionCreate (+9 more)
 
 ### Community 24 - "mark_bill_paid"
 Cohesion: 0.15
@@ -249,20 +249,16 @@ Cohesion: 0.13
 Nodes (3): InvestmentTransactionMapping, auto_detect_portfolio(), WealthService
 
 ### Community 28 - "Loader"
-Cohesion: 0.18
-Nodes (19): GripFistMark(), Loader(), LoaderProps, CreditCardDetailsPage(), CreditCardsPage(), CycleInfoCard(), Props, GraceOptimizerView() (+11 more)
-
-### Community 30 - "scheduler.py"
-Cohesion: 0.13
-Nodes (8): run_daily_anomaly_scan(), run_db_maintenance(), run_gmail_sync(), run_inactivity_contingency_check(), run_settle_up_email_reminders(), run_surety_reminders(), run_weekly_insights(), start_scheduler()
+Cohesion: 0.12
+Nodes (29): GripFistMark(), Loader(), LoaderProps, CreditCardDetailsPage(), CreditCardsPage(), CycleInfoCard(), Props, GraceOptimizerView() (+21 more)
 
 ### Community 31 - "webauthn_service.py"
 Cohesion: 0.25
-Nodes (8): PasskeyCredential, _cleanup_challenges(), get_rp_info(), _is_localhost_allowed(), _is_trusted_origin(), pop_challenge(), store_challenge(), WebAuthnService
+Nodes (7): _cleanup_challenges(), get_rp_info(), _is_localhost_allowed(), _is_trusted_origin(), pop_challenge(), store_challenge(), WebAuthnService
 
 ### Community 32 - "get_current_user"
-Cohesion: 0.26
-Nodes (13): User, create_manual_transaction(), delete_transaction(), get_all_transactions(), get_categories(), get_pending_transactions(), get_split_group(), get_tags_summary() (+5 more)
+Cohesion: 0.22
+Nodes (13): get_current_user(), create_manual_transaction(), delete_transaction(), get_all_transactions(), get_categories(), get_pending_transactions(), get_split_group(), get_tags_summary() (+5 more)
 
 ### Community 33 - "SettleUp.tsx"
 Cohesion: 0.18
@@ -273,16 +269,16 @@ Cohesion: 0.09
 Nodes (21): 10. Gesture design details (the "feel" checklist), 11. Frame-level smoothness, 12. Materials & depth — translucency conveys hierarchy, 13. Multimodal feedback — motion + sound + haptics, 14. Reduced motion & accessibility, 15. Typography — optical sizing, tracking, leading, 16. Design foundations — the eight principles, 17. Process (+13 more)
 
 ### Community 35 - "app/main.py"
-Cohesion: 0.19
-Nodes (5): SyncLog, lifespan(), privacy_policy(), root(), terms_of_service()
+Cohesion: 0.07
+Nodes (13): AuthenticationMiddleware, run_daily_anomaly_scan(), run_inactivity_contingency_check(), run_settle_up_email_reminders(), start_scheduler(), AnomalyFlagResponse, AnomalyListResponse, AnomalyScanResponse (+5 more)
 
 ### Community 36 - "dependencies"
 Cohesion: 0.10
 Nodes (21): dependencies, axios@^1.13.2, @capacitor/core@^8.6.2, @capacitor/network@^8.0.1, date-fns@^4.1.0, framer-motion@^12.26.2, lucide-react@^0.562.0, react@^19.2.0 (+13 more)
 
 ### Community 37 - "Sync.tsx"
-Cohesion: 0.20
-Nodes (19): SyncTrendChartProps, useAutoSync(), useConnectGmail(), useDisconnectGmail(), useGmailStatus(), useManualSync(), useSyncHistory(), GmailStatus (+11 more)
+Cohesion: 0.18
+Nodes (20): SyncTrendChartProps, useAutoSync(), useConnectGmail(), useDisconnectGmail(), useGmailStatus(), useManualSync(), useSyncHistory(), GmailStatus (+12 more)
 
 ### Community 38 - "compilerOptions"
 Cohesion: 0.09
@@ -308,29 +304,17 @@ Nodes (10): analyze_sip_date_performance(), delete_holding(), get_holding_detail
 Cohesion: 0.15
 Nodes (4): InvestmentHolding, create_holding(), InvestmentHoldingCreate, TaxEngine
 
-### Community 44 - "credit_cards/router.py"
-Cohesion: 0.38
-Nodes (9): CardGraceEvaluation, CreditCardBase, CreditCardCreate, CreditCardCycleInfo, CreditCardResponse, Config, CreditCardUpdate, CreditCardWithCycleInfo (+1 more)
-
 ### Community 45 - "get_financial_forecast"
 Cohesion: 0.60
 Nodes (3): get_financial_forecast(), get_investments_dashboard(), get_liquidity_dashboard()
-
-### Community 47 - "toast.ts"
-Cohesion: 0.24
-Nodes (9): badgeClasses, iconColors, icons, ToastContainer(), DEFAULT_DURATIONS, ToastItem, ToastStore, ToastType (+1 more)
 
 ### Community 48 - "CategoryService"
 Cohesion: 0.11
 Nodes (19): Category, create_category(), create_sub_category(), delete_category(), delete_sub_category(), get_categories(), update_category(), update_sub_category() (+11 more)
 
 ### Community 49 - ".train_and_forecast_next_month"
-Cohesion: 0.13
-Nodes (5): CategoryForecast, ForecastResponse, ForecastingService, is_recurring(), LightGBMForecaster
-
-### Community 50 - "get_billing_cycle_dates"
-Cohesion: 0.29
-Nodes (4): get_billing_cycle_dates(), check_upcoming_billing_cycles(), check_upcoming_bills(), get_notification_summary()
+Cohesion: 0.17
+Nodes (4): CategoryForecast, ForecastResponse, is_recurring(), LightGBMForecaster
 
 ### Community 51 - "✨ Key Features"
 Cohesion: 0.12
@@ -341,12 +325,12 @@ Cohesion: 0.12
 Nodes (17): devDependencies, autoprefixer@^10.4.23, postcss@^8.5.6, @resvg/resvg-js@^2.6.2, tailwindcss@^4.1.18, @types/node@^24.10.1, @types/react@^19.2.5, @types/react-dom@^19.2.3 (+9 more)
 
 ### Community 55 - "User"
-Cohesion: 0.22
-Nodes (11): get_current_user(), create_ledger_entry(), delete_settle_up_entry(), get_all_contacts(), get_peer_balances(), get_peer_contact(), get_peer_history(), send_email_reminder() (+3 more)
+Cohesion: 0.26
+Nodes (11): User, create_ledger_entry(), delete_settle_up_entry(), get_all_contacts(), get_peer_balances(), get_peer_contact(), get_peer_history(), send_email_reminder() (+3 more)
 
 ### Community 57 - "GripRadar.tsx"
-Cohesion: 0.14
-Nodes (21): getAnomalyMeta(), GripRadar, GripRadarProps, AnomalyFlag, AnomalyListResponse, AnomalyScanResponse, useAnomalyFlags(), useDismissAllAnomalies() (+13 more)
+Cohesion: 0.27
+Nodes (11): getAnomalyMeta(), GripRadar, GripRadarProps, AnomalyFlag, AnomalyListResponse, AnomalyScanResponse, useAnomalyFlags(), useDismissAllAnomalies() (+3 more)
 
 ### Community 58 - "Colors"
 Cohesion: 0.15
@@ -364,17 +348,13 @@ Nodes (12): background_color, description, display, display_override, icons, id,
 Cohesion: 0.15
 Nodes (13): Analytics, 🔌 API Documentation, Authentication, Export, Financial Goals & Targets, Forecasting, Gmail Sync, Interactive Docs (+5 more)
 
-### Community 64 - "get_llm_service"
-Cohesion: 0.14
-Nodes (6): get_llm_service(), LLMService, generate(), GenerateRequest, GenerateResponse, _warmup_llm()
+### Community 64 - "internal/router.py"
+Cohesion: 0.43
+Nodes (3): generate(), GenerateRequest, GenerateResponse
 
 ### Community 65 - "auth/schemas.py"
 Cohesion: 0.29
 Nodes (10): EmergencyContactResponse, EmergencyContactUpdate, PasswordVerification, Token, TokenData, UserBase, UserCreate, UserResponse (+2 more)
-
-### Community 66 - "anomaly/router.py"
-Cohesion: 0.67
-Nodes (3): AnomalyFlagResponse, AnomalyListResponse, AnomalyScanResponse
 
 ### Community 67 - "GRIP"
 Cohesion: 0.17
@@ -487,22 +467,22 @@ Nodes (4): 📧 Email Connection Modes, 🛠️ Environment & Security Configura
 ## Knowledge Gaps
 - **1 isolated node(s):** `Grip`
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 732 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **45 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **39 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `User` connect `get_current_user` to `analytics/service.py`, `typing`, `User`, `sync/service.py`, `wealth/schemas.py`, `NotificationService`, `check_goal_feasibility`, `bills/service.py`, `generate_portfolio_statement_excel`, `update_credit_card`, `mark_bill_paid`, `generate_portfolio_statement_excel`, `dismiss_flag`, `WealthService`, `scheduler.py`, `webauthn_service.py`, `app/main.py`, `get_sync_history`, `wealth/router.py`, `.get_asset_price`, `credit_cards/router.py`, `get_financial_forecast`, `CategoryService`, `User`, `anomaly/router.py`, `.import_cams_statement`?**
-  _High betweenness centrality (0.054) - this node is a cross-community bridge._
+- **Why does `User` connect `User` to `analytics/service.py`, `portfolio_statement.py`, `CreditCardService`, `typing`, `User`, `sync/service.py`, `wealth/schemas.py`, `NotificationService`, `check_goal_feasibility`, `bills/service.py`, `SyncService`, `sqlalchemy_ext_asyncio`, `dashboard/router.py`, `mark_bill_paid`, `generate_portfolio_statement_excel`, `dismiss_flag`, `WealthService`, `webauthn_service.py`, `get_current_user`, `app/main.py`, `get_sync_history`, `wealth/router.py`, `.get_asset_price`, `get_financial_forecast`, `CategoryService`, `.import_cams_statement`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
 - **Are the 112 inferred relationships involving `User` (e.g. with `run_daily_anomaly_scan()` and `run_gmail_sync()`) actually correct?**
   _`User` has 112 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Grip` to the rest of the system?**
   _1 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `analytics/service.py` be split into smaller, more focused modules?**
   _Cohesion score 0.06347469220246238 - nodes in this community are weakly interconnected._
-- **Why does `WealthService` connect `WealthService` to `analytics/service.py`, `typing`, `InvestmentSnapshot`, `sync/service.py`, `wealth/router.py`, `.get_asset_price`, `wealth/schemas.py`, `.import_cams_statement`, `.sync_all_holdings_prices`, `Transaction`, `.__init__`, `.simulate_historical_investment`, `scheduler.py`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+- **Why does `WealthService` connect `WealthService` to `analytics/service.py`, `portfolio_statement.py`, `typing`, `InvestmentSnapshot`, `sync/service.py`, `wealth/router.py`, `.get_asset_price`, `wealth/schemas.py`, `.import_cams_statement`, `.sync_all_holdings_prices`, `SyncService`, `Transaction`, `.simulate_historical_investment`?**
+  _High betweenness centrality (0.049) - this node is a cross-community bridge._
 - **Are the 25 inferred relationships involving `WealthService` (e.g. with `TransactionService` and `analyze_sip_date_performance()`) actually correct?**
   _`WealthService` has 25 INFERRED edges - model-reasoned connections that need verification._
-- **Should `AnomalyService` be split into smaller, more focused modules?**
-  _Cohesion score 0.14285714285714285 - nodes in this community are weakly interconnected._
+- **Should `CreditCardService` be split into smaller, more focused modules?**
+  _Cohesion score 0.06553128470936691 - nodes in this community are weakly interconnected._
